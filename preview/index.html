@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>0xNeko preview</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  </head>
+  <body>
+    <div id="grid" class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-1"></div>
+    <script>
+      const grid = document.getElementById("grid");
+      const names = ["unrevealed", "pixel-perfect", ...Array.from({length: 30}, (_, i) => String(i + 1).padStart(4, "0"))];
+      const io = new IntersectionObserver((entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          entry.target.src = entry.target.dataset.src;
+          io.unobserve(entry.target);
+        }
+      }, {rootMargin: "600px"});
+      for (const name of names) {
+        const img = document.createElement("img");
+        img.dataset.src = `${name}.svg`;
+        img.className = "aspect-square w-full rounded-fullx";
+        grid.append(img);
+        io.observe(img);
+      }
+    </script>
+  </body>
+</html>
