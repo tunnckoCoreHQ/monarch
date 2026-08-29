@@ -92,20 +92,16 @@ contract MockNekoGenerator is INekoGenerator {
         return _normalize(combined);
     }
 
-    function generateSVG(uint256 seed, TokenData calldata data)
-        external
-        pure
-        returns (string memory)
-    {
-        return string(abi.encode(seed, data));
+    function generateSVG(TokenData calldata data) external pure returns (string memory) {
+        return string(abi.encode(data));
     }
 
-    function generateImageURI(uint256 seed, TokenData calldata data)
+    function generateImageURI(TokenData calldata data)
         external
         pure
         returns (string memory uri, bytes32 contentHash)
     {
-        uri = string(abi.encode(seed, data));
+        uri = string(abi.encode(data));
         contentHash = keccak256(bytes(uri));
     }
 
@@ -117,12 +113,12 @@ contract MockNekoGenerator is INekoGenerator {
         return string(abi.encode("mock://unrevealed/", tokenId));
     }
 
-    function generateTokenURI(uint256 seed, uint256 tokenId, TokenData calldata data)
+    function generateTokenURI(uint256 tokenId, TokenData calldata data)
         external
         pure
         returns (string memory)
     {
-        return string(abi.encode(seed, tokenId, data));
+        return string(abi.encode(tokenId, data));
     }
 
     function generationProfile(uint256 seed)

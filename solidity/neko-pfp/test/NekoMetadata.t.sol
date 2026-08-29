@@ -153,7 +153,7 @@ contract NekoMetadataTest is NekoTestBase {
         generator.setRawTraits(seed, expectedTraits);
 
         INekoGenerator.TokenData memory data = neko.tokenData(1);
-        string memory expectedTokenURI = generator.generateTokenURI(seed, 1, data);
+        string memory expectedTokenURI = generator.generateTokenURI(1, data);
 
         assertEq(
             keccak256(abi.encode(data.traits)),

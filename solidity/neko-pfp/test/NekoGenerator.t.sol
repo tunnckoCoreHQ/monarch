@@ -70,9 +70,9 @@ contract NekoGeneratorTest is Test {
         INekoGenerator.RawTraits memory traits = generator.deriveRawTraits(seed);
         INekoGenerator.TokenData memory data = generator.resolveTokenData(traits, 2);
 
-        string memory svg = generator.generateSVG(seed, data);
-        (string memory imageURI, bytes32 contentHash) = generator.generateImageURI(seed, data);
-        string memory tokenURI = generator.generateTokenURI(seed, tokenId, data);
+        string memory svg = generator.generateSVG(data);
+        (string memory imageURI, bytes32 contentHash) = generator.generateImageURI(data);
+        string memory tokenURI = generator.generateTokenURI(tokenId, data);
 
         assertTrue(LibString.startsWith(svg, "<svg "), "rendered SVG has no root element");
         assertTrue(LibString.contains(svg, "fusion-diamond"), "fused SVG has no star marker");
@@ -150,7 +150,7 @@ contract NekoGeneratorTest is Test {
         bytes32 previousHash;
         for (uint8 color; color < 20; ++color) {
             INekoGenerator.RawTraits memory traits = _uniformTraits(color, color);
-            bytes32 currentHash = _renderVariant(color, color + 1, traits, 1);
+            bytes32 currentHash = _renderVariant(color + 1, traits, 1);
             if (color != 0) {
                 assertTrue(currentHash != previousHash, "palette color did not change metadata");
             }
@@ -160,7 +160,7 @@ contract NekoGeneratorTest is Test {
         previousHash = bytes32(0);
         for (uint8 toy; toy < 37; ++toy) {
             INekoGenerator.RawTraits memory traits = _uniformTraits(5, toy);
-            bytes32 currentHash = _renderVariant(toy, toy + 1, traits, 1);
+            bytes32 currentHash = _renderVariant(toy + 1, traits, 1);
             if (toy != 0) {
                 assertTrue(currentHash != previousHash, "toy did not change metadata");
             }
@@ -172,16 +172,16 @@ contract NekoGeneratorTest is Test {
         INekoGenerator.RawTraits memory matrix = _uniformTraits(5, 36);
         matrix.sky = 0;
         matrix.matrix = true;
-        bytes32 matrixHash = _renderVariant(0xaaaa, 1, matrix, 2);
+        bytes32 matrixHash = _renderVariant(1, matrix, 2);
 
         INekoGenerator.RawTraits memory invisible = _uniformTraits(7, 35);
         invisible.sky = 7;
         invisible.invisible = true;
-        bytes32 invisibleHash = _renderVariant(0xbbbb, 2, invisible, 3);
+        bytes32 invisibleHash = _renderVariant(2, invisible, 3);
 
-        bytes32 leftEyeHash = _renderVariant(0xcccc, 3, _alternateTraits(1, 4), 17);
-        bytes32 rightEyeHash = _renderVariant(0xdddd, 4, _alternateTraits(2, 8), 17);
-        bytes32 multiAlternateHash = _renderVariant(0xeeee, 5, _alternateTraits(3, 5), 17);
+        bytes32 leftEyeHash = _renderVariant(3, _alternateTraits(1, 4), 17);
+        bytes32 rightEyeHash = _renderVariant(4, _alternateTraits(2, 8), 17);
+        bytes32 multiAlternateHash = _renderVariant(5, _alternateTraits(3, 5), 17);
 
         assertTrue(matrixHash != invisibleHash, "special classes rendered identical metadata");
         assertTrue(leftEyeHash != rightEyeHash, "eye sides rendered identical metadata");
@@ -219,16 +219,16 @@ contract NekoGeneratorTest is Test {
 
         data.slopTier += 1;
         vm.expectRevert(NekoBase.InvalidTokenData.selector);
-        generator.generateSVG(1, data);
+        generator.generateSVG(data);
 
         data = generator.resolveTokenData(traits, 8);
         data.fusionMass = 0;
         vm.expectRevert(NekoBase.InvalidFusionMass.selector);
-        generator.generateTokenURI(1, 1, data);
+        generator.generateTokenURI(1, data);
 
         data.fusionMass = 4664;
         vm.expectRevert(NekoBase.InvalidFusionMass.selector);
-        generator.generateTokenURI(1, 1, data);
+        generator.generateTokenURI(1, data);
     }
 
     function _expectInvalidRawTraits(INekoGenerator.RawTraits memory traits) private {
@@ -237,15 +237,14 @@ contract NekoGeneratorTest is Test {
     }
 
     function _renderVariant(
-        uint256 seed,
         uint256 tokenId,
         INekoGenerator.RawTraits memory traits,
         uint256 fusionMass
     ) private view returns (bytes32 tokenURIHash) {
         INekoGenerator.TokenData memory data = generator.resolveTokenData(traits, fusionMass);
-        string memory svg = generator.generateSVG(seed, data);
-        (string memory imageURI, bytes32 contentHash) = generator.generateImageURI(seed, data);
-        string memory tokenURI = generator.generateTokenURI(seed, tokenId, data);
+        string memory svg = generator.generateSVG(data);
+        (string memory imageURI, bytes32 contentHash) = generator.generateImageURI(data);
+        string memory tokenURI = generator.generateTokenURI(tokenId, data);
 
         assertTrue(LibString.startsWith(svg, "<svg "), "variant SVG has no root element");
         assertTrue(LibString.contains(svg, 'id="toy"'), "variant SVG omitted toy");
