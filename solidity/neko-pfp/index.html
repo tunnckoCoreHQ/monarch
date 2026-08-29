@@ -26,7 +26,7 @@
       );
       for (const name of names) {
         const img = document.createElement("img");
-        img.dataset.src = `${name}.svg`;
+        img.dataset.src = `preview/${name}.svg`;
         img.className = "h-[150px] w-[150px] rounded-fullx";
         grid.append(img);
         io.observe(img);
