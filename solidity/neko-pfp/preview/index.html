@@ -7,10 +7,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   </head>
   <body>
-    <div id="grid" class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-1"></div>
+    <div id="grid" class="mt-1 grid grid-cols-[repeat(auto-fill,150px)] gap-1"></div>
     <script>
       const grid = document.getElementById("grid");
-      const names = ["unrevealed", "pixel-perfect", "pixel-neko", ...Array.from({length: 30}, (_, i) => String(i + 1).padStart(4, "0"))];
+      const names = ["unrevealed", "pixel-perfect", "pixel-neko", "rounded-neko", ...Array.from({length: 4500}, (_, i) => String(i + 1).padStart(4, "0"))];
       const io = new IntersectionObserver((entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
@@ -21,7 +21,7 @@
       for (const name of names) {
         const img = document.createElement("img");
         img.dataset.src = `${name}.svg`;
-        img.className = "aspect-square w-full rounded-fullx";
+        img.className = "h-[150px] w-[150px] rounded-fullx";
         grid.append(img);
         io.observe(img);
       }
