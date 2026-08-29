@@ -46,7 +46,7 @@ abstract contract PreviewBase is Script {
 contract PreviewDeploy is PreviewBase {
     bytes32 internal constant GENESIS_SEED_COMMITMENT_DOMAIN =
         keccak256("NekoPFPSeaDrop.genesisSeedCommitment.v1");
-    bytes32 internal constant GENESIS_SEED = keccak256("neko-pfp.preview.genesis-seed.v1");
+    bytes32 internal constant GENESIS_SEED = keccak256("neko-pfp.preview-new-neko.genesis-seed.v1");
     uint256 internal constant MINT_BATCH = 500;
 
     function run() external returns (NekoGenerator generator, NekoPFP neko) {

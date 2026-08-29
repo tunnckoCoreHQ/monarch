@@ -8,6 +8,7 @@ evm_version = "cancun"
 optimizer = true
 optimizer_runs = 1000
 allow_paths = ["../../node_modules"]
+fs_permissions = [{ access = "read-write", path = "./preview" }]
 deny = "warnings"
 remappings = [
   "erc721a/=node_modules/erc721a/contracts/",
