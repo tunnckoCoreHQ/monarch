@@ -5,7 +5,7 @@ name: auto-merge
 # while the pull request workflows themselves stay read-only.
 on:
   workflow_run:
-    workflows: [checks, triad-auth, solidity]
+    workflows: [ci, triad-auth, solidity]
     types: [completed]
 
 # One job per head commit; later workflow_run events for the same commit queue behind it and exit early once merged.
