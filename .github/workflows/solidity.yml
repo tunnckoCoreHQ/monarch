@@ -1,6 +1,10 @@
-# Runs vp run solidity:check on master pushes and PRs that match the path filters below.
-# Skips fork PRs and Dependabot-triggered runs; auto-merge-deps.yml handles Dependabot.
-# The check_test_build job has only contents: read.
+# Formats, lints, tests, and builds Solidity projects when the listed paths change.
+#
+# SECURITY: dependency installation and test tooling execute code from the PR. Keep the token
+# read-only and do not pass secrets or grant OIDC permission; PR code could use those credentials.
+#
+# Fork PRs are skipped here. Dependabot PRs are handled by auto-merge-deps.
+
 name: solidity
 
 on:

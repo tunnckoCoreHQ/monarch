@@ -10,7 +10,7 @@ This is a Solidity/TypeScript/Rust monorepo for multiple projects and languages.
 - Solidity dependencies are managed by Pnpm through Nodejs/node_modules.
 - Solidity projects are in `solidity/*`.
 - TypeScript packages and projects are at `packages/*`.
-- Package PRs include a Changeset; local and CI pnpm publishes use the committed scope mapping to `npm.wgw.lol`, with the local GitHub CLI token or GitHub Actions OIDC respectively. VLT service tokens stay in the worker; never add registry secrets to CI. Merges to `master` publish nightlies; Monday 09:00 UTC and manual runs prepare a release PR from pending Changesets. The owner reviews and merges release PRs; successful master checks then publish stable versions, package tags, and GitHub Releases. Never auto-merge release PRs.
+- Package PRs include a Changeset; local and CI pnpm publishes use the committed scope mapping to `npm.wgw.lol`, with the local GitHub CLI token or GitHub Actions OIDC respectively. VLT service tokens stay in the worker; never add registry secrets to CI. Merges to `master` publish nightlies; Monday 06:00 UTC and manual runs prepare a release PR from pending Changesets. The owner reviews and merges release PRs; successful master checks then publish stable versions, package tags, and GitHub Releases. Never auto-merge release PRs.
 - Apps and docs sites are at `apps/*`.
 - Solidity projects' docs should be on their own `solidity/*/docs` folder.
 - TypeScript toolchain is managed by VitePlus and `vp run check` is enough.

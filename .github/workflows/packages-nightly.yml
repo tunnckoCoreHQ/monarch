@@ -1,7 +1,13 @@
-# Runs after typescript.yml succeeds for a push to master in tunnckoCoreHQ/monarch.
-# If the commit changed packages/, pnpm publishes packages with pending Changesets to VLT with the nightly tag.
-# Only pkgs_nightly can request GitHub OIDC tokens.
-# vlt-front-worker at npm.wgw.lol verifies the token's signature, repository, branch, and workflow, and permits only nightly writes.
+# Publishes packages to VLT with nightly after typescript.yml succeeds for a package change on
+# master.
+#
+# SECURITY: workflow_run can grant credentials even when the triggering run came from a PR. The job
+# therefore accepts only successful pushes from this repository and checks out the tested head_sha.
+#
+# Do not allow PR runs or replace head_sha with a branch ref: either could publish code that has not
+# passed CI on master. vlt-front-worker at npm.wgw.lol verifies GitHub OIDC and limits this workflow
+# to nightly writes.
+
 name: packages-nightly
 
 on:

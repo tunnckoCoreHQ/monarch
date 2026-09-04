@@ -1,6 +1,10 @@
-# Runs vp run check and vp run test on pushes to master and PRs targeting master.
-# Skips fork PRs and Dependabot-triggered runs; auto-merge-deps.yml handles Dependabot.
-# The check_test job has only contents: read.
+# Runs checks and tests for master pushes and same-repository PRs. Dependabot has a separate
+# workflow.
+#
+# SECURITY: installs and tests execute PR code, including dependency scripts. Keep the token
+# read-only. Adding secrets, write access, or OIDC permission would expose those credentials to PR
+# code.
+
 name: typescript
 
 on:

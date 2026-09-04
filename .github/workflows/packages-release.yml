@@ -1,12 +1,19 @@
-# On Mondays at 09:00 UTC or workflow_dispatch, Changesets prepares a release PR for manual review and merge.
-# After typescript.yml succeeds for a push to master, pkgs_identify checks that the commit merged changeset-release/master.
-# Only then does pkgs_publish publish stable versions to VLT with latest and create package tags and GitHub Releases.
-# Only pkgs_publish can request OIDC tokens; vlt-front-worker at npm.wgw.lol verifies them and permits only latest writes.
+# Opens or updates a release PR every Monday at 06:00 UTC, or when run manually. Publishes stable
+# packages, tags, and GitHub Releases after you merge it and typescript passes.
+#
+# SECURITY: passing CI alone must not authorize a stable release. pkgs_identify matches the tested
+# commit to a merged changeset-release/master PR in this repository. Keep pkgs_publish dependent on
+# that result and checked out at the same SHA; otherwise it could publish an ordinary PR or untested
+# code.
+#
+# Only pkgs_publish gets OIDC permission. vlt-front-worker at npm.wgw.lol limits its token to latest
+# writes.
+
 name: packages-release
 
 on:
   schedule:
-    - cron: "0 9 * * 1"
+    - cron: "0 6 * * 1"
   workflow_dispatch:
   workflow_run:
     workflows: [typescript]

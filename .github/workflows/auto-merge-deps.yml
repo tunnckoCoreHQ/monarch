@@ -1,6 +1,9 @@
-# Runs vp run check, vp run test, and vp run solidity:check for Dependabot PRs targeting master.
-# Squash-merges the PR only if all three commands pass.
-# The verify_merge job requires github.actor == 'dependabot[bot]'; only that job has repository write permissions.
+# Checks and tests Dependabot PRs, then squash-merges them into master.
+#
+# SECURITY: this job installs PR dependencies and requests permission to merge. The actor gate
+# limits it to Dependabot; do not extend it to arbitrary PR authors. Keep every validation step
+# before gh pr merge. A failed check must stop the job.
+
 name: auto-merge-deps
 
 on:

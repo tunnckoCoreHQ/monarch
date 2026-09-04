@@ -1,6 +1,12 @@
-# Runs after typescript.yml or solidity.yml succeeds for a PR, then waits for all remaining PR checks.
-# Squash-merges PRs from owners, members, or collaborators; skips bots, changeset-release/* branches, and the do-not-merge label.
-# Executes auto-merge.yml from master without checking out PR code; rechecks the PR state and label before merging.
+# Merges PRs from owners, members, or collaborators after all checks pass.
+#
+# SECURITY: workflow_run executes this file from master with permission to merge. PRs are inspected
+# through the GitHub API. Do not add steps that check out or run PR code: that would give
+# contributor code the write token.
+#
+# Keep release PRs excluded. Recheck do-not-merge after waiting for CI, because the label may have
+# been added while checks were running.
+
 name: auto-merge
 
 on:
