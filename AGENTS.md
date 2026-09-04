@@ -4,7 +4,7 @@ This is a Solidity/TypeScript/Rust monorepo for multiple projects and languages.
 
 - Always read and follow `~/skills/instructions.md` and its referenced files.
 - Creating new solidity/foundry projects: copy `solidity/template/` as starting template, and edit the package.json fields, readme and etc.
-- Everything is managed by `vp` - which uses `pnpm` under the hood.
+- Everything is managed by `vp` - which uses `pnpm` under the hood. Contributors need `vp` installed globally; `pnpm install` runs `vp config` through the `prepare` script to install the Git hooks.
 - use conventional commits
 - Use pnpm/vp filters to run commands inside a given project or package or app.
 - Solidity dependencies are managed by Pnpm through Nodejs/node_modules.
