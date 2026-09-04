@@ -7,7 +7,7 @@ const app = new Hono<{ Bindings: Env & { COMMIT_SHA?: string } }>();
 app.get("/-/health", (c) => {
   const sha = c.env.COMMIT_SHA ?? "";
   const label = sha ? `/commit/${sha}` : "";
-  const link = `https://github.com/tunnckoCore/triad-auth${label}`;
+  const link = `https://github.com/tunnckoCoreHQ/monarch${label}`;
 
   return c.json({ ok: true, link, commit: sha ?? "unknwon" });
 });

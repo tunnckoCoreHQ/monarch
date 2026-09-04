@@ -7,7 +7,7 @@
   "author": "tunnckoCore",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tunnckoCore/triad-auth.git",
+    "url": "git+https://github.com/tunnckoCoreHQ/monarch.git",
     "directory": "solidity/neko-pfp"
   },
   "type": "module",

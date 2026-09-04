@@ -18,8 +18,8 @@ const {
 const commit = import.meta.env.COMMIT_SHA;
 const commitHref =
   commit === "local"
-    ? "https://github.com/tunnckoCore/triad-auth"
-    : `https://github.com/tunnckoCore/triad-auth/commit/${commit}`;
+    ? "https://github.com/tunnckoCoreHQ/monarch"
+    : `https://github.com/tunnckoCoreHQ/monarch/commit/${commit}`;
 ---
 
 <!doctype html>
@@ -40,7 +40,7 @@ const commitHref =
         <a class="nav-demo" href="/demo">DEMO</a>
         <a href="/me">ACCOUNT</a>
         <a class="nav-secondary" href="/api/auth/.well-known/openid-configuration">DISCOVERY</a>
-        <a href="https://github.com/tunnckoCore/triad-auth">SOURCE ↗</a>
+        <a href="https://github.com/tunnckoCoreHQ/monarch">SOURCE ↗</a>
       </nav>
     </header>
     <main id="content"><slot /></main>
@@ -50,7 +50,7 @@ const commitHref =
       <a href="/me">ACCOUNT</a>
       <a href="/privacy">PRIVACY</a>
       <a href="/terms">TERMS</a>
-      <a href="https://github.com/tunnckoCore/triad-auth">SOURCE ↗</a>
+      <a href="https://github.com/tunnckoCoreHQ/monarch">SOURCE ↗</a>
       <a href={commitHref} title={commit}>BUILD {commit.slice(0, 7)} ↗</a>
     </footer>
   </body>
