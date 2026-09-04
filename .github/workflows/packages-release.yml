@@ -1,3 +1,6 @@
+# Prepares a release PR on Mondays at 09:00 UTC or a manual trigger; the owner reviews and merges it.
+# After successful master TypeScript checks, verifies the release PR merge before publishing stable versions, tags, and GitHub Releases.
+# PR preparation has no OIDC permission; only publishing can request tokens, which the worker restricts to latest.
 name: packages-release
 
 on:
@@ -12,7 +15,7 @@ on:
 permissions: {}
 
 jobs:
-  prepare:
+  pkgs_prepare:
     if: github.repository == 'tunnckoCoreHQ/monarch' && github.ref == 'refs/heads/master' && github.event_name != 'workflow_run'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
@@ -43,7 +46,7 @@ jobs:
           pr-title: "chore: release packages"
           pr-base-branch: master
 
-  identify:
+  pkgs_identify:
     if: >-
       github.repository == 'tunnckoCoreHQ/monarch' &&
       github.event_name == 'workflow_run' &&
@@ -66,9 +69,9 @@ jobs:
             --jq ".[] | select(.merged_at != null and .merge_commit_sha == \"$RELEASE_SHA\" and .head.ref == \"changeset-release/master\" and .head.repo.full_name == \"$GITHUB_REPOSITORY\" and .base.ref == \"master\" and .base.repo.full_name == \"$GITHUB_REPOSITORY\") | .number")
           echo "release=$release" >> "$GITHUB_OUTPUT"
 
-  publish:
-    needs: identify
-    if: needs.identify.outputs.release != ''
+  pkgs_publish:
+    needs: pkgs_identify
+    if: needs.pkgs_identify.outputs.release != ''
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
@@ -94,4 +97,4 @@ jobs:
       - run: vp run packages:release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_PR: ${{ needs.identify.outputs.release }}
+          RELEASE_PR: ${{ needs.pkgs_identify.outputs.release }}

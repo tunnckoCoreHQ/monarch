@@ -1,3 +1,6 @@
+# Publishes pending Changesets to VLT as nightlies after successful master TypeScript checks.
+# Accepts only this repository's push runs; commits without packages/ changes skip setup and publishing.
+# Only the publishing job can request OIDC tokens; the worker validates the repository, ref, workflow, and dist-tag.
 name: packages-nightly
 
 on:
@@ -13,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  nightly:
+  pkgs_nightly:
     permissions:
       contents: read
       id-token: write

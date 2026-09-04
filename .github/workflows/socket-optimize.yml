@@ -1,3 +1,6 @@
+# Runs Socket dependency optimization on Mondays at 06:00 UTC or a manual trigger.
+# Runs only from master and validates changes before opening and squash-merging the optimization PR.
+# Write permissions are scoped to the job; checkout credentials are not persisted.
 name: socket-optimize
 
 on:
@@ -13,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  optimize:
+  socket_optimize:
     permissions:
       contents: write
       pull-requests: write

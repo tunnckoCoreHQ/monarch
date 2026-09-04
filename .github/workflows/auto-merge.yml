@@ -1,7 +1,8 @@
+# Squash-merges eligible non-bot PRs after their checks pass.
+# Uses workflow code from master without checking out PR code; only the merge job has write permissions.
+# Excludes release PRs and do-not-merge, then rechecks the PR state and label immediately before merging.
 name: auto-merge
 
-# Merges a pull request from an owner, member, or collaborator once every check on its head commit is green.
-# Runs on workflow_run so it executes trusted code from master with a write token.
 on:
   workflow_run:
     workflows: [typescript, solidity]
@@ -14,7 +15,7 @@ concurrency:
 permissions: {}
 
 jobs:
-  automerge:
+  auto_merge_prs:
     permissions:
       contents: write
       pull-requests: write
