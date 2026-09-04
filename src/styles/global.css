@@ -1179,6 +1179,13 @@ h3 {
   font-family: var(--display);
   font-size: 1.25rem;
 }
+.account-panel-copy {
+  max-width: 74ch;
+  margin: 0;
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--muted);
+}
 .panel-heading {
   display: flex;
   align-items: center;
@@ -1219,9 +1226,153 @@ h3 {
 .authorized-app code {
   color: var(--muted);
 }
+.account-passkeys {
+  display: grid;
+}
+.account-passkey {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1.25rem;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.account-passkey h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1rem;
+}
+.account-passkey small {
+  color: var(--muted);
+}
+.passkey-badges,
+.passkey-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.passkey-badges {
+  margin-block: 0.35rem;
+}
+.account-passkey-registration {
+  margin: 0;
+  padding: 1.25rem;
+  border-top: 0;
+}
+.passkey-required {
+  color: var(--signal);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
 .empty-state {
   margin: 0;
   padding: 2rem 1.25rem;
+  color: var(--muted);
+}
+
+.wallet-authorization {
+  max-width: 68rem;
+  min-height: calc(100svh - 11.25rem);
+  padding-block: clamp(4rem, 8vw, 7rem);
+}
+.wallet-heading {
+  max-width: 54rem;
+  margin-bottom: 3rem;
+}
+.wallet-heading > p:first-child {
+  color: var(--signal);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.wallet-heading h1 {
+  margin: 1rem 0 1.5rem;
+  font-family: var(--display);
+  font-size: clamp(3rem, 9vw, 7rem);
+  line-height: 0.82;
+  letter-spacing: -0.065em;
+}
+.wallet-heading h1 span {
+  color: var(--signal);
+}
+.wallet-heading .lede {
+  max-width: 58ch;
+}
+.wallet-request-ledger {
+  margin: 0;
+}
+.wallet-request-ledger > div {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.wallet-request-ledger dt,
+.wallet-passkey-form legend {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+.wallet-request-ledger dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.wallet-message-row dd {
+  white-space: pre-wrap;
+}
+.wallet-passkey-form {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem;
+}
+.wallet-passkey-form fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.wallet-passkey-form legend {
+  margin-bottom: 0.75rem;
+}
+#wallet-passkeys {
+  display: grid;
+  border-top: 1px solid var(--rule);
+}
+#wallet-passkeys label {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  gap: 0.75rem;
+  align-items: center;
+  min-height: 4rem;
+  padding: 0.75rem;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+  cursor: pointer;
+}
+#wallet-passkeys label:has(input:checked) {
+  border-color: var(--signal);
+  color: var(--signal);
+}
+#wallet-passkeys input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--signal);
+}
+#wallet-passkeys span {
+  display: grid;
+  gap: 0.2rem;
+}
+#wallet-passkeys small {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.wallet-passkey-form .fine-print {
+  max-width: 72ch;
+  margin: 0;
   color: var(--muted);
 }
 
@@ -1388,7 +1539,9 @@ h3 {
     flex-direction: column;
   }
   .account-ids > div,
-  .authorized-app {
+  .authorized-app,
+  .account-passkey,
+  .wallet-request-ledger > div {
     grid-template-columns: 1fr;
   }
   .passkey-registration {

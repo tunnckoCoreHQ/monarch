@@ -25,6 +25,7 @@ describe("downstream disclosure scope policy", () => {
       "chain_id",
       "cred",
       "pubkey",
+      "cosekey",
     ]);
     expect(OPTIONAL_DISCLOSURE_SCOPES).toEqual([
       "email",
@@ -36,6 +37,7 @@ describe("downstream disclosure scope policy", () => {
       "chain_id",
       "cred",
       "pubkey",
+      "cosekey",
     ]);
     expect(canonicalDisclosureScopes()).toEqual(["openid"]);
     expect(canonicalDisclosureScopes([])).toEqual(["openid"]);
@@ -64,6 +66,7 @@ describe("downstream disclosure scope policy", () => {
       chain_id: ["chain_id"],
       cred: ["cred"],
       pubkey: ["pubkey"],
+      cosekey: ["cosekey"],
     });
     expect(claimsForDisclosureScopes(["openid", "email", "avatar"])).toEqual([
       "pairwise_sub",
@@ -81,7 +84,7 @@ describe("downstream disclosure scope policy", () => {
       github: ["email", "handle", "name", "avatar"],
       twitter: ["handle", "name", "avatar"],
       ethereum: ["wallet", "chains", "chain_id"],
-      passkey: ["handle", "cred", "pubkey"],
+      passkey: ["handle", "cred", "pubkey", "cosekey"],
     });
     expect(() =>
       validateProviderDisclosureScopes("github", ["openid", "email", "handle", "name", "avatar"]),
@@ -94,7 +97,13 @@ describe("downstream disclosure scope policy", () => {
       validateProviderDisclosureScopes("ethereum", ["openid", "wallet", "chains", "chain_id"]),
     ).not.toThrow();
     expect(() =>
-      validateProviderDisclosureScopes("passkey", ["openid", "handle", "cred", "pubkey"]),
+      validateProviderDisclosureScopes("passkey", [
+        "openid",
+        "handle",
+        "cred",
+        "pubkey",
+        "cosekey",
+      ]),
     ).not.toThrow();
   });
 
@@ -111,6 +120,7 @@ describe("downstream disclosure scope policy", () => {
         chain_id: [],
         cred: [],
         pubkey: [],
+        cosekey: [],
       },
       github: {
         openid: [],
@@ -123,6 +133,7 @@ describe("downstream disclosure scope policy", () => {
         chain_id: [],
         cred: [],
         pubkey: [],
+        cosekey: [],
       },
       twitter: {
         openid: ["tweet.read", "users.read"],
@@ -135,6 +146,7 @@ describe("downstream disclosure scope policy", () => {
         chain_id: [],
         cred: [],
         pubkey: [],
+        cosekey: [],
       },
       ethereum: {
         openid: [],
@@ -147,6 +159,7 @@ describe("downstream disclosure scope policy", () => {
         chain_id: [],
         cred: [],
         pubkey: [],
+        cosekey: [],
       },
       passkey: {
         openid: [],
@@ -159,6 +172,7 @@ describe("downstream disclosure scope policy", () => {
         chain_id: [],
         cred: [],
         pubkey: [],
+        cosekey: [],
       },
     });
     expect(upstreamScopesForProvider("google", ["openid", "avatar", "email", "name"])).toEqual([

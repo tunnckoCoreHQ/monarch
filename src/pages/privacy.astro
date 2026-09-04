@@ -43,15 +43,7 @@ export const prerender = true;
         <div>
           <dt>WALLET + PASSKEY CREDENTIALS</dt>
           <dd>
-            Better Auth stores wallet addresses and authenticated chains in its wallet table, and passkey credential
-            IDs and public keys in its passkey table, because those values are required to verify later sign-ins.
-            Triad also stores the immutable canonical username and its account mapping to enforce uniqueness.
-            Triad does not disclose these values to an OAuth client by default. A client receives the canonical
-            passkey username as <code>preferred_username</code> only when it requests and the user approves
-            <code>handle</code>. A client receives credential material only when it requests and the user approves
-            <code>wallet</code>, <code>chains</code>, <code>chain_id</code>, <code>cred</code>, or <code>pubkey</code>.
-            The <code>chain_id</code> value identifies the chain used for the current SIWE session. Passkey credentials
-            are never linked to another Triad account.
+            Better Auth stores wallet addresses and authenticated chains in its wallet table, and passkey credential IDs and public keys in its passkey table, because those values are required to verify later sign-ins. Triad also stores the immutable canonical username and its account mapping to enforce uniqueness. A Triad account can retain multiple passkeys, and each credential belongs to only that account. Triad does not disclose these values to an OAuth client by default. A client receives the canonical passkey username as <code>preferred_username</code> only when it requests and the user approves <code>handle</code>. A client receives credential material only when it requests and the user approves <code>wallet</code>, <code>chains</code>, <code>chain_id</code>, <code>cred</code>, <code>pubkey</code>, or <code>cosekey</code>. The <code>chain_id</code> value identifies the chain used for the current SIWE session.
           </dd>
         </div>
         <div>
@@ -71,34 +63,24 @@ export const prerender = true;
             scopes and resource.
           </dd>
         </div>
+        <div>
+          <dt>WALLET REQUESTS</dt>
+          <dd>A Wallet Authorization temporarily stores the Triad Account, registered Client Application and redirect, callback state, requested message, selected Wallet Namespace and subject, Wallet Profile, Account Index, resolved path, applicable Chain ID, selected Passkey ID, WebAuthn challenge, exact Signing Envelope, expiry, and one-time consumption time. A Wallet Capability proof temporarily stores its Triad Account, selected Passkey ID, challenge, capability envelope, expiry, and one-time consumption time. Expired records are removed when another matching request starts or when the Triad Account is deleted.</dd>
+        </div>
       </dl>
     </section>
 
     <section class="legal-section" aria-labelledby="privacy-not-kept">
       <p class="section-kicker">02 / BOUNDARY</p>
       <h2 id="privacy-not-kept">WHAT IS NOT KEPT</h2>
-      <p>
-        Triad does not retain upstream provider access tokens, refresh tokens, or ID tokens after provider sign-in.
-        Triad also does not receive a provider password. Wallet and passkey credential material is retained only for
-        authentication and explicitly approved claims; it is not included in default client identity claims. The
-        provider remains responsible for data it keeps about your provider account.
-      </p>
-      <p>
-        Triad's application database does not store request IP addresses, authentication paths, or browser user-agent
-        strings. For rate limiting, Triad derives an opaque keyed bucket from normalized request input in memory and
-        stores only that bucket, its request count, and a timestamp.
-      </p>
+      <p>Triad does not retain upstream provider access tokens, refresh tokens, or ID tokens after provider sign-in. Triad also does not receive a provider password. Wallet and Passkey credential material is retained only for authentication and explicitly approved claims; it is not included in default client identity claims. Triad never receives or stores Passkey PRF outputs, Wallet Seeds, Derived Wallet private keys, or mnemonic phrases. The provider remains responsible for data it keeps about your provider account.</p>
+      <p>Triad's application database does not store request IP addresses, authentication paths, or browser user-agent strings. For rate limiting, Triad derives an opaque keyed bucket from normalized request input in memory and stores only that bucket, its request count, and a timestamp.</p>
     </section>
 
     <section class="legal-section" aria-labelledby="privacy-retention">
       <p class="section-kicker">03 / RETENTION</p>
       <h2 id="privacy-retention">WHEN RECORDS LEAVE</h2>
-      <p>
-        The encrypted profile envelope belongs to the account and is removed with it. Account deletion also removes
-        sessions, wallet or passkey credentials, provider accounts, device records, consents, grants, and
-        user-bound OAuth token records.
-        Database relationships remove other account-owned records when their user record is deleted.
-      </p>
+      <p>The encrypted profile envelope belongs to the Triad Account and is removed with it. Triad Account deletion also removes sessions, wallet or Passkey credentials, provider accounts, device and wallet request records, consents, grants, and Account Holder-bound OAuth token records. Database relationships remove other account-owned records when their account record is deleted.</p>
       <p>
         Already issued short-lived JWTs can remain verifiable until their expiry. Triad does not claim to revoke a
         provider session or delete data held by an upstream provider. Platform signing keys and anonymous protocol

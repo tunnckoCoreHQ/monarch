@@ -16,9 +16,13 @@ const DNS_OVER_HTTPS_URL = "https://cloudflare-dns.com/dns-query";
 const DNS_TIMEOUT_MS = 3_000;
 
 export type ResolveHostname = (hostname: string) => Promise<readonly string[]>;
+export type Fetcher = (
+  input: Parameters<typeof globalThis.fetch>[0],
+  init?: Parameters<typeof globalThis.fetch>[1],
+) => ReturnType<typeof globalThis.fetch>;
 
 export interface CimdAdmissionDependencies {
-  fetch?: typeof globalThis.fetch;
+  fetch?: Fetcher;
   resolveHostname?: ResolveHostname;
 }
 
@@ -32,7 +36,7 @@ interface DnsResponse {
   Status?: unknown;
 }
 
-async function queryDns(fetcher: typeof globalThis.fetch, hostname: string, type: "A" | "AAAA") {
+async function queryDns(fetcher: Fetcher, hostname: string, type: "A" | "AAAA") {
   const url = new URL(DNS_OVER_HTTPS_URL);
   url.searchParams.set("name", hostname);
   url.searchParams.set("type", type);
@@ -58,9 +62,7 @@ async function queryDns(fetcher: typeof globalThis.fetch, hostname: string, type
     .map((answer) => answer.data as string);
 }
 
-export function createDnsOverHttpsResolver(
-  fetcher: typeof globalThis.fetch = globalThis.fetch,
-): ResolveHostname {
+export function createDnsOverHttpsResolver(fetcher: Fetcher = globalThis.fetch): ResolveHostname {
   return async (hostname) => {
     const answers = await Promise.all([
       queryDns(fetcher, hostname, "A"),

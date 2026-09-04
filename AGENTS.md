@@ -1,36 +1,54 @@
-- always run final PR verification in this exact order: `vp run check`, `vp test --run`, then `vp run build`.
-- run the three verification commands sequentially. stop on the first failure, fix it, and restart from `vp run check`.
-- do not touch vite.config.ts!
-- always use typescript v6, for now.
-- always read `~/skills/chatgpt_system_prompt.md`; when writing code `~/skills/clean_code.md`; and if designing website/page/webapp/product `~/skills/product_design.md`
-- always use conventional commits
+# Project rules
 
-## Git and Github
+- Follow `~/skills/instructions.md`.
+- For code, follow `~/skills/clean_code.md`.
+- For UI work, follow `~/skills/product_design.md`.
+- Keep solutions small and direct.
+- Put generic reusable helpers in `src/utils.ts` and export them. Before adding a local helper, check the central utilities and existing exports so the same logic is not implemented twice.
+- Do not preserve superseded APIs or add regression tests for them during refactors.
+- Use TypeScript 7, pinned 7.0.2 is fine.
+- Do not edit `vite.config.ts` unless very necessary, ask the user to approve.
+- Use conventional commits. Obviously.
+- Do not hard-wrap prose.
+- Talk to the user in ASD-STE100 Simplified Technical English.
+- Never use any built-in browser or browser tool. Unless explicitly asked.
 
-- git and gh are routed by `gitswitch`. Inspect the repository remote url: if it includes `tunnckoCore` use `gitswitch switch tunnckoCore` and if it includes `olstenlarck` use `gitswitch switch olstenlarck`.
-- Git transport is SSH-only - both auth and signing - and SSH commit/tag signing is required. Both GitHub accounts use distinct P-256 keys for authentication and signing.
-- For git/gh ops: never change a remote to HTTPS. Do NOT install/use an HTTPS credential helper, do NOT run `gh auth setup-git`; do NOT migrate/copy authentication state, or change GitHub authentication/protocol state unless explicitly requested.
+## Verification
 
-## Merge pull requests
+Before a PR, run these sequentially and restart from the first command after any fix:
 
-- always squash merge pull requests.
-- never create a `Merge pull request ...` commit.
-- do not use a merge commit when the pull request can be squash merged.
+1. `vp run check`
+2. `vp test --run`
+3. `vp run build`
 
-## When a pull request is merged to `main` staging
+## Database migrations
 
-- stop all work in the feature worktree immediately after the merge.
-- use `git worktree list` to find the worktree that has `main` checked out.
-- change the working directory to the `main` worktree before any post-merge command.
-- update the `main` worktree to the merged `origin/main` commit. confirm that the current branch is `main` and that `HEAD` matches `origin/main`.
-- never clear D1, generate the schema, migrate, deploy, or make post-merge edits from the merged feature worktree.
-- `main` deploys to staging. work on `main` must not deploy to production.
-- never run `vp run deploy` from `main` unless the user explicitly requests a production deployment.
-- do not create another pull request for the post-merge database reset or staging deployment.
-- keep the existing D1 database resource and database ID. never delete and recreate D1 for this workflow.
-- clear the existing D1 database in place. remove its application data, schema, and migration records without deleting the D1 resource.
-- run `vp run db:generate` after the database is clear.
-- run `vp run db:migrate` after schema generation succeeds.
-- deploy only staging with `vp run deploy:staging`.
-- wait for the Cloudflare checks and deployment to finish.
-- validate the staging origin after deployment.
+- Never modify `migrations/0001-initial.sql`.
+- Add a new numbered migration for every schema change.
+- Never modify a migration already applied to production.
+- `vp run db:generate` creates `.generated/auth-schema.sql` for reference only.
+- Apply migrations with `vp run db:migrate` or `vp run db:migrate:local`.
+
+## Git and GitHub
+
+- Follow the Git and GitHub rules in `~/skills/instructions.md`.
+- Squash-merge PRs. Never create merge commits.
+- Use the babysit pr skill, only when asked, and only if it exists in the project.
+
+## After merging to `main`
+
+1. Stop using the feature worktree.
+2. Switch to the `main` worktree.
+3. Update `main` to `origin/main` and verify both commits match.
+4. Never delete or recreate the D1 database.
+5. Run `vp run db:migrate`.
+6. Run `vp run deploy:staging`.
+7. Wait for deployment and validate staging.
+
+## Production and Staging management
+
+- The "prod" means production environment at `triad.wgw.lol`.
+- The "staging" means staging environment at `staging-triad-auth.equator-owl-studio.workers.dev`.
+- Prod is sitting on `prod` branch. Staging is on `main`.
+- Never deploy production from `main` unless explicitly requested.
+- Never promote from `main` to `prod` automatically.

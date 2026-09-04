@@ -1,5 +1,7 @@
 import { decodeProtectedHeader, importJWK, jwtVerify } from "jose";
 
+import { base64UrlEncode, decodePublicJwk, type PublicJwk } from "../utils";
+
 export interface AuthorizationServerMetadata {
   authorization_endpoint: string;
   device_authorization_endpoint: string;
@@ -35,7 +37,8 @@ export type ProfileScope =
   | "chains"
   | "chain_id"
   | "cred"
-  | "pubkey";
+  | "pubkey"
+  | "cosekey";
 type DisclosureScope = "openid" | ProfileScope;
 
 export interface ProviderCapability {
@@ -53,7 +56,8 @@ export interface VerifiedProfile {
   chains?: number[];
   chainId?: number;
   cred?: string;
-  pubkey?: string;
+  pubkey?: PublicJwk;
+  cosekey?: string;
 }
 
 export interface DevicePollDecision {
@@ -96,6 +100,7 @@ const profileScopeOrder: readonly ProfileScope[] = [
   "chain_id",
   "cred",
   "pubkey",
+  "cosekey",
 ];
 const disclosureScopeOrder: readonly DisclosureScope[] = ["openid", ...profileScopeOrder];
 
@@ -106,15 +111,8 @@ export const demoProviderCapabilities: readonly ProviderCapability[] = [
   { id: "github", scopes: ["email", "handle", "name", "avatar"] },
   { id: "twitter", scopes: ["handle", "name", "avatar"] },
   { id: "ethereum", scopes: ["wallet", "chains", "chain_id"] },
-  { id: "passkey", scopes: ["handle", "cred", "pubkey"] },
+  { id: "passkey", scopes: ["handle", "cred", "pubkey", "cosekey"] },
 ];
-
-function base64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replace(/=+$/, "");
-}
 
 async function json(response: Response): Promise<unknown> {
   if (!response.ok) {
@@ -210,6 +208,12 @@ function optionalChains(payload: Record<string, unknown>): number[] | undefined 
   return value;
 }
 
+function optionalPublicJwk(payload: Record<string, unknown>): PublicJwk | undefined {
+  const value = payload.pubkey;
+
+  return value === undefined ? undefined : decodePublicJwk(value);
+}
+
 function optionalValue<Key extends keyof VerifiedProfile>(key: Key, value: VerifiedProfile[Key]) {
   return value === undefined ? {} : ({ [key]: value } as Pick<VerifiedProfile, Key>);
 }
@@ -231,7 +235,8 @@ function verifiedProfile(payload: Record<string, unknown>): VerifiedProfile {
     ...optionalValue("chains", optionalChains(payload)),
     ...optionalValue("chainId", optionalChainId(payload, "chain_id")),
     ...optionalValue("cred", optionalString(payload, "cred")),
-    ...optionalValue("pubkey", optionalString(payload, "pubkey")),
+    ...optionalValue("pubkey", optionalPublicJwk(payload)),
+    ...optionalValue("cosekey", optionalString(payload, "cosekey")),
   };
 }
 
@@ -250,11 +255,11 @@ export async function createPkce(): Promise<{
   state: string;
   verifier: string;
 }> {
-  const verifier = base64url(crypto.getRandomValues(new Uint8Array(64)));
-  const challenge = base64url(
+  const verifier = base64UrlEncode(crypto.getRandomValues(new Uint8Array(64)));
+  const challenge = base64UrlEncode(
     new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))),
   );
-  const state = base64url(crypto.getRandomValues(new Uint8Array(32)));
+  const state = base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));
 
   return { challenge, state, verifier };
 }

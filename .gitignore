@@ -2,6 +2,7 @@ node_modules/
 dist/
 .astro/
 .wrangler/
+.generated/
 .worktrees/
 .dev.vars
 .dev.vars.*

@@ -7,6 +7,7 @@ import type {
 } from "@better-auth/oauth-provider";
 import type { JwtOptions } from "better-auth/plugins";
 
+import { decodePublicJwk, type PublicJwk } from "../../utils";
 import {
   DISCLOSURE_CLAIMS,
   DISCLOSURE_SCOPES,
@@ -36,7 +37,8 @@ export interface TokenProfileClaims {
   picture?: string;
   wallet?: string;
   cred?: string;
-  pubkey?: string;
+  pubkey?: PublicJwk;
+  cosekey?: string;
 }
 
 export interface TokenSessionClaimResolver {
@@ -110,8 +112,20 @@ function assignProfileClaim(
   if (value === undefined) {
     throw new Error(`Token profile resolver did not return the required ${claim} claim`);
   }
-  const valid = claim === "email_verified" ? typeof value === "boolean" : typeof value === "string";
-  if (!valid) {
+  if (claim === "pubkey") {
+    claims.pubkey = decodePublicJwk(value);
+
+    return;
+  }
+  if (claim === "email_verified") {
+    if (typeof value !== "boolean") {
+      throw new Error(`Token profile resolver returned an invalid ${claim} claim`);
+    }
+    claims.email_verified = value;
+
+    return;
+  }
+  if (typeof value !== "string") {
     throw new Error(`Token profile resolver returned an invalid ${claim} claim`);
   }
 
@@ -279,6 +293,7 @@ export function createTokenComposition({
       "chain_id",
       "cred",
       "pubkey",
+      "cosekey",
     ],
   } as NonNullable<OAuthOptions<Scope[]>["advertisedMetadata"]> & {
     subject_types_supported: readonly ["pairwise"];

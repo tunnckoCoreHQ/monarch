@@ -33,6 +33,7 @@ describe("Triad OAuth resource fragment", () => {
             "chain_id",
             "cred",
             "pubkey",
+            "cosekey",
           ],
           disabled: false,
           identifier: "https://auth.example.com/demo",
@@ -50,6 +51,7 @@ describe("Triad OAuth resource fragment", () => {
         "chain_id",
         "cred",
         "pubkey",
+        "cosekey",
       ],
     });
     expect(fragment.oauthProviderOptions.resources?.[0]).not.toHaveProperty("refreshTokenTtl");
@@ -163,6 +165,7 @@ describe("Triad RFC 9728 protected-resource metadata", () => {
             "chain_id",
             "cred",
             "pubkey",
+            "cosekey",
           ],
         },
       },

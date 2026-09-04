@@ -1,7 +1,7 @@
 import { init } from "@paralleldrive/cuid2";
 import { hexToBytes } from "viem";
 
-import { base64UrlEncode } from "./encryption";
+import { base64UrlEncode } from "../../utils";
 import { sha256Hex } from "./subjects";
 
 const BASE_USERNAME_PATTERN = /^[a-z0-9][a-z0-9-]{2,23}$/;
@@ -50,6 +50,15 @@ export async function passkeyAccountSubject(username: string): Promise<string> {
 
 export async function passkeyWebAuthnUserId(username: string): Promise<string> {
   const accountSub = await passkeyAccountSubject(username);
+
+  return accountSubjectWebAuthnUserId(accountSub);
+}
+
+export function accountSubjectWebAuthnUserId(accountSub: string): string {
+  if (!/^acc_[0-9a-f]{64}$/.test(accountSub)) {
+    throw new Error("Triad account subject is invalid");
+  }
+
   const accountDigest = accountSub.slice("acc_".length);
 
   return base64UrlEncode(hexToBytes(`0x${accountDigest}`));

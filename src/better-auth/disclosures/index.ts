@@ -8,6 +8,7 @@ export const OPTIONAL_DISCLOSURE_SCOPES = [
   "chain_id",
   "cred",
   "pubkey",
+  "cosekey",
 ] as const;
 export const DISCLOSURE_SCOPES = ["openid", ...OPTIONAL_DISCLOSURE_SCOPES] as const;
 
@@ -26,6 +27,7 @@ export const DISCLOSURE_CLAIMS = {
   chain_id: ["chain_id"],
   cred: ["cred"],
   pubkey: ["pubkey"],
+  cosekey: ["cosekey"],
 } as const satisfies Record<DisclosureScope, readonly string[]>;
 
 export type DisclosureClaim = (typeof DISCLOSURE_CLAIMS)[DisclosureScope][number];
@@ -35,7 +37,7 @@ export const PROVIDER_DISCLOSURE_SCOPES = {
   github: ["email", "handle", "name", "avatar"],
   twitter: ["handle", "name", "avatar"],
   ethereum: ["wallet", "chains", "chain_id"],
-  passkey: ["handle", "cred", "pubkey"],
+  passkey: ["handle", "cred", "pubkey", "cosekey"],
 } as const satisfies Record<DisclosureProvider, readonly OptionalDisclosureScope[]>;
 
 export const PROVIDER_UPSTREAM_SCOPE_MAP = {
@@ -50,6 +52,7 @@ export const PROVIDER_UPSTREAM_SCOPE_MAP = {
     chain_id: [],
     cred: [],
     pubkey: [],
+    cosekey: [],
   },
   github: {
     openid: [],
@@ -62,6 +65,7 @@ export const PROVIDER_UPSTREAM_SCOPE_MAP = {
     chain_id: [],
     cred: [],
     pubkey: [],
+    cosekey: [],
   },
   twitter: {
     openid: ["tweet.read", "users.read"],
@@ -74,6 +78,7 @@ export const PROVIDER_UPSTREAM_SCOPE_MAP = {
     chain_id: [],
     cred: [],
     pubkey: [],
+    cosekey: [],
   },
   ethereum: {
     openid: [],
@@ -86,6 +91,7 @@ export const PROVIDER_UPSTREAM_SCOPE_MAP = {
     chain_id: [],
     cred: [],
     pubkey: [],
+    cosekey: [],
   },
   passkey: {
     openid: [],
@@ -98,6 +104,7 @@ export const PROVIDER_UPSTREAM_SCOPE_MAP = {
     chain_id: [],
     cred: [],
     pubkey: [],
+    cosekey: [],
   },
 } as const satisfies Record<DisclosureProvider, Record<DisclosureScope, readonly string[]>>;
 

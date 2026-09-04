@@ -31,6 +31,29 @@ export const prerender = true;
         </dl>
       </section>
 
+      <section id="account-passkey-panel" class="account-panel" aria-labelledby="wallet-passkeys-title">
+        <div class="panel-heading">
+          <h2 id="wallet-passkeys-title">PASSKEYS</h2>
+          <span id="passkey-count">0</span>
+        </div>
+        <p id="account-passkey-copy" class="account-panel-copy">Loading passkey roles...</p>
+        <div id="account-passkeys" class="account-passkeys"></div>
+        <form id="attach-passkey-form" class="passkey-registration account-passkey-registration">
+          <label for="attached-passkey-name">PASSKEY NAME</label>
+          <input
+            id="attached-passkey-name"
+            name="attached-passkey-name"
+            type="text"
+            autocomplete="off"
+            minlength="1"
+            maxlength="64"
+            placeholder="Phone, security key, laptop"
+            required
+          />
+          <button id="attach-passkey" class="button secondary" type="submit">ATTACH PASSKEY</button>
+        </form>
+      </section>
+
       <section class="account-panel" aria-labelledby="apps-title">
         <div class="panel-heading"><h2 id="apps-title">AUTHORIZED APPS</h2><span id="app-count">0</span></div>
         <p class="fine-print">
@@ -65,11 +88,18 @@ export const prerender = true;
     import {
       startAuthentication,
       startRegistration,
+      type AuthenticationResponseJSON,
       type PublicKeyCredentialCreationOptionsJSON,
       type PublicKeyCredentialRequestOptionsJSON,
     } from "@simplewebauthn/browser";
     import { inspectOAuthQuery } from "../scripts/demo-protocol";
-    import { passkeyWebAuthnUserId } from "../better-auth/identity/passkey-username";
+    import { passkeyPrfResult, signWithPrfWallet, walletPrfExtension } from "../scripts/prf-wallet";
+    import { isRecord, isoDate, jsonResponse, responseError } from "../utils";
+    import {
+      accountSubjectWebAuthnUserId,
+      passkeyWebAuthnUserId,
+    } from "../better-auth/identity/passkey-username";
+    import { SOCIAL_PROVIDERS } from "../better-auth/identity/subjects";
 
     type LinkedAccount = { providerId?: string };
     type OAuthConsent = {
@@ -81,12 +111,183 @@ export const prerender = true;
     };
     type PublicClient = { client_id?: string; client_name?: string };
     type SessionResult = { user?: { id?: string; provider?: string } } | null;
+    type AccountPasskey = {
+      id: string;
+      name: string | null;
+      backedUp: boolean;
+      createdAt: string | number | null;
+      role: "identity" | "attached";
+      walletCapable: boolean;
+      removable: boolean;
+    };
+
+    interface WalletCapabilityOptions {
+      request_id: string;
+      options: PublicKeyCredentialRequestOptionsJSON;
+      prf_salt: string;
+      signing_message: string;
+      wallet_profile: import("../better-auth/wallet").WalletProfileId;
+      account_index: number;
+      expires_at: string;
+    }
 
     interface EthereumProvider {
       request(input: { method: string; params?: unknown[] }): Promise<unknown>;
     }
 
-    const providers = ["google", "github", "twitter"] as const;
+    const providers = SOCIAL_PROVIDERS;
+
+    function decodeNothing(_value: unknown): undefined {
+      return undefined;
+    }
+
+    function decodeOptionalString(value: unknown, property: string, message: string): Record<string, string | undefined> {
+      if (!isRecord(value) || (value[property] !== undefined && typeof value[property] !== "string")) {
+        throw new Error(message);
+      }
+
+      return { [property]: typeof value[property] === "string" ? value[property] : undefined };
+    }
+
+    function decodeAuthenticationOptions(value: unknown): PublicKeyCredentialRequestOptionsJSON {
+      if (!isRecord(value) || typeof value.challenge !== "string") {
+        throw new Error("Triad returned invalid passkey authentication options.");
+      }
+
+      return value as unknown as PublicKeyCredentialRequestOptionsJSON;
+    }
+
+    function decodeRegistrationOptions(value: unknown): PublicKeyCredentialCreationOptionsJSON {
+      if (!isRecord(value) || typeof value.challenge !== "string" || !isRecord(value.user) || !Array.isArray(value.pubKeyCredParams)) {
+        throw new Error("Triad returned invalid passkey registration options.");
+      }
+
+      return value as unknown as PublicKeyCredentialCreationOptionsJSON;
+    }
+
+    function decodeAccountPasskeys(value: unknown): AccountPasskey[] {
+      if (!Array.isArray(value)) {
+        throw new Error("Triad returned an invalid Passkey list.");
+      }
+
+      return value.map((passkey) => {
+        if (
+          !isRecord(passkey) ||
+          typeof passkey.id !== "string" ||
+          (passkey.name !== null && typeof passkey.name !== "string") ||
+          typeof passkey.backedUp !== "boolean" ||
+          (passkey.role !== "identity" && passkey.role !== "attached") ||
+          typeof passkey.walletCapable !== "boolean" ||
+          typeof passkey.removable !== "boolean"
+        ) {
+          throw new Error("Triad returned an invalid Passkey.");
+        }
+
+        return {
+          id: passkey.id,
+          name: passkey.name,
+          backedUp: passkey.backedUp,
+          createdAt:
+            typeof passkey.createdAt === "number" || typeof passkey.createdAt === "string"
+              ? passkey.createdAt
+              : null,
+          role: passkey.role,
+          walletCapable: passkey.walletCapable,
+          removable: passkey.removable,
+        };
+      });
+    }
+
+    function decodeWalletCapabilityOptions(value: unknown): WalletCapabilityOptions {
+      if (
+        !isRecord(value) ||
+        typeof value.request_id !== "string" ||
+        !isRecord(value.options) ||
+        typeof value.options.challenge !== "string" ||
+        typeof value.prf_salt !== "string" ||
+        typeof value.signing_message !== "string" ||
+        value.wallet_profile !== "evm" ||
+        value.account_index !== 0 ||
+        typeof value.expires_at !== "string"
+      ) {
+        throw new Error("Triad returned invalid Wallet Capability options.");
+      }
+
+      return {
+        request_id: value.request_id,
+        options: value.options as unknown as PublicKeyCredentialRequestOptionsJSON,
+        prf_salt: value.prf_salt,
+        signing_message: value.signing_message,
+        wallet_profile: value.wallet_profile,
+        account_index: value.account_index,
+        expires_at: value.expires_at,
+      };
+    }
+
+    function decodePublicClient(value: unknown): PublicClient {
+      if (!isRecord(value)) {
+        throw new Error("Triad returned invalid client metadata.");
+      }
+
+      return {
+        ...(typeof value.client_id === "string" ? { client_id: value.client_id } : {}),
+        ...(typeof value.client_name === "string" ? { client_name: value.client_name } : {}),
+      };
+    }
+
+    function decodeSession(value: unknown): SessionResult {
+      if (value === null) {
+        return null;
+      }
+      if (!isRecord(value) || !isRecord(value.user)) {
+        throw new Error("Triad returned an invalid session.");
+      }
+
+      return {
+        user: {
+          ...(typeof value.user.id === "string" ? { id: value.user.id } : {}),
+          ...(typeof value.user.provider === "string" ? { provider: value.user.provider } : {}),
+        },
+      };
+    }
+
+    function decodeLinkedAccounts(value: unknown): LinkedAccount[] {
+      if (!Array.isArray(value)) {
+        throw new Error("Triad returned invalid linked identities.");
+      }
+
+      return value.map((account) => {
+        if (!isRecord(account)) {
+          throw new Error("Triad returned an invalid linked identity.");
+        }
+
+        return typeof account.providerId === "string" ? { providerId: account.providerId } : {};
+      });
+    }
+
+    function decodeOAuthConsents(value: unknown): OAuthConsent[] {
+      if (!Array.isArray(value)) {
+        throw new Error("Triad returned invalid application consents.");
+      }
+
+      return value.map((consent) => {
+        if (!isRecord(consent)) {
+          throw new Error("Triad returned an invalid application consent.");
+        }
+
+        return {
+          ...(typeof consent.clientId === "string" ? { clientId: consent.clientId } : {}),
+          ...(typeof consent.id === "string" ? { id: consent.id } : {}),
+          ...(Array.isArray(consent.resources) && consent.resources.every((resource) => typeof resource === "string")
+            ? { resources: consent.resources }
+            : {}),
+          ...(Array.isArray(consent.scopes) && consent.scopes.every((scope) => typeof scope === "string")
+            ? { scopes: consent.scopes }
+            : {}),
+          ...(typeof consent.updatedAt === "string" ? { updatedAt: consent.updatedAt } : {}),
+        };
+      });
+    }
     const content = document.querySelector<HTMLElement>("#account-content")!;
     const signedOut = document.querySelector<HTMLElement>("#signed-out")!;
     const error = document.querySelector<HTMLElement>("#me-error")!;
@@ -96,17 +297,16 @@ export const prerender = true;
     const appCount = document.querySelector<HTMLElement>("#app-count")!;
     const list = document.querySelector<HTMLElement>("#authorized-apps")!;
     const providerActions = document.querySelector<HTMLElement>("#account-provider-actions")!;
+    const passkeyList = document.querySelector<HTMLElement>("#account-passkeys")!;
+    const passkeyCount = document.querySelector<HTMLElement>("#passkey-count")!;
+    const passkeyCopy = document.querySelector<HTMLElement>("#account-passkey-copy")!;
+    const attachPasskeyForm = document.querySelector<HTMLFormElement>("#attach-passkey-form")!;
+    const attachPasskeyButton = document.querySelector<HTMLButtonElement>("#attach-passkey")!;
+    const attachedPasskeyName = document.querySelector<HTMLInputElement>("#attached-passkey-name")!;
     let loadController: AbortController | null = null;
     let loading = false;
-
-    function responseError(body: unknown, fallback: string): Error {
-      if (body && typeof body === "object") {
-        const candidate = body as { error?: string; message?: string };
-        return new Error(candidate.message ?? candidate.error ?? fallback);
-      }
-
-      return new Error(fallback);
-    }
+    let activeAccountSub: string | undefined;
+    let activeProvider: string | undefined;
 
     function showError(reason: unknown, fallback: string) {
       error.textContent = reason instanceof Error ? reason.message : fallback;
@@ -118,6 +318,9 @@ export const prerender = true;
     function setMutationControls(disabled: boolean) {
       logout.disabled = disabled;
       deleteAccountButton.disabled = disabled;
+      attachPasskeyForm.querySelectorAll<HTMLButtonElement | HTMLInputElement>("button, input").forEach((control) => {
+        control.disabled = disabled;
+      });
       providerActions.querySelectorAll<HTMLButtonElement | HTMLInputElement>("button, input").forEach((control) => {
         control.disabled = disabled;
       });
@@ -126,25 +329,37 @@ export const prerender = true;
       });
     }
 
-    async function jsonResponse<T>(response: Response, fallback: string): Promise<T> {
-      const body = (await response.json()) as T;
-      if (!response.ok) {
-        throw responseError(body, fallback);
-      }
-
-      return body;
-    }
-
     function currentOAuthQuery(): string | undefined {
-      if (!location.search) {
+      if (!location.search || returnDestination()) {
         return undefined;
       }
 
       return inspectOAuthQuery(location.search).oauthQuery;
     }
 
+    function returnDestination(): string | undefined {
+      const query = new URLSearchParams(location.search);
+      const values = query.getAll("return_to");
+      if (values.length !== 1) {
+        return undefined;
+      }
+
+      try {
+        const target = new URL(values[0]!, location.origin);
+        if (target.origin !== location.origin || target.pathname !== "/wallet/authorize") {
+          return undefined;
+        }
+
+        return `${target.pathname}${target.search}${target.hash}`;
+      } catch {
+        return undefined;
+      }
+    }
+
     function requestedScopes(): readonly string[] {
-      return location.search ? inspectOAuthQuery(location.search).scopes : ["openid"];
+      return location.search && !returnDestination()
+        ? inspectOAuthQuery(location.search).scopes
+        : ["openid"];
     }
 
     function requestedProvider(): "ethereum" | "passkey" | undefined {
@@ -171,13 +386,19 @@ export const prerender = true;
         github: ["openid", "email", "handle", "name", "avatar"],
         twitter: ["openid", "handle", "name", "avatar"],
         ethereum: ["openid", "wallet", "chains", "chain_id"],
-        passkey: ["openid", "handle", "cred", "pubkey"],
+        passkey: ["openid", "handle", "cred", "pubkey", "cosekey"],
       };
 
       return requestedScopes().every((scope) => capabilities[provider]?.includes(scope));
     }
 
     function resumeAuthorization() {
+      const destination = returnDestination();
+      if (destination) {
+        location.assign(destination);
+        return;
+      }
+
       const oauthQuery = currentOAuthQuery();
       location.assign(oauthQuery ? `/api/auth/oauth2/authorize?${oauthQuery}` : "/me");
     }
@@ -200,10 +421,14 @@ export const prerender = true;
             provider,
             ...(oauthQuery
               ? { oauth_query: oauthQuery }
-              : { callbackURL: new URL("/me", location.origin).href }),
+              : {
+                  callbackURL: new URL(returnDestination() ?? "/me", location.origin).href,
+                }),
           }),
         });
-        const body = await jsonResponse<{ url?: string }>(response, "Provider sign-in could not start.");
+        const body = await jsonResponse(response, "Provider sign-in could not start.", (value) =>
+          decodeOptionalString(value, "url", "Provider sign-in returned an invalid destination."),
+        );
         if (!body.url) {
           throw new Error("Provider sign-in did not return a destination.");
         }
@@ -269,28 +494,6 @@ export const prerender = true;
       ].join("\n");
     }
 
-    function base64Url(bytes: Uint8Array): string {
-      return btoa(String.fromCharCode(...bytes))
-        .replaceAll("+", "-")
-        .replaceAll("/", "_")
-        .replace(/=+$/, "");
-    }
-
-    function passkeyPrfResult(extensionResults: unknown): Uint8Array {
-      const prf =
-        typeof extensionResults === "object" && extensionResults !== null
-          ? Reflect.get(extensionResults, "prf")
-          : undefined;
-      const results = typeof prf === "object" && prf !== null ? Reflect.get(prf, "results") : undefined;
-      const first =
-        typeof results === "object" && results !== null ? Reflect.get(results, "first") : undefined;
-      if (!(first instanceof ArrayBuffer) || first.byteLength !== 32) {
-        throw new Error("This passkey did not produce the required PRF result.");
-      }
-
-      return new Uint8Array(first);
-    }
-
     async function signInWithEthereum(button: HTMLButtonElement) {
       setMutationControls(true);
       error.hidden = true;
@@ -310,9 +513,10 @@ export const prerender = true;
           headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify({ walletAddress: address, chainId }),
         });
-        const { nonce } = await jsonResponse<{ nonce?: string }>(
+        const { nonce } = await jsonResponse(
           nonceResponse,
           "Triad could not issue a wallet challenge.",
+          (value) => decodeOptionalString(value, "nonce", "Triad returned an invalid wallet challenge."),
         );
         if (!nonce || !/^[A-Za-z0-9]{8,}$/.test(nonce)) {
           throw new Error("Triad returned an invalid wallet challenge.");
@@ -333,7 +537,7 @@ export const prerender = true;
           headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify({ message, signature, walletAddress: address, chainId }),
         });
-        await jsonResponse(verifyResponse, "Triad rejected the wallet signature.");
+        await jsonResponse(verifyResponse, "Triad rejected the wallet signature.", decodeNothing);
         resumeAuthorization();
       } catch (reason) {
         button.textContent = "RETRY ETHEREUM";
@@ -346,29 +550,22 @@ export const prerender = true;
       const optionsResponse = await fetch("/api/auth/passkey/generate-authenticate-options", {
         headers: { accept: "application/json" },
       });
-      const options = await jsonResponse<PublicKeyCredentialRequestOptionsJSON>(
+      const options = await jsonResponse(
         optionsResponse,
         "Triad could not issue a passkey challenge.",
+        decodeAuthenticationOptions,
       );
-      const prfOptions = {
-        ...options,
-        extensions: {
-          ...options.extensions,
-          prf: { eval: { first: crypto.getRandomValues(new Uint8Array(32)) } },
-        },
-      } as unknown as PublicKeyCredentialRequestOptionsJSON;
-      const response = await startAuthentication({ optionsJSON: prfOptions });
-      const first = passkeyPrfResult(response.clientExtensionResults);
+      const response = await startAuthentication({ optionsJSON: options });
       const serializedResponse = {
         ...response,
-        clientExtensionResults: { prf: { results: { first: base64Url(first) } } },
+        clientExtensionResults: {},
       };
       const verifyResponse = await fetch("/api/auth/passkey/verify-authentication", {
         method: "POST",
         headers: { accept: "application/json", "content-type": "application/json" },
         body: JSON.stringify({ response: serializedResponse }),
       });
-      await jsonResponse(verifyResponse, "Triad rejected the passkey assertion.");
+      await jsonResponse(verifyResponse, "Triad rejected the passkey assertion.", decodeNothing);
     }
 
     async function signInWithPasskey(button: HTMLButtonElement) {
@@ -403,41 +600,262 @@ export const prerender = true;
         const optionsResponse = await fetch(endpoint, {
           headers: { accept: "application/json" },
         });
-        const options = await jsonResponse<PublicKeyCredentialCreationOptionsJSON>(
+        const options = await jsonResponse(
           optionsResponse,
           "Triad could not issue a passkey registration challenge.",
+          decodeRegistrationOptions,
         );
-        const p256Algorithms = options.pubKeyCredParams.filter((parameter) => parameter.alg === -7);
-        if (p256Algorithms.length === 0) {
-          throw new Error("Triad did not offer the required ES256 passkey algorithm.");
-        }
         const userId = await passkeyWebAuthnUserId(options.user.name);
         const response = await startRegistration({
           optionsJSON: {
             ...options,
             user: { ...options.user, id: userId },
-            pubKeyCredParams: p256Algorithms,
           },
         });
-        const extensionResults = response.clientExtensionResults as unknown as {
-          prf?: { enabled?: boolean };
-        };
-        if (extensionResults.prf?.enabled !== true) {
-          throw new Error("This passkey does not support the required PRF extension.");
-        }
-
         const verifyResponse = await fetch("/api/auth/passkey/verify-registration", {
           method: "POST",
           headers: { accept: "application/json", "content-type": "application/json" },
           body: JSON.stringify({ response, createSession: true }),
         });
-        await jsonResponse(verifyResponse, "Triad rejected the passkey registration.");
+        await jsonResponse(verifyResponse, "Triad rejected the passkey registration.", decodeNothing);
 
         resumeAuthorization();
       } catch (reason) {
         button.textContent = "RETRY REGISTER PASSKEY";
         setMutationControls(false);
         showError(reason, "Passkey registration could not be completed.");
+      }
+    }
+
+    async function accountPasskeys(signal?: AbortSignal): Promise<AccountPasskey[]> {
+      const response = await fetch("/api/wallet/passkeys", {
+        method: "POST",
+        headers: { accept: "application/json", "content-type": "application/json" },
+        body: JSON.stringify({}),
+        signal,
+      });
+
+      return jsonResponse(response, "Could not load account passkeys.", decodeAccountPasskeys);
+    }
+
+    // A wallet-broker failure must not hide sign-out and consent controls.
+    async function loadableAccountPasskeys(
+      signal: AbortSignal,
+    ): Promise<AccountPasskey[] | undefined> {
+      try {
+        return await accountPasskeys(signal);
+      } catch (reason) {
+        if (reason instanceof DOMException && reason.name === "AbortError") {
+          throw reason;
+        }
+
+        return undefined;
+      }
+    }
+
+    async function removePasskey(passkey: AccountPasskey, button: HTMLButtonElement) {
+      if (!window.confirm(`Remove ${passkey.name?.trim() || "this passkey"} from this Triad account?`)) {
+        return;
+      }
+
+      setMutationControls(true);
+      error.hidden = true;
+      retry.hidden = true;
+      button.textContent = "REMOVING PASSKEY";
+
+      try {
+        const response = await fetch("/api/auth/passkey/delete-passkey", {
+          method: "POST",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          body: JSON.stringify({ id: passkey.id }),
+        });
+        await jsonResponse(response, "Could not remove this passkey.", decodeNothing);
+        renderAccountPasskeys(await accountPasskeys());
+      } catch (reason) {
+        button.textContent = "RETRY REMOVE";
+        showError(reason, "Could not remove this passkey.");
+      } finally {
+        setMutationControls(false);
+      }
+    }
+
+    async function enableWalletCapability(passkey: AccountPasskey, button: HTMLButtonElement) {
+      setMutationControls(true);
+      error.hidden = true;
+      retry.hidden = true;
+      button.textContent = "CHECKING PASSKEY";
+
+      try {
+        const optionsResponse = await fetch("/api/wallet/capability/options", {
+          method: "POST",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          body: JSON.stringify({ credential_id: passkey.id }),
+        });
+        const capability = await jsonResponse(
+          optionsResponse,
+          "Triad could not issue the Wallet Capability challenge.",
+          decodeWalletCapabilityOptions,
+        );
+        const assertion = await startAuthentication({
+          optionsJSON: {
+            ...capability.options,
+            extensions: walletPrfExtension(capability.prf_salt),
+          },
+        });
+        let prfRoot: Uint8Array<ArrayBuffer>;
+        try {
+          prfRoot = passkeyPrfResult(assertion.clientExtensionResults);
+        } catch {
+          throw new Error("This Passkey is not Wallet capable.");
+        }
+        button.textContent = "PROVING WALLET";
+        const wallet = await signWithPrfWallet(
+          prfRoot,
+          capability.wallet_profile,
+          capability.account_index,
+          capability.signing_message,
+        );
+        const { clientExtensionResults: _privatePrfOutput, ...assertionWithoutExtensions } = assertion;
+        const serverAssertion: AuthenticationResponseJSON = {
+          ...assertionWithoutExtensions,
+          clientExtensionResults: {},
+        };
+        const completeResponse = await fetch("/api/wallet/capability/complete", {
+          method: "POST",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          body: JSON.stringify({
+            request_id: capability.request_id,
+            response: serverAssertion,
+            address: wallet.address,
+            signature: wallet.signature,
+          }),
+        });
+        await jsonResponse(completeResponse, "Triad rejected the Wallet Capability proof.", (value) => {
+          if (!isRecord(value) || value.wallet_capable !== true) {
+            throw new Error("Triad did not record Wallet Capability.");
+          }
+
+          return true;
+        });
+        renderAccountPasskeys(await accountPasskeys());
+      } catch (reason) {
+        button.textContent = "RETRY ENABLE WALLET";
+        showError(reason, "Wallet Capability could not be established.");
+      } finally {
+        setMutationControls(false);
+      }
+    }
+
+    function renderAccountPasskeys(passkeys: AccountPasskey[]) {
+      passkeyList.replaceChildren();
+      passkeyCount.textContent = String(passkeys.length);
+      if (passkeys.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "empty-state";
+        empty.textContent = "No passkey is attached to this account.";
+        passkeyList.append(empty);
+        return;
+      }
+
+      for (const passkey of passkeys) {
+        const row = document.createElement("article");
+        row.className = "account-passkey";
+        const copy = document.createElement("div");
+        const title = document.createElement("h3");
+        title.textContent = passkey.name?.trim() || "Unnamed passkey";
+        const detail = document.createElement("small");
+        detail.textContent = `${passkey.backedUp ? "SYNCED" : "DEVICE-BOUND"} · ${isoDate(passkey.createdAt, "DATE UNAVAILABLE")}`;
+        const badges = document.createElement("div");
+        badges.className = "passkey-badges";
+        const role = document.createElement("span");
+        role.className = "passkey-required";
+        role.textContent = passkey.role === "identity" ? "IDENTITY" : "ATTACHED";
+        badges.append(role);
+        if (passkey.walletCapable) {
+          const wallet = document.createElement("span");
+          wallet.className = "passkey-required";
+          wallet.textContent = "WALLET";
+          badges.append(wallet);
+        }
+        copy.append(title, badges, detail);
+
+        const actions = document.createElement("div");
+        actions.className = "passkey-actions";
+        if (!passkey.walletCapable) {
+          const enableWallet = document.createElement("button");
+          enableWallet.className = "button secondary";
+          enableWallet.type = "button";
+          enableWallet.textContent = "ENABLE WALLET";
+          enableWallet.addEventListener("click", () => {
+            void enableWalletCapability(passkey, enableWallet);
+          });
+          actions.append(enableWallet);
+        }
+        if (passkey.removable) {
+          const remove = document.createElement("button");
+          remove.className = "button danger";
+          remove.type = "button";
+          remove.textContent = "REMOVE PASSKEY";
+          remove.addEventListener("click", () => {
+            void removePasskey(passkey, remove);
+          });
+          actions.append(remove);
+        }
+        row.append(copy, actions);
+        passkeyList.append(row);
+      }
+    }
+
+    function renderPasskeysUnavailable() {
+      passkeyList.replaceChildren();
+      passkeyCount.textContent = "—";
+      const notice = document.createElement("p");
+      notice.className = "empty-state";
+      notice.textContent = "Passkeys are unavailable right now. Reload the page to try again.";
+      passkeyList.append(notice);
+    }
+
+    async function attachPasskey() {
+      if (!activeAccountSub || !attachPasskeyForm.reportValidity()) {
+        return;
+      }
+
+      const name = attachedPasskeyName.value.trim();
+      setMutationControls(true);
+      error.hidden = true;
+      retry.hidden = true;
+      attachPasskeyButton.textContent = "CREATING PASSKEY";
+
+      try {
+        const endpoint = new URL("/api/auth/passkey/generate-register-options", location.origin);
+        endpoint.searchParams.set("name", name);
+        const optionsResponse = await fetch(endpoint, { headers: { accept: "application/json" } });
+        const options = await jsonResponse(
+          optionsResponse,
+          "Triad could not issue a passkey registration challenge.",
+          decodeRegistrationOptions,
+        );
+        const response = await startRegistration({
+          optionsJSON: {
+            ...options,
+            user: { ...options.user, id: accountSubjectWebAuthnUserId(activeAccountSub) },
+          },
+        });
+        const verifyResponse = await fetch("/api/auth/passkey/verify-registration", {
+          method: "POST",
+          headers: { accept: "application/json", "content-type": "application/json" },
+          body: JSON.stringify({ response, name }),
+        });
+        await jsonResponse(verifyResponse, "Triad rejected the passkey registration.", decodeNothing);
+
+        attachedPasskeyName.value = "";
+        renderAccountPasskeys(await accountPasskeys());
+        attachPasskeyButton.textContent = "ATTACH PASSKEY";
+      } catch (reason) {
+        attachPasskeyButton.textContent = "RETRY ATTACH PASSKEY";
+        showError(reason, "Passkey attachment could not be completed.");
+      } finally {
+        setMutationControls(false);
       }
     }
 
@@ -528,7 +946,7 @@ export const prerender = true;
         signal,
       });
 
-      return jsonResponse(response, `Could not load client ${clientId}.`);
+      return jsonResponse(response, `Could not load client ${clientId}.`, decodePublicClient);
     }
 
     async function removeConsent(consentId: string, row: HTMLElement) {
@@ -688,8 +1106,10 @@ export const prerender = true;
           headers: { accept: "application/json" },
           signal: controller.signal,
         });
-        const session = await jsonResponse<SessionResult>(sessionResponse, "Could not load your session.");
+        const session = await jsonResponse(sessionResponse, "Could not load your session.", decodeSession);
         if (!session?.user?.id) {
+          activeAccountSub = undefined;
+          activeProvider = undefined;
           document.querySelector("#account-summary")!.textContent =
             "No active authorization session on this browser.";
           content.hidden = true;
@@ -698,7 +1118,15 @@ export const prerender = true;
           return;
         }
 
-        const [accountsResponse, consentsResponse] = await Promise.all([
+        activeAccountSub = session.user.id;
+        activeProvider = session.user.provider;
+        attachPasskeyForm.hidden = activeProvider === "ethereum";
+        attachPasskeyButton.textContent = "ATTACH PASSKEY";
+        passkeyCopy.textContent =
+          activeProvider === "ethereum"
+            ? "An EVM Identity Source uses its external wallet and cannot attach passkeys."
+            : "Identity and Attached Passkeys can authenticate this Triad Account. Enable Wallet Capability on any Passkey that supports PRF.";
+        const [accountsResponse, consentsResponse, passkeys] = await Promise.all([
           fetch("/api/auth/list-accounts", {
             headers: { accept: "application/json" },
             signal: controller.signal,
@@ -707,14 +1135,17 @@ export const prerender = true;
             headers: { accept: "application/json" },
             signal: controller.signal,
           }),
+          loadableAccountPasskeys(controller.signal),
         ]);
-        const accounts = await jsonResponse<LinkedAccount[]>(
+        const accounts = await jsonResponse(
           accountsResponse,
           "Could not load linked identities.",
+          decodeLinkedAccounts,
         );
-        const consents = await jsonResponse<OAuthConsent[]>(
+        const consents = await jsonResponse(
           consentsResponse,
           "Could not load authorized applications.",
+          decodeOAuthConsents,
         );
 
         document.querySelector("#account-summary")!.textContent =
@@ -726,6 +1157,11 @@ export const prerender = true;
             .map((provider) => (provider === "siwe" ? "ethereum" : provider).toUpperCase()),
         );
         document.querySelector("#identity-list")!.textContent = [...identities].join(" · ") || "NONE";
+        if (passkeys) {
+          renderAccountPasskeys(passkeys);
+        } else {
+          renderPasskeysUnavailable();
+        }
         await renderConsents(consents, controller.signal);
         signedOut.hidden = true;
         content.hidden = false;
@@ -749,6 +1185,10 @@ export const prerender = true;
     });
     deleteAccountButton.addEventListener("click", () => {
       void deleteAccount();
+    });
+    attachPasskeyForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void attachPasskey();
     });
     retry.addEventListener("click", () => {
       void load();

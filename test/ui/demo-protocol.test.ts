@@ -109,7 +109,7 @@ describe("demo disclosure scopes", () => {
       { id: "github", scopes: ["email", "handle", "name", "avatar"] },
       { id: "twitter", scopes: ["handle", "name", "avatar"] },
       { id: "ethereum", scopes: ["wallet", "chains", "chain_id"] },
-      { id: "passkey", scopes: ["handle", "cred", "pubkey"] },
+      { id: "passkey", scopes: ["handle", "cred", "pubkey", "cosekey"] },
     ]);
   });
 

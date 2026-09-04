@@ -1,4 +1,3 @@
-// @ts-expect-error Node types are intentionally absent from the Worker project.
 import { readFileSync } from "node:fs";
 import { cimd } from "@better-auth/cimd";
 import { deviceCodeGrant, oauthProvider } from "@better-auth/oauth-provider";
@@ -8,20 +7,19 @@ import { describe, expect, it } from "vite-plus/test";
 
 const packageJson = JSON.parse(readFileSync("package.json", "utf8")) as {
   dependencies: Record<string, string>;
-  devDependencies: Record<string, string>;
 };
 
 const acceptsD1Database = (database: D1Database): BetterAuthOptions["database"] => database;
 
 describe("Better Auth package baseline", () => {
-  it("pins the Better Auth family to RC.4", () => {
+  it("uses the shared Better Auth catalog", () => {
     expect(packageJson.dependencies).toMatchObject({
-      "@better-auth/cimd": "1.7.0-rc.4",
-      "@better-auth/oauth-provider": "1.7.0-rc.4",
-      "@better-auth/passkey": "1.7.0-rc.4",
-      "better-auth": "1.7.0-rc.4",
+      "@better-auth/cimd": "catalog:better-auth",
+      "@better-auth/oauth-provider": "catalog:better-auth",
+      "@better-auth/passkey": "catalog:better-auth",
+      auth: "catalog:better-auth",
+      "better-auth": "catalog:better-auth",
     });
-    expect(packageJson.devDependencies.auth).toBe("1.7.0-rc.4");
   });
 
   it("exposes the required public factories", () => {

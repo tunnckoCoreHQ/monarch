@@ -1,6 +1,5 @@
-// @ts-expect-error Node types are intentionally absent from the Worker project.
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-// @ts-expect-error Node types are intentionally absent from the Worker project.
 import { dirname, extname, relative, resolve } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -88,15 +87,27 @@ const migrationFiles = readdirSync("migrations")
   .filter((path: string) => path.endsWith(".sql"))
   .sort();
 const initialMigration = readSource("migrations/0001-initial.sql");
+const walletMigration = readSource("migrations/0002-prf-wallet.sql");
+const walletCapabilityMigration = readSource("migrations/0003-wallet-capability.sql");
+const walletAddressesMigration = readSource("migrations/0004-wallet-addresses.sql");
 
 describe("Better Auth schema tooling", () => {
-  it("keeps one finalized initial migration", () => {
-    expect(migrationFiles).toEqual(["0001-initial.sql"]);
+  it("keeps the finalized initial migration and adds schema changes separately", () => {
+    expect(migrationFiles).toEqual([
+      "0001-initial.sql",
+      "0002-prf-wallet.sql",
+      "0003-wallet-capability.sql",
+      "0004-wallet-addresses.sql",
+    ]);
+    expect(createHash("sha256").update(initialMigration).digest("hex")).toBe(
+      "23f86de32d73f5cac58147983fe07b68890000174fd916f39039083d22aa9e00",
+    );
     expect(initialMigration).toContain('create table "user"');
     expect(initialMigration).toContain('"encryptedData" text');
     expect(initialMigration).toContain('create table "walletAddress"');
     expect(initialMigration).toContain('create table "passkey"');
     expect(initialMigration).toContain('create table "passkeyUsername"');
+    expect(initialMigration).not.toContain('create table "walletRequest"');
     expect(initialMigration).toContain('"credentialID" text not null');
     expect(initialMigration).toContain('"username" text not null unique');
     expect(initialMigration).toContain('"accountSub" text not null unique');
@@ -111,6 +122,24 @@ describe("Better Auth schema tooling", () => {
     expect(initialMigration).not.toContain('"profileAvatar"');
     expect(initialMigration).toContain('create table "deviceCode"');
     expect(initialMigration).toContain('create table "rateLimit"');
+    expect(walletMigration).toContain('create table "walletRequest"');
+    expect(walletMigration).toContain('"namespace" text not null');
+    expect(walletMigration).toContain('"walletProfile" text not null');
+    expect(walletMigration).toContain('"accountIndex" integer not null');
+    expect(walletMigration).toContain('"chainId" integer');
+    expect(walletMigration).toContain('"signingMessage" text not null');
+    expect(walletMigration).toContain('"consumedAt" date');
+    expect(walletMigration).toContain('create index "walletRequest_expiresAt_idx"');
+    expect(walletCapabilityMigration).toContain(
+      'alter table "passkey" add column "walletCapable" integer not null default 0',
+    );
+    expect(walletCapabilityMigration).toContain('create table "walletCapabilityRequest"');
+    expect(walletCapabilityMigration).toContain(
+      'create index "walletCapabilityRequest_expiresAt_idx"',
+    );
+    expect(walletAddressesMigration).toContain(
+      'alter table "passkey" add column "encryptedData" text',
+    );
   });
 
   it("configures one canonical Worker and D1 database with preview URLs", () => {
@@ -134,7 +163,7 @@ describe("Better Auth schema tooling", () => {
 
   it("exposes generated schema, migration, and deployment commands", () => {
     expect(packageJson.scripts["db:generate"]).toBe(
-      "vp exec auth generate --config src/better-auth/schema.ts --output migrations/0001-initial.sql --yes",
+      "vp exec auth generate --config src/better-auth/schema.ts --output .generated/auth-schema.sql --yes",
     );
     expect(packageJson.scripts["db:migrate"]).toContain("--remote");
     expect(packageJson.scripts["db:migrate:local"]).toContain("--local");

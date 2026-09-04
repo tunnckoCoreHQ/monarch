@@ -66,6 +66,7 @@ export const prerender = true;
 
   <script>
     import { renderDisclosures } from "../../scripts/disclosure-controls";
+    import { responseError } from "../../utils";
 
     type SessionResult = { user?: { id?: string } } | null;
     type DeviceResult = {
@@ -117,10 +118,6 @@ export const prerender = true;
 
     function hasCompleteCode(): boolean {
       return input.value.replace(/[^A-Z0-9]/g, "").length === 8;
-    }
-
-    function responseError(body: DeviceResult, fallback: string): Error {
-      return new Error(body.error_description ?? body.message ?? body.error ?? fallback);
     }
 
     function clearError() {

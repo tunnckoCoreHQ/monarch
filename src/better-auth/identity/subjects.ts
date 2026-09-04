@@ -1,7 +1,13 @@
 import { toHex } from "viem";
 
-export type IdentityProvider = "google" | "github" | "twitter";
-export type AuthenticationProvider = IdentityProvider | "ethereum" | "passkey";
+export const SOCIAL_PROVIDERS = ["google", "github", "twitter"] as const;
+
+export type SocialProvider = (typeof SOCIAL_PROVIDERS)[number];
+export type AuthenticationProvider = SocialProvider | "ethereum" | "passkey";
+
+export function isSocialProvider(value: unknown): value is SocialProvider {
+  return SOCIAL_PROVIDERS.some((provider) => provider === value);
+}
 
 const encoder = new TextEncoder();
 
@@ -21,8 +27,8 @@ export async function ethereumUpstreamId(address: string): Promise<string> {
 }
 
 export async function passkeyUpstreamId(publicKey: Uint8Array): Promise<string> {
-  if (publicKey.length !== 65 || publicKey[0] !== 0x04) {
-    throw new Error("Passkey must contain a canonical P-256 public key");
+  if (publicKey.length === 0) {
+    throw new Error("Passkey must contain a canonical COSE public key");
   }
 
   return sha256Hex(publicKey);

@@ -66,7 +66,12 @@ const profileDisclosures: Record<string, Disclosure> = {
   pubkey: {
     label: "PASSKEY PUBLIC KEY",
     claim: "pubkey",
-    description: "Share the canonical P-256 public key as hexadecimal.",
+    description: "Share the Passkey public key as a public JWK.",
+  },
+  cosekey: {
+    label: "PASSKEY COSE KEY",
+    claim: "cosekey",
+    description: "Share the registered COSE_Key as base64url.",
   },
 };
 

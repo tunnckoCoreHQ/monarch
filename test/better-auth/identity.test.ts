@@ -4,7 +4,7 @@ import {
   accountSubject,
   createIdentityConfiguration,
   openProfileEncryptedData,
-  type IdentityProvider,
+  type SocialProvider,
   pairwiseSubject,
   providerSubject,
 } from "../../src/better-auth/identity";
@@ -31,7 +31,7 @@ function createEnv(): TriadEnv {
   };
 }
 
-function createUserRecord(accountSub: string, provider: IdentityProvider, providerSub: string) {
+function createUserRecord(accountSub: string, provider: SocialProvider, providerSub: string) {
   const now = new Date("2026-01-01T00:00:00Z");
 
   return {
@@ -49,7 +49,7 @@ function createUserRecord(accountSub: string, provider: IdentityProvider, provid
 
 function profileMapper(
   configuration: ReturnType<typeof createIdentityConfiguration>,
-  provider: IdentityProvider,
+  provider: SocialProvider,
 ) {
   const configuredProvider = configuration.socialProviders[provider];
   if (!configuredProvider || typeof configuredProvider === "function") {

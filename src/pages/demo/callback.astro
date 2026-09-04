@@ -108,7 +108,7 @@ export const prerender = true;
 
     function renderProfileClaims(profile: VerifiedProfile) {
       const container = document.querySelector<HTMLElement>("#callback-profile-claims")!;
-      const claims: Array<[string, string | number | number[] | boolean | undefined]> = [
+      const claims: Array<[string, VerifiedProfile[keyof VerifiedProfile]]> = [
         ["email", profile.email],
         ["email_verified", profile.emailVerified],
         ["preferred_username", profile.handle],
@@ -119,6 +119,7 @@ export const prerender = true;
         ["chain_id", profile.chainId],
         ["cred", profile.cred],
         ["pubkey", profile.pubkey],
+        ["cosekey", profile.cosekey],
       ];
 
       container.replaceChildren();
@@ -131,7 +132,7 @@ export const prerender = true;
         const term = document.createElement("dt");
         const description = document.createElement("dd");
         term.textContent = claim;
-        description.textContent = Array.isArray(value) ? JSON.stringify(value) : String(value);
+        description.textContent = typeof value === "object" ? JSON.stringify(value) : String(value);
         row.append(term, description);
         container.append(row);
       }

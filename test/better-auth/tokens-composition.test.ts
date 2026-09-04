@@ -135,6 +135,7 @@ describe("token composition", () => {
       "chain_id",
       "cred",
       "pubkey",
+      "cosekey",
       "resource:read",
     ]);
     expect(oauthProviderOptions.scopes).not.toContain("profile");
@@ -166,6 +167,7 @@ describe("token composition", () => {
       "chain_id",
       "cred",
       "pubkey",
+      "cosekey",
       "resource:read",
     ]);
     expect(oauthProviderOptions.clientRegistrationDefaultScopes).toEqual(["openid"]);
@@ -371,6 +373,42 @@ describe("token composition", () => {
     });
   });
 
+  it("returns a public JWK for the pubkey scope", async () => {
+    const pubkey = {
+      crv: "Ed25519" as const,
+      kty: "OKP" as const,
+      x: "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+    };
+    const profileClaims: TokenProfileClaimResolver = {
+      resolveProfileClaims: vi.fn(async () => ({ pubkey })),
+    };
+    const { oauthProviderOptions } = createComposition(createIdentityResolver(), profileClaims);
+
+    await expect(
+      oauthProviderOptions.customIdTokenClaims?.({
+        metadata: {},
+        scopes: ["openid", "pubkey"],
+        user,
+      }),
+    ).resolves.toEqual({ pubkey });
+  });
+
+  it("returns the base64url COSE_Key for the cosekey scope", async () => {
+    const cosekey = "pQECAyYgASFYIAcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc";
+    const profileClaims: TokenProfileClaimResolver = {
+      resolveProfileClaims: vi.fn(async () => ({ cosekey })),
+    };
+    const { oauthProviderOptions } = createComposition(createIdentityResolver(), profileClaims);
+
+    await expect(
+      oauthProviderOptions.customIdTokenClaims?.({
+        metadata: {},
+        scopes: ["openid", "cosekey"],
+        user,
+      }),
+    ).resolves.toEqual({ cosekey });
+  });
+
   it("adds global-subject triple claims to access tokens and introspection", async () => {
     const composition = createComposition();
     const extension = claimsExtension(composition);
@@ -448,6 +486,7 @@ describe("token composition", () => {
       "chain_id",
       "cred",
       "pubkey",
+      "cosekey",
     ]);
     expect(oauthProviderOptions.advertisedMetadata?.scopes_supported).toEqual([
       "openid",
@@ -460,6 +499,7 @@ describe("token composition", () => {
       "chain_id",
       "cred",
       "pubkey",
+      "cosekey",
       "resource:read",
     ]);
   });

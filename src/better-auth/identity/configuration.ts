@@ -1,4 +1,6 @@
 import type { Account, BetterAuthOptions } from "better-auth";
+
+import { isRecord } from "../../utils";
 import type { TriadEnv } from "../env";
 import { captureProviderProfile, sealProfileEncryptedData, type CapturedProfile } from "./profile";
 import { validateEncryptionSecrets } from "./encryption";
@@ -6,7 +8,7 @@ import {
   accountSubject,
   type AuthenticationProvider,
   ethereumUpstreamId,
-  type IdentityProvider,
+  type SocialProvider,
   providerSubject,
 } from "./subjects";
 
@@ -27,12 +29,8 @@ interface PendingIdentityUser {
   providerSub: string;
 }
 
-function invalidUpstreamId(provider: IdentityProvider): Error {
+function invalidUpstreamId(provider: SocialProvider): Error {
   return new Error(`Invalid ${provider} immutable upstream ID`);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function googleUpstreamId(profile: unknown): string {
@@ -68,7 +66,7 @@ function twitterUpstreamId(profile: unknown): string {
 
 async function mapIdentity(
   secret: string,
-  provider: IdentityProvider,
+  provider: SocialProvider,
   upstreamId: string,
   profile: CapturedProfile,
   encryptionSecrets: string,

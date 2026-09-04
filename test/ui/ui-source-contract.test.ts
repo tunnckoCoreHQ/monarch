@@ -1,4 +1,3 @@
-// @ts-expect-error Node types are intentionally absent from the Worker project.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -10,12 +9,44 @@ const demo = source("../../src/pages/demo/index.astro");
 const callback = source("../../src/pages/demo/callback.astro");
 const consent = source("../../src/pages/consent.astro");
 const account = source("../../src/pages/me.astro");
+const walletAuthorization = source("../../src/pages/wallet/authorize.astro");
+const prfWallet = source("../../src/scripts/prf-wallet.ts");
+const walletSignatures = source("../../src/better-auth/wallet/signatures.ts");
+const walletBroker = source("../../src/better-auth/wallet/index.ts");
 const landing = source("../../src/pages/index.astro");
 const protocol = source("../../src/scripts/demo-protocol.ts");
 const disclosures = source("../../src/scripts/disclosure-controls.ts");
 const staticHeaders = source("../../public/_headers");
 
 describe("preserved Better Auth UI wiring", () => {
+  it("keeps PRF wallet roots in the browser and returns only verified signatures", () => {
+    expect(walletAuthorization).toContain("/api/wallet/inspect");
+    expect(walletAuthorization).toContain("/api/wallet/options");
+    expect(walletAuthorization).toContain("/api/wallet/complete");
+    expect(walletAuthorization).toContain("clientExtensionResults: {}");
+    expect(walletAuthorization).toContain("signWithPrfWallet");
+    expect(walletSignatures).toContain("prfRoot.fill(0)");
+    expect(prfWallet).toContain("signPrfWallet");
+    expect(account).toContain("ENABLE WALLET");
+    expect(account).toContain('wallet.textContent = "WALLET"');
+    expect(account).toContain("/api/wallet/capability/options");
+    expect(account).toContain("/api/wallet/capability/complete");
+    expect(account).toContain("/api/wallet/passkeys");
+    expect(account).toContain("accountSubjectWebAuthnUserId(activeAccountSub)");
+    expect(account).not.toContain("p256Algorithms");
+  });
+
+  it("claims each one-time wallet challenge before cryptographic verification", () => {
+    const claim = walletBroker.indexOf('update "walletRequest" set "consumedAt"');
+    const verification = walletBroker.indexOf("verifyStoredPasskeyAssertion", claim);
+
+    expect(claim).toBeGreaterThan(-1);
+    expect(verification).toBeGreaterThan(claim);
+    expect(walletBroker).toContain(
+      "Claim the challenge before expensive cryptographic work so every request has one attempt.",
+    );
+  });
+
   it("keeps the landing privacy promise and optional claim manifest", () => {
     expect(landing).toContain("ASK FOR LESS.<br />REVEAL LESS.");
     expect(landing).toContain(
@@ -36,7 +67,7 @@ describe("preserved Better Auth UI wiring", () => {
 
   it("restores provider-aware optional request controls with every option off", () => {
     expect(demo).toContain('<select id="demo-provider"');
-    expect(demo.match(/<input type="checkbox" name="demo-scope"/g)).toHaveLength(9);
+    expect(demo.match(/<input type="checkbox" name="demo-scope"/g)).toHaveLength(10);
     expect(demo).toContain('value="email"');
     expect(demo).toContain('value="handle"');
     expect(demo).toContain('value="name"');
@@ -46,6 +77,7 @@ describe("preserved Better Auth UI wiring", () => {
     expect(demo).toContain('value="chain_id"');
     expect(demo).toContain('value="cred"');
     expect(demo).toContain('value="pubkey"');
+    expect(demo).toContain('value="cosekey"');
     expect(demo).not.toMatch(/name="demo-scope"[^>]*checked/);
     expect(demo).toContain("canonicalScopeRequest");
     expect(demo).toContain("input.checked = false");

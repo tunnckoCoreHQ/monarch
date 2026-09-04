@@ -1,3 +1,5 @@
+import { base64UrlDecode, base64UrlEncode, getArrayBuffer, isRecord } from "../../utils";
+
 const ENVELOPE_VERSION = "v1";
 const ENCRYPTION_CONTEXT = "triad-encrypted-data:v1";
 const SECRET_ID_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
@@ -5,10 +7,6 @@ const SECRET_ID_PATTERN = /^[A-Za-z0-9_-]{1,32}$/;
 interface ParsedEncryptionSecrets {
   active: string;
   secrets: Record<string, Uint8Array<ArrayBuffer>>;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function parseEncryptionSecrets(serialized: string): ParsedEncryptionSecrets {
@@ -77,41 +75,6 @@ export function validateEncryptionSecrets(
   }
 }
 
-export function base64UrlEncode(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
-}
-
-function arrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const copy = new Uint8Array(bytes.length);
-  copy.set(bytes);
-
-  return copy.buffer;
-}
-
-export function base64UrlDecode(value: string): Uint8Array<ArrayBuffer> {
-  if (!/^[A-Za-z0-9_-]+$/.test(value)) {
-    throw new Error("Invalid encrypted data encoding");
-  }
-
-  const padded = value
-    .replaceAll("-", "+")
-    .replaceAll("_", "/")
-    .padEnd(Math.ceil(value.length / 4) * 4, "=");
-  let binary: string;
-  try {
-    binary = atob(padded);
-  } catch {
-    throw new Error("Invalid encrypted data encoding");
-  }
-
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
-}
-
 function additionalData(secretId: string, context: string, binding: string): Uint8Array {
   return new TextEncoder().encode(`${ENVELOPE_VERSION}\0${secretId}\0${context}\0${binding}`);
 }
@@ -166,11 +129,11 @@ export async function sealEncryptedData(
   const encrypted = await crypto.subtle.encrypt(
     {
       name: "AES-GCM",
-      iv: arrayBuffer(iv),
-      additionalData: arrayBuffer(additionalData(encryption.active, context, binding)),
+      iv: getArrayBuffer(iv),
+      additionalData: getArrayBuffer(additionalData(encryption.active, context, binding)),
     },
     key,
-    arrayBuffer(new TextEncoder().encode(JSON.stringify(value))),
+    getArrayBuffer(new TextEncoder().encode(JSON.stringify(value))),
   );
 
   return [
@@ -214,11 +177,11 @@ export async function openEncryptedData(
     decrypted = await crypto.subtle.decrypt(
       {
         name: "AES-GCM",
-        iv: arrayBuffer(iv),
-        additionalData: arrayBuffer(additionalData(secretId, context, binding)),
+        iv: getArrayBuffer(iv),
+        additionalData: getArrayBuffer(additionalData(secretId, context, binding)),
       },
       key,
-      arrayBuffer(base64UrlDecode(encodedCiphertext)),
+      getArrayBuffer(base64UrlDecode(encodedCiphertext)),
     );
   } catch {
     throw new Error("Unable to decrypt encrypted data");

@@ -7,6 +7,7 @@ import {
   createCimdAdmissionOptions,
   createCimdClientDiscovery,
   createDnsOverHttpsResolver,
+  type Fetcher,
 } from "../../src/better-auth/admission/cimd";
 
 function dnsResponse(answers: Array<{ data: string; type: number }>, status = 0): Response {
@@ -15,7 +16,7 @@ function dnsResponse(answers: Array<{ data: string; type: number }>, status = 0)
 
 describe("CIMD DNS resolution", () => {
   it("resolves A and AAAA records through the injected fetch", async () => {
-    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+    const fetcher = vi.fn<Fetcher>(async (input, init) => {
       const url = new URL(String(input));
       const type = url.searchParams.get("type");
 
@@ -39,7 +40,7 @@ describe("CIMD DNS resolution", () => {
   });
 
   it("fails closed when either DNS query fails", async () => {
-    const fetcher = vi.fn<typeof fetch>(async (input) => {
+    const fetcher = vi.fn<Fetcher>(async (input) => {
       const type = new URL(String(input)).searchParams.get("type");
 
       return type === "A"
@@ -74,7 +75,7 @@ describe("CIMD admission options", () => {
   });
 
   it("uses Worker-safe manual redirect handling for metadata resources", async () => {
-    const fetcher = vi.fn<typeof fetch>(async () => Response.json({}));
+    const fetcher = vi.fn<Fetcher>(async () => Response.json({}));
     const options = createCimdAdmissionOptions({
       fetch: fetcher,
       resolveHostname: async () => ["8.8.8.8"],

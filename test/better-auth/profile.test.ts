@@ -24,7 +24,7 @@ async function profileUser(profileInput: CapturedProfile = profile) {
 }
 
 describe("Triad profile claim resolver", () => {
-  const resolver = createProfileClaimResolver(ENCRYPTION_SECRETS);
+  const resolver = createProfileClaimResolver({ encryptionSecrets: ENCRYPTION_SECRETS });
 
   it("returns only claims authorized by downstream profile scopes", async () => {
     await expect(
@@ -69,7 +69,7 @@ describe("Triad profile claim resolver", () => {
 
   it("rejects profile data copied to another account", async () => {
     const encryptedData = await sealProfileEncryptedData(ENCRYPTION_SECRETS, "acc_a", profile);
-    const resolver = createProfileClaimResolver(ENCRYPTION_SECRETS);
+    const resolver = createProfileClaimResolver({ encryptionSecrets: ENCRYPTION_SECRETS });
 
     await expect(
       resolver.resolveProfileClaims({ id: "acc_b", encryptedData }, ["email"]),

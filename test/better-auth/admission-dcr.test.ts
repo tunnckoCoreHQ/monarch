@@ -1,4 +1,3 @@
-// @ts-expect-error Node types are intentionally absent from the Worker project.
 import { readFileSync } from "node:fs";
 import { type OAuthOptions, type Scope } from "@better-auth/oauth-provider";
 import { describe, expect, expectTypeOf, it } from "vite-plus/test";

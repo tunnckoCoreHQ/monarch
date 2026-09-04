@@ -1,13 +1,12 @@
-import type { IdentityProvider } from "./subjects";
+import type { SocialProvider } from "./subjects";
 import type { OptionalDisclosureScope } from "../disclosures";
+import { base64UrlDecode, base64UrlEncode, isRecord, type PublicJwk } from "../../utils";
+import { openEncryptedData, sealEncryptedData, validateEncryptionSecrets } from "./encryption";
 import {
-  base64UrlDecode,
-  base64UrlEncode,
-  openEncryptedData,
-  sealEncryptedData,
-  validateEncryptionSecrets,
-} from "./encryption";
-import { storedPasskeyPublicKeyHex } from "./passkey-public-key";
+  isIdentityPasskey,
+  storedPasskeyCoseKey,
+  storedPasskeyPublicJwk,
+} from "./passkey-public-key";
 
 const SYNTHETIC_EMAIL_SUFFIX = "@identity.invalid";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
@@ -43,11 +42,8 @@ export interface ProfileClaims {
   picture?: string;
   wallet?: string;
   cred?: string;
-  pubkey?: string;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  pubkey?: PublicJwk;
+  cosekey?: string;
 }
 
 function nonEmptyString(value: unknown): string | undefined {
@@ -269,7 +265,7 @@ function twitterProfile(profile: unknown): CapturedProfile {
 }
 
 export function captureProviderProfile(
-  provider: IdentityProvider,
+  provider: SocialProvider,
   profile: unknown,
 ): CapturedProfile {
   if (provider === "google") {
@@ -336,25 +332,48 @@ async function walletClaim(database: D1Database, userId: string): Promise<string
 
 async function passkeyClaims(
   database: D1Database,
-  userId: string,
-): Promise<Pick<ProfileClaims, "cred" | "pubkey">> {
-  const row = await database
-    .prepare('select "credentialID", "publicKey" from "passkey" where "userId" = ? limit 1')
-    .bind(userId)
-    .first<{ credentialID: unknown; publicKey: unknown }>();
+  user: ProfileIdentityUser,
+  identifierSecret: string,
+): Promise<Pick<ProfileClaims, "cred" | "pubkey" | "cosekey">> {
+  if (user.provider !== "passkey" || typeof user.providerSub !== "string") {
+    return {};
+  }
+  const providerSub = user.providerSub;
+  const result = await database
+    .prepare('select "credentialID", "publicKey" from "passkey" where "userId" = ?')
+    .bind(user.id)
+    .all<{ credentialID: unknown; publicKey: unknown }>();
+  const candidates = await Promise.all(
+    result.results.map(async (candidate) => ({
+      candidate,
+      identity:
+        typeof candidate.publicKey === "string" &&
+        (await isIdentityPasskey(identifierSecret, providerSub, candidate.publicKey)),
+    })),
+  );
+  const row = candidates.find(({ identity }) => identity)?.candidate;
   if (typeof row?.credentialID !== "string" || typeof row.publicKey !== "string") {
     return {};
   }
   const cred = credentialId(row.credentialID);
-  const pubkey = storedPasskeyPublicKeyHex(row.publicKey);
+  const pubkey = storedPasskeyPublicJwk(row.publicKey);
+  const cosekey = storedPasskeyCoseKey(row.publicKey);
 
   return {
     ...(cred ? { cred } : {}),
-    ...(typeof pubkey === "string" && /^04[0-9a-f]{128}$/.test(pubkey) ? { pubkey } : {}),
+    pubkey,
+    cosekey,
   };
 }
 
-export function createProfileClaimResolver(encryptionSecrets: string, database?: D1Database) {
+interface ProfileClaimResolverOptions {
+  encryptionSecrets: string;
+  database?: D1Database;
+  identifierSecret?: string;
+}
+
+export function createProfileClaimResolver(options: ProfileClaimResolverOptions) {
+  const { database, encryptionSecrets, identifierSecret } = options;
   validateEncryptionSecrets(encryptionSecrets);
 
   return {
@@ -366,19 +385,25 @@ export function createProfileClaimResolver(encryptionSecrets: string, database?:
         return {};
       }
 
-      const databaseScopes: readonly OptionalDisclosureScope[] = ["wallet", "cred", "pubkey"];
+      const passkeyScopes: readonly OptionalDisclosureScope[] = ["cred", "pubkey", "cosekey"];
+      const databaseScopes: readonly OptionalDisclosureScope[] = ["wallet", ...passkeyScopes];
       const requiresDatabaseClaims = scopes.some((scope) => databaseScopes.includes(scope));
       if (requiresDatabaseClaims && !database) {
         throw new Error("Credential claims require an identity database");
+      }
+      const requiresPasskeyClaims = scopes.some((scope) => passkeyScopes.includes(scope));
+      if (requiresPasskeyClaims && !identifierSecret) {
+        throw new Error("Identity Passkey claims require the identifier secret");
       }
       const walletPromise: Promise<string | undefined> =
         scopes.includes("wallet") && database
           ? walletClaim(database, user.id)
           : Promise.resolve(undefined);
-      const passkeyPromise: Promise<Pick<ProfileClaims, "cred" | "pubkey">> =
-        (scopes.includes("cred") || scopes.includes("pubkey")) && database
-          ? passkeyClaims(database, user.id)
-          : Promise.resolve({});
+      let passkeyPromise: Promise<Pick<ProfileClaims, "cred" | "pubkey" | "cosekey">> =
+        Promise.resolve({});
+      if (requiresPasskeyClaims && database && identifierSecret) {
+        passkeyPromise = passkeyClaims(database, user, identifierSecret);
+      }
 
       const [profile, wallet, passkey] = await Promise.all([
         typeof user.encryptedData === "string"
@@ -396,6 +421,9 @@ export function createProfileClaimResolver(encryptionSecrets: string, database?:
       }
       if (scopes.includes("pubkey") && passkey.pubkey) {
         claims.pubkey = passkey.pubkey;
+      }
+      if (scopes.includes("cosekey") && passkey.cosekey) {
+        claims.cosekey = passkey.cosekey;
       }
 
       return claims;

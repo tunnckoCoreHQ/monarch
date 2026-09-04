@@ -1,5 +1,7 @@
 import type { BetterAuthOptions } from "better-auth";
 
+import { hexEncode } from "../utils";
+
 const RATE_LIMIT_CONTEXT = "triad-rate-limit:v1\0";
 export const RATE_LIMIT_WINDOW_SECONDS = 60;
 const MAX_RATE_LIMIT_WINDOW_MS = RATE_LIMIT_WINDOW_SECONDS * 1_000;
@@ -41,10 +43,6 @@ interface RateLimitRow {
 }
 
 type RateLimitStorage = NonNullable<NonNullable<BetterAuthOptions["rateLimit"]>["customStorage"]>;
-
-function hexEncode(bytes: ArrayBuffer): string {
-  return Array.from(new Uint8Array(bytes), (byte) => byte.toString(16).padStart(2, "0")).join("");
-}
 
 export async function deriveRateLimitBucket(
   secret: string,

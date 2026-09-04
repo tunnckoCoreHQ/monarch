@@ -2,6 +2,7 @@ export { createIdentityConfiguration } from "./configuration";
 export { openEncryptedData, sealEncryptedData, validateEncryptionSecrets } from "./encryption";
 export { createPasskeyAuthentication } from "./passkey";
 export {
+  accountSubjectWebAuthnUserId,
   canonicalPasskeyUsername,
   createPasskeyUsernameGenerator,
   normalizePasskeyUsername,
@@ -10,6 +11,7 @@ export {
   type PasskeyUsernameGeneratorOptions,
   passkeyWebAuthnUserId,
 } from "./passkey-username";
+export { isIdentityPasskey, storedPasskeyPublicKeyBytes } from "./passkey-public-key";
 export {
   type CapturedProfile,
   captureProviderProfile,
@@ -25,9 +27,11 @@ export {
   accountSubject,
   type AuthenticationProvider,
   ethereumUpstreamId,
-  type IdentityProvider,
+  isSocialProvider,
   pairwiseSubject,
   passkeyUpstreamId,
   providerSubject,
   sha256Hex,
+  SOCIAL_PROVIDERS,
+  type SocialProvider,
 } from "./subjects";

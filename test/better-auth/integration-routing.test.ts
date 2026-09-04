@@ -28,8 +28,10 @@ function createEnv(overrides: Partial<TriadEnv> = {}): TriadEnv {
 function createServices() {
   const authHandler = vi.fn(() => new Response("auth"));
   const getSession = vi.fn(async () => ({ user: { id: "acc_session" } }));
+  const signJWT = vi.fn(async () => ({ token: "signed-receipt" }));
   const createTriadConfiguration = vi.fn(() => ({ application: "triad" }));
-  const createTriadAuth = vi.fn(() => ({ api: { getSession }, handler: authHandler }));
+  const createTriadAuth = vi.fn(() => ({ api: { getSession, signJWT }, handler: authHandler }));
+  const handleWalletBroker = vi.fn(async () => new Response("wallet"));
   const handleAstro = vi.fn(async () => new Response("astro"));
   const fetchAssets = vi.fn(async () => new Response("assets"));
 
@@ -37,14 +39,17 @@ function createServices() {
     services: {
       createTriadConfiguration,
       createTriadAuth,
+      handleWalletBroker,
       handleAstro,
       fetchAssets,
     },
     spies: {
       authHandler,
       getSession,
+      signJWT,
       createTriadConfiguration,
       createTriadAuth,
+      handleWalletBroker,
       handleAstro,
       fetchAssets,
     },
@@ -80,6 +85,7 @@ describe("Triad protected-resource metadata routing", () => {
         "chain_id",
         "cred",
         "pubkey",
+        "cosekey",
       ],
     ],
   ])(

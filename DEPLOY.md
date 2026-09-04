@@ -20,15 +20,16 @@ vp install --frozen-lockfile
 vp exec wrangler login
 ```
 
-Create the D1 database, copy its ID into `wrangler.toml`, and apply the generated initial migration:
+Create the D1 database, copy its ID into `wrangler.toml`, and apply all checked-in migrations in order:
 
 ```sh
 vp exec wrangler d1 create triad-auth
 vp run db:migrate
 ```
 
-The checked-in migration is generated from Better Auth. Regenerate it with `vp run db:generate`; do not edit the SQL
-manually.
+`migrations/0001-initial.sql` is the immutable production baseline. Never edit or regenerate it, and never rewrite any migration already applied to production. Every schema change must be a new, monotonically numbered SQL file in `migrations/`.
+
+`vp run db:generate` writes the current Better Auth schema to the ignored `.generated/auth-schema.sql` reference file. Compare that reference with the committed migrations when authoring a new additive migration; do not copy it over an existing migration.
 
 ## Secrets
 
@@ -84,9 +85,7 @@ for `main`, so pull-request branches perform no deployment and receive no previe
 The `prod` deployment uses the production `AUTH_ORIGIN` from `wrangler.toml`. The `main` command overrides that binding
 only for its preview version and moves the stable `staging` alias to the new version.
 
-D1 migrations are intentionally separate from Workers Builds. Apply a schema change once with `vp run db:migrate`
-before deploying code that requires it. Cloudflare's automatically managed Workers Builds token does not include D1
-write permission.
+D1 migrations are intentionally separate from Workers Builds. Apply each new checked-in migration with `vp run db:migrate` before deploying code that requires it. Cloudflare's automatically managed Workers Builds token does not include D1 write permission.
 
 ## Manual deployment
 

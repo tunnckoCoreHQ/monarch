@@ -3,10 +3,12 @@ import { createTriadConfiguration } from "./better-auth/configuration";
 import { canonicalDisclosureScopes } from "./better-auth/disclosures";
 import type { TriadEnv } from "./better-auth/env";
 import { createTriadResourceFragment } from "./better-auth/resources";
+import { handleWalletBrokerRequest } from "./better-auth/wallet";
 
 interface TriadAuthService {
   api: {
     getSession(input: { headers: Headers }): Promise<{ user: { id: string } } | null>;
+    signJWT(input: { body: { payload: Record<string, unknown> } }): Promise<{ token: string }>;
   };
   handler(request: Request): Response | Promise<Response>;
 }
@@ -14,6 +16,7 @@ interface TriadAuthService {
 interface WorkerServices<Configuration> {
   createTriadConfiguration(env: TriadEnv): Configuration;
   createTriadAuth(env: TriadEnv, configuration: Configuration): TriadAuthService;
+  handleWalletBroker(request: Request, env: TriadEnv, auth: TriadAuthService): Promise<Response>;
   handleAstro(request: Request, env: TriadEnv, context: ExecutionContext): Promise<Response>;
   fetchAssets(request: Request, env: TriadEnv): Promise<Response>;
 }
@@ -23,6 +26,7 @@ interface DeviceDisclosureRecord {
 }
 
 const DEVICE_DISCLOSURE_PATH = `${AUTH_BASE_PATH}/device/disclosure`;
+const WALLET_API_BASE_PATH = "/api/wallet";
 const SECURITY_HEADERS: Record<string, string> = {
   "content-security-policy": [
     "default-src 'self'",
@@ -151,6 +155,20 @@ export function createWorker<Configuration>(services: WorkerServices<Configurati
         );
       }
 
+      if (
+        url.pathname === WALLET_API_BASE_PATH ||
+        url.pathname.startsWith(`${WALLET_API_BASE_PATH}/`)
+      ) {
+        const configuration = services.createTriadConfiguration(env);
+        const auth = services.createTriadAuth(env, configuration);
+
+        return withSecurityHeaders(
+          await services.handleWalletBroker(request, env, auth),
+          env,
+          url.pathname,
+        );
+      }
+
       if (isAuthPath(url.pathname)) {
         const configuration = services.createTriadConfiguration(env);
         const authResponse = await services.createTriadAuth(env, configuration).handler(request);
@@ -174,6 +192,7 @@ export function createWorker<Configuration>(services: WorkerServices<Configurati
 export default createWorker({
   createTriadConfiguration,
   createTriadAuth,
+  handleWalletBroker: handleWalletBrokerRequest,
   async handleAstro(request, env, context) {
     const { handle } = await import("@astrojs/cloudflare/handler");
 

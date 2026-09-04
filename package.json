@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vp exec astro build",
-    "db:generate": "vp exec auth generate --config src/better-auth/schema.ts --output migrations/0001-initial.sql --yes",
+    "db:generate": "vp exec auth generate --config src/better-auth/schema.ts --output .generated/auth-schema.sql --yes",
     "db:migrate": "vp exec wrangler d1 migrations apply DB --remote",
     "db:migrate:local": "vp exec wrangler d1 migrations apply DB --local",
     "deploy": "vp exec wrangler deploy",
@@ -15,27 +15,41 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.1.2",
-    "@better-auth/cimd": "1.7.0-rc.4",
-    "@better-auth/oauth-provider": "1.7.0-rc.4",
-    "@better-auth/passkey": "1.7.0-rc.4",
+    "@better-auth/cimd": "catalog:better-auth",
+    "@better-auth/oauth-provider": "catalog:better-auth",
+    "@better-auth/passkey": "catalog:better-auth",
     "@fontsource-variable/archivo": "^5.2.8",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@noble/curves": "catalog:crypto",
+    "@noble/hashes": "catalog:crypto",
     "@paralleldrive/cuid2": "^3.3.0",
+    "@scure/base": "catalog:crypto",
+    "@scure/bip32": "catalog:crypto",
+    "@scure/btc-signer": "catalog:crypto",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.1",
-    "astro": "^7.0.7",
-    "better-auth": "1.7.0-rc.4",
+    "astro": "catalog:",
+    "auth": "catalog:better-auth",
+    "better-auth": "catalog:better-auth",
     "jose": "^6.1.0",
     "viem": "^2.55.11"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260710.1",
-    "auth": "1.7.0-rc.4",
-    "eslint-plugin-perfectionist": "^5.10.0",
-    "typescript": "^6.0.3",
-    "vite-plus": "catalog:",
-    "vitest": "catalog:",
-    "wrangler": "^4.110.0"
+    "@cloudflare/workers-types": "catalog:types",
+    "@types/bun": "catalog:types",
+    "@types/node": "catalog:types",
+    "@vitest/coverage-v8": "catalog:vite",
+    "typescript": "catalog:types",
+    "vite": "catalog:vite",
+    "vite-plus": "catalog:vite",
+    "wrangler": "catalog:"
   },
-  "packageManager": "pnpm@11.11.0"
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.21.0",
+      "onFail": "download"
+    }
+  },
+  "packageManager": "pnpm@11.21.0"
 }

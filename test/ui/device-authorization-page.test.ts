@@ -1,4 +1,3 @@
-// @ts-expect-error Node types are intentionally absent from the Worker project.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 

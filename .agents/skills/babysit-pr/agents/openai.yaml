@@ -1,0 +1,4 @@
+interface:
+  display_name: "Babysit PR"
+  short_description: "Finish pull requests with concise judgment"
+  default_prompt: "Use $babysit-pr to finish this pull request and report when it is ready."
