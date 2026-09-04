@@ -12,7 +12,7 @@ export async function verifyPublishToken(token: string): Promise<"nightly" | "la
     algorithms: ["RS256"],
     requiredClaims: ["exp", "iat", "nbf", "sub"],
     maxTokenAge: "10m",
-    subject: `repo:${repository}:ref:refs/heads/master`,
+    subject: "repo:tunnckoCoreHQ@51462759/monarch@1299813376:ref:refs/heads/master",
   });
 
   if (

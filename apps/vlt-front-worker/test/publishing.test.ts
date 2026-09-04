@@ -12,7 +12,7 @@ const env: Env = {
 const claims: JWTPayload = {
   iss: "https://token.actions.githubusercontent.com",
   aud: "https://npm.wgw.lol",
-  sub: "repo:tunnckoCoreHQ/monarch:ref:refs/heads/master",
+  sub: "repo:tunnckoCoreHQ@51462759/monarch@1299813376:ref:refs/heads/master",
   repository: "tunnckoCoreHQ/monarch",
   repository_id: "1299813376",
   repository_owner_id: "51462759",
@@ -114,6 +114,9 @@ describe("CI publishing authorization", () => {
         "tunnckoCoreHQ/monarch/.github/workflows/packages-nightly.yml@refs/heads/feature",
     },
     { sub: "repo:tunnckoCoreHQ/monarch:pull_request" },
+    { sub: "repo:tunnckoCoreHQ/monarch:ref:refs/heads/master" },
+    { sub: "repo:tunnckoCoreHQ@123/monarch@1299813376:ref:refs/heads/master" },
+    { sub: "repo:tunnckoCoreHQ@51462759/monarch@123:ref:refs/heads/master" },
     { workflow_ref: "tunnckoCoreHQ/monarch/.github/workflows/other.yml@refs/heads/master" },
     { iss: "https://attacker.example" },
     { aud: "https://other.example" },
