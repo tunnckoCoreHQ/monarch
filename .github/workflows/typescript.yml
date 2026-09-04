@@ -1,5 +1,6 @@
-# Runs checks and tests for master pushes and same-repository PRs. Dependabot has a separate
-# workflow.
+# Runs checks and tests for master pushes, explicit master dispatches, and same-repository PRs.
+# Automated merges dispatch this workflow because GITHUB_TOKEN merges do not trigger push runs.
+# Dependabot PRs have a separate workflow.
 #
 # SECURITY: installs and tests execute PR code, including dependency scripts. Keep the token
 # read-only. Adding secrets, write access, or OIDC permission would expose those credentials to PR
@@ -8,6 +9,12 @@
 name: typescript
 
 on:
+  workflow_dispatch:
+    inputs:
+      merge_sha:
+        description: Merged master commit to check; defaults to the current master commit.
+        type: string
+        required: false
   push:
     branches: [master]
   pull_request:
@@ -16,18 +23,33 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.merge_sha || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   check_test:
     permissions:
       contents: read
-    # Pushes to master, and same-repository non-Dependabot pull requests. Dependabot PRs are verified and merged by auto-merge-deps.
-    if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    # Manual and automated dispatches may test only master, never a PR branch.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+      (github.actor != 'dependabot[bot]' &&
+        ((github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+          (github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.full_name == github.repository)))
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.merge_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - if: github.event_name != 'pull_request'
+        env:
+          CHECKED_SHA: ${{ inputs.merge_sha || github.sha }}
+        run: |
+          [[ "$CHECKED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$CHECKED_SHA" origin/master
       - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
@@ -47,6 +69,15 @@ jobs:
             vite-task-${{ runner.os }}-${{ runner.arch }}-
       - run: vp run check
       - run: vp run test
+      # workflow_run.head_sha is the dispatch ref, not necessarily the commit checked out above.
+      - if: github.event_name != 'pull_request'
+        run: git rev-parse HEAD > "$RUNNER_TEMP/checked-sha"
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: checked-commit-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/checked-sha
+          if-no-files-found: error
       - if: success()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

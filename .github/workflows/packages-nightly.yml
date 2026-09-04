@@ -2,9 +2,10 @@
 # master.
 #
 # SECURITY: workflow_run can grant credentials even when the triggering run came from a PR. The job
-# therefore accepts only successful pushes from this repository and checks out the tested head_sha.
+# therefore accepts only successful pushes or dispatches on master from this repository and checks
+# out the SHA recorded by that run after its checks passed.
 #
-# Do not allow PR runs or replace head_sha with a branch ref: either could publish code that has not
+# Do not allow PR runs or replace the recorded SHA with a branch ref: either could publish code not
 # passed CI on master. vlt-front-worker at npm.wgw.lol verifies GitHub OIDC and limits this workflow
 # to nightly writes.
 
@@ -21,22 +22,35 @@ permissions: {}
 concurrency:
   group: packages-nightly
   cancel-in-progress: false
+  queue: max
 
 jobs:
   pkgs_nightly:
     permissions:
+      actions: read
       contents: read
       id-token: write
     if: >-
       github.repository == 'tunnckoCoreHQ/monarch' &&
-      github.event.workflow_run.event == 'push' &&
+      (github.event.workflow_run.event == 'push' ||
+        github.event.workflow_run.event == 'workflow_dispatch') &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
+      - id: checked
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "checked-commit-$RUN_ATTEMPT" --dir "$RUNNER_TEMP/checked-commit"
+          sha=$(cat "$RUNNER_TEMP/checked-commit/checked-sha")
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ steps.checked.outputs.sha }}
           fetch-depth: 0
           persist-credentials: false
       - id: changes
