@@ -22,8 +22,8 @@ jobs:
       # SHA-pinned; let Renovate bump it
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # A PAT so the pushed branch and the PR trigger the check workflows. GITHUB_TOKEN would not.
-          token: ${{ secrets.SOCKET_OPTIMIZE_PAT }}
+          # Nothing before the final step may hold write credentials.
+          persist-credentials: false
       # SHA-pinned; let Renovate bump it
       - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
         with:
@@ -56,6 +56,8 @@ jobs:
           git switch -c "$BRANCH"
           git add -A
           git commit -m "chore(deps): apply socket optimize overrides"
+          # The PAT is used only here, so the pushed branch and PR trigger the check workflows.
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin "$BRANCH"
           if ! gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
             gh pr create --base master --head "$BRANCH" \
