@@ -1,4 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   appendFileSync,
   existsSync,
@@ -37,6 +38,39 @@ function report(message: string): void {
   console.log(message);
   appendFileSync(process.env.GITHUB_OUTPUT!, `report=${message}\n`);
   appendFileSync(process.env.GITHUB_STEP_SUMMARY!, `${message}\n\n`);
+}
+
+async function publishedCommit(
+  name: string,
+  version: string,
+  dist?: { tarball?: string; integrity?: string },
+): Promise<string> {
+  if (!dist?.tarball || !dist.integrity?.startsWith("sha512-")) {
+    throw new Error(`Missing tarball or integrity for ${name}@${version}`);
+  }
+  const response = await fetch(dist.tarball, { signal: AbortSignal.timeout(30_000) });
+  if (!response.ok) {
+    throw new Error(`Cannot download ${name}@${version}: ${response.status}`);
+  }
+  const archive = Buffer.from(await response.arrayBuffer());
+  if (`sha512-${createHash("sha512").update(archive).digest("base64")}` !== dist.integrity) {
+    throw new Error(`Tarball integrity mismatch for ${name}@${version}`);
+  }
+  const manifest = JSON.parse(
+    execFileSync("tar", ["-xzOf", "-", "package/package.json"], {
+      input: archive,
+      encoding: "utf8",
+    }),
+  );
+  if (
+    manifest.name !== name ||
+    manifest.version !== version ||
+    typeof manifest.gitHead !== "string" ||
+    !/^[0-9a-f]{40}$/.test(manifest.gitHead)
+  ) {
+    throw new Error(`Invalid packaged identity or source commit for ${name}@${version}`);
+  }
+  return manifest.gitHead;
 }
 
 async function github<T>(path: string, method = "GET", body?: unknown): Promise<T> {
@@ -171,16 +205,17 @@ try {
       throw new Error(`Cannot read ${pkg.name}: ${metadataResponse.status}`);
     }
     const metadata: {
-      versions?: Record<string, { gitHead?: string }>;
+      versions?: Record<string, { dist?: { tarball?: string; integrity?: string } }>;
       "dist-tags"?: Record<string, string>;
     } = metadataResponse.ok ? await metadataResponse.json() : {};
 
     const nightly = metadata["dist-tags"]?.nightly;
     if (tag === "nightly" && nightly) {
-      const publishedSha = metadata.versions?.[nightly]?.gitHead;
-      if (!publishedSha || !/^[0-9a-f]{40}$/.test(publishedSha)) {
-        throw new Error(`Missing source commit for ${pkg.name}@nightly`);
-      }
+      const publishedSha = await publishedCommit(
+        pkg.name,
+        nightly,
+        metadata.versions?.[nightly]?.dist,
+      );
       if (git("merge-base", sha, publishedSha) === sha) {
         verified.push(`${pkg.name}@${nightly} already contains this commit`);
         continue;
@@ -238,17 +273,14 @@ try {
       });
       const published: {
         "dist-tags"?: Record<string, string>;
-        versions?: Record<string, { gitHead?: string; dist?: { tarball?: string } }>;
+        versions?: Record<string, { dist?: { tarball?: string; integrity?: string } }>;
       } = response.ok ? await response.json() : {};
       const tarball = published.versions?.[version]?.dist?.tarball;
-      if (
-        published["dist-tags"]?.[tag] === version &&
-        published.versions?.[version]?.gitHead === sha &&
-        tarball
-      ) {
-        const download = await fetch(tarball, { signal: AbortSignal.timeout(30_000) });
-        if (!download.ok || (await download.arrayBuffer()).byteLength === 0) {
-          throw new Error(`Cannot download published ${pkg.name}@${version}`);
+      if (published["dist-tags"]?.[tag] === version && tarball) {
+        if (
+          (await publishedCommit(pkg.name, version, published.versions?.[version]?.dist)) !== sha
+        ) {
+          throw new Error(`Published source commit differs for ${pkg.name}@${version}`);
         }
         verified.push(`${pkg.name}@${version}`);
         break;
