@@ -25,10 +25,9 @@ updates:
       day: monday
       time: "06:00"
       timezone: Etc/UTC
-    # Never take a release younger than a week. Majors wait two.
+    # Never take a release younger than a week.
     cooldown:
       default-days: 7
-      semver-major-days: 14
     open-pull-requests-limit: 5
     groups:
       # One PR per week for everything that is not a major bump.
@@ -36,6 +35,15 @@ updates:
         update-types: ["minor", "patch"]
         patterns: ["*"]
     ignore:
+      # Better Auth stays on the release candidate the app is built against. Bump by hand.
+      - dependency-name: auth
+      - dependency-name: better-auth
+      - dependency-name: "@better-auth/*"
+      # Vite+ ships its own vite and vitest builds; the three move together with vite-plus. Bump by hand.
+      - dependency-name: vite
+      - dependency-name: vite-plus
+      - dependency-name: "@voidzero-dev/*"
+      - dependency-name: "@vitest/*"
       # Pinned on purpose. Bump by hand.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
