@@ -11,3 +11,5 @@ export const modulo = (left, right) => left % right;
 export const power = (base, exponent) => base ** exponent;
 
 export const squareRoot = (value) => Math.sqrt(value);
+
+export const absolute = (value) => Math.abs(value);

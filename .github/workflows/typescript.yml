@@ -2,9 +2,9 @@
 # Automated merges dispatch this workflow because GITHUB_TOKEN merges do not trigger push runs.
 # Dependabot PRs have a separate workflow.
 #
-# SECURITY: installs and tests execute PR code, including dependency scripts. Keep the token
-# read-only. Adding secrets, write access, or OIDC permission would expose those credentials to PR
-# code.
+# SECURITY: check_test executes PR code and has read-only access. Publishing jobs run only after
+# successful checks on master, with OIDC scoped to those jobs. commit_status runs no repository code
+# and records results on the tested commit, including commits supplied by automated dispatches.
 
 name: typescript
 
@@ -28,6 +28,10 @@ concurrency:
 
 jobs:
   check_test:
+    name: TypeScript checks and tests
+    outputs:
+      sha: ${{ steps.checked.outputs.sha }}
+      packages: ${{ steps.checked.outputs.packages }}
     permissions:
       contents: read
     # Manual and automated dispatches may test only master, never a PR branch.
@@ -69,17 +73,80 @@ jobs:
             vite-task-${{ runner.os }}-${{ runner.arch }}-
       - run: vp run check
       - run: vp run test
-      # workflow_run.head_sha is the dispatch ref, not necessarily the commit checked out above.
-      - if: github.event_name != 'pull_request'
-        run: git rev-parse HEAD > "$RUNNER_TEMP/checked-sha"
-      - if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: checked-commit-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/checked-sha
-          if-no-files-found: error
+      - id: checked
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [ -n "$(git diff --name-only HEAD^ HEAD -- packages/)" ]; then
+            echo "packages=true" >> "$GITHUB_OUTPUT"
+          fi
       - if: success()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.vite/task-cache
           key: ${{ steps.task-cache.outputs.cache-primary-key }}
+
+  nightly:
+    needs: check_test
+    if: >-
+      github.repository == 'tunnckoCoreHQ/monarch' &&
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      needs.check_test.outputs.packages == 'true'
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/packages-nightly.yml
+    with:
+      sha: ${{ needs.check_test.outputs.sha }}
+
+  release:
+    needs: check_test
+    if: >-
+      github.repository == 'tunnckoCoreHQ/monarch' &&
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      needs.check_test.outputs.packages == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    uses: ./.github/workflows/packages-release.yml
+    with:
+      sha: ${{ needs.check_test.outputs.sha }}
+
+  commit_status:
+    needs: [check_test, nightly, release]
+    if: >-
+      always() && github.repository == 'tunnckoCoreHQ/monarch' &&
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      statuses: write
+    steps:
+      # Report against the tested merge commit, even if master advanced before dispatch started.
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          CHECKED_SHA: ${{ inputs.merge_sha || github.sha }}
+          CHECK_RESULT: ${{ needs.check_test.result }}
+          NIGHTLY_RESULT: ${{ needs.nightly.result }}
+          NIGHTLY_REPORT: ${{ needs.nightly.outputs.report }}
+        run: |
+          [[ "$CHECKED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          state=failure
+          [ "$CHECK_RESULT" != success ] || state=success
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$CHECKED_SHA" \
+            -f state="$state" -f context=typescript -f description="Checks: $CHECK_RESULT" -f target_url="$url"
+          state=failure
+          description="Nightly: $NIGHTLY_RESULT"
+          if [ "$NIGHTLY_RESULT" = success ] && [ -n "$NIGHTLY_REPORT" ]; then
+            state=success
+            description="$NIGHTLY_REPORT"
+          elif [ "$NIGHTLY_RESULT" = skipped ] && [ "$CHECK_RESULT" = success ]; then
+            state=success
+            description="Not published: no packages changed"
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$CHECKED_SHA" \
+            -f state="$state" -f context=packages-nightly -f description="${description:0:140}" -f target_url="$url"
