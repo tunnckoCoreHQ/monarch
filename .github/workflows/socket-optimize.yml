@@ -1,0 +1,65 @@
+name: socket-optimize
+
+on:
+  schedule:
+    # Mondays 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: socket-optimize
+  cancel-in-progress: false
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: socket-optimize
+    steps:
+      # SHA-pinned; let Renovate bump it
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # A PAT so the pushed branch and the PR trigger the check workflows. GITHUB_TOKEN would not.
+          token: ${{ secrets.SOCKET_OPTIMIZE_PAT }}
+      # SHA-pinned; let Renovate bump it
+      - uses: voidzero-dev/setup-vp@313600b80b104eadebb9111787d37a2e83e014ca # v1.17.0
+        with:
+          sfw: true
+          cache: true
+          run-install: true
+          node-version: "lts"
+      - run: pnpm dlx socket@1.1.167 optimize
+        env:
+          SOCKET_SECURITY_API_TOKEN: ${{ secrets.SOCKET_SECURITY_API_TOKEN }}
+      - id: diff
+        run: |
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.diff.outputs.changed == 'true'
+        run: pnpm install --no-frozen-lockfile
+      - if: steps.diff.outputs.changed == 'true'
+        run: vp run check
+      - if: steps.diff.outputs.changed == 'true'
+        run: vp test --run
+      - if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.SOCKET_OPTIMIZE_PAT }}
+        run: |
+          git config user.name tunnckoCore
+          git config user.email 5038030+tunnckoCore@users.noreply.github.com
+          git switch -c "$BRANCH"
+          git add -A
+          git commit -m "chore(deps): apply socket optimize overrides"
+          git push --force origin "$BRANCH"
+          if ! gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+            gh pr create --base master --head "$BRANCH" \
+              --title "chore(deps): apply socket optimize overrides" \
+              --body "Weekly run of socket optimize. Review the override changes before merge; auto-merge is enabled once checks pass."
+          fi
+          gh pr merge "$BRANCH" --auto --squash || echo "auto-merge not enabled on the repository; merge the PR by hand"
