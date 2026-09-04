@@ -1,0 +1,3 @@
+READ_TOKEN=vlt_1_read_token
+WRITE_TOKEN=vlt_1_write_token
+UPSTREAM_URL=https://registry.vlt.io/<vlt_username>/main/

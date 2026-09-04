@@ -9,5 +9,12 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": [".astro/types.d.ts", "src", "test", "**/*.ts"]
+  "include": [
+    "apps/**/*.ts",
+    "apps/*/.astro/types.d.ts",
+    "packages/**/*.ts",
+    "solidity/**/*.ts",
+    "**/*.ts"
+  ],
+  "exclude": ["**/node_modules", "**/dist"]
 }

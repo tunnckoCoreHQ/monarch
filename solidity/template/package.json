@@ -1,0 +1,36 @@
+{
+  "name": "template",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Template solidity project",
+  "license": "Apache-2.0",
+  "author": "tunnckoCore",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tunnckoCore/triad-auth.git",
+    "directory": "solidity/template"
+  },
+  "scripts": {
+    "build": "forge build",
+    "check": "vp run fmt && vp run lint && vp run test && vp run build",
+    "fmt": "forge fmt",
+    "lint": "forge lint --deny warnings",
+    "test": "forge test",
+    "gas": "forge snapshot --no-match-test testFuzz",
+    "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi"
+  },
+  "dependencies": {
+    "solady": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:types",
+    "@types/bun": "catalog:types",
+    "@types/node": "catalog:types",
+    "@vitest/coverage-v8": "catalog:",
+    "forge-std": "github:foundry-rs/forge-std#v1.16.1",
+    "typescript": "catalog:types",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

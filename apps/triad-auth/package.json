@@ -1,0 +1,50 @@
+{
+  "name": "triad-auth",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "vp exec astro build",
+    "build:nightly": "WRANGLER_CONFIG=wrangler.nightly.jsonc vp exec astro build",
+    "db:generate": "vp exec auth generate --config src/better-auth/schema.ts --output .ignore/auth-schema.sql --yes",
+    "db:migrate:local": "vp exec wrangler d1 migrations apply DB --local",
+    "deploy": "vp exec wrangler d1 migrations apply DB --remote -c wrangler.jsonc && vp exec wrangler deploy",
+    "deploy:nightly": "vp exec wrangler d1 migrations apply DB --remote -c wrangler.nightly.jsonc && vp exec wrangler deploy",
+    "dev": "vp exec astro dev",
+    "preview": "vp run build && vp exec astro preview",
+    "promote": "git fetch origin && git push origin origin/master:stable"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^14.1.2",
+    "@better-auth/cimd": "catalog:better-auth",
+    "@better-auth/oauth-provider": "catalog:better-auth",
+    "@better-auth/passkey": "catalog:better-auth",
+    "@fontsource-variable/archivo": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@noble/curves": "catalog:crypto",
+    "@noble/hashes": "catalog:crypto",
+    "@paralleldrive/cuid2": "^3.3.0",
+    "@scure/base": "catalog:crypto",
+    "@scure/bip32": "catalog:crypto",
+    "@scure/btc-signer": "catalog:crypto",
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.1",
+    "astro": "catalog:",
+    "auth": "catalog:better-auth",
+    "better-auth": "catalog:better-auth",
+    "jose": "catalog:",
+    "viem": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:types",
+    "@types/bun": "catalog:types",
+    "@types/node": "catalog:types",
+    "@vitest/coverage-v8": "catalog:",
+    "typescript": "catalog:types",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "catalog:"
+  },
+  "packageManager": "pnpm@11.21.0"
+}

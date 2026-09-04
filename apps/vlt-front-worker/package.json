@@ -1,0 +1,19 @@
+{
+  "name": "vlt-front-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "vp check --fix",
+    "deploy": "vp run types && vp exec wrangler deploy",
+    "dev": "vp exec wrangler dev",
+    "types": "mkdir -p ./src/generated/ && vp exec wrangler types -c ./wrangler.jsonc ./src/generated/worker-types.d.ts"
+  },
+  "dependencies": {
+    "effect": "4.0.0-rc.111",
+    "hono": "4.13.3"
+  },
+  "devDependencies": {
+    "wrangler": "catalog:"
+  }
+}

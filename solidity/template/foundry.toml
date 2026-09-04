@@ -1,0 +1,35 @@
+[profile.default]
+src = "src"
+out = "out"
+test = "test"
+libs = ["node_modules"]
+solc_version = "0.8.30"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 1000
+allow_paths = ["../../node_modules"]
+deny = "warnings"
+# 2394: transient storage warning (not used by the kernel today; kept for future tstore/tload use)
+ignored_error_codes = [2394]
+remappings = [
+  "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+  "solady/=node_modules/solady/src/",
+  "forge-std/=node_modules/forge-std/src/",
+]
+
+[lint]
+# every narrowing cast is bounded by the packed bit layouts (see GlyphKernel.sol header)
+exclude_lints = ["unsafe-typecast"]
+severity = ["high", "med", "low"]
+ignore = ["node_modules/**"]
+
+[fuzz]
+runs = 256
+
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+quote_style = "double"
+number_underscore = "thousands"

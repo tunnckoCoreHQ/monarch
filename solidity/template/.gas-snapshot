@@ -1,0 +1,4 @@
+CounterTest:test_Decrement() (gas: 19466)
+CounterTest:test_Increment() (gas: 28475)
+CounterTest:test_RevertWhen_DecrementAtZero() (gas: 10349)
+CounterTest:test_StartsAtZero() (gas: 7547)

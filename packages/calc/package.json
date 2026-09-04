@@ -1,0 +1,16 @@
+{
+  "name": "@tunnckocore/calc",
+  "version": "0.1.2",
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  }
+}

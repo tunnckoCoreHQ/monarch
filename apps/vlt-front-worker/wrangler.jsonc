@@ -1,0 +1,20 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "vlt-front-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-24",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "npm.wgw.lol/*",
+      "zone_name": "wgw.lol",
+    },
+  ],
+  "vars": {
+    "ALLOWED_GITHUB_LOGIN": "tunnckoCore",
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
+}

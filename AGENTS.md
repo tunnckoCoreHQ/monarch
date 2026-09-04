@@ -1,45 +1,32 @@
-# Project rules
+# Monorepo
 
-- Follow `~/skills/instructions.md`.
-- For code, follow `~/skills/clean_code.md`.
-- For UI work, follow `~/skills/product_design.md`.
-- Keep solutions small and direct.
-- Put generic reusable helpers in `src/utils.ts` and export them. Before adding a local helper, check the central utilities and existing exports so the same logic is not implemented twice.
-- Do not preserve superseded APIs or add regression tests for them during refactors.
-- Use TypeScript 7, pinned 7.0.2 is fine.
-- Do not edit `vite.config.ts` unless very necessary, ask the user to approve.
-- Use conventional commits. Obviously.
-- Do not hard-wrap prose.
-- Talk to the user in ASD-STE100 Simplified Technical English.
-- Never use any built-in browser or browser tool. Unless explicitly asked.
+This is a Solidity/TypeScript/Rust monorepo for multiple projects and languages. It is managed by Pnpm and VitePlus (oxc toolchain), and Cargo for Rust, and Foundry Forge for Solidity.
 
-## Verification
+- Always read and follow `~/skills/instructions.md` and its referenced files.
+- Creating new solidity/foundry projects: copy `solidity/template/` as starting template, and edit the package.json fields, readme and etc.
+- Everything is managed by `vp` - which uses `pnpm` under the hood.
+- use conventional commits
+- Use pnpm/vp filters to run commands inside a given project or package or app.
+- Solidity dependencies are managed by Pnpm through Nodejs/node_modules.
+- Solidity projects are in `solidity/*`.
+- TypeScript packages and projects are at `packages/*`.
+- Apps and docs sites are at `apps/*`.
+- Solidity projects' docs should be on their own `solidity/*/docs` folder.
+- TypeScript toolchain is managed by VitePlus and `vp run check` is enough.
+- Solidity projects are formatted, linted and build with Foundry, not Pnpm/VitePlus/Oxc.
+- Solidity linting/format/build should happen with `vp`. At the root, `vp run solidity:check` runs fmt, lint, test, and build for every Solidity project with caching, `vp run solidity:test` runs only the tests with caching, and `vp run solidity:testing` runs all project test scripts in parallel without cache for a fresh fuzz. Prefer the per-project filter for day-to-day work.
+- Call `vp run --filter glyph-protocol test` to run Solidity tests only for that project. Same for any other project-scoped Solidity Forge command.
+- Every Solidity/Foundry project has `fmt`, `test`, `lint` and `build` scripts.
 
-Before a PR, run these sequentially and restart from the first command after any fix:
+Here some filtering patterns:
 
-1. `vp run check`
-2. `vp test --run`
-3. `vp run build`
-
-## Database migrations
-
-- Never modify `migrations/0001-initial.sql`.
-- Add a new numbered migration for every schema change.
-- Never modify a migration already applied to production.
-- `vp run db:generate` creates `.generated/auth-schema.sql` for reference only.
-- Apply migrations with `vp run db:migrate` or `vp run db:migrate:local`.
-
-## Git and GitHub
-
-- Follow the Git and GitHub rules in `~/skills/instructions.md`.
-- Squash-merge PRs. Never create merge commits.
-- Use the babysit pr skill, only when asked, and only if it exists in the project.
-
-## Branches and environments
-
-- `master` is the default branch. Pull requests merge into `master`.
-- Workers Builds deploys `master` to the `triad-auth-nightly` Worker at `https://triad-auth-nightly.wgw.lol`.
-- `stable` is the production pointer. Workers Builds deploys `stable` to the `triad-auth` Worker at `https://triad-auth.wgw.lol`.
-- Cut a production release with `vp run promote`. It fast-forwards `stable` to `origin/master`. Run it only when the user asks.
-- Never run `vp run deploy` or `vp run deploy:nightly` locally unless the user explicitly asks. Builds runs them.
-- Each Worker has its own D1 database and its own secrets. See `CONTRIBUTING.md`.
+```
+Filter Patterns:
+  --filter <pattern>        Select by package name (e.g. foo, @scope/*)
+  --filter ./<dir>          Select packages under a directory
+  --filter {<dir>}          Same as ./<dir>, but allows traversal suffixes
+  --filter <pattern>...     Select package and its dependencies
+  --filter ...<pattern>     Select package and its dependents
+  --filter <pattern>^...    Select only the dependencies (exclude the package itself)
+  --filter !<pattern>       Exclude packages matching the pattern
+```

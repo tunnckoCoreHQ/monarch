@@ -1,0 +1,39 @@
+{
+  "name": "glyph-protocol",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A minimal on-chain inscription protocol for the EVM",
+  "license": "Apache-2.0",
+  "author": "tunnckoCore",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tunnckoCore/triad-auth.git",
+    "directory": "solidity/glyph-protocol"
+  },
+  "scripts": {
+    "build": "forge build",
+    "check": "vp run fmt && vp run lint && vp run test && vp run build && vp run check:extra",
+    "check:extra": "vp run selectors",
+    "fmt": "forge fmt",
+    "lint": "forge lint --deny warnings",
+    "selectors": "methods=$(forge inspect GlyphKernel methods --json) || exit; if printf '%s\\n' \"$methods\" | grep -Eq '\":[[:space:]]*\"(0x)?0[1-4][0-9a-fA-F]{6}\"'; then echo \"selector starts with a raw op byte\"; exit 1; fi",
+    "test": "forge test",
+    "gas": "forge snapshot --no-match-test testFuzz",
+    "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "catalog:",
+    "solady": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:types",
+    "@types/bun": "catalog:types",
+    "@types/node": "catalog:types",
+    "@vitest/coverage-v8": "catalog:",
+    "forge-std": "github:foundry-rs/forge-std#v1.16.1",
+    "typescript": "catalog:types",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "catalog:"
+  }
+}
