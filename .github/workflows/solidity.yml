@@ -1,6 +1,6 @@
-# Runs Solidity formatting, linting, tests, and builds when Solidity or its shared inputs change.
-# Accepts master pushes and same-repository PRs; Dependabot has its own verification workflow.
-# The job has read-only repository access and does not publish or deploy.
+# Runs vp run solidity:check on master pushes and PRs that match the path filters below.
+# Skips fork PRs and Dependabot-triggered runs; auto-merge-deps.yml handles Dependabot.
+# The check_test_build job has only contents: read.
 name: solidity
 
 on:

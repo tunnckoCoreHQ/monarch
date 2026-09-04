@@ -1,6 +1,7 @@
-# Publishes pending Changesets to VLT as nightlies after successful master TypeScript checks.
-# Accepts only this repository's push runs; commits without packages/ changes skip setup and publishing.
-# Only the publishing job can request OIDC tokens; the worker validates the repository, ref, workflow, and dist-tag.
+# Runs after typescript.yml succeeds for a push to master in tunnckoCoreHQ/monarch.
+# If the commit changed packages/, pnpm publishes packages with pending Changesets to VLT with the nightly tag.
+# Only pkgs_nightly can request GitHub OIDC tokens.
+# vlt-front-worker at npm.wgw.lol verifies the token's signature, repository, branch, and workflow, and permits only nightly writes.
 name: packages-nightly
 
 on:

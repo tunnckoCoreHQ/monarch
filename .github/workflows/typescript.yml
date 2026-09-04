@@ -1,6 +1,6 @@
-# Runs TypeScript checks and tests on master pushes and PRs targeting master.
-# Skips fork and Dependabot PRs here; Dependabot has its own verification workflow.
-# The job has read-only repository access and does not publish or deploy.
+# Runs vp run check and vp run test on pushes to master and PRs targeting master.
+# Skips fork PRs and Dependabot-triggered runs; auto-merge-deps.yml handles Dependabot.
+# The check_test job has only contents: read.
 name: typescript
 
 on:

@@ -1,6 +1,6 @@
-# Runs Socket dependency optimization on Mondays at 06:00 UTC or a manual trigger.
-# Runs only from master and validates changes before opening and squash-merging the optimization PR.
-# Write permissions are scoped to the job; checkout credentials are not persisted.
+# Runs Socket's optimize command on Mondays at 06:00 UTC or workflow_dispatch, only from master.
+# If dependencies change, runs check, test, and solidity:check before opening and squash-merging the optimization PR.
+# Only socket_optimize has repository write permissions; checkout does not persist Git credentials.
 name: socket-optimize
 
 on:

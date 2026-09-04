@@ -1,6 +1,6 @@
-# Squash-merges eligible non-bot PRs after their checks pass.
-# Uses workflow code from master without checking out PR code; only the merge job has write permissions.
-# Excludes release PRs and do-not-merge, then rechecks the PR state and label immediately before merging.
+# Runs after typescript.yml or solidity.yml succeeds for a PR, then waits for all remaining PR checks.
+# Squash-merges PRs from owners, members, or collaborators; skips bots, changeset-release/* branches, and the do-not-merge label.
+# Executes auto-merge.yml from master without checking out PR code; rechecks the PR state and label before merging.
 name: auto-merge
 
 on:

@@ -1,6 +1,7 @@
-# Prepares a release PR on Mondays at 09:00 UTC or a manual trigger; the owner reviews and merges it.
-# After successful master TypeScript checks, verifies the release PR merge before publishing stable versions, tags, and GitHub Releases.
-# PR preparation has no OIDC permission; only publishing can request tokens, which the worker restricts to latest.
+# On Mondays at 09:00 UTC or workflow_dispatch, Changesets prepares a release PR for manual review and merge.
+# After typescript.yml succeeds for a push to master, pkgs_identify checks that the commit merged changeset-release/master.
+# Only then does pkgs_publish publish stable versions to VLT with latest and create package tags and GitHub Releases.
+# Only pkgs_publish can request OIDC tokens; vlt-front-worker at npm.wgw.lol verifies them and permits only latest writes.
 name: packages-release
 
 on:
