@@ -121,6 +121,18 @@ export default defineConfig({
         ],
       },
 
+      "triad-auth:test": {
+        command: "vp test apps/triad-auth",
+        input: [
+          "vite.config.ts",
+          "apps/triad-auth/**/*.{ts,tsx,astro,json,jsonc,sql}",
+          "!**/dist/**",
+          "!**/node_modules/**",
+          "!**/.astro/**",
+        ],
+        output: [],
+      },
+
       "solidity:test": {
         command: solidityProjects.map((project) => `forge test --root solidity/${project}`),
         input: [{ auto: true }, "!**/out/**", "!**/cache/**", "!**/node_modules/**"],

@@ -9,8 +9,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  # Needed to dispatch the ci workflow on the pushed branch.
-  actions: write
 
 concurrency:
   group: socket-optimize
@@ -71,6 +69,5 @@ jobs:
               --title "chore(deps): apply socket optimize overrides" \
               --body "Weekly socket optimize run. Check, test, and build passed in the job before this pull request was opened."
           fi
-          gh pr merge "$BRANCH" --repo "$GITHUB_REPOSITORY" --auto --squash --delete-branch
-          # A job-token push does not trigger pull_request workflows. Dispatch ci so the required check lands on this commit.
-          gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
+          # Check, test, and build already passed above. A job-token pull request gets no pull_request runs, so merge it here.
+          gh pr merge "$BRANCH" --repo "$GITHUB_REPOSITORY" --squash --delete-branch

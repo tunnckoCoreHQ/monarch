@@ -3,20 +3,19 @@ name: ci
 on:
   pull_request:
     branches: [master]
-  # Lets a job-token workflow ask for the required check on its own branch, since job-token pushes do not trigger pull_request runs.
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   check:
+    name: ci:check
     # Same-repository branches only. Fork PRs never run, so they cannot write caches or execute code here.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       # SHA-pinned
@@ -35,8 +34,9 @@ jobs:
       - run: vp run check
 
   test:
+    name: ci:test
     needs: check
-    if: needs.check.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: needs.check.result == 'success' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       # SHA-pinned
