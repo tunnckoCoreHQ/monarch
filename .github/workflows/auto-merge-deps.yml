@@ -1,0 +1,24 @@
+name: auto-merge-deps
+
+# Enables GitHub auto-merge on Dependabot pull requests. GitHub then squash-merges
+# once the checks required by the master ruleset pass.
+on:
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: auto-merge-deps-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  enable:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --auto --squash --delete-branch
