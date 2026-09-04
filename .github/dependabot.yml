@@ -35,6 +35,15 @@ updates:
         update-types: ["minor", "patch"]
         patterns: ["*"]
     ignore:
+      # Better Auth stays on the release candidate the app is built against. Bump by hand.
+      - dependency-name: auth
+      - dependency-name: better-auth
+      - dependency-name: "@better-auth/*"
+      # Vite+ ships its own vite and vitest builds; the three move together with vite-plus. Bump by hand.
+      - dependency-name: vite
+      - dependency-name: vite-plus
+      - dependency-name: "@voidzero-dev/*"
+      - dependency-name: "@vitest/*"
       # Pinned on purpose. Bump by hand.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
