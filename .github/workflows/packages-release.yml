@@ -9,8 +9,7 @@ on:
     types: [completed]
     branches: [master]
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
   prepare:

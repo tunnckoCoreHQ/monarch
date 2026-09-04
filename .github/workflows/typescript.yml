@@ -6,8 +6,7 @@ on:
   pull_request:
     branches: [master]
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -15,6 +14,8 @@ concurrency:
 
 jobs:
   check_test:
+    permissions:
+      contents: read
     # Pushes to master, and same-repository non-Dependabot pull requests. Dependabot PRs are verified and merged by auto-merge-deps.
     if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: blacksmith-4vcpu-ubuntu-2404

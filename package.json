@@ -7,6 +7,7 @@
     "changeset": "changeset",
     "packages:nightly": "node scripts/publish-packages.ts nightly",
     "packages:release": "node scripts/publish-packages.ts latest",
+    "packages:release-pr": "gh workflow run packages-release.yml --repo tunnckoCoreHQ/monarch --ref master",
     "packages:version": "changeset version && pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile && vp run check && vp run test",
     "prepare": "vp config --no-agent",
     "solidity:build": "vp run --filter './solidity/*' build",

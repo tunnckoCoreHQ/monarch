@@ -6,9 +6,7 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: socket-optimize
@@ -16,6 +14,9 @@ concurrency:
 
 jobs:
   optimize:
+    permissions:
+      contents: write
+      pull-requests: write
     # Only the default branch may run this, including manual dispatches, so a modified branch cannot reach the secrets or push.
     if: github.ref == 'refs/heads/master'
     runs-on: blacksmith-2vcpu-ubuntu-2404

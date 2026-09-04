@@ -5,9 +5,7 @@ on:
   pull_request:
     branches: [master]
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -15,6 +13,9 @@ concurrency:
 
 jobs:
   verify_merge:
+    permissions:
+      contents: write
+      pull-requests: write
     if: github.actor == 'dependabot[bot]'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:

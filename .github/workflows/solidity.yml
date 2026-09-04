@@ -18,8 +18,7 @@ on:
       - "vite.config.ts"
       - ".github/workflows/solidity.yml"
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -27,6 +26,8 @@ concurrency:
 
 jobs:
   check_test_build:
+    permissions:
+      contents: read
     # Pushes to master, and same-repository non-Dependabot pull requests. Dependabot PRs are verified and merged by auto-merge-deps.
     if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: blacksmith-4vcpu-ubuntu-2404
