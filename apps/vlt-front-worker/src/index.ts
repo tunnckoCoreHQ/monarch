@@ -4,7 +4,9 @@ import { Hono } from "hono";
 const app = new Hono<{ Bindings: Env & { COMMIT_SHA?: string } }>();
 
 // Registry paths never start with "/-/health", so this cannot shadow a package.
-app.get("/-/health", (c) => c.json({ ok: true, commit: c.env.COMMIT_SHA ?? "unknown" }));
+app.get("/-/health", (c) =>
+  c.json({ ok: true, foobar: true, commit: c.env.COMMIT_SHA ?? "unknown" }),
+);
 
 app.all("*", async (c) => {
   const request = c.req.raw;
