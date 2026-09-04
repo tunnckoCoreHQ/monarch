@@ -38,5 +38,6 @@ jobs:
       # SHA-pinned
       - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
         with:
-          version: stable
+          # Matches the forge build used locally (1.7.x nightly); stable 1.8 adds lint rules this code does not pass yet.
+          version: nightly
       - run: vp run solidity:check
