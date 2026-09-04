@@ -87,27 +87,23 @@ const migrationFiles = readdirSync("migrations")
   .filter((path: string) => path.endsWith(".sql"))
   .sort();
 const initialMigration = readSource("migrations/0001-initial.sql");
-const walletMigration = readSource("migrations/0002-prf-wallet.sql");
-const walletCapabilityMigration = readSource("migrations/0003-wallet-capability.sql");
-const walletAddressesMigration = readSource("migrations/0004-wallet-addresses.sql");
+const nightlyWranglerSource = readSource("wrangler.nightly.toml");
+
+function d1Blocks(source: string): string[] {
+  return source.match(/\[\[d1_databases\]\][\s\S]*?(?=\n\[|$)/g) ?? [];
+}
 
 describe("Better Auth schema tooling", () => {
-  it("keeps the finalized initial migration and adds schema changes separately", () => {
-    expect(migrationFiles).toEqual([
-      "0001-initial.sql",
-      "0002-prf-wallet.sql",
-      "0003-wallet-capability.sql",
-      "0004-wallet-addresses.sql",
-    ]);
+  it("keeps one squashed initial migration", () => {
+    expect(migrationFiles).toEqual(["0001-initial.sql"]);
     expect(createHash("sha256").update(initialMigration).digest("hex")).toBe(
-      "23f86de32d73f5cac58147983fe07b68890000174fd916f39039083d22aa9e00",
+      "edd209690f552bfff2b7d48d68d86bd4d9f6f393c664efb43c57602a95dea58d",
     );
     expect(initialMigration).toContain('create table "user"');
     expect(initialMigration).toContain('"encryptedData" text');
     expect(initialMigration).toContain('create table "walletAddress"');
     expect(initialMigration).toContain('create table "passkey"');
     expect(initialMigration).toContain('create table "passkeyUsername"');
-    expect(initialMigration).not.toContain('create table "walletRequest"');
     expect(initialMigration).toContain('"credentialID" text not null');
     expect(initialMigration).toContain('"username" text not null unique');
     expect(initialMigration).toContain('"accountSub" text not null unique');
@@ -122,54 +118,80 @@ describe("Better Auth schema tooling", () => {
     expect(initialMigration).not.toContain('"profileAvatar"');
     expect(initialMigration).toContain('create table "deviceCode"');
     expect(initialMigration).toContain('create table "rateLimit"');
-    expect(walletMigration).toContain('create table "walletRequest"');
-    expect(walletMigration).toContain('"namespace" text not null');
-    expect(walletMigration).toContain('"walletProfile" text not null');
-    expect(walletMigration).toContain('"accountIndex" integer not null');
-    expect(walletMigration).toContain('"chainId" integer');
-    expect(walletMigration).toContain('"signingMessage" text not null');
-    expect(walletMigration).toContain('"consumedAt" date');
-    expect(walletMigration).toContain('create index "walletRequest_expiresAt_idx"');
-    expect(walletCapabilityMigration).toContain(
-      'alter table "passkey" add column "walletCapable" integer not null default 0',
+    expect(initialMigration).toContain('create table "walletRequest"');
+    expect(initialMigration).toContain('"namespace" text not null');
+    expect(initialMigration).toContain('"walletProfile" text not null');
+    expect(initialMigration).toContain('"accountIndex" integer not null');
+    expect(initialMigration).toContain('"chainId" integer');
+    expect(initialMigration).toContain('"signingMessage" text not null');
+    expect(initialMigration).toContain('"consumedAt" date');
+    expect(initialMigration).toContain('create index "walletRequest_expiresAt_idx"');
+    expect(initialMigration).toContain('create table "walletCapabilityRequest"');
+    expect(initialMigration).toContain('create index "walletCapabilityRequest_expiresAt_idx"');
+    expect(initialMigration).toMatch(
+      /create table "passkey" \([^;]*"walletCapable" integer not null default 0, "encryptedData" text\);/,
     );
-    expect(walletCapabilityMigration).toContain('create table "walletCapabilityRequest"');
-    expect(walletCapabilityMigration).toContain(
-      'create index "walletCapabilityRequest_expiresAt_idx"',
-    );
-    expect(walletAddressesMigration).toContain(
-      'alter table "passkey" add column "encryptedData" text',
-    );
+    expect(initialMigration).not.toContain("alter table");
   });
 
-  it("configures one canonical Worker and D1 database with preview URLs", () => {
-    const bindingBlocks = wranglerSource.match(/\[\[d1_databases\]\][\s\S]*?(?=\n\[|$)/g) ?? [];
+  it("configures the production Worker and D1 database", () => {
+    const bindingBlocks = d1Blocks(wranglerSource);
 
     expect(bindingBlocks).toHaveLength(1);
     expect(wranglerSource).toContain('name = "triad-auth"');
     expect(wranglerSource).toContain("workers_dev = false");
-    expect(wranglerSource).toContain("preview_urls = true");
+    expect(wranglerSource).toContain("preview_urls = false");
     expect(wranglerSource).toContain(
-      'routes = [{ pattern = "triad.wgw.lol/*", zone_name = "wgw.lol" }]',
+      'routes = [{ pattern = "triad-auth.wgw.lol/*", zone_name = "wgw.lol" }]',
     );
+    expect(wranglerSource).toContain('AUTH_ORIGIN = "https://triad-auth.wgw.lol"');
     expect(bindingBlocks[0]).toContain('binding = "DB"');
     expect(bindingBlocks[0]).toContain('database_name = "triad-auth"');
-    expect(bindingBlocks[0]).toContain('database_id = "cb0818ed-e2c1-4b41-bfe6-15d4399602e2"');
+    expect(bindingBlocks[0]).toContain('database_id = "40220009-d502-4afd-ab7b-54495016720f"');
     expect(bindingBlocks[0]).toContain('migrations_dir = "migrations"');
-    expect(wranglerSource).not.toContain("[env.staging]");
-    expect(wranglerSource).not.toContain("triad-auth-staging");
+    expect(wranglerSource).not.toContain("[env.");
     expect(wranglerSource.match(/database_id\s*=/g)).toHaveLength(1);
+  });
+
+  it("configures the nightly Worker and D1 database", () => {
+    const bindingBlocks = d1Blocks(nightlyWranglerSource);
+
+    expect(bindingBlocks).toHaveLength(1);
+    expect(nightlyWranglerSource).toContain('name = "triad-auth-nightly"');
+    expect(nightlyWranglerSource).toContain("workers_dev = false");
+    expect(nightlyWranglerSource).toContain("preview_urls = false");
+    expect(nightlyWranglerSource).toContain(
+      'routes = [{ pattern = "triad-auth-nightly.wgw.lol/*", zone_name = "wgw.lol" }]',
+    );
+    expect(nightlyWranglerSource).toContain('AUTH_ORIGIN = "https://triad-auth-nightly.wgw.lol"');
+    expect(bindingBlocks[0]).toContain('binding = "DB"');
+    expect(bindingBlocks[0]).toContain('database_name = "triad-auth-nightly"');
+    expect(bindingBlocks[0]).toContain('database_id = "c4c8e874-a463-4c22-8389-8911627c055d"');
+    expect(bindingBlocks[0]).toContain('migrations_dir = "migrations"');
+    expect(nightlyWranglerSource).not.toContain("[env.");
+    expect(nightlyWranglerSource.match(/database_id\s*=/g)).toHaveLength(1);
   });
 
   it("exposes generated schema, migration, and deployment commands", () => {
     expect(packageJson.scripts["db:generate"]).toBe(
       "vp exec auth generate --config src/better-auth/schema.ts --output .generated/auth-schema.sql --yes",
     );
-    expect(packageJson.scripts["db:migrate"]).toContain("--remote");
     expect(packageJson.scripts["db:migrate:local"]).toContain("--local");
-    expect(packageJson.scripts.deploy).toBe("vp exec wrangler deploy");
-    expect(packageJson.scripts["deploy:staging"]).toContain("versions upload");
-    expect(packageJson.scripts["deploy:staging"]).toContain("--preview-alias staging");
+    expect(packageJson.scripts.build).toBe("vp exec astro build");
+    expect(packageJson.scripts["build:nightly"]).toBe(
+      "WRANGLER_CONFIG=wrangler.nightly.toml vp exec astro build",
+    );
+    expect(packageJson.scripts.deploy).toBe(
+      "vp exec wrangler d1 migrations apply DB --remote -c wrangler.toml && vp exec wrangler deploy",
+    );
+    expect(packageJson.scripts["deploy:nightly"]).toBe(
+      "vp exec wrangler d1 migrations apply DB --remote -c wrangler.nightly.toml && vp exec wrangler deploy",
+    );
+    expect(packageJson.scripts.promote).toBe(
+      "git fetch origin && git push origin origin/master:stable",
+    );
+    expect(packageJson.scripts["deploy:staging"]).toBeUndefined();
+    expect(packageJson.scripts.test).toBeUndefined();
   });
 
   it("does not add an adapter, emulator, SQLite driver, or legacy resource name", () => {

@@ -1,13 +1,13 @@
-name = "triad-auth"
+name = "triad-auth-nightly"
 main = "src/index.ts"
 compatibility_date = "2026-07-09"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 workers_dev = false
 preview_urls = false
-routes = [{ pattern = "triad-auth.wgw.lol/*", zone_name = "wgw.lol" }]
+routes = [{ pattern = "triad-auth-nightly.wgw.lol/*", zone_name = "wgw.lol" }]
 
 [vars]
-AUTH_ORIGIN = "https://triad-auth.wgw.lol"
+AUTH_ORIGIN = "https://triad-auth-nightly.wgw.lol"
 
 [assets]
 directory = "./dist"
@@ -18,6 +18,6 @@ run_worker_first = false
 
 [[d1_databases]]
 binding = "DB"
-database_name = "triad-auth"
-database_id = "40220009-d502-4afd-ab7b-54495016720f"
+database_name = "triad-auth-nightly"
+database_id = "c4c8e874-a463-4c22-8389-8911627c055d"
 migrations_dir = "migrations"

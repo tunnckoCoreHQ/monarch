@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "build": "vp exec astro build",
+    "build:nightly": "WRANGLER_CONFIG=wrangler.nightly.toml vp exec astro build",
     "db:generate": "vp exec auth generate --config src/better-auth/schema.ts --output .generated/auth-schema.sql --yes",
-    "db:migrate": "vp exec wrangler d1 migrations apply DB --remote",
     "db:migrate:local": "vp exec wrangler d1 migrations apply DB --local",
-    "deploy": "vp exec wrangler deploy",
-    "deploy:staging": "vp exec wrangler versions upload --preview-alias staging --var AUTH_ORIGIN:https://staging-triad-auth.equator-owl-studio.workers.dev",
+    "deploy": "vp exec wrangler d1 migrations apply DB --remote -c wrangler.toml && vp exec wrangler deploy",
+    "deploy:nightly": "vp exec wrangler d1 migrations apply DB --remote -c wrangler.nightly.toml && vp exec wrangler deploy",
     "dev": "vp exec astro dev",
-    "preview": "vp run build && vp exec astro preview"
+    "preview": "vp run build && vp exec astro preview",
+    "promote": "git fetch origin && git push origin origin/master:stable"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.1.2",

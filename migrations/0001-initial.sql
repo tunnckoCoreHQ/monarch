@@ -10,7 +10,7 @@ create table "deviceCode" ("id" text not null primary key, "deviceCode" text not
 
 create table "walletAddress" ("id" text not null primary key, "userId" text not null references "user" ("id") on delete cascade, "address" text not null, "chainId" integer not null, "isPrimary" integer not null, "createdAt" date not null);
 
-create table "passkey" ("id" text not null primary key, "name" text, "publicKey" text not null, "userId" text not null references "user" ("id") on delete cascade, "credentialID" text not null, "counter" integer not null, "deviceType" text not null, "backedUp" integer not null, "transports" text, "createdAt" date, "aaguid" text);
+create table "passkey" ("id" text not null primary key, "name" text, "publicKey" text not null, "userId" text not null references "user" ("id") on delete cascade, "credentialID" text not null, "counter" integer not null, "deviceType" text not null, "backedUp" integer not null, "transports" text, "createdAt" date, "aaguid" text, "walletCapable" integer not null default 0, "encryptedData" text);
 
 create table "passkeyUsername" ("id" text not null primary key, "username" text not null unique, "accountSub" text not null unique references "user" ("id") on delete cascade, "createdAt" date not null);
 
@@ -79,3 +79,16 @@ create index "deviceCode_deviceCode_idx" on "deviceCode" ("deviceCode");
 create index "deviceCode_userCode_idx" on "deviceCode" ("userCode");
 
 create unique index "oauthClientResource_clientId_resourceId_uidx" on "oauthClientResource" ("clientId", "resourceId");
+create table "walletRequest" ("id" text not null primary key, "userId" text not null references "user" ("id") on delete cascade, "clientId" text not null references "oauthClient" ("clientId") on delete cascade, "credentialId" text not null, "redirectUri" text not null, "state" text not null, "message" text not null, "namespace" text not null, "namespaceSubject" text not null, "walletProfile" text not null, "accountIndex" integer not null, "chainId" integer, "derivationPath" text not null, "challenge" text not null, "signingMessage" text not null, "expiresAt" date not null, "consumedAt" date, "createdAt" date not null);
+
+create index "walletRequest_userId_idx" on "walletRequest" ("userId");
+
+create index "walletRequest_clientId_idx" on "walletRequest" ("clientId");
+
+create index "walletRequest_expiresAt_idx" on "walletRequest" ("expiresAt");
+
+create table "walletCapabilityRequest" ("id" text not null primary key, "userId" text not null references "user" ("id") on delete cascade, "credentialId" text not null, "challenge" text not null, "signingMessage" text not null, "expiresAt" date not null, "consumedAt" date, "createdAt" date not null);
+
+create index "walletCapabilityRequest_userId_idx" on "walletCapabilityRequest" ("userId");
+
+create index "walletCapabilityRequest_expiresAt_idx" on "walletCapabilityRequest" ("expiresAt");

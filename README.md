@@ -19,11 +19,9 @@ vp run build
 
 ## Deployment
 
-Production and staging use one `triad-auth` Worker and one `triad-auth` D1 database. The `prod` branch deploys the
-production version, while `main` uploads the stable staging preview at
-`staging-triad-auth.equator-owl-studio.workers.dev`. Other branches do not deploy.
+Triad runs as two Cloudflare Workers with two D1 databases. Pull requests merge into `master`, which Workers Builds deploys to `triad-auth-nightly` at `https://triad-auth-nightly.wgw.lol`. Moving the `stable` branch forward deploys `triad-auth` at `https://triad-auth.wgw.lol`. Other branches do not deploy.
 
-See [`DEPLOY.md`](./DEPLOY.md) for first-time setup, required secrets, and Cloudflare Workers Builds configuration.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full flow, first-time setup, and secrets.
 
 ## Data and identity boundaries
 
@@ -49,7 +47,7 @@ Triad validates the client and redirect, requires an authenticated Triad Account
 Example request:
 
 ```text
-https://triad.wgw.lol/wallet/authorize?client_id=https%3A%2F%2Fclient.example%2Foauth.json&redirect_uri=https%3A%2F%2Fclient.example%2Fcallback&state=client-generated-state-1234&namespace=client&wallet_profile=evm&account_index=0&chain_id=1&message=Sign%20the%20client%20challenge
+https://triad-auth.wgw.lol/wallet/authorize?client_id=https%3A%2F%2Fclient.example%2Foauth.json&redirect_uri=https%3A%2F%2Fclient.example%2Fcallback&state=client-generated-state-1234&namespace=client&wallet_profile=evm&account_index=0&chain_id=1&message=Sign%20the%20client%20challenge
 ```
 
 The callback fragment contains `state`, `triad_request_id`, `triad_address`, `triad_signature`, `triad_namespace`, `triad_namespace_subject`, `triad_wallet_profile`, `triad_account_index`, `triad_path`, an applicable `triad_chain_id`, the base64url-encoded `triad_message`, and `triad_receipt`. Clients must compare `state`, verify the ES256 receipt through Triad's published JWKS with their Client ID as audience, compare its hashes and fields with the result, verify the exact returned Signing Envelope with the returned Wallet Profile, and reject replayed request IDs.

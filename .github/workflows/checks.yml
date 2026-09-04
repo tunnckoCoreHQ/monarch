@@ -1,0 +1,24 @@
+name: checks
+
+on:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      # SHA-pinned; let Renovate bump it
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # SHA-pinned; let Renovate bump it
+      - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+      - uses: voidzero-dev/setup-vp@v1.17.0
+        with:
+          sfw: true
+          cache: true
+          run-install: true
+          node-version: "lts"
+      - run: vp run check
+      - run: vp test --run
+      - run: vp run build
