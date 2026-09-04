@@ -49,4 +49,5 @@ jobs:
             exit 0
           fi
           gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
-          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master
+          merge_sha=$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq .mergeCommit.oid)
+          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master -f merge_sha="$merge_sha"

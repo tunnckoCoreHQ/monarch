@@ -64,13 +64,7 @@ if (packages.some((pkg) => pkg.publishConfig?.registry)) {
 
 const sha = git("rev-parse", "HEAD");
 const selected = new Set<string>();
-if (tag === "nightly") {
-  const head = await github<{ object: { sha: string } }>("git/ref/heads/master");
-  if (head.object.sha !== sha) {
-    console.log("A newer master commit exists; skipping this nightly run.");
-    process.exit(0);
-  }
-} else {
+if (tag === "latest") {
   if (!process.env.RELEASE_PR) {
     throw new Error("Stable publishing requires a merged release PR");
   }
@@ -136,8 +130,22 @@ try {
     if (!metadataResponse.ok && metadataResponse.status !== 404) {
       throw new Error(`Cannot read ${pkg.name}: ${metadataResponse.status}`);
     }
-    const metadata: { versions?: Record<string, unknown>; "dist-tags"?: Record<string, string> } =
-      metadataResponse.ok ? await metadataResponse.json() : {};
+    const metadata: {
+      versions?: Record<string, { gitHead?: string }>;
+      "dist-tags"?: Record<string, string>;
+    } = metadataResponse.ok ? await metadataResponse.json() : {};
+
+    const nightly = metadata["dist-tags"]?.nightly;
+    if (tag === "nightly" && nightly) {
+      const publishedSha = metadata.versions?.[nightly]?.gitHead;
+      if (!publishedSha || !/^[0-9a-f]{40}$/.test(publishedSha)) {
+        throw new Error(`Missing source commit for ${pkg.name}@nightly`);
+      }
+      if (git("merge-base", sha, publishedSha) === sha) {
+        console.log(`Skipping ${pkg.name}@${version}; nightly already contains this commit.`);
+        continue;
+      }
+    }
 
     const latest = metadata["dist-tags"]?.latest;
     if (tag === "latest" && latest && /^\d+\.\d+\.\d+$/.test(latest)) {
@@ -153,6 +161,12 @@ try {
     if (!metadata.versions?.[version] || metadata["dist-tags"]?.[tag] !== version) {
       if (!metadata.versions?.[version] && pkg.scripts?.build) {
         run("exec", "vp", "run", "--filter", pkg.name, "build");
+      }
+      if (!metadata.versions?.[version]) {
+        writeFileSync(
+          `${pkg.dir}/package.json`,
+          `${JSON.stringify({ ...manifest, gitHead: sha }, null, 2)}\n`,
+        );
       }
       const tokenUrl = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL!);
       tokenUrl.searchParams.set("audience", "https://npm.wgw.lol");

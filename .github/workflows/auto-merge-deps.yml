@@ -54,4 +54,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh pr merge "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
-          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master
+          merge_sha=$(gh pr view "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq .mergeCommit.oid)
+          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master -f merge_sha="$merge_sha"

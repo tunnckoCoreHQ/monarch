@@ -64,19 +64,26 @@ jobs:
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       pull-requests: read
     outputs:
       release: ${{ steps.pr.outputs.release }}
+      sha: ${{ steps.pr.outputs.sha }}
     steps:
       - id: pr
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
         run: |
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "checked-commit-$RUN_ATTEMPT" --dir "$RUNNER_TEMP/checked-commit"
+          RELEASE_SHA=$(cat "$RUNNER_TEMP/checked-commit/checked-sha")
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           release=$(gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/pulls" \
             --jq ".[] | select(.merged_at != null and .merge_commit_sha == \"$RELEASE_SHA\" and .head.ref == \"changeset-release/master\" and .head.repo.full_name == \"$GITHUB_REPOSITORY\" and .base.ref == \"master\" and .base.repo.full_name == \"$GITHUB_REPOSITORY\") | .number")
           echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
 
   pkgs_publish:
     needs: pkgs_identify
@@ -88,10 +95,11 @@ jobs:
     concurrency:
       group: packages-latest
       cancel-in-progress: false
+      queue: max
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ needs.pkgs_identify.outputs.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2

@@ -86,5 +86,7 @@ jobs:
               --body "Weekly socket optimize run. Check, test, and solidity passed in the job before this pull request was opened."
           fi
           # The master ruleset requires a pull request; this is it. Verification already happened above.
-          gh pr merge "$BRANCH" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
-          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master
+          pr=$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json number --jq .number)
+          gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
+          merge_sha=$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq .mergeCommit.oid)
+          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master -f merge_sha="$merge_sha"
