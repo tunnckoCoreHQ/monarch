@@ -35,20 +35,11 @@ Before a PR, run these sequentially and restart from the first command after any
 - Squash-merge PRs. Never create merge commits.
 - Use the babysit pr skill, only when asked, and only if it exists in the project.
 
-## After merging to `main`
+## Branches and environments
 
-1. Stop using the feature worktree.
-2. Switch to the `main` worktree.
-3. Update `main` to `origin/main` and verify both commits match.
-4. Never delete or recreate the D1 database.
-5. Run `vp run db:migrate`.
-6. Run `vp run deploy:staging`.
-7. Wait for deployment and validate staging.
-
-## Production and Staging management
-
-- The "prod" means production environment at `triad.wgw.lol`.
-- The "staging" means staging environment at `staging-triad-auth.equator-owl-studio.workers.dev`.
-- Prod is sitting on `prod` branch. Staging is on `main`.
-- Never deploy production from `main` unless explicitly requested.
-- Never promote from `main` to `prod` automatically.
+- `master` is the default branch. Pull requests merge into `master`.
+- Workers Builds deploys `master` to the `triad-auth-nightly` Worker at `https://triad-auth-nightly.wgw.lol`.
+- `stable` is the production pointer. Workers Builds deploys `stable` to the `triad-auth` Worker at `https://triad-auth.wgw.lol`.
+- Cut a production release with `vp run promote`. It fast-forwards `stable` to `origin/master`. Run it only when the user asks.
+- Never run `vp run deploy` or `vp run deploy:nightly` locally unless the user explicitly asks. Builds runs them.
+- Each Worker has its own D1 database and its own secrets. See `CONTRIBUTING.md`.
