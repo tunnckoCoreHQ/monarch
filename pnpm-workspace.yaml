@@ -17,14 +17,14 @@ catalogMode: prefer
 catalogs:
   default:
     vite: npm:@voidzero-dev/vite-plus-core@0.2.8
-    vite-plus: 0.2.8
-    "@vitest/coverage-v8": 4.1.10
+    vite-plus: 0.3.0
+    "@vitest/coverage-v8": 4.1.11
     astro: ^7.2.0
     wrangler: 4.128.0
     "@openzeppelin/contracts": 5.6.1
     solady: 0.1.26
     erc721a: 4.3.0
-    viem: 2.55.19
+    viem: 2.56.0
     jose: ^6.2.10
   types:
     "@cloudflare/workers-types": 5.20260831.1
@@ -32,17 +32,17 @@ catalogs:
     "@types/node": ^24
     typescript: 7.0.2
   crypto:
-    "@noble/curves": 2.3.0
-    "@noble/hashes": 2.3.0
+    "@noble/curves": 2.4.0
+    "@noble/hashes": 2.4.0
     "@scure/base": 2.3.0
     "@scure/bip32": 2.3.0
     "@scure/btc-signer": 2.3.0
   better-auth:
-    auth: 1.7.0-rc.4
-    "@better-auth/cimd": 1.7.0-rc.4
+    auth: 1.7.2
+    "@better-auth/cimd": 1.7.2
     "@better-auth/oauth-provider": 1.7.0-rc.4
-    "@better-auth/passkey": 1.7.0-rc.4
-    "better-auth": 1.7.0-rc.4
+    "@better-auth/passkey": 1.7.2
+    "better-auth": 1.7.2
 
 overrides:
   vite: "catalog:"
