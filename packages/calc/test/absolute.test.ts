@@ -8,6 +8,10 @@ describe("absolute", () => {
     [-1.5, 1.5],
     [1.5, 1.5],
     [0, 0],
+    [Number.MIN_VALUE, Number.MIN_VALUE],
+    [-Number.MIN_VALUE, Number.MIN_VALUE],
+    [Number.MAX_VALUE, Number.MAX_VALUE],
+    [-Number.MAX_VALUE, Number.MAX_VALUE],
   ])("returns %s as %s", (value, expected) => expect(absolute(value)).toBe(expected));
 
   it("converts negative zero to positive zero", () => expect(absolute(-0)).toBe(0));
