@@ -19,7 +19,7 @@ concurrency:
 
 # Lint and types run in the ci workflow for every pull request. This one only tests and builds the app.
 jobs:
-  test:
+  test-triad-auth:
     # Same-repository branches only. Fork PRs never run, so they cannot write caches or execute code here.
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: blacksmith-2vcpu-ubuntu-2404
@@ -39,8 +39,8 @@ jobs:
           node-version: "lts"
       - run: vp test --run apps/triad-auth
 
-  build:
-    needs: test
+  build-triad-auth:
+    needs: test-triad-auth
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       # SHA-pinned
