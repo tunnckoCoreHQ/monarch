@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prepare": "if [ -x node_modules/.bin/vp ]; then vp config --no-agent; fi",
+    "prepare": "vp config --no-agent",
     "solidity:build": "vp run --filter './solidity/*' build",
     "solidity:fmt": "vp run --filter './solidity/*' fmt",
     "solidity:lint": "vp run --filter './solidity/*' lint",
