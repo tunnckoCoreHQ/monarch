@@ -1,7 +1,16 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import {
+  appendFileSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout } from "node:timers/promises";
 
 const tag = process.argv[2];
 const repository = "tunnckoCoreHQ/monarch";
@@ -11,7 +20,7 @@ if (
   process.env.GITHUB_ACTIONS !== "true" ||
   process.env.GITHUB_REPOSITORY !== repository ||
   process.env.GITHUB_REF !== "refs/heads/master" ||
-  process.env.GITHUB_EVENT_NAME !== "workflow_run"
+  !["push", "workflow_dispatch"].includes(process.env.GITHUB_EVENT_NAME ?? "")
 ) {
   throw new Error("Publishing must follow successful master checks in GitHub Actions");
 }
@@ -22,6 +31,12 @@ function git(...args: string[]): string {
 
 function run(...args: string[]): void {
   execFileSync("pnpm", args, { stdio: "inherit" });
+}
+
+function report(message: string): void {
+  console.log(message);
+  appendFileSync(process.env.GITHUB_OUTPUT!, `report=${message}\n`);
+  appendFileSync(process.env.GITHUB_STEP_SUMMARY!, `${message}\n\n`);
 }
 
 async function github<T>(path: string, method = "GET", body?: unknown): Promise<T> {
@@ -79,6 +94,7 @@ if (tag === "latest") {
 }
 
 const temporary = mkdtempSync(join(tmpdir(), "monarch-publish-"));
+const verified: string[] = [];
 try {
   if (tag === "nightly") {
     const statusFile = join(temporary, "status.json");
@@ -93,7 +109,8 @@ try {
       selected.add(release.name);
     }
     if (selected.size === 0) {
-      console.log("No pending changesets; skipping nightly publishing.");
+      report("Not published: no pending changesets");
+      rmSync(temporary, { recursive: true, force: true });
       process.exit(0);
     }
     run(
@@ -104,6 +121,29 @@ try {
       `nightly.${process.env.GITHUB_RUN_ID}.${process.env.GITHUB_RUN_ATTEMPT}`,
     );
     run("install", "--lockfile-only", "--ignore-scripts", "--no-frozen-lockfile");
+  }
+
+  if (selected.size > 0) {
+    const requiredDeployment = git("log", "-1", "--format=%H", "--", "apps/vlt-front-worker");
+    for (let attempt = 0; ; attempt++) {
+      const health = await fetch(`${registry}-/health`, { signal: AbortSignal.timeout(10_000) });
+      const deployed = health.ok
+        ? ((await health.json()) as { commit?: string }).commit
+        : undefined;
+      if (
+        deployed &&
+        /^[0-9a-f]{40}$/.test(deployed) &&
+        spawnSync("git", ["merge-base", "--is-ancestor", requiredDeployment, deployed]).status === 0
+      ) {
+        break;
+      }
+      if (attempt === 59) {
+        throw new Error(`npm.wgw.lol has not deployed ${requiredDeployment}; publishing stopped`);
+      }
+      console.log(`Waiting for Cloudflare Builds to deploy npm.wgw.lol at ${requiredDeployment}`);
+      await setTimeout(10_000);
+      git("fetch", "origin", "master");
+    }
   }
 
   const authFile = join(temporary, "npmrc");
@@ -142,7 +182,7 @@ try {
         throw new Error(`Missing source commit for ${pkg.name}@nightly`);
       }
       if (git("merge-base", sha, publishedSha) === sha) {
-        console.log(`Skipping ${pkg.name}@${version}; nightly already contains this commit.`);
+        verified.push(`${pkg.name}@${nightly} already contains this commit`);
         continue;
       }
     }
@@ -191,6 +231,34 @@ try {
       });
     }
 
+    for (let attempt = 0; ; attempt++) {
+      const response = await fetch(`${registry}${encodeURIComponent(pkg.name)}`, {
+        headers: { "cache-control": "no-cache" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      const published: {
+        "dist-tags"?: Record<string, string>;
+        versions?: Record<string, { gitHead?: string; dist?: { tarball?: string } }>;
+      } = response.ok ? await response.json() : {};
+      const tarball = published.versions?.[version]?.dist?.tarball;
+      if (
+        published["dist-tags"]?.[tag] === version &&
+        published.versions?.[version]?.gitHead === sha &&
+        tarball
+      ) {
+        const download = await fetch(tarball, { signal: AbortSignal.timeout(30_000) });
+        if (!download.ok || (await download.arrayBuffer()).byteLength === 0) {
+          throw new Error(`Cannot download published ${pkg.name}@${version}`);
+        }
+        verified.push(`${pkg.name}@${version}`);
+        break;
+      }
+      if (attempt === 11) {
+        throw new Error(`VLT has not confirmed ${pkg.name}@${version} with ${tag} from ${sha}`);
+      }
+      await setTimeout(10_000);
+    }
+
     if (tag === "latest") {
       const packageTag = `${pkg.name}@${version}`;
       const existing = await fetch(
@@ -214,6 +282,11 @@ try {
     }
     console.log(`Published ${pkg.name}@${version} with ${tag}`);
   }
+  report(
+    verified.length > 0
+      ? `Verified ${tag}: ${verified.join(", ")}`
+      : "Not published: no release needed",
+  );
 } finally {
   rmSync(temporary, { recursive: true, force: true });
 }

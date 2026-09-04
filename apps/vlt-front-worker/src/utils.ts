@@ -19,23 +19,23 @@ export async function verifyPublishToken(token: string): Promise<"nightly" | "la
     payload.repository !== repository ||
     payload.repository_id !== "1299813376" ||
     payload.repository_owner_id !== "51462759" ||
-    payload.ref !== "refs/heads/master"
+    payload.ref !== "refs/heads/master" ||
+    payload.workflow_ref !== `${repository}/.github/workflows/typescript.yml@refs/heads/master` ||
+    (payload.event_name !== "push" && payload.event_name !== "workflow_dispatch")
   ) {
     throw new Error("Untrusted publishing repository or ref");
   }
 
   if (
-    payload.workflow_ref ===
-      `${repository}/.github/workflows/packages-nightly.yml@refs/heads/master` &&
-    payload.event_name === "workflow_run"
+    payload.job_workflow_ref ===
+    `${repository}/.github/workflows/packages-nightly.yml@refs/heads/master`
   ) {
     return "nightly";
   }
 
   if (
-    payload.workflow_ref ===
-      `${repository}/.github/workflows/packages-release.yml@refs/heads/master` &&
-    payload.event_name === "workflow_run"
+    payload.job_workflow_ref ===
+    `${repository}/.github/workflows/packages-release.yml@refs/heads/master`
   ) {
     return "latest";
   }

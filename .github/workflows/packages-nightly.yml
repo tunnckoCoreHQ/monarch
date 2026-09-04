@@ -1,21 +1,20 @@
-# Publishes packages to VLT with nightly after typescript.yml succeeds for a package change on
-# master.
+# Publishes package changes to VLT with nightly after TypeScript checks and tests pass.
+# Called directly by typescript.yml so automated merges do not depend on workflow_run events.
 #
-# SECURITY: workflow_run can grant credentials even when the triggering run came from a PR. The job
-# therefore accepts only successful pushes or dispatches on master from this repository and checks
-# out the SHA recorded by that run after its checks passed.
-#
-# Do not allow PR runs or replace the recorded SHA with a branch ref: either could publish code not
-# passed CI on master. vlt-front-worker at npm.wgw.lol verifies GitHub OIDC and limits this workflow
-# to nightly writes.
+# SECURITY: only master pushes and dispatches may publish. The caller passes the tested commit;
+# npm.wgw.lol checks both the caller and this reusable workflow in the GitHub OIDC token.
 
 name: packages-nightly
 
 on:
-  workflow_run:
-    workflows: [typescript]
-    types: [completed]
-    branches: [master]
+  workflow_call:
+    inputs:
+      sha:
+        required: true
+        type: string
+    outputs:
+      report:
+        value: ${{ jobs.pkgs_nightly.outputs.report }}
 
 permissions: {}
 
@@ -26,53 +25,39 @@ concurrency:
 
 jobs:
   pkgs_nightly:
+    name: Publish and verify nightly
+    outputs:
+      report: ${{ steps.publish.outputs.report }}
     permissions:
-      actions: read
       contents: read
       id-token: write
     if: >-
       github.repository == 'tunnckoCoreHQ/monarch' &&
-      (github.event.workflow_run.event == 'push' ||
-        github.event.workflow_run.event == 'workflow_dispatch') &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
+      github.ref == 'refs/heads/master' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      - id: checked
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
-        run: |
-          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "checked-commit-$RUN_ATTEMPT" --dir "$RUNNER_TEMP/checked-commit"
-          sha=$(cat "$RUNNER_TEMP/checked-commit/checked-sha")
-          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ steps.checked.outputs.sha }}
+          ref: ${{ inputs.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - id: changes
+      - env:
+          CHECKED_SHA: ${{ inputs.sha }}
         run: |
-          changed=$(git diff --name-only HEAD^ HEAD -- packages/)
-          if [ -n "$changed" ]; then
-            echo "packages=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "packages=false" >> "$GITHUB_OUTPUT"
-          fi
-      - if: steps.changes.outputs.packages == 'true'
-        uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+          [[ "$CHECKED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git merge-base --is-ancestor "$CHECKED_SHA" origin/master
+          test -n "$(git diff --name-only HEAD^ HEAD -- packages/)"
+      - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
-      - if: steps.changes.outputs.packages == 'true'
-        uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
+      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
         with:
           sfw: true
           cache: true
           run-install: true
           node-version: "lts"
-      - if: steps.changes.outputs.packages == 'true'
+      - id: publish
         run: vp run packages:nightly
         env:
           GH_TOKEN: ${{ github.token }}

@@ -1,5 +1,5 @@
 # Opens or updates a release PR every Monday at 06:00 UTC, or when run manually. Publishes stable
-# packages, tags, and GitHub Releases after you merge it and typescript passes.
+# packages, tags, and GitHub Releases when typescript.yml calls it after the merged commit passes.
 #
 # SECURITY: passing CI alone must not authorize a stable release. pkgs_identify matches the tested
 # commit to a merged changeset-release/master PR in this repository. Keep pkgs_publish dependent on
@@ -15,16 +15,17 @@ on:
   schedule:
     - cron: "0 6 * * 1"
   workflow_dispatch:
-  workflow_run:
-    workflows: [typescript]
-    types: [completed]
-    branches: [master]
+  workflow_call:
+    inputs:
+      sha:
+        required: true
+        type: string
 
 permissions: {}
 
 jobs:
   pkgs_prepare:
-    if: github.repository == 'tunnckoCoreHQ/monarch' && github.ref == 'refs/heads/master' && github.event_name != 'workflow_run'
+    if: github.repository == 'tunnckoCoreHQ/monarch' && github.ref == 'refs/heads/master' && inputs.sha == ''
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
@@ -57,14 +58,10 @@ jobs:
   pkgs_identify:
     if: >-
       github.repository == 'tunnckoCoreHQ/monarch' &&
-      github.event_name == 'workflow_run' &&
-      (github.event.workflow_run.event == 'push' ||
-        github.event.workflow_run.event == 'workflow_dispatch') &&
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_repository.full_name == github.repository
-    runs-on: ubuntu-latest
+      github.ref == 'refs/heads/master' && inputs.sha != '' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
-      actions: read
       contents: read
       pull-requests: read
     outputs:
@@ -74,11 +71,8 @@ jobs:
       - id: pr
         env:
           GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RELEASE_SHA: ${{ inputs.sha }}
         run: |
-          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --name "checked-commit-$RUN_ATTEMPT" --dir "$RUNNER_TEMP/checked-commit"
-          RELEASE_SHA=$(cat "$RUNNER_TEMP/checked-commit/checked-sha")
           [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
           release=$(gh api "repos/$GITHUB_REPOSITORY/commits/$RELEASE_SHA/pulls" \
             --jq ".[] | select(.merged_at != null and .merge_commit_sha == \"$RELEASE_SHA\" and .head.ref == \"changeset-release/master\" and .head.repo.full_name == \"$GITHUB_REPOSITORY\" and .base.ref == \"master\" and .base.repo.full_name == \"$GITHUB_REPOSITORY\") | .number")

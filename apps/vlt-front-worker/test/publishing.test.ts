@@ -17,8 +17,10 @@ const claims: JWTPayload = {
   repository_id: "1299813376",
   repository_owner_id: "51462759",
   ref: "refs/heads/master",
-  workflow_ref: "tunnckoCoreHQ/monarch/.github/workflows/packages-nightly.yml@refs/heads/master",
-  event_name: "workflow_run",
+  workflow_ref: "tunnckoCoreHQ/monarch/.github/workflows/typescript.yml@refs/heads/master",
+  job_workflow_ref:
+    "tunnckoCoreHQ/monarch/.github/workflows/packages-nightly.yml@refs/heads/master",
+  event_name: "push",
 };
 let privateKey: CryptoKey;
 let jwks: { keys: object[] };
@@ -92,9 +94,8 @@ describe("CI publishing authorization", () => {
 
   it("allows stable publishing after successful master checks", async () => {
     const bearer = await token({
-      workflow_ref:
+      job_workflow_ref:
         "tunnckoCoreHQ/monarch/.github/workflows/packages-release.yml@refs/heads/master",
-      event_name: "workflow_run",
     });
     expect((await publish(bearer, "latest", "0.1.3")).status).toBe(201);
   });
@@ -105,6 +106,13 @@ describe("CI publishing authorization", () => {
     { repository_owner_id: "123" },
     { ref: "refs/heads/feature" },
     { event_name: "pull_request" },
+    { event_name: "workflow_run" },
+    { job_workflow_ref: undefined },
+    { job_workflow_ref: "tunnckoCoreHQ/monarch/.github/workflows/other.yml@refs/heads/master" },
+    {
+      job_workflow_ref:
+        "tunnckoCoreHQ/monarch/.github/workflows/packages-nightly.yml@refs/heads/feature",
+    },
     { sub: "repo:tunnckoCoreHQ/monarch:pull_request" },
     { workflow_ref: "tunnckoCoreHQ/monarch/.github/workflows/other.yml@refs/heads/master" },
     { iss: "https://attacker.example" },
@@ -121,6 +129,10 @@ describe("CI publishing authorization", () => {
     expect(upstream).not.toHaveBeenCalled();
   });
 
+  it("allows an automated master dispatch to publish nightly", async () => {
+    expect((await publish(await token({ event_name: "workflow_dispatch" }))).status).toBe(201);
+  });
+
   it("prevents a nightly token from modifying latest", async () => {
     expect((await publish(await token(), "latest", "0.1.3")).status).toBe(403);
     expect(upstream).not.toHaveBeenCalled();
@@ -128,9 +140,8 @@ describe("CI publishing authorization", () => {
 
   it("prevents a stable workflow from publishing a prerelease as latest", async () => {
     const bearer = await token({
-      workflow_ref:
+      job_workflow_ref:
         "tunnckoCoreHQ/monarch/.github/workflows/packages-release.yml@refs/heads/master",
-      event_name: "workflow_run",
     });
     expect((await publish(bearer, "latest")).status).toBe(403);
     expect(upstream).not.toHaveBeenCalled();
