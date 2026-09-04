@@ -4,9 +4,13 @@ import { Hono } from "hono";
 const app = new Hono<{ Bindings: Env & { COMMIT_SHA?: string } }>();
 
 // Registry paths never start with "/-/health", so this cannot shadow a package.
-app.get("/-/health", (c) =>
-  c.json({ ok: true, foobar: true, commit: c.env.COMMIT_SHA ?? "unknown" }),
-);
+app.get("/-/health", (c) => {
+  const sha = c.env.COMMIT_SHA ?? "";
+  const label = sha ? `/commit/${sha}` : "";
+  const link = `https://github.com/tunnckoCore/triad-auth${label}`;
+
+  return c.json({ ok: true, link, commit: sha ?? "unknwon" });
+});
 
 app.all("*", async (c) => {
   const request = c.req.raw;
