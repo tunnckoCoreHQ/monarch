@@ -1,34 +1,21 @@
-name: solidity
+name: auto-merge-deps
 
+# Verifies a Dependabot pull request with the full check, test, and solidity suite, then merges it with the job token.
 on:
-  push:
-    branches: [master]
-    paths:
-      - "solidity/**"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "vite.config.ts"
-      - ".github/workflows/solidity.yml"
   pull_request:
     branches: [master]
-    paths:
-      - "solidity/**"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "vite.config.ts"
-      - ".github/workflows/solidity.yml"
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  check_test_build:
-    # Pushes to master, and same-repository non-Dependabot pull requests. Dependabot PRs are verified and merged by auto-merge-deps.
-    if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+  verify_merge:
+    if: github.actor == 'dependabot[bot]'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       # SHA-pinned
@@ -47,9 +34,7 @@ jobs:
       # SHA-pinned
       - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
         with:
-          # Pinned to the forge release used locally. 1.8 adds lint rules this code does not pass yet.
           version: v1.7.1
-      # Vite+ task cache, restored after install so vp run replays unchanged tasks.
       # SHA-pinned
       - id: task-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -58,10 +43,10 @@ jobs:
           key: vite-task-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             vite-task-${{ runner.os }}-${{ runner.arch }}-
+      - run: vp run check
+      - run: vp run test
+      # Dependencies are managed by pnpm for Solidity too, so a bump can change what forge compiles.
       - run: vp run solidity:check
-      # SHA-pinned
-      - if: success()
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: node_modules/.vite/task-cache
-          key: ${{ steps.task-cache.outputs.cache-primary-key }}
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
