@@ -6,6 +6,7 @@
 #
 # Keep release PRs excluded. Recheck do-not-merge after waiting for CI, because the label may have
 # been added while checks were running.
+# Dispatch typescript after merging: GITHUB_TOKEN merges do not trigger push workflows.
 
 name: auto-merge
 
@@ -23,6 +24,7 @@ permissions: {}
 jobs:
   auto_merge_prs:
     permissions:
+      actions: write
       contents: write
       pull-requests: write
     if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
@@ -47,3 +49,4 @@ jobs:
             exit 0
           fi
           gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
+          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master

@@ -6,6 +6,7 @@
 #
 # Checkout avoids persisted Git credentials, but actions can still access the job token. Keep
 # validation before the final push and merge.
+# Dispatch typescript after merging: GITHUB_TOKEN merges do not trigger push workflows.
 
 name: socket-optimize
 
@@ -24,6 +25,7 @@ concurrency:
 jobs:
   socket_optimize:
     permissions:
+      actions: write
       contents: write
       pull-requests: write
     # Only the default branch may run this, including manual dispatches, so a modified branch cannot reach the secrets or push.
@@ -85,3 +87,4 @@ jobs:
           fi
           # The master ruleset requires a pull request; this is it. Verification already happened above.
           gh pr merge "$BRANCH" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
+          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master

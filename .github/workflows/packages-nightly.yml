@@ -2,7 +2,8 @@
 # master.
 #
 # SECURITY: workflow_run can grant credentials even when the triggering run came from a PR. The job
-# therefore accepts only successful pushes from this repository and checks out the tested head_sha.
+# therefore accepts only successful pushes or dispatches on master from this repository and checks
+# out the tested head_sha.
 #
 # Do not allow PR runs or replace head_sha with a branch ref: either could publish code that has not
 # passed CI on master. vlt-front-worker at npm.wgw.lol verifies GitHub OIDC and limits this workflow
@@ -29,7 +30,8 @@ jobs:
       id-token: write
     if: >-
       github.repository == 'tunnckoCoreHQ/monarch' &&
-      github.event.workflow_run.event == 'push' &&
+      (github.event.workflow_run.event == 'push' ||
+        github.event.workflow_run.event == 'workflow_dispatch') &&
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404

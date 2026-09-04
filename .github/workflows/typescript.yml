@@ -1,5 +1,6 @@
-# Runs checks and tests for master pushes and same-repository PRs. Dependabot has a separate
-# workflow.
+# Runs checks and tests for master pushes, explicit master dispatches, and same-repository PRs.
+# Automated merges dispatch this workflow because GITHUB_TOKEN merges do not trigger push runs.
+# Dependabot PRs have a separate workflow.
 #
 # SECURITY: installs and tests execute PR code, including dependency scripts. Keep the token
 # read-only. Adding secrets, write access, or OIDC permission would expose those credentials to PR
@@ -8,6 +9,7 @@
 name: typescript
 
 on:
+  workflow_dispatch:
   push:
     branches: [master]
   pull_request:
@@ -23,8 +25,13 @@ jobs:
   check_test:
     permissions:
       contents: read
-    # Pushes to master, and same-repository non-Dependabot pull requests. Dependabot PRs are verified and merged by auto-merge-deps.
-    if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    # Manual and automated dispatches may test only master, never a PR branch.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+      (github.actor != 'dependabot[bot]' &&
+        ((github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+          (github.event_name == 'pull_request' &&
+            github.event.pull_request.head.repo.full_name == github.repository)))
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

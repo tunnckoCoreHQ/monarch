@@ -3,6 +3,7 @@
 # SECURITY: this job installs PR dependencies and requests permission to merge. The actor gate
 # limits it to Dependabot; do not extend it to arbitrary PR authors. Keep every validation step
 # before gh pr merge. A failed check must stop the job.
+# Dispatch typescript after merging: GITHUB_TOKEN merges do not trigger push workflows.
 
 name: auto-merge-deps
 
@@ -19,6 +20,7 @@ concurrency:
 jobs:
   verify_merge:
     permissions:
+      actions: write
       contents: write
       pull-requests: write
     if: github.actor == 'dependabot[bot]'
@@ -50,4 +52,6 @@ jobs:
       - run: vp run solidity:check
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr merge "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
+        run: |
+          gh pr merge "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
+          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master
