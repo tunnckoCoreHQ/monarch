@@ -1,6 +1,8 @@
 name: typescript
 
 on:
+  push:
+    branches: [master]
   pull_request:
     branches: [master]
 
@@ -8,13 +10,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   check_test:
-    # Same-repository, non-Dependabot pull requests. Dependabot PRs are verified and merged by auto-merge-deps.
-    if: github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    # Pushes to master, and same-repository non-Dependabot pull requests. Dependabot PRs are verified and merged by auto-merge-deps.
+    if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       # SHA-pinned
