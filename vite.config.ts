@@ -20,6 +20,10 @@ function checkExtra(project: string): string[] {
 }
 
 export default defineConfig({
+  // Pre-commit runs this on the staged files. Everything else is covered by the check task inputs.
+  staged: {
+    "*": "vp run check",
+  },
   test: {
     globals: true,
     include: ["**/test/**/*.test.ts", "!**/solidity/**/*"],

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare": "vp config --no-agent",
     "solidity:build": "vp run --filter './solidity/*' build",
     "solidity:fmt": "vp run --filter './solidity/*' fmt",
     "solidity:lint": "vp run --filter './solidity/*' lint",
