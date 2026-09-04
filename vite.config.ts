@@ -63,7 +63,7 @@ export default defineConfig({
   },
   run: {
     cache: {
-      scripts: true,
+      scripts: false, // scripts have side effects outside the tree; never replay them
       tasks: true, // Cache task definitions (default: true)
     },
 
