@@ -36,7 +36,7 @@ Fill `.dev.vars` with local values. `vp run dev` uses `wrangler.jsonc` bindings 
    vp run --filter triad-auth build
    ```
 
-4. Open a pull request into `master`. The `checks` GitHub Actions workflow runs the same three commands. Nothing deploys from a pull request.
+4. Open a pull request into `master`. The `typescript` GitHub Actions workflow runs `vp run check` and `vp run test`; the `solidity` workflow runs when Solidity or shared dependency files change. Nothing deploys from a pull request.
 5. Squash-merge. Builds deploys the merge commit to nightly. The build command targets the nightly config, and the deploy command applies pending migrations first, then uploads the Worker.
 
 ## Releasing to production

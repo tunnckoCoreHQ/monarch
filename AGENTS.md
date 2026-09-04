@@ -38,5 +38,5 @@ Filter Patterns:
 - Production is a branch per app named `release/<name>`. Each production Worker has branch control on that branch and the same root directory and watch paths as its nightly Worker.
 - The app's `promote` script fast-forwards only its own branch: `git fetch origin && git push origin origin/master:release/<name>`. Run it only when the user asks. Promoting one app never builds another app's Worker.
 - An app without environments has one Worker with branch control on `master` and no `promote` script. Every merge that touches its paths deploys it. `apps/vlt-front-worker` is that shape.
-- Each app has its own workflow in `.github/workflows/<name>.yml`, filtered to its paths, running its tests and build. `checks.yml` lints and type-checks the whole workspace. Copy `triad-auth.yml` for a new app.
+- Two pull request workflows cover the whole workspace. `typescript` runs `vp run check` and `vp run test` on every pull request and on pushes to `master`. `solidity` runs `vp run solidity:check` when Solidity, the lockfile, the workspace file, or `vite.config.ts` change. Both restore the Vite+ task cache, so unchanged tasks replay. A new app needs no workflow of its own.
 - Never run an app's `deploy` script locally unless the user explicitly asks. Builds runs it.
