@@ -14,10 +14,10 @@
     "build": "forge build",
     "check": "vp run fmt && vp run lint && vp run test && vp run build",
     "fmt": "forge fmt",
-    "lint": "forge lint --deny warnings",
-    "test": "forge test",
     "gas": "forge snapshot --no-match-test testFuzz",
-    "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi"
+    "lint": "forge lint --deny warnings",
+    "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi",
+    "test": "forge test"
   },
   "dependencies": {
     "solady": "catalog:"

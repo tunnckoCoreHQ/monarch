@@ -15,11 +15,11 @@
     "check": "vp run fmt && vp run lint && vp run test && vp run build && vp run check:extra",
     "check:extra": "vp run selectors",
     "fmt": "forge fmt",
+    "gas": "forge snapshot --no-match-test testFuzz",
     "lint": "forge lint --deny warnings",
     "selectors": "methods=$(forge inspect GlyphKernel methods --json) || exit; if printf '%s\\n' \"$methods\" | grep -Eq '\":[[:space:]]*\"(0x)?0[1-4][0-9a-fA-F]{6}\"'; then echo \"selector starts with a raw op byte\"; exit 1; fi",
-    "test": "forge test",
-    "gas": "forge snapshot --no-match-test testFuzz",
-    "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi"
+    "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi",
+    "test": "forge test"
   },
   "dependencies": {
     "@openzeppelin/contracts": "catalog:",

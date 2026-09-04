@@ -4,12 +4,12 @@ Triad is a Better Auth OAuth/OIDC server on Cloudflare Workers, D1, and Astro. T
 
 ## Environments
 
-| Branch   | Worker               | Config                   | D1                   | Origin                               |
-| -------- | -------------------- | ------------------------ | -------------------- | ------------------------------------ |
-| `master` | `triad-auth-nightly` | `wrangler.nightly.jsonc` | `triad-auth-nightly` | `https://triad-auth-nightly.wgw.lol` |
-| `stable` | `triad-auth`         | `wrangler.jsonc`         | `triad-auth`         | `https://triad-auth.wgw.lol`         |
+| Branch               | Worker               | Config                   | D1                   | Origin                               |
+| -------------------- | -------------------- | ------------------------ | -------------------- | ------------------------------------ |
+| `master`             | `triad-auth-nightly` | `wrangler.nightly.jsonc` | `triad-auth-nightly` | `https://triad-auth-nightly.wgw.lol` |
+| `release/triad-auth` | `triad-auth`         | `wrangler.jsonc`         | `triad-auth`         | `https://triad-auth.wgw.lol`         |
 
-`master` is the default branch. Every pull request targets it. Cloudflare Workers Builds deploys `master` to nightly on each push. `stable` is the production pointer. Builds deploys it to production when it moves. No other branch deploys.
+`master` is the default branch. Every pull request targets it. Cloudflare Workers Builds deploys `master` to nightly on each push. `release/triad-auth` is the production pointer. Builds deploys it to production when it moves. No other branch deploys.
 
 The two Workers share nothing. Each has its own D1 database, its own secrets, and its own `AUTH_ORIGIN`.
 
@@ -47,7 +47,7 @@ Confirm nightly is healthy at `https://triad-auth-nightly.wgw.lol`, then:
 vp run promote
 ```
 
-This fast-forwards `stable` to `origin/master`. Builds deploys it to `triad-auth`. To release a specific commit instead, push it directly: `git push origin <sha>:refs/heads/stable`.
+This fast-forwards `release/triad-auth` to `origin/master`. Builds deploys it to `triad-auth`. To release a specific commit instead, push it directly: `git push origin <sha>:refs/heads/release/triad-auth`.
 
 ## Build and deploy scripts
 
@@ -57,7 +57,7 @@ This fast-forwards `stable` to `origin/master`. Builds deploys it to `triad-auth
 | `vp run build:nightly`  | Astro build against `wrangler.nightly.jsonc`                                                 |
 | `vp run deploy`         | `wrangler d1 migrations apply DB --remote -c wrangler.jsonc`, then `wrangler deploy`         |
 | `vp run deploy:nightly` | `wrangler d1 migrations apply DB --remote -c wrangler.nightly.jsonc`, then `wrangler deploy` |
-| `vp run promote`        | `git fetch origin && git push origin origin/master:stable`                                   |
+| `vp run promote`        | `git fetch origin && git push origin origin/master:release/triad-auth`                       |
 
 The Astro Cloudflare adapter reads the selected Wrangler config at build time and writes the final Worker config to `dist/server/wrangler.json`. `wrangler deploy` follows the redirect in `.wrangler/deploy/config.json` to that file, so it takes no `-c` flag. The `WRANGLER_CONFIG` variable in `astro.config.mjs` picks the source config. Always run the matching build before a deploy.
 
@@ -111,12 +111,12 @@ Register the callback URI `/api/auth/callback/<provider>` on both origins with e
 
 In the Cloudflare dashboard, connect the GitHub repository to both Workers:
 
-| Setting                            | `triad-auth-nightly`      | `triad-auth`      |
-| ---------------------------------- | ------------------------- | ----------------- |
-| Production branch                  | `master`                  | `stable`          |
-| Build command                      | `pnpm run build:nightly`  | `pnpm run build`  |
-| Deploy command                     | `pnpm run deploy:nightly` | `pnpm run deploy` |
-| Builds for non-production branches | Off                       | Off               |
+| Setting                            | `triad-auth-nightly`      | `triad-auth`         |
+| ---------------------------------- | ------------------------- | -------------------- |
+| Production branch                  | `master`                  | `release/triad-auth` |
+| Build command                      | `pnpm run build:nightly`  | `pnpm run build`     |
+| Deploy command                     | `pnpm run deploy:nightly` | `pnpm run deploy`    |
+| Builds for non-production branches | Off                       | Off                  |
 
 The auto-generated Builds API token lacks D1 permission. Under My Profile, API Tokens, add D1 Edit to it. Migrations fail without it.
 

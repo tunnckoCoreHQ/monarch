@@ -30,3 +30,13 @@ Filter Patterns:
   --filter <pattern>^...    Select only the dependencies (exclude the package itself)
   --filter !<pattern>       Exclude packages matching the pattern
 ```
+
+## Apps and deployments
+
+- Every app lives in `apps/<name>` with its own `package.json`, `wrangler.jsonc`, and a `tsconfig.json` that extends the root one. Cloudflare Workers Builds deploys apps; GitHub Actions only checks them.
+- `master` is nightly for every app. Each nightly Worker has branch control on `master`, root directory `apps/<name>`, and build watch paths `apps/<name>/**`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, and `patches/**` when the app uses a patched dependency.
+- Production is a branch per app named `release/<name>`. Each production Worker has branch control on that branch and the same root directory and watch paths as its nightly Worker.
+- The app's `promote` script fast-forwards only its own branch: `git fetch origin && git push origin origin/master:release/<name>`. Run it only when the user asks. Promoting one app never builds another app's Worker.
+- An app without environments has one Worker with branch control on `master` and no `promote` script. Every merge that touches its paths deploys it. `apps/vlt-front-worker` is that shape.
+- Each app has its own workflow in `.github/workflows/<name>.yml`, filtered to its paths, running its tests and build. `checks.yml` lints and type-checks the whole workspace. Copy `triad-auth.yml` for a new app.
+- Never run an app's `deploy` script locally unless the user explicitly asks. Builds runs it.

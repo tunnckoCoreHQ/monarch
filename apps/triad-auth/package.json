@@ -13,7 +13,7 @@
     "deploy:nightly": "vp exec wrangler d1 migrations apply DB --remote -c wrangler.nightly.jsonc && vp exec wrangler deploy",
     "dev": "vp exec astro dev",
     "preview": "vp run build && vp exec astro preview",
-    "promote": "git fetch origin && git push origin origin/master:stable"
+    "promote": "git fetch origin && git push origin origin/master:release/triad-auth"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.1.2",

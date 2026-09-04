@@ -19,7 +19,7 @@ vp run build
 
 ## Deployment
 
-Triad runs as two Cloudflare Workers with two D1 databases. Pull requests merge into `master`, which Workers Builds deploys to `triad-auth-nightly` at `https://triad-auth-nightly.wgw.lol`. Moving the `stable` branch forward deploys `triad-auth` at `https://triad-auth.wgw.lol`. Other branches do not deploy.
+Triad runs as two Cloudflare Workers with two D1 databases. Pull requests merge into `master`, which Workers Builds deploys to `triad-auth-nightly` at `https://triad-auth-nightly.wgw.lol`. Moving the `release/triad-auth` branch forward deploys `triad-auth` at `https://triad-auth.wgw.lol`. Other branches do not deploy.
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the full flow, first-time setup, and secrets.
 

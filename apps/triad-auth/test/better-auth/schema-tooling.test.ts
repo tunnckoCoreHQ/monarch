@@ -211,7 +211,7 @@ describe("Better Auth schema tooling", () => {
       "vp exec wrangler d1 migrations apply DB --remote -c wrangler.nightly.jsonc && vp exec wrangler deploy",
     );
     expect(packageJson.scripts.promote).toBe(
-      "git fetch origin && git push origin origin/master:stable",
+      "git fetch origin && git push origin origin/master:release/triad-auth",
     );
     expect(packageJson.scripts["deploy:staging"]).toBeUndefined();
     expect(packageJson.scripts.test).toBeUndefined();
