@@ -51,7 +51,7 @@ jobs:
       - if: steps.diff.outputs.changed == 'true'
         run: vp run check
       - if: steps.diff.outputs.changed == 'true'
-        run: vp test --run
+        run: vp run test
       - if: steps.diff.outputs.changed == 'true'
         run: vp run --filter triad-auth build
       - if: steps.diff.outputs.changed == 'true'

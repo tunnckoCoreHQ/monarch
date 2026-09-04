@@ -37,7 +37,7 @@ jobs:
           cache: true
           run-install: true
           node-version: "lts"
-      - run: vp test --run apps/triad-auth
+      - run: vp run test
 
   build:
     needs: test
