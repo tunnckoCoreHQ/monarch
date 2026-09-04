@@ -49,6 +49,8 @@ vp run promote
 
 This fast-forwards `release/triad-auth` to `origin/master`. Builds deploys it to `triad-auth`. To release a specific commit instead, push it directly: `git push origin <sha>:refs/heads/release/triad-auth`.
 
+Every page footer shows a `BUILD <sha>` link with the commit the running Worker was built from. It can trail the branch pointer: Builds skips a push whose changes fall outside the watch paths, so a promote that only touches other apps or root tooling does not rebuild this Worker.
+
 ## Build and deploy scripts
 
 | Script                  | What it does                                                                                 |
