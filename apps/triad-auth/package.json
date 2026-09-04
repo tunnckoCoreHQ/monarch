@@ -2,6 +2,7 @@
   "name": "triad-auth",
   "version": "0.1.0",
   "private": true,
+  "description": "Triad identity broker on Cloudflare Workers",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {

@@ -2,6 +2,7 @@
   "name": "vlt-front-worker",
   "version": "0.1.0",
   "private": true,
+  "description": "Registry front worker for the vlt scope at npm.wgw.lol",
   "type": "module",
   "scripts": {
     "check": "vp check --fix",
