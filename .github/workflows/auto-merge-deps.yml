@@ -1,13 +1,16 @@
+# Checks and tests Dependabot PRs, then squash-merges them into master.
+#
+# SECURITY: this job installs PR dependencies and requests permission to merge. The actor gate
+# limits it to Dependabot; do not extend it to arbitrary PR authors. Keep every validation step
+# before gh pr merge. A failed check must stop the job.
+
 name: auto-merge-deps
 
-# Verifies a Dependabot pull request with the full check, test, and solidity suite, then merges it with the job token.
 on:
   pull_request:
     branches: [master]
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -15,27 +18,25 @@ concurrency:
 
 jobs:
   verify_merge:
+    permissions:
+      contents: write
+      pull-requests: write
     if: github.actor == 'dependabot[bot]'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      # SHA-pinned
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # SHA-pinned
       - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
-      # SHA-pinned
       - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
         with:
           sfw: true
           cache: true
           run-install: true
           node-version: "lts"
-      # SHA-pinned
       - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
         with:
           version: v1.7.1
-      # SHA-pinned
       - id: task-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

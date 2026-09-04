@@ -1,3 +1,10 @@
+# Runs checks and tests for master pushes and same-repository PRs. Dependabot has a separate
+# workflow.
+#
+# SECURITY: installs and tests execute PR code, including dependency scripts. Keep the token
+# read-only. Adding secrets, write access, or OIDC permission would expose those credentials to PR
+# code.
+
 name: typescript
 
 on:
@@ -6,8 +13,7 @@ on:
   pull_request:
     branches: [master]
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -15,17 +21,16 @@ concurrency:
 
 jobs:
   check_test:
+    permissions:
+      contents: read
     # Pushes to master, and same-repository non-Dependabot pull requests. Dependabot PRs are verified and merged by auto-merge-deps.
     if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      # SHA-pinned
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # SHA-pinned
       - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
-      # SHA-pinned
       - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
         with:
           sfw: true
@@ -33,7 +38,6 @@ jobs:
           run-install: true
           node-version: "lts"
       # Vite+ task cache, restored after install so vp run replays unchanged tasks.
-      # SHA-pinned
       - id: task-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -43,7 +47,6 @@ jobs:
             vite-task-${{ runner.os }}-${{ runner.arch }}-
       - run: vp run check
       - run: vp run test
-      # SHA-pinned
       - if: success()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

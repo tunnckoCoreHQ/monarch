@@ -1,7 +1,14 @@
+# Merges PRs from owners, members, or collaborators after all checks pass.
+#
+# SECURITY: workflow_run executes this file from master with permission to merge. PRs are inspected
+# through the GitHub API. Do not add steps that check out or run PR code: that would give
+# contributor code the write token.
+#
+# Keep release PRs excluded. Recheck do-not-merge after waiting for CI, because the label may have
+# been added while checks were running.
+
 name: auto-merge
 
-# Merges a pull request from an owner, member, or collaborator once every check on its head commit is green.
-# Runs on workflow_run so it executes trusted code from master with a write token.
 on:
   workflow_run:
     workflows: [typescript, solidity]
@@ -11,12 +18,13 @@ concurrency:
   group: auto-merge-${{ github.event.workflow_run.head_sha }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 jobs:
-  merge:
+  auto_merge_prs:
+    permissions:
+      contents: write
+      pull-requests: write
     if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
@@ -25,16 +33,17 @@ jobs:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           pr=$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&per_page=100" \
-            --jq ".[] | select(.head.sha == \"$HEAD_SHA\" and .user.type != \"Bot\" and (.author_association | IN(\"OWNER\", \"MEMBER\", \"COLLABORATOR\"))) | .number" | head -1)
+            --jq ".[] | select(.head.sha == \"$HEAD_SHA\" and .user.type != \"Bot\" and (.head.ref | startswith(\"changeset-release/\") | not) and (.labels | any(.name == \"do-not-merge\") | not) and (.author_association | IN(\"OWNER\", \"MEMBER\", \"COLLABORATOR\"))) | .number" | head -1)
           if [ -z "$pr" ]; then
             echo "no eligible open pull request at $HEAD_SHA"
             exit 0
           fi
           # Wait for every remaining check on this commit. Non-zero exit means one failed.
           gh pr checks "$pr" --repo "$GITHUB_REPOSITORY" --watch --fail-fast
-          state=$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state --jq .state)
-          if [ "$state" != "OPEN" ]; then
-            echo "pull request #$pr is $state, nothing to do"
+          eligible=$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json state,labels \
+            --jq '.state == "OPEN" and (.labels | any(.name == "do-not-merge") | not)')
+          if [ "$eligible" != "true" ]; then
+            echo "pull request #$pr is closed or has do-not-merge, skipping"
             exit 0
           fi
           gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --delete-branch

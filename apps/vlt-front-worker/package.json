@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "effect": "4.0.0-rc.111",
-    "hono": "4.13.5"
+    "hono": "4.13.5",
+    "jose": "catalog:"
   },
   "devDependencies": {
     "wrangler": "catalog:"

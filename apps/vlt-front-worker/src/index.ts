@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { validatePublishRequest, verifyPublishToken } from "./utils";
 
 // COMMIT_SHA arrives as a deploy-time var, see the deploy script.
 const app = new Hono<{ Bindings: Env & { COMMIT_SHA?: string } }>();
@@ -51,32 +52,48 @@ app.all("*", async (c) => {
       });
     }
 
-    const github = await fetch("https://api.github.com/user", {
-      headers: {
-        accept: "application/vnd.github+json",
-        authorization: `Bearer ${bearer}`,
-        "user-agent": "vlt-front-worker",
-        "x-github-api-version": "2026-03-10",
-      },
-    });
-    if (github.status === 401) {
-      return c.text("Unauthorized", 401);
-    }
-    if (!github.ok) {
-      return c.text("GitHub authorization unavailable", 502);
-    }
+    if (bearer.split(".").length === 3) {
+      let tag: "nightly" | "latest";
+      try {
+        tag = await verifyPublishToken(bearer);
+      } catch {
+        return c.text("Unauthorized", 401);
+      }
+      try {
+        if (!(await validatePublishRequest(request, path, tag))) {
+          return c.text("Forbidden", 403);
+        }
+      } catch {
+        return c.text("Invalid publish request", 400);
+      }
+    } else {
+      const github = await fetch("https://api.github.com/user", {
+        headers: {
+          accept: "application/vnd.github+json",
+          authorization: `Bearer ${bearer}`,
+          "user-agent": "vlt-front-worker",
+          "x-github-api-version": "2026-03-10",
+        },
+      });
+      if (github.status === 401) {
+        return c.text("Unauthorized", 401);
+      }
+      if (!github.ok) {
+        return c.text("GitHub authorization unavailable", 502);
+      }
 
-    const profile: unknown = await github.json();
-    if (
-      typeof profile !== "object" ||
-      profile === null ||
-      !("login" in profile) ||
-      typeof profile.login !== "string"
-    ) {
-      return c.text("GitHub authorization unavailable", 502);
-    }
-    if (profile.login.toLowerCase() !== c.env.ALLOWED_GITHUB_LOGIN.toLowerCase()) {
-      return c.text("Forbidden", 403);
+      const profile: unknown = await github.json();
+      if (
+        typeof profile !== "object" ||
+        profile === null ||
+        !("login" in profile) ||
+        typeof profile.login !== "string"
+      ) {
+        return c.text("GitHub authorization unavailable", 502);
+      }
+      if (profile.login.toLowerCase() !== c.env.ALLOWED_GITHUB_LOGIN.toLowerCase()) {
+        return c.text("Forbidden", 403);
+      }
     }
 
     token = c.env.WRITE_TOKEN;

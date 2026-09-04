@@ -1,3 +1,12 @@
+# Runs Socket Optimize CLI to optimize dependencies at `socket-optimize` brnach on Monday at 06:00
+# UTC or manually, then opens and merges a PR if validation passes.
+#
+# SECURITY: this job can access the Socket secret and write to the repository. Keep the master-only
+# guard: without it, a manual run could execute modified workflow code with those credentials.
+#
+# Checkout avoids persisted Git credentials, but actions can still access the job token. Keep
+# validation before the final push and merge.
+
 name: socket-optimize
 
 on:
@@ -6,16 +15,17 @@ on:
     - cron: "0 6 * * 1"
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: socket-optimize
   cancel-in-progress: false
 
 jobs:
-  optimize:
+  socket_optimize:
+    permissions:
+      contents: write
+      pull-requests: write
     # Only the default branch may run this, including manual dispatches, so a modified branch cannot reach the secrets or push.
     if: github.ref == 'refs/heads/master'
     runs-on: blacksmith-2vcpu-ubuntu-2404
@@ -25,7 +35,7 @@ jobs:
       # SHA-pinned
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Nothing before the final step may hold write credentials.
+          # Avoid leaving a write credential in Git's local config.
           persist-credentials: false
       # SHA-pinned
       - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
@@ -65,7 +75,7 @@ jobs:
           git switch -c "$BRANCH"
           git add -A
           git commit -m "chore(deps): apply socket optimize overrides"
-          # The job token is used only from here on, after check, test, and solidity passed.
+          # Give Git push its credential only after validation passes.
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin "$BRANCH"
           if ! gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json number >/dev/null 2>&1; then

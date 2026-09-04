@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "changeset": "changeset",
+    "packages:nightly": "node scripts/publish-packages.ts nightly",
+    "packages:release": "node scripts/publish-packages.ts latest",
+    "packages:release-pr": "gh workflow run packages-release.yml --repo tunnckoCoreHQ/monarch --ref master",
+    "packages:version": "changeset version && pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile && vp run check && vp run test",
     "prepare": "vp config --no-agent",
     "solidity:build": "vp run --filter './solidity/*' build",
     "solidity:fmt": "vp run --filter './solidity/*' fmt",
@@ -11,6 +16,7 @@
     "solidity:testing": "vp run --filter './solidity/*' test"
   },
   "devDependencies": {
+    "@changesets/cli": "3.0.2",
     "@cloudflare/workers-types": "catalog:types",
     "@types/bun": "catalog:types",
     "@types/node": "catalog:types",
