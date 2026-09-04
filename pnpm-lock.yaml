@@ -220,6 +220,8 @@ importers:
 
   packages/calc: {}
 
+  packages/clamp: {}
+
   packages/ethscriptions-holders: {}
 
   solidity/glyph-protocol:
