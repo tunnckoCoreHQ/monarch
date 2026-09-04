@@ -30,7 +30,7 @@
     "@types/bun": "catalog:types",
     "@types/node": "catalog:types",
     "@vitest/coverage-v8": "catalog:",
-    "forge-std": "github:foundry-rs/forge-std#v1.16.1",
+    "forge-std": "github:foundry-rs/forge-std#v1.16.2",
     "typescript": "catalog:types",
     "viem": "catalog:",
     "vite": "catalog:",
