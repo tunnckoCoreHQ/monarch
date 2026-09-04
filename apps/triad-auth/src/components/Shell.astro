@@ -14,6 +14,12 @@ const {
   description = "A small identity broker with explicit provider-global, account, and per-app identifiers.",
   mode = "brand",
 } = Astro.props;
+
+const commit = import.meta.env.COMMIT_SHA;
+const commitHref =
+  commit === "local"
+    ? "https://github.com/tunnckoCore/triad-auth"
+    : `https://github.com/tunnckoCore/triad-auth/commit/${commit}`;
 ---
 
 <!doctype html>
@@ -34,7 +40,7 @@ const {
         <a class="nav-demo" href="/demo">DEMO</a>
         <a href="/me">ACCOUNT</a>
         <a class="nav-secondary" href="/api/auth/.well-known/openid-configuration">DISCOVERY</a>
-        <a href="https://github.com/olstenlarck/triad-auth">SOURCE ↗</a>
+        <a href="https://github.com/tunnckoCore/triad-auth">SOURCE ↗</a>
       </nav>
     </header>
     <main id="content"><slot /></main>
@@ -44,7 +50,8 @@ const {
       <a href="/me">ACCOUNT</a>
       <a href="/privacy">PRIVACY</a>
       <a href="/terms">TERMS</a>
-      <a href="https://github.com/olstenlarck/triad-auth">SOURCE ↗</a>
+      <a href="https://github.com/tunnckoCore/triad-auth">SOURCE ↗</a>
+      <a href={commitHref} title={commit}>BUILD {commit.slice(0, 7)} ↗</a>
     </footer>
   </body>
 </html>
