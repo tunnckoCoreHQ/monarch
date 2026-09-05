@@ -4,49 +4,45 @@ const githubKeys = createRemoteJWKSet(
   new URL("https://token.actions.githubusercontent.com/.well-known/jwks"),
 );
 const repository = "tunnckoCoreHQ/monarch";
+const repositoryId = "1299813376";
+const repositoryOwnerId = "51462759";
 
-export async function verifyPublishToken(token: string): Promise<"nightly" | "latest"> {
+// Package managers request the GitHub OIDC token with audience `npm:<registry host>` and
+// exchange it at the registry; see the exchange route in index.ts.
+export const publishAudience = "npm:npm.wgw.lol";
+
+export type PublishTag = "nightly" | "latest";
+
+// The GitHub environment declared on the publishing job decides which dist-tag it may write.
+export async function verifyPublishToken(token: string): Promise<PublishTag> {
   const { payload } = await jwtVerify(token, githubKeys, {
     issuer: "https://token.actions.githubusercontent.com",
-    audience: "https://npm.wgw.lol",
+    audience: publishAudience,
     algorithms: ["RS256"],
-    requiredClaims: ["exp", "iat", "nbf", "sub"],
+    requiredClaims: ["exp", "iat", "nbf", "sub", "environment"],
     maxTokenAge: "10m",
-    subject: "repo:tunnckoCoreHQ@51462759/monarch@1299813376:ref:refs/heads/master",
   });
 
   if (
     payload.repository !== repository ||
-    payload.repository_id !== "1299813376" ||
-    payload.repository_owner_id !== "51462759" ||
-    payload.ref !== "refs/heads/master" ||
-    payload.workflow_ref !== `${repository}/.github/workflows/typescript.yml@refs/heads/master` ||
-    (payload.event_name !== "push" && payload.event_name !== "workflow_dispatch")
+    payload.repository_id !== repositoryId ||
+    payload.repository_owner_id !== repositoryOwnerId ||
+    payload.ref !== "refs/heads/master"
   ) {
     throw new Error("Untrusted publishing repository or ref");
   }
 
-  if (
-    payload.job_workflow_ref ===
-    `${repository}/.github/workflows/packages-nightly.yml@refs/heads/master`
-  ) {
-    return "nightly";
+  if (payload.environment === "nightly" || payload.environment === "latest") {
+    return payload.environment;
   }
 
-  if (
-    payload.job_workflow_ref ===
-    `${repository}/.github/workflows/packages-release.yml@refs/heads/master`
-  ) {
-    return "latest";
-  }
-
-  throw new Error("Untrusted publishing workflow or event");
+  throw new Error("Untrusted publishing environment");
 }
 
 export async function validatePublishRequest(
   request: Request,
   path: string,
-  tag: "nightly" | "latest",
+  tag: PublishTag,
 ): Promise<boolean> {
   if (request.method !== "PUT") {
     return false;
