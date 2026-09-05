@@ -41,12 +41,9 @@ interface INekoGenerator {
         uint16 consumedPartsMask
     ) external view returns (RawTraits memory);
 
-    function generateSVG(uint256 seed, TokenData calldata data)
-        external
-        view
-        returns (string memory);
+    function generateSVG(TokenData calldata data) external view returns (string memory);
 
-    function generateImageURI(uint256 seed, TokenData calldata data)
+    function generateImageURI(TokenData calldata data)
         external
         view
         returns (string memory uri, bytes32 contentHash);
@@ -55,7 +52,7 @@ interface INekoGenerator {
 
     function generateUnrevealedTokenURI(uint256 tokenId) external view returns (string memory);
 
-    function generateTokenURI(uint256 seed, uint256 tokenId, TokenData calldata data)
+    function generateTokenURI(uint256 tokenId, TokenData calldata data)
         external
         view
         returns (string memory);

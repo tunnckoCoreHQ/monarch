@@ -7,7 +7,7 @@ import {NekoBase} from "./NekoBase.sol";
 /// @notice SVG scene composition, individual Neko art layers, metadata attributes,
 ///         palette labels, and toy lookup.
 abstract contract NekoRenderer is NekoBase {
-    function _renderSVG(RawTraits memory traits, uint256 fusionMass)
+    function _renderSVG(RawTraits memory traits, string memory dna, uint256 fusionMass)
         internal
         pure
         returns (string memory)
@@ -19,7 +19,9 @@ abstract contract NekoRenderer is NekoBase {
             string.concat(_renderLegs(traits), _renderFace(traits), _renderHead(traits));
 
         return string.concat(
-            '<svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" data-fusion-mass="',
+            '<svg viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg" data-dna="',
+            dna,
+            '" data-fusion-mass="',
             LibString.toString(fusionMass),
             '" shape-rendering="crispEdges" image-rendering="pixelated">',
             scene,
@@ -35,9 +37,9 @@ abstract contract NekoRenderer is NekoBase {
         }
 
         return string.concat(
-            '<text id="fusion-diamond" x="57.5" y="35" text-anchor="middle" dominant-baseline="central" font-size="9" fill="#f9d100">',
-            unicode"★",
-            "</text>"
+            '<foreignObject id="fusion-diamond" x="51.5" y="30" width="12" height="12"><div xmlns="http://www.w3.org/1999/xhtml" style="width: 12px; height: 12px; font-size: 9px; line-height: 10px; text-align: center">',
+            unicode"⭐️",
+            "</div></foreignObject>"
         );
     }
 
@@ -47,22 +49,12 @@ abstract contract NekoRenderer is NekoBase {
         }
 
         string memory sky = _baseColor(traits.sky);
-        string memory background = string.concat(
-            '<rect width="100%" height="100%" fill="',
+        return string.concat(
+            '<rect id="sky" width="100%" height="100%" fill="',
             sky,
-            '"/><rect y="115" width="100%" height="35" fill="oklch(from ',
+            '"/><rect id="ground" y="115" width="100%" height="35" fill="oklch(from ',
             sky,
             ' calc(l * 0.75) calc(c * 0.85) h)"/>'
-        );
-        if (traits.invisible || traits.sky == BLACK) {
-            return background;
-        }
-
-        return string.concat(
-            background,
-            '<path fill="oklch(from ',
-            sky,
-            ' calc(l * 0.68) calc(c * 0.9) h)" d="M53 115h57v3H53zM65 118h51v3H65z"/>'
         );
     }
 
@@ -79,122 +71,65 @@ abstract contract NekoRenderer is NekoBase {
     }
 
     function _renderBody(RawTraits memory traits) internal pure returns (string memory) {
-        string memory body = string.concat(
-            '<path fill="',
-            _baseColor(traits.body),
-            '" d="M113 95H53V81h3v-3h3V75h44v1h2v1h2v1h2v1h2v1h1v1h1V95z"/>'
-        );
-        string memory tail = string.concat(
-            '<path fill="',
-            _baseColor(traits.tail),
-            '" d="M99 58h3v-3h3v-3h3v-3h3v-3h3v6h-3v3h-3v3h-3zM102 58h3v12h-3zM104 67h3v6h-3zM106 70h3v6h-3zM108 73h3v6h-3zM110 76h3v6h-3z"/>'
-        );
-        if (traits.invisible) {
-            return string.concat(body, tail);
-        }
-
         return string.concat(
-            body,
-            tail,
-            '<path fill="',
-            _baseShadeColor(traits.tail, "0.75", "0.9"),
-            '" d="M111 46h3v1h-1v1h-1v1h-1z"/>'
+            '<path id="body" fill="',
+            _baseColor(traits.body),
+            '" d="M105 95H45V81.5h3.333v-2.75h3.334V75h43v3.75h6.666v2.75H105V95z"/>',
+            '<path id="tail" fill="',
+            _baseColor(traits.tail),
+            '" d="M96 82v-3h-3v-6h-3V61h3v-3h3v-3h3v-3h3v-3h3v6h-3v3h-3v3h-3v12h3v3h3v3h3v6h-6v-3z"/>'
         );
     }
 
     function _renderLegs(RawTraits memory traits) internal pure returns (string memory) {
         string memory backLegs = string.concat(
-            '<path fill="',
+            '<path id="leg4" fill="',
             _baseColor(traits.legs[3]),
-            '" d="M71 115h7v-3h2V95H71z"/>',
-            '<path fill="',
+            '" d="M64.5 115H71v-3.344h3.25V95H64.5z"/>',
+            '<path id="leg3" fill="',
             _baseColor(traits.legs[2]),
-            '" d="M101 115h7v-3h2V95H101z"/>'
+            '" d="M93.5 115h6.5v-3.344h3.25V95H93.5z"/>'
         );
         string memory frontLegs = string.concat(
-            '<path fill="',
+            '<path id="leg2" fill="',
             _baseColor(traits.legs[1]),
-            '" d="M86 115h7v-3h2V95H86z"/>',
-            '<path fill="',
+            '" d="M79 115h6.5v-3.344h3.25V95H79z"/>',
+            '<path id="leg1" fill="',
             _baseColor(traits.legs[0]),
-            '" d="M53 115h7v-3h2V95H53z"/>'
+            '" d="M45 115h6.5v-3.344h3.25V95H45z"/>'
         );
-        if (traits.invisible) {
-            return string.concat(backLegs, frontLegs);
-        }
-
-        return string.concat(
-            backLegs,
-            frontLegs,
-            '<g><path fill="',
-            _pawAccentColor(traits.legs[0]),
-            '" d="M55 112h1v3h-1zM57 112h1v3h-1z"/><path fill="',
-            _pawAccentColor(traits.legs[3]),
-            '" d="M73 112h1v3h-1zM75 112h1v3h-1z"/><path fill="',
-            _pawAccentColor(traits.legs[1]),
-            '" d="M88 112h1v3h-1zM90 112h1v3h-1z"/><path fill="',
-            _pawAccentColor(traits.legs[2]),
-            '" d="M103 112h1v3h-1zM105 112h1v3h-1z"/></g>'
-        );
+        return string.concat(backLegs, frontLegs);
     }
 
     function _renderFace(RawTraits memory traits) internal pure returns (string memory) {
         return string.concat(
-            '<path fill="',
+            '<path id="eye1" fill="',
             _faceColor(traits.eyes[0]),
-            '" d="M50 64h4v8h-4z"/>',
-            '<path fill="',
+            '" d="M42.66 63.738h4v8h-4z"/>',
+            '<path id="eye2" fill="',
             _faceColor(traits.eyes[1]),
-            '" d="M74 64h4v8h-4z"/>',
-            '<path fill="',
+            '" d="M68.33 63.738h4v8h-4z"/>',
+            '<path id="mouth" fill="',
             _faceColor(traits.mouth),
-            '" d="M58 74h4v1h-4zM65 74h4v1h-4zM59 75h4v1h-4zM64 75h4v1h-4zM60 76h7v1h-7z"/>'
+            '" d="M52.33 73.475h10v4h-10z"/>'
         );
     }
 
     function _renderHead(RawTraits memory traits) internal pure returns (string memory) {
-        string memory headColor = _baseColor(traits.head);
-        string memory renderedHead = string.concat(
-            '<path fill="',
-            headColor,
-            '" d="M50 71h3v-6h-3v6zM58 75h4v-1h-4zM65 75h4v-1h-4zM59 76h4v-1h-4zM64 76h4v-1h-4zM60 77h7v-1h-7zM77 65h-3v6h3zM41 56h3v-6h3v-6h3v-3h3v3h3v3h3v3h9v-3h3v-3h3v-3h3v3h3v6h3v6h3v5h1v6h-1v6h-1v3h-2v3h-2v2h-3v2h-3v1H52v-1h-3v-2h-3v-2h-2v-3h-2v-3h-1v-6h-1v-6h1v-5zM83 76h1v1h-1zM51 83h1v1h-1zM52 78H82v2h-1v1h-1v1h-1v1h-1v1h-1v1h-2v1h-3v1h-4v1h-9v-1h-3v-1h-2v-2h-2zM53 84h1v1h-1z"/>'
-        );
-        string memory gaze = string.concat(
-            _renderGaze(traits.eyes[0], "M50 68h2v3h-2z"),
-            _renderGaze(traits.eyes[1], "M74 68h2v3h-2z")
-        );
-        if (traits.invisible) {
-            return string.concat(renderedHead, gaze);
-        }
-
-        string memory earAccent = _earAccentColor(traits.head);
-        string memory neckShade = _neckShadeColor(traits);
-        string memory noseAccent = _noseAccentColor(traits.head);
         return string.concat(
-            renderedHead,
-            '<path fill="',
-            noseAccent,
-            '" d="M62 74h3v1h-3zM63 75h1v1h-1z"/>',
-            gaze,
-            '<path fill="',
-            neckShade,
-            '" d="M54 85h2v1h3v1h9v-1h4v-1h3v-1h2v-1h1v-1h1v-1h1v1h-1v1h-1v1h-1v1h-2v1h-3v1h-4v1h-9v-1h-3v-1h-2zM80 80h1v1h-1zM81 79h1v1h-1z"/>',
-            '<path fill="',
-            earAccent,
-            '" d="M50 47h3v3h-3zM74 47h3v3h-3z"/>',
-            '<path fill="',
-            noseAccent,
-            '" d="M62 72h3v2h-3z"/>'
+            '<path id="head" fill="',
+            _baseColor(traits.head),
+            '" d="M42.66 70.393h3.22v-6.655h-3.22v6.655zm19.25 6.328v-3.246h-9.58v3.246h9.58zm9.64-12.983h-3.22v6.655h3.22zM39.44 80.295v-3.574h-3.22v-3.246H33V57.082h3.22v-6.721h3.22v-6.672h3.22v-3.361h3.22v3.361h3.23v3.327h3.22v3.345h9.58v-3.345h3.22v-3.327h3.2v-3.361h3.22v3.361h3.22v6.672h3.22v6.721h3.22v16.393h-3.22v3.246h-3.22v3.574H71.55v3H42.66v-3H39.44z"/>'
         );
     }
 
     function _renderToy(RawTraits memory traits) internal pure returns (string memory) {
         return string.concat(
-            '<text id="toy" data-toyName="',
+            '<foreignObject x="15" y="85" width="25" height="25"><div id="toy" data-toyName="',
             _toyName(traits.toy),
-            '" x="33" y="95" text-anchor="middle" dominant-baseline="central" font-size="16">',
+            '" xmlns="http://www.w3.org/1999/xhtml">',
             _toyGlyph(traits.toy),
-            "</text>"
+            "</div></foreignObject>"
         );
     }
 
@@ -328,96 +263,6 @@ abstract contract NekoRenderer is NekoBase {
         return _baseColor(_facePaletteHue(index));
     }
 
-    function _pawAccentColor(uint256 index) internal pure returns (string memory) {
-        string memory color = _baseColor(index);
-        if (index == BLACK) {
-            return "oklch(0.35 0 0)";
-        }
-        if (index == WHITE) {
-            return _monochromeAccentColor(index, color);
-        }
-
-        return string.concat("oklch(from ", color, " calc(l * 0.84) calc(c * 0.95) h)");
-    }
-
-    function _gazeColor(uint256 index) internal pure returns (string memory) {
-        uint256 baseIndex = _facePaletteHue(index);
-        string memory color = _baseColor(baseIndex);
-        if (_isDarkBaseColor(baseIndex)) {
-            return string.concat("oklch(from ", color, " calc(0.65 + l * 0.35) calc(c * 0.5) h)");
-        }
-
-        return string.concat("oklch(from ", color, " calc(l * 0.65) calc(c * 0.85) h)");
-    }
-
-    function _renderGaze(uint256 index, string memory path) internal pure returns (string memory) {
-        if (index == 0 || index == 5 || index == 6 || index == 9 || index == 11) {
-            return "";
-        }
-
-        string memory color = index == 10 ? _baseColor(BLACK) : _gazeColor(index);
-        return string.concat('<path fill="', color, '" d="', path, '"/>');
-    }
-
-    function _baseShadeColor(uint256 index, string memory lightness, string memory chroma)
-        internal
-        pure
-        returns (string memory)
-    {
-        string memory color = _baseColor(index);
-        if (index == BLACK || index == WHITE) {
-            return _monochromeAccentColor(index, color);
-        }
-
-        return
-            string.concat(
-                "oklch(from ", color, " calc(l * ", lightness, ") calc(c * ", chroma, ") h)"
-            );
-    }
-
-    function _earAccentColor(uint256 index) internal pure returns (string memory) {
-        string memory color = _baseColor(index);
-        if (index == BLACK) {
-            return "oklch(0.3 0 0)";
-        }
-        return string.concat("oklch(from ", color, " calc(l - 0.15) calc(c * 0.75) h)");
-    }
-
-    function _noseAccentColor(uint256 index) internal pure returns (string memory) {
-        string memory color = _baseColor(index);
-        if (index == BLACK) {
-            return "oklch(0.3 0 0)";
-        }
-
-        return string.concat("oklch(from ", color, " calc(l * 0.69) calc(c * 0.9) h)");
-    }
-
-    function _neckShadeColor(RawTraits memory traits) internal pure returns (string memory) {
-        if (traits.head == BLACK && traits.body == BLACK) {
-            return "oklch(0.18 0 0)";
-        }
-
-        return _baseShadeColor(traits.head, "0.9", "0.9");
-    }
-
-    function _monochromeAccentColor(uint256 index, string memory color)
-        internal
-        pure
-        returns (string memory)
-    {
-        if (index == BLACK) {
-            return "oklch(0.3 0 0)";
-        }
-
-        return string.concat("oklch(from ", color, " calc(l * 0.85) calc(c * 0.5) h)");
-    }
-
-    function _isDarkBaseColor(uint256 index) internal pure returns (bool) {
-        return
-            index == 9 || index == 10 || index == 11 || index == 12 || index == BLACK
-                || index == SLATE;
-    }
-
     function _toyName(uint256 index) internal pure returns (string memory) {
         bytes memory names = bytes(TOY_NAMES);
         uint256 start;
@@ -454,5 +299,9 @@ abstract contract NekoRenderer is NekoBase {
         }
 
         return string(result);
+    }
+
+    function _dna(uint256 seed) internal pure returns (string memory) {
+        return LibString.toHexString(seed, 32);
     }
 }

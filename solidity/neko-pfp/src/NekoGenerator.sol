@@ -117,24 +117,19 @@ contract NekoGenerator is NekoRenderer {
     // Rendering
     // ------------------------------------------------------------------
 
-    function generateSVG(uint256 seed, TokenData calldata data)
-        public
-        pure
-        override
-        returns (string memory)
-    {
+    function generateSVG(TokenData calldata data) public pure override returns (string memory) {
         _validateTokenData(data);
-        return _renderSVG(data.traits, _dna(seed), data.fusionMass);
+        return _renderSVG(data.traits, data.fusionMass);
     }
 
-    function generateImageURI(uint256 seed, TokenData calldata data)
+    function generateImageURI(TokenData calldata data)
         public
         pure
         override
         returns (string memory uri, bytes32 contentHash)
     {
         _validateTokenData(data);
-        string memory svg = _renderSVG(data.traits, _dna(seed), data.fusionMass);
+        string memory svg = _renderSVG(data.traits, data.fusionMass);
         uri = string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(svg)));
         contentHash = keccak256(bytes(uri));
     }
@@ -182,7 +177,7 @@ contract NekoGenerator is NekoRenderer {
         return string.concat("data:application/json;base64,", Base64.encode(bytes(json)));
     }
 
-    function generateTokenURI(uint256 seed, uint256 tokenId, TokenData calldata data)
+    function generateTokenURI(uint256 tokenId, TokenData calldata data)
         public
         pure
         override
@@ -191,7 +186,7 @@ contract NekoGenerator is NekoRenderer {
         _validateTokenData(data);
         string memory imageURI = string.concat(
             "data:image/svg+xml;base64,",
-            Base64.encode(bytes(_renderSVG(data.traits, _dna(seed), data.fusionMass)))
+            Base64.encode(bytes(_renderSVG(data.traits, data.fusionMass)))
         );
         string memory identity = string.concat(
             '{"name":"0xNeko PFP #',

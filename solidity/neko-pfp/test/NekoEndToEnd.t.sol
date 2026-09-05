@@ -204,8 +204,7 @@ contract NekoEndToEndTest is Test {
             NekoPFP.FusionAction.Mutation,
             PARTIAL_MUTATION_MASK
         );
-        string memory expectedMetadata =
-            generator.generateTokenURI(neko.seedOf(survivorId), survivorId, survivorAfter);
+        string memory expectedMetadata = generator.generateTokenURI(survivorId, survivorAfter);
         bytes32 metadataAfter = keccak256(bytes(neko.tokenURI(survivorId)));
         assertTrue(metadataAfter != metadataBefore, "actual mutation did not update metadata");
         assertEq(
@@ -260,8 +259,7 @@ contract NekoEndToEndTest is Test {
         );
         assertEq(mutationMask, 0, "actual combined tree merge mask mismatch");
 
-        string memory expectedMetadata =
-            generator.generateTokenURI(neko.seedOf(firstSurvivor), firstSurvivor, merged);
+        string memory expectedMetadata = generator.generateTokenURI(firstSurvivor, merged);
         assertEq(
             keccak256(bytes(neko.tokenURI(firstSurvivor))),
             keccak256(bytes(expectedMetadata)),
@@ -462,8 +460,7 @@ contract NekoEndToEndTest is Test {
             "actual token data differs from production resolver"
         );
 
-        string memory expectedMetadata =
-            generator.generateTokenURI(neko.seedOf(tokenId), tokenId, actual);
+        string memory expectedMetadata = generator.generateTokenURI(tokenId, actual);
         metadataHash = keccak256(bytes(neko.tokenURI(tokenId)));
         assertEq(
             metadataHash,

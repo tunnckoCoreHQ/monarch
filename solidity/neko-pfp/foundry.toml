@@ -6,8 +6,11 @@ libs = ["node_modules"]
 solc_version = "0.8.30"
 evm_version = "cancun"
 optimizer = true
-optimizer_runs = 1000
+optimizer_runs = 200
+bytecode_hash = "none"
+cbor_metadata = false
 allow_paths = ["../../node_modules"]
+fs_permissions = [{ access = "read-write", path = "./preview" }]
 deny = "warnings"
 remappings = [
   "erc721a/=node_modules/erc721a/contracts/",

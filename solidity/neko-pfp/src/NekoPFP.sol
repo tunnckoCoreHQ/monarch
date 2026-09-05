@@ -205,7 +205,7 @@ contract NekoPFP is ERC721SeaDropCompat {
         }
 
         uint256 seed = seedOf(tokenId);
-        return generator.generateTokenURI(seed, tokenId, _resolveTokenData(tokenId, seed));
+        return generator.generateTokenURI(tokenId, _resolveTokenData(tokenId, seed));
     }
 
     function tokenData(uint256 tokenId) public view returns (INekoGenerator.TokenData memory) {
