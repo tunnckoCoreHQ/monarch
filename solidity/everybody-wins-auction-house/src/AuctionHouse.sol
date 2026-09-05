@@ -39,6 +39,7 @@ contract AuctionHouse is Initializable {
 
     error AlreadyHighestBidder();
     error AuctionBidTooLow(uint256 actual, uint256 minimum);
+    error AuctionCostTooHigh(uint256 actual, uint256 maximum);
     error AuctionEnded();
     error AuctionNotEnded();
     error AuctionNotFound();
@@ -139,7 +140,11 @@ contract AuctionHouse is Initializable {
         emit AuctionStarted(auctionId, tokenId, msg.sender, startingPrice, block.timestamp, endTime);
     }
 
-    function bid(uint64 auctionId, uint96 bidAmount) external payable nonReentrant {
+    function bid(uint64 auctionId, uint96 bidAmount, uint256 maxTotalCost)
+        external
+        payable
+        nonReentrant
+    {
         Auction storage auction = _activeAuction(auctionId);
         if (block.timestamp >= auction.endTime) {
             revert AuctionEnded();
@@ -160,6 +165,9 @@ contract AuctionHouse is Initializable {
         uint16 nextBidCount = auction.bidCount + 1;
         uint256 bonus = previousBidder == address(0) ? 0 : _calculateBonus(bidAmount, nextBidCount);
         uint256 totalCost = uint256(bidAmount) + bonus;
+        if (totalCost > maxTotalCost) {
+            revert AuctionCostTooHigh(totalCost, maxTotalCost);
+        }
 
         uint256 accountCredit = credits[msg.sender];
         uint256 creditUsed = accountCredit < totalCost ? accountCredit : totalCost;
@@ -210,6 +218,7 @@ contract AuctionHouse is Initializable {
         if (houseFee != 0) {
             _transferETH(protocol, houseFee);
         }
+        // Bidders choose themselves as recipients. A receiver callback must not block settlement.
         collection.transferFrom(address(this), winner, auction.tokenId);
 
         emit AuctionSettled(

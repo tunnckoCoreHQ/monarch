@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {Test} from "forge-std/Test.sol";
 import {AuctionHouse} from "../src/AuctionHouse.sol";
 import {AuctionHouseFactory} from "../src/AuctionHouseFactory.sol";
@@ -11,6 +12,26 @@ contract MockCollection is ERC721 {
 
     function mint(address recipient, uint256 tokenId) external {
         _mint(recipient, tokenId);
+    }
+}
+
+contract RejectingNFTReceiver {
+    error NFTRejected();
+
+    function bid(AuctionHouse house, uint64 auctionId, uint96 amount) external payable {
+        house.bid{value: msg.value}(auctionId, amount, msg.value);
+    }
+
+    function onERC721Received(address, address, uint256, bytes calldata)
+        external
+        pure
+        returns (bytes4)
+    {
+        revert NFTRejected();
+    }
+
+    function transferToken(ERC721 collection, address recipient, uint256 tokenId) external {
+        collection.transferFrom(address(this), recipient, tokenId);
     }
 }
 
@@ -29,6 +50,11 @@ contract AuctionHouseTest is Test {
     AuctionHouseFactory internal factory;
     AuctionHouse internal auctionHouse;
     MockCollection internal collection;
+    bool internal rotateOwnerOnReceive;
+    bool internal rejectETH;
+    bool internal reenterWithdrawal;
+
+    error ETHRejected();
 
     function setUp() public {
         factory = new AuctionHouseFactory();
@@ -222,7 +248,7 @@ contract AuctionHouseTest is Test {
 
         vm.prank(seller);
         vm.expectRevert(AuctionHouse.SellerCannotBid.selector);
-        auctionHouse.bid{value: STARTING_PRICE}(auctionId, STARTING_PRICE);
+        auctionHouse.bid{value: STARTING_PRICE}(auctionId, STARTING_PRICE, STARTING_PRICE);
     }
 
     function test_RevertWhen_HighestBidderBidsAgain() public {
@@ -231,7 +257,7 @@ contract AuctionHouseTest is Test {
 
         vm.prank(bidder);
         vm.expectRevert(AuctionHouse.AlreadyHighestBidder.selector);
-        auctionHouse.bid{value: 1.06 ether}(auctionId, 1.06 ether);
+        auctionHouse.bid{value: 1.06 ether}(auctionId, 1.06 ether, 1.0812 ether);
     }
 
     function test_RevertWhen_BidIsBelowMinimum() public {
@@ -243,7 +269,7 @@ contract AuctionHouseTest is Test {
                 AuctionHouse.AuctionBidTooLow.selector, STARTING_PRICE - 1, STARTING_PRICE
             )
         );
-        auctionHouse.bid{value: STARTING_PRICE - 1}(auctionId, STARTING_PRICE - 1);
+        auctionHouse.bid{value: STARTING_PRICE - 1}(auctionId, STARTING_PRICE - 1, STARTING_PRICE);
     }
 
     function test_RevertWhen_PaymentDoesNotMatchQuote() public {
@@ -254,7 +280,7 @@ contract AuctionHouseTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(AuctionHouse.IncorrectPayment.selector, 1.06 ether, 1.0812 ether)
         );
-        auctionHouse.bid{value: 1.06 ether}(auctionId, 1.06 ether);
+        auctionHouse.bid{value: 1.06 ether}(auctionId, 1.06 ether, 1.0812 ether);
     }
 
     function test_RevertWhen_BiddingAfterEnd() public {
@@ -263,7 +289,7 @@ contract AuctionHouseTest is Test {
 
         vm.prank(bidder);
         vm.expectRevert(AuctionHouse.AuctionEnded.selector);
-        auctionHouse.bid{value: STARTING_PRICE}(auctionId, STARTING_PRICE);
+        auctionHouse.bid{value: STARTING_PRICE}(auctionId, STARTING_PRICE, STARTING_PRICE);
     }
 
     function test_RevertWhen_SettlingBeforeEnd() public {
@@ -281,6 +307,257 @@ contract AuctionHouseTest is Test {
         vm.stopPrank();
     }
 
+    function test_WithdrawalEventKeepsActualRecipientWhenOwnerChangesInCallback() public {
+        vm.deal(address(factory), 1 ether);
+        uint256 balanceBefore = address(this).balance;
+        rotateOwnerOnReceive = true;
+
+        vm.expectEmit(true, false, false, true, address(factory));
+        emit AuctionHouseFactory.ProtocolFeesWithdrawn(address(this), 1 ether);
+        factory.withdrawProtocolFees(0);
+
+        assertEq(factory.owner(), seller);
+        assertEq(address(this).balance, balanceBefore + 1 ether);
+        assertEq(address(factory).balance, 0);
+    }
+
+    function test_RejectingWinnerCannotBlockSettlement() public {
+        RejectingNFTReceiver winner = new RejectingNFTReceiver();
+        uint64 auctionId = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+        winner.bid{value: STARTING_PRICE}(auctionHouse, auctionId, STARTING_PRICE);
+        vm.warp(block.timestamp + DURATION);
+
+        vm.prank(address(auctionHouse));
+        vm.expectRevert(RejectingNFTReceiver.NFTRejected.selector);
+        collection.safeTransferFrom(address(auctionHouse), address(winner), 1);
+        assertEq(collection.ownerOf(1), address(auctionHouse));
+
+        vm.prank(settler);
+        auctionHouse.settle(auctionId);
+
+        assertEq(collection.ownerOf(1), address(winner));
+        assertEq(auctionHouse.credits(seller), 0.9801 ether);
+        assertEq(auctionHouse.credits(settler), 0.0099 ether);
+        assertEq(address(factory).balance, 0.01 ether);
+        winner.transferToken(collection, thirdBidder, 1);
+        assertEq(collection.ownerOf(1), thirdBidder);
+    }
+
+    function test_FailedWithdrawalPreservesCreditAndAllowsRetry() public {
+        uint64 auctionId = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+        vm.deal(address(this), 2 ether);
+        _bid(address(this), auctionId, STARTING_PRICE, STARTING_PRICE);
+        _bid(nextBidder, auctionId, 1.06 ether, 1.0812 ether);
+        uint256 houseBalance = address(auctionHouse).balance;
+
+        rejectETH = true;
+        vm.expectRevert(AuctionHouse.TransferETHFailed.selector);
+        auctionHouse.withdraw();
+        assertEq(auctionHouse.credits(address(this)), 1.0212 ether);
+        assertEq(address(auctionHouse).balance, houseBalance);
+
+        rejectETH = false;
+        reenterWithdrawal = true;
+        uint256 balanceBefore = address(this).balance;
+        auctionHouse.withdraw();
+        assertEq(auctionHouse.credits(address(this)), 0);
+        assertEq(address(this).balance, balanceBefore + 1.0212 ether);
+    }
+
+    function test_ImplementationAndHouseCannotBeReinitialized() public {
+        AuctionHouse implementation = AuctionHouse(factory.implementation());
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        implementation.initialize(address(collection));
+
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        auctionHouse.initialize(address(collection));
+    }
+
+    function test_CreditFundedBidKeepsUnusedCredit() public {
+        uint64 firstAuction = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+        uint64 secondAuction = _startAuction(secondSeller, 3, 0.5 ether, DURATION);
+        _bid(bidder, firstAuction, STARTING_PRICE, STARTING_PRICE);
+        _bid(nextBidder, firstAuction, 1.06 ether, 1.0812 ether);
+
+        AuctionHouse.BidQuote memory quote = auctionHouse.quoteBid(secondAuction, 0.5 ether, bidder);
+        assertEq(quote.creditUsed, 0.5 ether);
+        assertEq(quote.ethRequired, 0);
+        uint256 balanceBefore = address(auctionHouse).balance;
+        _bid(bidder, secondAuction, 0.5 ether, 0);
+
+        assertEq(auctionHouse.credits(bidder), 0.5212 ether);
+        assertEq(address(auctionHouse).balance, balanceBefore);
+        assertEq(auctionHouse.getAuction(secondAuction).highestBid, 0.5 ether);
+    }
+
+    function test_StaleCreditQuoteCannotSpendAboveLimit() public {
+        uint64 firstAuction = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+        uint64 secondAuction = _startAuction(secondSeller, 3, 0.1 ether, DURATION);
+        _bid(bidder, firstAuction, STARTING_PRICE, STARTING_PRICE);
+        _bid(nextBidder, firstAuction, 1.06 ether, 1.0812 ether);
+        _bid(nextBidder, secondAuction, 0.1 ether, 0.1 ether);
+
+        AuctionHouse.BidQuote memory quote = auctionHouse.quoteBid(secondAuction, 0.5 ether, bidder);
+        assertEq(quote.totalCost, 0.51 ether);
+        assertEq(quote.ethRequired, 0);
+        _bid(thirdBidder, secondAuction, 0.2 ether, 0.204 ether);
+        uint256 creditBefore = auctionHouse.credits(bidder);
+
+        vm.prank(bidder);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AuctionHouse.AuctionCostTooHigh.selector, 0.515 ether, 0.51 ether
+            )
+        );
+        auctionHouse.bid(secondAuction, 0.5 ether, quote.totalCost);
+
+        assertEq(auctionHouse.credits(bidder), creditBefore);
+        assertEq(auctionHouse.getAuction(secondAuction).highestBidder, thirdBidder);
+        vm.prank(bidder);
+        auctionHouse.bid(secondAuction, 0.5 ether, 0.515 ether);
+        assertEq(auctionHouse.credits(bidder), creditBefore - 0.515 ether);
+    }
+
+    function testFuzz_MinimumKeepsSellerAhead(uint96 firstBid, uint96 offeredBid) public {
+        vm.deal(bidder, 1 << 128);
+        vm.deal(nextBidder, 1 << 128);
+        uint64 auctionId = _startAuction(seller, 1, firstBid, DURATION);
+        _bid(bidder, auctionId, firstBid, firstBid);
+
+        uint256 minimum = auctionHouse.minimumBid(auctionId);
+        if (minimum > type(uint96).max) {
+            vm.prank(nextBidder);
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    AuctionHouse.AuctionBidTooLow.selector, type(uint96).max, minimum
+                )
+            );
+            auctionHouse.bid(auctionId, type(uint96).max, type(uint256).max);
+        } else {
+            uint96 amount = uint96(bound(offeredBid, minimum, type(uint96).max));
+            AuctionHouse.BidQuote memory quote =
+                auctionHouse.quoteBid(auctionId, amount, nextBidder);
+            _bid(nextBidder, auctionId, amount, quote.ethRequired);
+            assertGe(auctionHouse.credits(bidder), firstBid);
+        }
+
+        vm.warp(block.timestamp + DURATION);
+        vm.prank(settler);
+        auctionHouse.settle(auctionId);
+        if (minimum <= type(uint96).max) {
+            assertGt(auctionHouse.credits(seller), auctionHouse.credits(bidder));
+        }
+        assertEq(
+            address(auctionHouse).balance,
+            auctionHouse.credits(seller) + auctionHouse.credits(settler)
+                + auctionHouse.credits(bidder)
+        );
+    }
+
+    function testFuzz_ConcurrentAuctionsRemainSolvent(uint256 seed) public {
+        address[7] memory accounts =
+            [seller, secondSeller, bidder, nextBidder, thirdBidder, fourthBidder, settler];
+        for (uint256 i; i < accounts.length; ++i) {
+            vm.deal(accounts[i], 1 << 128);
+        }
+        uint64[2] memory auctionIds = [
+            _startAuction(seller, 1, 0, DURATION),
+            _startAuction(secondSeller, 3, 1 ether, DURATION * 2)
+        ];
+        uint256[2] memory previousCosts;
+        uint256[2] memory previousPayouts;
+
+        for (uint256 i; i < 40; ++i) {
+            if (i == 20) {
+                vm.warp(block.timestamp + DURATION);
+                _settleAndAssert(auctionIds[0], previousPayouts[0]);
+                _assertSolvent(accounts, auctionIds);
+            }
+
+            seed = uint256(keccak256(abi.encode(seed, i)));
+            uint256 index = i < 20 ? seed % 2 : 1;
+            uint64 auctionId = auctionIds[index];
+            AuctionHouse.Auction memory previous = auctionHouse.getAuction(auctionId);
+            uint256 accountIndex = 2 + ((seed >> 8) % 4);
+            if (accounts[accountIndex] == previous.highestBidder) {
+                accountIndex = accountIndex == 5 ? 2 : accountIndex + 1;
+            }
+            address account = accounts[accountIndex];
+            if ((seed >> 16) % 3 == 0 && auctionHouse.credits(account) != 0) {
+                vm.prank(account);
+                auctionHouse.withdraw();
+                _assertSolvent(accounts, auctionIds);
+            }
+
+            uint256 minimum = auctionHouse.minimumBid(auctionId);
+            uint96 amount = uint96(minimum + ((seed >> 24) % ((minimum / 5) + 1)));
+            AuctionHouse.BidQuote memory quote = auctionHouse.quoteBid(auctionId, amount, account);
+            uint256 previousCredit = auctionHouse.credits(previous.highestBidder);
+            _bid(account, auctionId, amount, quote.ethRequired);
+
+            if (previous.highestBidder != address(0)) {
+                uint256 payout = auctionHouse.credits(previous.highestBidder) - previousCredit;
+                assertGe(payout, previousCosts[index]);
+                previousPayouts[index] = payout;
+            }
+            previousCosts[index] = quote.totalCost;
+            _assertSolvent(accounts, auctionIds);
+        }
+
+        vm.warp(block.timestamp + DURATION);
+        _settleAndAssert(auctionIds[1], previousPayouts[1]);
+        _assertSolvent(accounts, auctionIds);
+
+        for (uint256 i; i < accounts.length; ++i) {
+            if (auctionHouse.credits(accounts[i]) != 0) {
+                vm.prank(accounts[i]);
+                auctionHouse.withdraw();
+                _assertSolvent(accounts, auctionIds);
+            }
+        }
+        assertEq(address(auctionHouse).balance, 0);
+    }
+
+    function _settleAndAssert(uint64 auctionId, uint256 previousPayout) internal {
+        AuctionHouse.Auction memory auction = auctionHouse.getAuction(auctionId);
+        uint256 sellerCredit = auctionHouse.credits(auction.seller);
+        uint256 settlerCredit = auctionHouse.credits(settler);
+        uint256 protocolBalance = address(factory).balance;
+
+        vm.prank(settler);
+        auctionHouse.settle(auctionId);
+
+        uint256 amount = auction.highestBidder == address(0) ? 0 : auction.highestBid;
+        uint256 feePercent = auction.bidCount < 10 ? auction.bidCount : 10;
+        uint256 fee = (amount * feePercent) / 100;
+        uint256 reward = (amount - fee) / 100;
+        uint256 proceeds = auctionHouse.credits(auction.seller) - sellerCredit;
+        assertEq(address(factory).balance - protocolBalance, fee);
+        assertEq(auctionHouse.credits(settler) - settlerCredit, reward);
+        assertEq(proceeds, amount - fee - reward);
+        if (auction.bidCount > 1) {
+            assertGt(proceeds, previousPayout);
+        }
+        assertEq(
+            collection.ownerOf(auction.tokenId),
+            auction.highestBidder == address(0) ? auction.seller : auction.highestBidder
+        );
+    }
+
+    function _assertSolvent(address[7] memory accounts, uint64[2] memory auctionIds) internal view {
+        uint256 liabilities;
+        for (uint256 i; i < accounts.length; ++i) {
+            liabilities += auctionHouse.credits(accounts[i]);
+        }
+        for (uint256 i; i < auctionIds.length; ++i) {
+            (,,,, address highestBidder, uint96 highestBid) = auctionHouse.auctions(auctionIds[i]);
+            if (highestBidder != address(0)) {
+                liabilities += highestBid;
+            }
+        }
+        assertEq(address(auctionHouse).balance, liabilities);
+    }
+
     function _startAuction(address tokenOwner, uint256 tokenId, uint96 price, uint40 duration)
         internal
         returns (uint64 auctionId)
@@ -292,9 +569,23 @@ contract AuctionHouseTest is Test {
     }
 
     function _bid(address account, uint64 auctionId, uint96 amount, uint256 payment) internal {
+        uint256 maxTotalCost = auctionHouse.quoteBid(auctionId, amount, account).totalCost;
         vm.prank(account);
-        auctionHouse.bid{value: payment}(auctionId, amount);
+        auctionHouse.bid{value: payment}(auctionId, amount, maxTotalCost);
     }
 
-    receive() external payable {}
+    receive() external payable {
+        if (rejectETH) {
+            revert ETHRejected();
+        }
+        if (rotateOwnerOnReceive) {
+            factory.transferOwnership(seller);
+        }
+        if (reenterWithdrawal) {
+            (bool success, bytes memory reason) =
+                address(auctionHouse).call(abi.encodeCall(AuctionHouse.withdraw, ()));
+            assertFalse(success);
+            assertEq(reason, abi.encodeWithSelector(AuctionHouse.ReentrancyGuard.selector));
+        }
+    }
 }

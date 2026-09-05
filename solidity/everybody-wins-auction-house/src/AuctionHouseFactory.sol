@@ -81,12 +81,13 @@ contract AuctionHouseFactory {
             revert IncorrectAmount();
         }
 
-        (bool success,) = payable(owner).call{value: withdrawal}("");
+        address recipient = owner;
+        (bool success,) = payable(recipient).call{value: withdrawal}("");
         if (!success) {
             revert TransferETHFailed();
         }
 
-        emit ProtocolFeesWithdrawn(owner, withdrawal);
+        emit ProtocolFeesWithdrawn(recipient, withdrawal);
     }
 
     function transferOwnership(address newOwner) external onlyOwner {
