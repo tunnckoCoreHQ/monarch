@@ -1,0 +1,17 @@
+{
+  "name": "@tunnckocore/clamp",
+  "version": "0.0.0",
+  "description": "Clamp a number between a lower and upper bound.",
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  }
+}
