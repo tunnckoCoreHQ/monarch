@@ -1,0 +1,36 @@
+{
+  "name": "everybody-wins-auction-house",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Everybody-wins auctions for minted ERC-721 tokens",
+  "license": "GPL-3.0-or-later",
+  "author": "tunnckoCore",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tunnckoCoreHQ/monarch.git",
+    "directory": "solidity/everybody-wins-auction-house"
+  },
+  "scripts": {
+    "build": "forge build",
+    "check": "vp run fmt && vp run lint && vp run test && vp run build && vp run snapshot",
+    "fmt": "forge fmt",
+    "gas": "forge snapshot --no-match-test testFuzz",
+    "lint": "forge lint --deny warnings",
+    "snapshot": "if [ -f .gas-snapshot ]; then forge snapshot --check --no-match-test testFuzz; else vp run gas; fi",
+    "test": "forge test"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:types",
+    "@types/bun": "catalog:types",
+    "@types/node": "catalog:types",
+    "@vitest/coverage-v8": "catalog:",
+    "forge-std": "github:foundry-rs/forge-std#v1.16.1",
+    "typescript": "catalog:types",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "catalog:"
+  }
+}
