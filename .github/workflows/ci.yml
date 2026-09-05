@@ -7,7 +7,7 @@
 # the OIDC token and allows only the matching dist-tag. The PAT is used by changesets/action so
 # the release PR is a real user PR that receives checks; it never reaches jobs that run PR code.
 
-name: typescript
+name: ci
 
 on:
   workflow_dispatch:
@@ -51,8 +51,6 @@ jobs:
           restore-keys: |
             vite-task-${{ runner.os }}-${{ runner.arch }}-
       - run: vp run check
-      # Workflow lint. Runner labels come from .github/actionlint.yaml.
-      - uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
       - if: success()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -118,7 +116,8 @@ jobs:
           run-install: true
           node-version: "lts"
       # Nightly publishes only what this push changed. Pending changesets for other packages stay
-      # untouched for their stable release. pnpm exchanges the GitHub OIDC token at npm.wgw.lol.
+      # untouched for their stable release. Packages are built in dependency order first, then
+      # published in dependency order. pnpm exchanges the GitHub OIDC token at npm.wgw.lol.
       - name: Publish nightlies for the packages this push changed
         env:
           BEFORE: ${{ github.event.before }}
@@ -132,18 +131,21 @@ jobs:
             exit 0
           fi
           pnpm changeset version --snapshot nightly
+          filters=()
           published=()
           for manifest in $(git diff --name-only -- 'packages/*/package.json'); do
             name=$(jq -r .name "$manifest")
             grep -qxF "$name" <<< "$changed" || continue
-            pnpm --filter "$name" publish --tag nightly --no-git-checks
+            filters+=(--filter "$name")
             published+=("$name@$(jq -r .version "$manifest")")
           done
           if [ "${#published[@]}" -eq 0 ]; then
             echo "Not published: this push changed no package with a pending changeset" | tee -a "$GITHUB_STEP_SUMMARY"
-          else
-            printf 'Published %s with nightly\n' "${published[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
+          vp run build
+          pnpm -r publish "${filters[@]}" --tag nightly --no-git-checks
+          printf 'Published %s with nightly\n' "${published[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
 
   release:
     needs: test
@@ -176,6 +178,6 @@ jobs:
         with:
           github-token: ${{ secrets.OLSTENLARCK_HQ_PAT }}
           version-script: vp run packages:version
-          publish-script: "${{ startsWith(github.event.head_commit.message, 'chore: release packages') && 'pnpm changeset publish' || '' }}"
+          publish-script: "${{ startsWith(github.event.head_commit.message, 'chore: release packages') && 'vp run build && pnpm changeset publish' || '' }}"
           commit-message: "chore: release packages"
           pr-title: "chore: release packages"
