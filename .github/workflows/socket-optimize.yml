@@ -1,12 +1,9 @@
-# Runs Socket Optimize CLI to optimize dependencies at `socket-optimize` brnach on Monday at 06:00
-# UTC or manually, then opens and merges a PR if validation passes.
+# Runs Socket Optimize on Monday at 06:00 UTC or manually. When it changes anything, opens a pull
+# request as the PAT owner and enables auto-merge, so the PR gets the normal checks and GitHub
+# merges it when the required check passes.
 #
-# SECURITY: this job can access the Socket secret and write to the repository. Keep the master-only
-# guard: without it, a manual run could execute modified workflow code with those credentials.
-#
-# Checkout avoids persisted Git credentials, but actions can still access the job token. Keep
-# validation before the final push and merge.
-# Dispatch typescript after merging: GITHUB_TOKEN merges do not trigger push workflows.
+# SECURITY: this job can read the Socket secret and the PAT. Keep the master-only guard: without
+# it, a manual run could execute modified workflow code with those credentials.
 
 name: socket-optimize
 
@@ -25,31 +22,23 @@ concurrency:
 jobs:
   socket_optimize:
     permissions:
-      actions: write
-      contents: write
-      pull-requests: write
-    # Only the default branch may run this, including manual dispatches, so a modified branch cannot reach the secrets or push.
+      contents: read
+    # Only the default branch may run this, including manual dispatches, so a modified branch cannot reach the secrets.
     if: github.ref == 'refs/heads/master'
     runs-on: blacksmith-2vcpu-ubuntu-2404
     env:
       BRANCH: socket-optimize
     steps:
-      # SHA-pinned
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Avoid leaving a write credential in Git's local config.
           persist-credentials: false
-      # SHA-pinned
       - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
         with:
           sfw: true
           cache: true
           run-install: true
           node-version: "lts"
-      # SHA-pinned
-      - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
-        with:
-          version: v1.7.1
       - run: pnpm dlx socket@1.1.167 optimize
         env:
           SOCKET_SECURITY_API_TOKEN: ${{ secrets.SOCKET_SECURITY_API_TOKEN }}
@@ -63,30 +52,19 @@ jobs:
       - if: steps.diff.outputs.changed == 'true'
         run: pnpm install --no-frozen-lockfile
       - if: steps.diff.outputs.changed == 'true'
-        run: vp run check
-      - if: steps.diff.outputs.changed == 'true'
-        run: vp run test
-      - if: steps.diff.outputs.changed == 'true'
-        run: vp run solidity:check
-      - if: steps.diff.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.OLSTENLARCK_HQ_PAT }}
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git switch -c "$BRANCH"
           git add -A
           git commit -m "chore(deps): apply socket optimize overrides"
-          # Give Git push its credential only after validation passes.
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push --force origin "$BRANCH"
           if ! gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json number >/dev/null 2>&1; then
             gh pr create --repo "$GITHUB_REPOSITORY" --base master --head "$BRANCH" \
               --title "chore(deps): apply socket optimize overrides" \
-              --body "Weekly socket optimize run. Check, test, and solidity passed in the job before this pull request was opened."
+              --body "Weekly Socket Optimize run. Merges automatically once the required checks pass."
           fi
-          # The master ruleset requires a pull request; this is it. Verification already happened above.
-          pr=$(gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json number --jq .number)
-          gh pr merge "$pr" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
-          merge_sha=$(gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq .mergeCommit.oid)
-          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master -f merge_sha="$merge_sha"
+          gh pr merge "$BRANCH" --repo "$GITHUB_REPOSITORY" --auto --squash

@@ -3,7 +3,7 @@
 # SECURITY: dependency installation and test tooling execute code from the PR. Keep the token
 # read-only and do not pass secrets or grant OIDC permission; PR code could use those credentials.
 #
-# Fork PRs are skipped here. Dependabot PRs are handled by auto-merge-deps.
+# Fork PRs are skipped here.
 
 name: solidity
 
@@ -35,8 +35,8 @@ jobs:
   check_test_build:
     permissions:
       contents: read
-    # Pushes to master, and same-repository non-Dependabot pull requests. Dependabot PRs are verified and merged by auto-merge-deps.
-    if: github.actor != 'dependabot[bot]' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+    # Pushes to master and same-repository pull requests, Dependabot included.
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
