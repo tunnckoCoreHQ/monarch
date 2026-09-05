@@ -51,10 +51,8 @@ jobs:
           restore-keys: |
             vite-task-${{ runner.os }}-${{ runner.arch }}-
       - run: vp run check
-      # Workflow lint. The Blacksmith runner labels are unknown to actionlint and are ignored.
+      # Workflow lint. Runner labels come from .github/actionlint.yaml.
       - uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2.2.0
-        with:
-          flags: -ignore 'label "blacksmith-.*" is unknown'
       - if: success()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
