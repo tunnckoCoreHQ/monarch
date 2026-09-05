@@ -11,7 +11,7 @@ const routes = [
 const pageTitle = "WGW x402 Router";
 const pageDescription =
     "Use one standard x402 facilitator endpoint and route payments to PrimeV, x402.org, or CDP without storing seller secrets on the hosted router.";
-const pageSubdomain = Astro.url.hostname.replace(".wgw.lol", "");
+const routerOrigin = Astro.url.origin;
 const sourceUrl = `https://github.com/tunnckoCore/wgw-deploy-cf/tree/codex/cdn-hosted-manifests/packages/x402-router`;
 ---
 
@@ -44,7 +44,7 @@ const sourceUrl = `https://github.com/tunnckoCore/wgw-deploy-cf/tree/codex/cdn-h
                         class="flex items-center justify-between text-sm text-secondary"
                     >
                         <a href="/" class="font-semibold"
-                            ><span class="text-accent">{pageSubdomain}</span
+                            ><span class="text-accent">x402-router</span
                             >.wgw.lol</a
                         >
                         <div class="flex items-center gap-5">
@@ -113,7 +113,7 @@ const sourceUrl = `https://github.com/tunnckoCore/wgw-deploy-cf/tree/codex/cdn-h
                                 <div
                                     class="mt-6 max-w-xl border border-line bg-code px-4 py-3 font-mono text-sm text-code-text"
                                 >
-                                    https://{pageSubdomain}.wgw.lol
+                                    {routerOrigin}
                                 </div>
                             </div>
                         </div>
@@ -140,7 +140,7 @@ const sourceUrl = `https://github.com/tunnckoCore/wgw-deploy-cf/tree/codex/cdn-h
                                         class="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-line bg-code p-3 font-mono text-[11px] leading-5 text-code-text md:whitespace-pre md:text-xs"><code><span class="text-info">import</span> &#123; <span class="text-primary">createCdpAuthHeaders</span> &#125; <span class="text-info">from</span> <span class="text-warn">"@tunnckocore/x402-router/cdp"</span>;
 
 <span class="text-info">const</span> <span class="text-primary">facilitator</span> = <span class="text-info">new</span> <span class="text-accent">HTTPFacilitatorClient</span>(&#123;
-  <span class="text-secondary">url</span>: <span class="text-warn">"https://{pageSubdomain}.wgw.lol"</span>,
+  <span class="text-secondary">url</span>: <span class="text-warn">"{routerOrigin}"</span>,
   <span class="text-secondary">createAuthHeaders</span>: () =&gt;
     <span class="text-accent">createCdpAuthHeaders</span>(&#123;
       <span class="text-secondary">apiKeyId</span>: <span class="text-primary">process</span>.<span class="text-secondary">env</span>.<span class="text-primary">CDP_API_KEY_ID</span>,
@@ -339,11 +339,11 @@ const sourceUrl = `https://github.com/tunnckoCore/wgw-deploy-cf/tree/codex/cdn-h
                 </div>
             </div>
         </footer>
-        <script is:inline define:vars={{ pageSubdomain }}>
+        <script is:inline>
             const health = document.querySelector("#router-health");
             const label = document.querySelector("#router-health-label");
 
-            fetch(`https://${pageSubdomain}.wgw.lol/health`, {
+            fetch("/health", {
                 headers: { accept: "application/json" },
             })
                 .then((response) =>

@@ -4,7 +4,7 @@ import "../styles.css";
 const pageTitle = "WGW x402 Router story variant";
 const pageDescription =
     "A bolder WGW x402 Router landing page built around the protocol map, upstream fragmentation, CDP pass-through, and self-hosting.";
-const pageSubdomain = Astro.url.hostname.replace(".wgw.lol", "");
+const routerOrigin = Astro.url.origin;
 const sourceUrl =
     "https://github.com/tunnckoCore/wgw-deploy-cf/tree/codex/cdn-hosted-manifests/packages/x402-router";
 
@@ -54,7 +54,7 @@ const flow = [
     },
 ];
 
-const terminal = `$ curl https://x402-router.wgw.lol/supported
+const terminal = `$ curl ${routerOrigin}/supported
 GET  /supported
 POST /verify
 POST /settle
@@ -64,7 +64,7 @@ router:   choose provider, forward CDP bearer only when needed
 state:    no seller account, no custody, no stored CDP secret`;
 
 const client = `const facilitator = new HTTPFacilitatorClient({
-  url: "https://x402-router.wgw.lol",
+  url: "${routerOrigin}",
   createAuthHeaders: () =>
     createCdpAuthHeaders({
       apiKeyId: process.env.CDP_API_KEY_ID!,
@@ -109,7 +109,7 @@ export default {
                         class="flex flex-wrap items-center justify-between gap-4 text-sm text-secondary"
                     >
                         <a href="/" class="font-semibold text-primary">
-                            <span class="text-accent">{pageSubdomain}</span>.wgw.lol
+                            <span class="text-accent">x402-router</span>.wgw.lol
                         </a>
                         <div class="flex flex-wrap items-center gap-5">
                             <a
@@ -288,7 +288,7 @@ export default {
                             matters more.
                         </h2>
                         <p class="mt-4 max-w-2xl leading-7 text-secondary">
-                            Use <code>https://x402-router.wgw.lol</code> while
+                            Use <code>{routerOrigin}</code> while
                             you wire paid endpoints. Move the same router into
                             your own Cloudflare Worker, Node service, Bun app,
                             or Deno runtime when you need custom upstreams or

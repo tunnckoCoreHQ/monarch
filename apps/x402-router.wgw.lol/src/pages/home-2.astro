@@ -4,7 +4,7 @@ import "../styles.css";
 const pageTitle = "WGW x402 Router integration variant";
 const pageDescription =
     "A developer-forward WGW x402 Router landing page with standard x402 endpoints, CDP header pass-through, hosted use, and self-hosting.";
-const pageSubdomain = Astro.url.hostname.replace(".wgw.lol", "");
+const routerOrigin = Astro.url.origin;
 const sourceUrl =
     "https://github.com/tunnckoCore/wgw-deploy-cf/tree/codex/cdn-hosted-manifests/packages/x402-router";
 
@@ -59,7 +59,7 @@ import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { ExactSvmScheme } from "@x402/svm/exact/server";
 
 const facilitator = new HTTPFacilitatorClient({
-  url: "https://x402-router.wgw.lol",
+  url: "${routerOrigin}",
   createAuthHeaders: () =>
     createCdpAuthHeaders({
       apiKeyId: process.env.CDP_API_KEY_ID!,
@@ -115,7 +115,7 @@ export default {
                         class="flex flex-wrap items-center justify-between gap-4 text-sm text-secondary"
                     >
                         <a href="/" class="font-semibold text-primary">
-                            <span class="text-accent">{pageSubdomain}</span>.wgw.lol
+                            <span class="text-accent">x402-router</span>.wgw.lol
                         </a>
                         <div class="flex flex-wrap items-center gap-5">
                             <a
@@ -152,7 +152,7 @@ export default {
                             </h1>
                             <p class="mt-6 max-w-2xl text-lg leading-8 text-secondary">
                                 Point the standard x402 client at
-                                <code>https://x402-router.wgw.lol</code>. The
+                                <code>{routerOrigin}</code>. The
                                 service exposes <code>/supported</code>,
                                 <code>/verify</code>, and <code>/settle</code>,
                                 then chooses PrimeV, x402.org, or CDP from the
@@ -176,7 +176,7 @@ export default {
                             >
                                 <span class="text-muted">facilitator.url</span>
                                 <span class="text-accent"
-                                    >https://x402-router.wgw.lol</span
+                                    >{routerOrigin}</span
                                 >
                             </div>
                             <div class="divide-y divide-line">
@@ -314,7 +314,7 @@ export default {
                         </h2>
                         <p class="mt-4 max-w-xl leading-7 text-secondary">
                             The public endpoint is the quickest path:
-                            <code>https://x402-router.wgw.lol</code>. If you
+                            <code>{routerOrigin}</code>. If you
                             need private routing rules, your own observability,
                             or internal deployment controls, run the package as
                             a Fetch handler.
