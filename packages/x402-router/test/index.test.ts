@@ -320,3 +320,119 @@ test("creates HTTPFacilitatorClient auth headers for CDP pass-through routing", 
   expect(headers.verify).toEqual({ [CDP_FORWARD_TOKEN_HEADER]: "Bearer verify" });
   expect(headers.supported).toEqual({});
 });
+
+test("uses a custom token header for default CDP routing and preflight", async () => {
+  const authorizations: (string | null)[] = [];
+  const router = createX402Router({
+    forwardedBearerHeader: "X-Seller-Token",
+    supported: { kinds: [{ network: BASE_MAINNET, scheme: "exact", x402Version: 2 }] },
+    fetch: async (_url, init) => {
+      authorizations.push(new Headers(init.headers).get("authorization"));
+      return Response.json({ ok: true });
+    },
+  });
+  const preflight = await router.fetch(
+    new Request("https://router.example/verify", { method: "OPTIONS" }),
+  );
+  expect(preflight.headers.get("access-control-allow-headers")).toContain("x-seller-token");
+
+  const missing = await router.fetch(paymentRequest(BASE_MAINNET));
+  expect(missing.status).toBe(401);
+  await expect(missing.json()).resolves.toMatchObject({
+    message: "missing X-Seller-Token header for cdp-mainnet",
+  });
+
+  const request = paymentRequest(BASE_MAINNET);
+  request.headers.set("X-Seller-Token", "Bearer custom-token");
+  expect((await router.fetch(request)).status).toBe(200);
+  expect(authorizations).toEqual(["Bearer custom-token"]);
+});
+
+test("keeps explicit upstream token headers ahead of the router default", async () => {
+  const router = createX402Router({
+    forwardedBearerHeader: "X-Seller-Token",
+    supported: { kinds: [{ network: BASE_MAINNET, scheme: "exact", x402Version: 2 }] },
+    upstreams: [
+      {
+        name: "custom",
+        facilitatorUrl: CDP_FACILITATOR_URL,
+        auth: { type: "forwarded-bearer", header: "X-Upstream-Token" },
+        supportedKinds: [{ network: BASE_MAINNET, scheme: "exact", x402Version: 2 }],
+      },
+    ],
+    fetch: async (_url, init) =>
+      Response.json({ authorization: new Headers(init.headers).get("authorization") }),
+  });
+  const preflight = await router.fetch(
+    new Request("https://router.example/verify", { method: "OPTIONS" }),
+  );
+  expect(preflight.headers.get("access-control-allow-headers")).toContain("x-upstream-token");
+  const request = paymentRequest(BASE_MAINNET);
+  request.headers.set("X-Seller-Token", "Bearer wrong-token");
+  request.headers.set("X-Upstream-Token", "Bearer upstream-token");
+  await expect((await router.fetch(request)).json()).resolves.toEqual({
+    authorization: "Bearer upstream-token",
+  });
+});
+
+test.each(["supported", "verify", "settle"])(
+  "bounds stalled discovery before serving %s",
+  async (endpoint) => {
+    vi.useFakeTimers();
+    try {
+      let discoverySignal: AbortSignal | null | undefined;
+      const router = createX402Router({
+        upstreams: [
+          {
+            name: "stalled",
+            facilitatorUrl: "https://stalled.example",
+            supportedKinds: [{ network: BASE_MAINNET, scheme: "exact", x402Version: 2 }],
+          },
+          {
+            name: "healthy",
+            facilitatorUrl: PRIMEV_FACILITATOR_URL,
+            supportedKinds: [{ network: ETHEREUM_MAINNET, scheme: "exact", x402Version: 2 }],
+          },
+        ],
+        fetch: async (url, init) => {
+          if (url.hostname === "stalled.example") {
+            discoverySignal = init.signal;
+            return new Promise<Response>((_resolve, reject) => {
+              init.signal!.addEventListener("abort", () => reject(init.signal!.reason), {
+                once: true,
+              });
+            });
+          }
+          if (url.pathname === "/supported") {
+            return Response.json({
+              kinds: [{ network: ETHEREUM_MAINNET, scheme: "exact", x402Version: 2 }],
+            });
+          }
+          return Response.json({ ok: true });
+        },
+      });
+      const request =
+        endpoint === "supported"
+          ? new Request("https://router.example/supported")
+          : new Request(`https://router.example/${endpoint}`, paymentRequest(ETHEREUM_MAINNET));
+      const responsePromise = router.fetch(request);
+      await vi.advanceTimersByTimeAsync(5000);
+      const response = await responsePromise;
+      expect(discoverySignal?.aborted).toBe(true);
+      expect(response.status).toBe(200);
+      if (endpoint === "supported") {
+        await expect(response.json()).resolves.toMatchObject({
+          kinds: [
+            { network: BASE_MAINNET, scheme: "exact", x402Version: 2 },
+            { network: ETHEREUM_MAINNET, scheme: "exact", x402Version: 2 },
+          ],
+        });
+      } else {
+        await expect(response.json()).resolves.toEqual({ ok: true });
+      }
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);

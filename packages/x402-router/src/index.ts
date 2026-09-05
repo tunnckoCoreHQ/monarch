@@ -31,11 +31,14 @@ type X402FacilitatorPayload = {
   x402Version?: unknown;
 };
 
-function corsHeaders(init?: HeadersInit) {
+function corsHeaders(
+  init?: HeadersInit,
+  allowedHeaders = "content-type, authorization, x-forwarded-cdp-token",
+) {
   const headers = new Headers(init);
 
   headers.set("access-control-allow-origin", "*");
-  headers.set("access-control-allow-headers", "content-type, authorization, x-forwarded-cdp-token");
+  headers.set("access-control-allow-headers", allowedHeaders);
   headers.set("access-control-allow-methods", "GET, POST, OPTIONS");
 
   return headers;
@@ -49,8 +52,8 @@ function json(value: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(value), { ...init, headers: finalHeaders });
 }
 
-function empty(init?: ResponseInit) {
-  const headers = corsHeaders(init?.headers);
+function empty(init?: ResponseInit, allowedHeaders?: string) {
+  const headers = corsHeaders(init?.headers, allowedHeaders);
 
   return new Response(null, { ...init, headers });
 }
@@ -170,6 +173,9 @@ async function fetchSupportedForUpstream(
     return staticSupportedFor(upstream);
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
   try {
     const fetcher = options.fetch ?? globalThis.fetch;
     const url = new URL(upstream.facilitatorUrl);
@@ -179,6 +185,7 @@ async function fetchSupportedForUpstream(
     const response = await fetcher(url, {
       headers,
       method: "GET",
+      signal: controller.signal,
     });
 
     if (!response.ok) {
@@ -194,6 +201,8 @@ async function fetchSupportedForUpstream(
     return supportedV2Only(supported);
   } catch {
     return staticSupportedFor(upstream);
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -325,6 +334,21 @@ async function forwardToUpstream(
 
 export function createX402Router(options: X402RouterOptions = {}) {
   const upstreams = options.upstreams ?? defaultX402RouterUpstreams;
+  const allowedHeaders = ["content-type", "authorization"];
+
+  for (const upstream of upstreams) {
+    if (upstream.auth?.type === "forwarded-bearer") {
+      allowedHeaders.push(
+        (
+          upstream.auth.header ??
+          options.forwardedBearerHeader ??
+          CDP_FORWARD_TOKEN_HEADER
+        ).toLowerCase(),
+      );
+    }
+  }
+
+  const corsAllowedHeaders = [...new Set(allowedHeaders)].join(", ");
 
   return {
     async fetch(request: Request): Promise<Response> {
@@ -332,7 +356,7 @@ export function createX402Router(options: X402RouterOptions = {}) {
       const endpoint = url.pathname.replace(/^\/+|\/+$/g, "");
 
       if (request.method === "OPTIONS") {
-        return empty({ status: 204 });
+        return empty({ status: 204 }, corsAllowedHeaders);
       }
 
       if (request.method === "GET" && endpoint === "supported") {

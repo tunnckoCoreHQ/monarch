@@ -53,7 +53,7 @@ export const defaultX402RouterUpstreams: X402RouterUpstream[] = [
     supportedKinds: [exact(BASE_SEPOLIA), exact(SOLANA_DEVNET)],
   },
   {
-    auth: { header: CDP_FORWARD_TOKEN_HEADER, type: "forwarded-bearer" },
+    auth: { type: "forwarded-bearer" },
     facilitatorUrl: CDP_FACILITATOR_URL,
     name: "cdp-mainnet",
     supportedKinds: [
