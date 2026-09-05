@@ -1,20 +1,16 @@
-# Runs checks and tests for master pushes, explicit master dispatches, and same-repository PRs.
-# Automated merges dispatch this workflow because GITHUB_TOKEN merges do not trigger push runs.
-# Dependabot PRs have a separate workflow.
+# Checks and tests every pull request and every push to master. After a master push passes,
+# nightly publishes the packages that push changed and release keeps the release PR current or,
+# when a release PR was merged, publishes stable versions with tags and GitHub Releases.
 #
-# SECURITY: check_test executes PR code and has read-only access. Publishing jobs run only after
-# successful checks on master, with OIDC scoped to those jobs. commit_status runs no repository code
-# and records results on the tested commit, including commits supplied by automated dispatches.
+# SECURITY: check and test run PR code with a read-only token and no secrets. nightly and release
+# run only for master pushes. Each carries a GitHub environment; npm.wgw.lol reads that claim from
+# the OIDC token and allows only the matching dist-tag. The PAT is used by changesets/action so
+# the release PR is a real user PR that receives checks; it never reaches jobs that run PR code.
 
 name: typescript
 
 on:
   workflow_dispatch:
-    inputs:
-      merge_sha:
-        description: Merged master commit to check; defaults to the current master commit.
-        type: string
-        required: false
   push:
     branches: [master]
   pull_request:
@@ -23,37 +19,20 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || inputs.merge_sha || github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  check_test:
-    name: TypeScript checks and tests
-    outputs:
-      sha: ${{ steps.checked.outputs.sha }}
-      packages: ${{ steps.checked.outputs.packages }}
+  check:
+    # Master pushes, manual master runs, and same-repository pull requests, Dependabot included.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: read
-    # Manual and automated dispatches may test only master, never a PR branch.
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
-      (github.actor != 'dependabot[bot]' &&
-        ((github.event_name == 'push' && github.ref == 'refs/heads/master') ||
-          (github.event_name == 'pull_request' &&
-            github.event.pull_request.head.repo.full_name == github.repository)))
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.merge_sha || github.sha }}
-          fetch-depth: 0
           persist-credentials: false
-      - if: github.event_name != 'pull_request'
-        env:
-          CHECKED_SHA: ${{ inputs.merge_sha || github.sha }}
-        run: |
-          [[ "$CHECKED_SHA" =~ ^[0-9a-f]{40}$ ]]
-          git merge-base --is-ancestor "$CHECKED_SHA" origin/master
       - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
@@ -68,18 +47,43 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.vite/task-cache
-          key: vite-task-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: vite-task-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}-check
           restore-keys: |
             vite-task-${{ runner.os }}-${{ runner.arch }}-
       - run: vp run check
+      - if: success()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.vite/task-cache
+          key: ${{ steps.task-cache.outputs.cache-primary-key }}
+
+  # The master ruleset requires this job. Keep its name.
+  test:
+    needs: check
+    permissions:
+      contents: read
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
+        with:
+          sfw: true
+          cache: true
+          run-install: true
+          node-version: "lts"
+      - id: task-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.vite/task-cache
+          key: vite-task-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}-test
+          restore-keys: |
+            vite-task-${{ runner.os }}-${{ runner.arch }}-
       - run: vp run test
-      - id: checked
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-          if [ -n "$(git diff --name-only HEAD^ HEAD -- packages/)" ]; then
-            echo "packages=true" >> "$GITHUB_OUTPUT"
-          fi
       - if: success()
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -87,66 +91,89 @@ jobs:
           key: ${{ steps.task-cache.outputs.cache-primary-key }}
 
   nightly:
-    needs: check_test
-    if: >-
-      github.repository == 'tunnckoCoreHQ/monarch' &&
-      github.ref == 'refs/heads/master' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      needs.check_test.outputs.packages == 'true'
+    needs: test
+    if: github.event_name == 'push'
+    environment: nightly
     permissions:
       contents: read
       id-token: write
-    uses: ./.github/workflows/packages-nightly.yml
-    with:
-      sha: ${{ needs.check_test.outputs.sha }}
+    concurrency:
+      group: packages-nightly
+      cancel-in-progress: false
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
+        with:
+          sfw: true
+          cache: true
+          run-install: true
+          node-version: "lts"
+      # Nightly publishes only what this push changed. Pending changesets for other packages stay
+      # untouched for their stable release. pnpm exchanges the GitHub OIDC token at npm.wgw.lol.
+      - name: Publish nightlies for the packages this push changed
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          base=$BEFORE
+          git cat-file -e "$base^{commit}" 2>/dev/null || base=HEAD~1
+          # Changed workspace packages and their dependents, read before snapshot versioning edits manifests.
+          changed=$(pnpm ls --filter "...[$base]" --depth -1 --json | jq -r '.[].name')
+          if ! compgen -G '.changeset/*.md' > /dev/null; then
+            echo "Not published: no pending changesets" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          pnpm changeset version --snapshot nightly
+          published=()
+          for manifest in $(git diff --name-only -- 'packages/*/package.json'); do
+            name=$(jq -r .name "$manifest")
+            grep -qxF "$name" <<< "$changed" || continue
+            pnpm --filter "$name" publish --tag nightly --no-git-checks
+            published+=("$name@$(jq -r .version "$manifest")")
+          done
+          if [ "${#published[@]}" -eq 0 ]; then
+            echo "Not published: this push changed no package with a pending changeset" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            printf 'Published %s with nightly\n' "${published[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
 
   release:
-    needs: check_test
-    if: >-
-      github.repository == 'tunnckoCoreHQ/monarch' &&
-      github.ref == 'refs/heads/master' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      needs.check_test.outputs.packages == 'true'
+    needs: test
+    if: github.event_name == 'push'
+    environment: latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
       id-token: write
-    uses: ./.github/workflows/packages-release.yml
-    with:
-      sha: ${{ needs.check_test.outputs.sha }}
-
-  commit_status:
-    needs: [check_test, nightly, release]
-    if: >-
-      always() && github.repository == 'tunnckoCoreHQ/monarch' &&
-      github.ref == 'refs/heads/master' &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    concurrency:
+      group: packages-release
+      cancel-in-progress: false
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    permissions:
-      statuses: write
     steps:
-      # Report against the tested merge commit, even if master advanced before dispatch started.
-      - env:
-          GH_TOKEN: ${{ github.token }}
-          CHECKED_SHA: ${{ inputs.merge_sha || github.sha }}
-          CHECK_RESULT: ${{ needs.check_test.result }}
-          NIGHTLY_RESULT: ${{ needs.nightly.result }}
-          NIGHTLY_REPORT: ${{ needs.nightly.outputs.report }}
-        run: |
-          [[ "$CHECKED_SHA" =~ ^[0-9a-f]{40}$ ]]
-          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          state=failure
-          [ "$CHECK_RESULT" != success ] || state=success
-          gh api "repos/$GITHUB_REPOSITORY/statuses/$CHECKED_SHA" \
-            -f state="$state" -f context=typescript -f description="Checks: $CHECK_RESULT" -f target_url="$url"
-          state=failure
-          description="Nightly: $NIGHTLY_RESULT"
-          if [ "$NIGHTLY_RESULT" = success ] && [ -n "$NIGHTLY_REPORT" ]; then
-            state=success
-            description="$NIGHTLY_REPORT"
-          elif [ "$NIGHTLY_RESULT" = skipped ] && [ "$CHECK_RESULT" = success ]; then
-            state=success
-            description="Not published: no packages changed"
-          fi
-          gh api "repos/$GITHUB_REPOSITORY/statuses/$CHECKED_SHA" \
-            -f state="$state" -f context=packages-nightly -f description="${description:0:140}" -f target_url="$url"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
+        with:
+          sfw: true
+          cache: true
+          run-install: true
+          node-version: "lts"
+      # With pending changesets this opens or updates the release PR. Publishing runs only for the
+      # merged release PR itself, so a new package cannot reach latest without a reviewed release.
+      - uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
+        with:
+          github-token: ${{ secrets.OLSTENLARCK_HQ_PAT }}
+          version-script: vp run packages:version
+          publish-script: "${{ startsWith(github.event.head_commit.message, 'chore: release packages') && 'pnpm changeset publish' || '' }}"
+          commit-message: "chore: release packages"
+          pr-title: "chore: release packages"
