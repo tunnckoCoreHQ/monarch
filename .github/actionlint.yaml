@@ -1,0 +1,4 @@
+# actionlint configuration. Blacksmith runner labels are not GitHub-hosted labels.
+self-hosted-runner:
+  labels:
+    - blacksmith-*
