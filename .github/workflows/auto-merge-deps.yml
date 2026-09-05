@@ -1,9 +1,9 @@
-# Checks and tests Dependabot PRs, then squash-merges them into master.
+# Enables GitHub auto-merge on Dependabot pull requests. GitHub merges them once the master
+# ruleset's required check passes, using the PAT owner's identity so the merge triggers the
+# master workflows like any other push.
 #
-# SECURITY: this job installs PR dependencies and requests permission to merge. The actor gate
-# limits it to Dependabot; do not extend it to arbitrary PR authors. Keep every validation step
-# before gh pr merge. A failed check must stop the job.
-# Dispatch typescript after merging: GITHUB_TOKEN merges do not trigger push workflows.
+# SECURITY: the job runs no repository code. The PAT comes from Dependabot secrets and is used
+# only to enable auto-merge. Keep the actor gate; do not extend it to other PR authors.
 
 name: auto-merge-deps
 
@@ -13,46 +13,12 @@ on:
 
 permissions: {}
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
 jobs:
-  verify_merge:
-    permissions:
-      actions: write
-      contents: write
-      pull-requests: write
+  enable_auto_merge:
     if: github.actor == 'dependabot[bot]'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
-        with:
-          mode: firewall-free
-      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
-        with:
-          sfw: true
-          cache: true
-          run-install: true
-          node-version: "lts"
-      - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
-        with:
-          version: v1.7.1
-      - id: task-cache
-        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: node_modules/.vite/task-cache
-          key: vite-task-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: |
-            vite-task-${{ runner.os }}-${{ runner.arch }}-
-      - run: vp run check
-      - run: vp run test
-      # Dependencies are managed by pnpm for Solidity too, so a bump can change what forge compiles.
-      - run: vp run solidity:check
       - env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr merge "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --squash --delete-branch
-          merge_sha=$(gh pr view "${{ github.event.pull_request.number }}" --repo "$GITHUB_REPOSITORY" --json mergeCommit --jq .mergeCommit.oid)
-          gh workflow run typescript.yml --repo "$GITHUB_REPOSITORY" --ref master -f merge_sha="$merge_sha"
+          GH_TOKEN: ${{ secrets.OLSTENLARCK_HQ_PAT }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --auto --squash
