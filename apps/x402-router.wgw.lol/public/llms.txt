@@ -1,0 +1,19 @@
+# x402-router.wgw.lol
+
+> Standalone x402 v2 facilitator router for any Fetch API runtime.
+
+## Docs
+
+- https://x402-router.wgw.lol/docs/getting-started/ (https://x402-router.wgw.lol/docs/getting-started.md)
+- https://x402-router.wgw.lol/docs/ (https://x402-router.wgw.lol/docs/index.md)
+- https://x402-router.wgw.lol/docs/integration/ (https://x402-router.wgw.lol/docs/integration.md)
+- https://x402-router.wgw.lol/docs/license/ (https://x402-router.wgw.lol/docs/license.md)
+- https://x402-router.wgw.lol/docs/self-hosting/ (https://x402-router.wgw.lol/docs/self-hosting.md)
+- https://x402-router.wgw.lol/docs/upstreams/ (https://x402-router.wgw.lol/docs/upstreams.md)
+
+## API
+
+- https://x402-router.wgw.lol/supported
+- https://x402-router.wgw.lol/verify
+- https://x402-router.wgw.lol/settle
+- https://x402-router.wgw.lol/health

@@ -1,0 +1,453 @@
+---
+import "../styles.css";
+
+const pageTitle = "WGW x402 Router story variant";
+const pageDescription =
+    "A bolder WGW x402 Router landing page built around the protocol map, upstream fragmentation, CDP pass-through, and self-hosting.";
+const pageSubdomain = Astro.url.hostname.replace(".wgw.lol", "");
+const sourceUrl =
+    "https://github.com/tunnckoCore/wgw-deploy-cf/tree/codex/cdn-hosted-manifests/packages/x402-router";
+
+const mapRows = [
+    {
+        request: "ETHEREUM_MAINNET + exact",
+        route: "PrimeV",
+        result: "mainnet settlement with sponsored gas",
+    },
+    {
+        request: "BASE_MAINNET + exact",
+        route: "CDP",
+        result: "seller CDP bearer header forwarded",
+    },
+    {
+        request: "SOLANA_MAINNET + exact",
+        route: "CDP",
+        result: "same x402 resource server path",
+    },
+    {
+        request: "public test/dev network",
+        route: "x402.org",
+        result: "public facilitator coverage",
+    },
+];
+
+const flow = [
+    {
+        title: "Support is discovered",
+        body:
+            "/supported comes from the upstream facilitators. The page you depend on is not a stale table baked into your app.",
+    },
+    {
+        title: "The payment chooses the route",
+        body:
+            "Version, scheme, and network decide whether verify and settle go to PrimeV, x402.org, or CDP.",
+    },
+    {
+        title: "CDP auth stays outside WGW",
+        body:
+            "Your server mints the short-lived CDP JWT. The router forwards that header only for CDP-routed calls.",
+    },
+    {
+        title: "Self-hosting stays first-class",
+        body:
+            "The hosted URL is convenient. The package is still a Fetch handler you can run under your own policy.",
+    },
+];
+
+const terminal = `$ curl https://x402-router.wgw.lol/supported
+GET  /supported
+POST /verify
+POST /settle
+
+request:  x402 v2 + exact + network
+router:   choose provider, forward CDP bearer only when needed
+state:    no seller account, no custody, no stored CDP secret`;
+
+const client = `const facilitator = new HTTPFacilitatorClient({
+  url: "https://x402-router.wgw.lol",
+  createAuthHeaders: () =>
+    createCdpAuthHeaders({
+      apiKeyId: process.env.CDP_API_KEY_ID!,
+      apiKeySecret: process.env.CDP_API_KEY_SECRET!,
+    }),
+});`;
+
+const selfHost = `import { createX402Router } from "@tunnckocore/x402-router";
+
+const handler = createX402Router();
+
+export default {
+  fetch(request: Request) {
+    return handler.fetch(request);
+  },
+};`;
+---
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={Astro.url} />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={Astro.url} />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+    </head>
+    <body class="bg-page text-primary antialiased">
+        <main>
+            <section class="overflow-hidden border-b border-line bg-page">
+                <div
+                    class="mx-auto flex min-h-[92vh] max-w-7xl flex-col px-5 py-8 md:px-8 lg:px-10 lg:py-10"
+                >
+                    <nav
+                        class="flex flex-wrap items-center justify-between gap-4 text-sm text-secondary"
+                    >
+                        <a href="/" class="font-semibold text-primary">
+                            <span class="text-accent">{pageSubdomain}</span>.wgw.lol
+                        </a>
+                        <div class="flex flex-wrap items-center gap-5">
+                            <a
+                                class="hover:text-accent hover:underline hover:underline-offset-4"
+                                href="/docs/">Docs</a
+                            >
+                            <a
+                                class="hover:text-accent hover:underline hover:underline-offset-4"
+                                href="/docs/upstreams/">Upstreams</a
+                            >
+                            <a
+                                class="hover:text-accent hover:underline hover:underline-offset-4"
+                                href="/docs/self-hosting/">Self-hosting</a
+                            >
+                            <a
+                                class="hover:text-accent hover:underline hover:underline-offset-4"
+                                href={sourceUrl}
+                                rel="noreferrer external"
+                                target="_blank">GitHub</a
+                            >
+                        </div>
+                    </nav>
+
+                    <div
+                        class="grid flex-1 gap-10 py-14 lg:grid-cols-[0.85fr_1.15fr] lg:items-center"
+                    >
+                        <div>
+                            <h1
+                                class="max-w-4xl text-5xl font-semibold leading-none text-primary md:text-7xl"
+                            >
+                                The facilitator layer is fragmented. Route it
+                                like infrastructure.
+                            </h1>
+                            <p class="mt-6 max-w-2xl text-lg leading-8 text-secondary">
+                                Replace the facilitator URL with
+                                <code>x402-router.wgw.lol</code>. Keep the x402
+                                v2 surface plain while WGW routes requests to
+                                PrimeV, x402.org, or CDP and leaves seller
+                                credentials on the seller server.
+                            </p>
+                            <div class="mt-8 flex flex-wrap gap-3">
+                                <a
+                                    class="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-black hover:bg-accent-high"
+                                    href="#map">Read the route map</a
+                                >
+                                <a
+                                    class="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-5 text-sm font-semibold text-primary hover:border-accent hover:text-accent"
+                                    href="#server">Wire the client</a
+                                >
+                            </div>
+                        </div>
+
+                        <div class="protocol-board">
+                            <div class="protocol-node protocol-node-source">
+                                API or MCP server
+                            </div>
+                            <div class="protocol-spine" aria-hidden="true"></div>
+                            <div class="protocol-node protocol-node-router">
+                                WGW x402 Router
+                            </div>
+                            <div class="protocol-spine protocol-spine-short" aria-hidden="true">
+                            </div>
+                            <div class="protocol-targets">
+                                <div>PrimeV for Ethereum Mainnet</div>
+                                <div>CDP for Base and Solana rails</div>
+                                <div>x402.org for public test/dev</div>
+                            </div>
+                            <div class="protocol-caption">
+                                /supported, /verify, /settle stay standard.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                id="map"
+                class="border-b border-line bg-band px-5 py-16 md:px-8 lg:px-10"
+            >
+                <div class="mx-auto max-w-7xl">
+                    <div class="grid gap-8 lg:grid-cols-[0.7fr_1.3fr]">
+                        <div>
+                            <h2 class="max-w-xl text-3xl font-semibold text-primary md:text-4xl">
+                                One URL does not mean one upstream.
+                            </h2>
+                            <p class="mt-4 max-w-xl leading-7 text-secondary">
+                                The router keeps a single integration point
+                                while acknowledging the real state of x402
+                                support. Each request carries enough protocol
+                                information to choose the right facilitator.
+                            </p>
+                        </div>
+
+                        <div class="route-ledger border-y border-line">
+                            {
+                                mapRows.map((row) => (
+                                    <div class="grid gap-3 border-b border-line py-5 last:border-b-0 md:grid-cols-[1fr_7rem_1.1fr]">
+                                        <code class="font-mono text-sm text-primary">
+                                            {row.request}
+                                        </code>
+                                        <strong class="font-mono text-sm text-accent">
+                                            {row.route}
+                                        </strong>
+                                        <span class="leading-7 text-secondary">
+                                            {row.result}
+                                        </span>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="border-b border-line bg-page px-5 py-16 md:px-8 lg:px-10">
+                <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_1fr]">
+                    <div>
+                        <h2 class="max-w-lg text-3xl font-semibold text-primary md:text-4xl">
+                            x402 gives you the interface. Facilitators give you
+                            uneven coverage.
+                        </h2>
+                        <p class="mt-4 leading-7 text-secondary">
+                            You can hard-wire one provider and narrow what your
+                            paid endpoint accepts. Or you can keep the x402
+                            server path intact and put routing where routing
+                            belongs: behind the facilitator URL.
+                        </p>
+                    </div>
+                    <div class="border-y border-line">
+                        {
+                            flow.map((item) => (
+                                <div class="grid gap-2 border-b border-line py-5 last:border-b-0 md:grid-cols-[13rem_1fr]">
+                                    <h3 class="font-semibold text-primary">
+                                        {item.title}
+                                    </h3>
+                                    <p class="leading-7 text-secondary">
+                                        {item.body}
+                                    </p>
+                                </div>
+                            ))
+                        }
+                    </div>
+                </div>
+            </section>
+
+            <section
+                id="server"
+                class="border-b border-line bg-frame px-5 py-16 md:px-8 lg:px-10"
+            >
+                <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.85fr_1.15fr]">
+                    <div>
+                        <h2 class="text-3xl font-semibold text-primary md:text-4xl">
+                            The seller server still controls sensitive auth.
+                        </h2>
+                        <p class="mt-4 max-w-xl leading-7 text-secondary">
+                            CDP requires auth. WGW does not turn that into a
+                            router account system. Your server creates the CDP
+                            bearer header from environment secrets and the
+                            router forwards it only when CDP is the selected
+                            provider.
+                        </p>
+                        <pre
+                            class="mt-8 overflow-x-auto whitespace-pre-wrap break-words border border-line bg-code p-4 font-mono text-xs leading-6 text-code-text md:whitespace-pre"><code>{client}</code></pre>
+                    </div>
+
+                    <pre
+                        class="overflow-x-auto whitespace-pre-wrap break-words border border-line bg-code p-4 font-mono text-xs leading-6 text-code-text md:whitespace-pre"><code>{terminal}</code></pre>
+                </div>
+            </section>
+
+            <section class="border-b border-line bg-page px-5 py-16 md:px-8 lg:px-10">
+                <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div>
+                        <h2 class="max-w-2xl text-3xl font-semibold text-primary md:text-4xl">
+                            Hosted when speed matters. Self-hosted when control
+                            matters more.
+                        </h2>
+                        <p class="mt-4 max-w-2xl leading-7 text-secondary">
+                            Use <code>https://x402-router.wgw.lol</code> while
+                            you wire paid endpoints. Move the same router into
+                            your own Cloudflare Worker, Node service, Bun app,
+                            or Deno runtime when you need custom upstreams or
+                            private operating policy.
+                        </p>
+                    </div>
+
+                    <pre
+                        class="overflow-x-auto whitespace-pre-wrap break-words border border-line bg-code p-4 font-mono text-xs leading-6 text-code-text md:whitespace-pre"><code>{selfHost}</code></pre>
+                </div>
+            </section>
+
+            <section class="bg-band px-5 py-12 md:px-8 lg:px-10">
+                <div
+                    class="mx-auto flex max-w-7xl flex-col gap-5 md:flex-row md:items-center md:justify-between"
+                >
+                    <div>
+                        <h2 class="text-2xl font-semibold text-primary">
+                            Give your x402 stack one facilitator URL.
+                        </h2>
+                        <p class="mt-2 max-w-2xl text-secondary">
+                            Keep the upstream decision out of your paid route
+                            handlers.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <a
+                            class="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-black hover:bg-accent-high"
+                            href="/docs/getting-started/">Start with docs</a
+                        >
+                        <a
+                            class="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-5 text-sm font-semibold text-primary hover:border-accent hover:text-accent"
+                            href={sourceUrl}
+                            rel="noreferrer external"
+                            target="_blank">Inspect package</a
+                        >
+                    </div>
+                </div>
+            </section>
+        </main>
+        <style>
+            .protocol-board {
+                display: grid;
+                gap: 0;
+                border: 1px solid var(--color-line);
+                background: var(--color-code);
+                color: var(--color-primary);
+                font-family: var(--sl-font);
+            }
+
+            .protocol-node {
+                padding: 1.25rem;
+                font-weight: 700;
+                border-bottom: 1px solid var(--color-line);
+            }
+
+            .protocol-node-source {
+                color: var(--color-muted);
+            }
+
+            .protocol-node-router {
+                color: var(--color-accent);
+                font-size: 1.5rem;
+            }
+
+            .protocol-spine {
+                height: 3.5rem;
+                border-left: 1px solid var(--color-edge);
+                margin-left: 1.25rem;
+            }
+
+            .protocol-spine-short {
+                height: 2rem;
+            }
+
+            .protocol-targets {
+                display: grid;
+                border-top: 1px solid var(--color-line);
+                border-bottom: 1px solid var(--color-line);
+            }
+
+            .protocol-targets div {
+                padding: 1rem 1.25rem;
+                border-bottom: 1px solid var(--color-line);
+                color: var(--color-secondary);
+            }
+
+            .protocol-targets div:last-child {
+                border-bottom: 0;
+            }
+
+            .protocol-caption {
+                padding: 1rem 1.25rem;
+                color: var(--color-info);
+                font-family: var(--sl-font-mono);
+                font-size: 0.875rem;
+            }
+
+            @media (min-width: 768px) {
+                .protocol-board {
+                    grid-template-columns: 0.8fr 4rem 1fr;
+                    align-items: stretch;
+                }
+
+                .protocol-node,
+                .protocol-targets,
+                .protocol-caption {
+                    border-bottom: 0;
+                }
+
+                .protocol-node-source {
+                    display: flex;
+                    align-items: center;
+                    border-right: 1px solid var(--color-line);
+                }
+
+                .protocol-node-router {
+                    display: flex;
+                    align-items: center;
+                    border-left: 1px solid var(--color-line);
+                    border-right: 1px solid var(--color-line);
+                    grid-column: 3;
+                    grid-row: 1;
+                }
+
+                .protocol-spine {
+                    height: auto;
+                    margin: 0;
+                    border-left: 0;
+                    border-top: 1px solid var(--color-edge);
+                    align-self: center;
+                    grid-column: 2;
+                    grid-row: 1;
+                }
+
+                .protocol-spine-short {
+                    display: none;
+                }
+
+                .protocol-targets {
+                    grid-column: 1 / -1;
+                    grid-template-columns: repeat(3, 1fr);
+                    border-top: 1px solid var(--color-line);
+                }
+
+                .protocol-targets div {
+                    border-bottom: 0;
+                    border-right: 1px solid var(--color-line);
+                }
+
+                .protocol-targets div:last-child {
+                    border-right: 0;
+                }
+
+                .protocol-caption {
+                    grid-column: 1 / -1;
+                    border-top: 1px solid var(--color-line);
+                }
+            }
+        </style>
+    </body>
+</html>

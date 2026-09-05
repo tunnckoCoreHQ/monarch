@@ -1,0 +1,389 @@
+---
+import "../styles.css";
+
+const pageTitle = "WGW x402 Router integration variant";
+const pageDescription =
+    "A developer-forward WGW x402 Router landing page with standard x402 endpoints, CDP header pass-through, hosted use, and self-hosting.";
+const pageSubdomain = Astro.url.hostname.replace(".wgw.lol", "");
+const sourceUrl =
+    "https://github.com/tunnckoCore/wgw-deploy-cf/tree/codex/cdn-hosted-manifests/packages/x402-router";
+
+const endpoints = [
+    {
+        method: "GET",
+        path: "/supported",
+        detail:
+            "Builds the supported payment list from the live upstream facilitators.",
+    },
+    {
+        method: "POST",
+        path: "/verify",
+        detail:
+            "Reads the x402 request and routes verification by version, scheme, and network.",
+    },
+    {
+        method: "POST",
+        path: "/settle",
+        detail:
+            "Sends settlement to the same upstream selected for the payment route.",
+    },
+];
+
+const routes = [
+    {
+        network: "Ethereum Mainnet",
+        upstream: "PrimeV",
+        reason: "Ethereum Mainnet x402 support, 1.2s settlement, sponsored gas",
+    },
+    {
+        network: "Base + CDP EVM",
+        upstream: "CDP",
+        reason: "seller-generated CDP bearer header forwarded only for CDP calls",
+    },
+    {
+        network: "Solana + CDP SVM",
+        upstream: "CDP",
+        reason: "same x402 server flow, SVM exact scheme support",
+    },
+    {
+        network: "Public test and dev networks",
+        upstream: "x402.org",
+        reason: "public coverage discovered from x402.org support data",
+    },
+];
+
+const clientSetup = `import { BASE_MAINNET, ETHEREUM_MAINNET, SOLANA_MAINNET } from "@tunnckocore/x402-router";
+import { createCdpAuthHeaders } from "@tunnckocore/x402-router/cdp";
+import { HTTPFacilitatorClient, x402ResourceServer } from "@x402/core/server";
+import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { ExactSvmScheme } from "@x402/svm/exact/server";
+
+const facilitator = new HTTPFacilitatorClient({
+  url: "https://x402-router.wgw.lol",
+  createAuthHeaders: () =>
+    createCdpAuthHeaders({
+      apiKeyId: process.env.CDP_API_KEY_ID!,
+      apiKeySecret: process.env.CDP_API_KEY_SECRET!,
+    }),
+});
+
+const server = new x402ResourceServer(facilitator)
+  .register(ETHEREUM_MAINNET, new ExactEvmScheme())
+  .register(BASE_MAINNET, new ExactEvmScheme())
+  .register(SOLANA_MAINNET, new ExactSvmScheme());`;
+
+const cdpHelper = `createAuthHeaders: () =>
+  createCdpAuthHeaders({
+    apiKeyId: process.env.CDP_API_KEY_ID!,
+    apiKeySecret: process.env.CDP_API_KEY_SECRET!,
+  })`;
+
+const selfHost = `import { createX402Router } from "@tunnckocore/x402-router";
+
+const handler = createX402Router();
+
+export default {
+  fetch(request: Request) {
+    return handler.fetch(request);
+  },
+};`;
+---
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={Astro.url} />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={Astro.url} />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+    </head>
+    <body class="bg-page text-primary antialiased">
+        <main>
+            <section class="border-b border-line bg-page">
+                <div
+                    class="mx-auto flex max-w-7xl flex-col gap-12 px-5 py-8 md:px-8 lg:px-10 lg:py-10"
+                >
+                    <nav
+                        class="flex flex-wrap items-center justify-between gap-4 text-sm text-secondary"
+                    >
+                        <a href="/" class="font-semibold text-primary">
+                            <span class="text-accent">{pageSubdomain}</span>.wgw.lol
+                        </a>
+                        <div class="flex flex-wrap items-center gap-5">
+                            <a
+                                class="hover:text-accent hover:underline hover:underline-offset-4"
+                                href="/docs/">Docs</a
+                            >
+                            <a
+                                class="hover:text-accent hover:underline hover:underline-offset-4"
+                                href="/docs/integration/">Integration</a
+                            >
+                            <a
+                                class="hover:text-accent hover:underline hover:underline-offset-4"
+                                href="/docs/self-hosting/">Self-hosting</a
+                            >
+                            <a
+                                class="hover:text-accent hover:underline hover:underline-offset-4"
+                                href={sourceUrl}
+                                rel="noreferrer external"
+                                target="_blank">GitHub</a
+                            >
+                        </div>
+                    </nav>
+
+                    <div class="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+                        <div class="max-w-3xl">
+                            <p class="mb-5 max-w-xl text-lg text-muted">
+                                WGW x402 Router for API and MCP sellers.
+                            </p>
+                            <h1
+                                class="text-5xl font-semibold leading-none text-primary md:text-7xl"
+                            >
+                                Keep your x402 server code. Replace the
+                                facilitator URL.
+                            </h1>
+                            <p class="mt-6 max-w-2xl text-lg leading-8 text-secondary">
+                                Point the standard x402 client at
+                                <code>https://x402-router.wgw.lol</code>. The
+                                service exposes <code>/supported</code>,
+                                <code>/verify</code>, and <code>/settle</code>,
+                                then chooses PrimeV, x402.org, or CDP from the
+                                payment request.
+                            </p>
+                            <div class="mt-8 flex flex-wrap gap-3">
+                                <a
+                                    class="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-black hover:bg-accent-high"
+                                    href="#client-setup">Use hosted endpoint</a
+                                >
+                                <a
+                                    class="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-5 text-sm font-semibold text-primary hover:border-accent hover:text-accent"
+                                    href="#self-host">Self-host the handler</a
+                                >
+                            </div>
+                        </div>
+
+                        <div class="border border-line bg-code">
+                            <div
+                                class="flex items-center justify-between border-b border-line px-4 py-3 text-sm"
+                            >
+                                <span class="text-muted">facilitator.url</span>
+                                <span class="text-accent"
+                                    >https://x402-router.wgw.lol</span
+                                >
+                            </div>
+                            <div class="divide-y divide-line">
+                                {
+                                    endpoints.map((endpoint) => (
+                                        <div class="grid gap-3 px-4 py-4 text-sm md:grid-cols-[5rem_8rem_1fr] md:items-start">
+                                            <span class="font-mono text-info">
+                                                {endpoint.method}
+                                            </span>
+                                            <code class="font-mono text-primary">
+                                                {endpoint.path}
+                                            </code>
+                                            <span class="leading-6 text-secondary">
+                                                {endpoint.detail}
+                                            </span>
+                                        </div>
+                                    ))
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                id="client-setup"
+                class="border-b border-line bg-band px-5 py-16 md:px-8 lg:px-10"
+            >
+                <div class="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.72fr_1.28fr]">
+                    <div>
+                        <h2 class="max-w-xl text-3xl font-semibold text-primary md:text-4xl">
+                            The integration change belongs in one place.
+                        </h2>
+                        <p class="mt-4 max-w-xl leading-7 text-secondary">
+                            Your paid route, schemes, and middleware stay in
+                            the normal x402 shape. WGW only becomes the
+                            facilitator endpoint and the CDP header bridge.
+                        </p>
+                    </div>
+
+                    <pre
+                        class="overflow-x-auto whitespace-pre-wrap break-words border border-line bg-code p-4 font-mono text-xs leading-6 text-code-text md:whitespace-pre"><code>{clientSetup}</code></pre>
+                </div>
+            </section>
+
+            <section class="border-b border-line bg-page px-5 py-16 md:px-8 lg:px-10">
+                <div class="mx-auto max-w-7xl">
+                    <div class="grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
+                        <div>
+                            <h2 class="max-w-lg text-3xl font-semibold text-primary md:text-4xl">
+                            Standard endpoint surface. Explicit provider
+                            routing.
+                            </h2>
+                            <p class="mt-4 max-w-xl leading-7 text-secondary">
+                                The service does not pretend every provider
+                                supports every network. It reads the x402
+                                version, scheme, and network, then sends the
+                                call where that payment can actually be
+                                handled.
+                            </p>
+                        </div>
+
+                        <div class="border-y border-line">
+                            {
+                                routes.map((route) => (
+                                    <div class="grid gap-3 border-b border-line py-5 last:border-b-0 md:grid-cols-[1fr_7rem_1.25fr] md:items-start">
+                                        <div class="font-medium text-primary">
+                                            {route.network}
+                                        </div>
+                                        <div class="font-mono text-sm text-accent">
+                                            {route.upstream}
+                                        </div>
+                                        <div class="leading-7 text-secondary">
+                                            {route.reason}
+                                        </div>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="border-b border-line bg-frame px-5 py-16 md:px-8 lg:px-10">
+                <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_1fr]">
+                    <div>
+                        <h2 class="text-3xl font-semibold text-primary md:text-4xl">
+                            CDP credentials stay on the seller server.
+                        </h2>
+                        <p class="mt-4 leading-7 text-secondary">
+                            The hosted service does not store CDP API keys. Your
+                            server generates a short-lived CDP bearer token.
+                            WGW forwards it only when the selected provider is
+                            CDP.
+                        </p>
+                        <div class="mt-8 divide-y divide-line border-y border-line">
+                            <div class="grid gap-2 py-4 md:grid-cols-[8rem_1fr]">
+                                <strong class="text-primary">You keep</strong>
+                                <span class="text-secondary"
+                                    >CDP API key ID and secret in server-side
+                                    environment variables.</span
+                                >
+                            </div>
+                            <div class="grid gap-2 py-4 md:grid-cols-[8rem_1fr]">
+                                <strong class="text-primary">You send</strong>
+                                <span class="text-secondary"
+                                    >a short-lived bearer header created for the
+                                    CDP upstream, not a router account.</span
+                                >
+                            </div>
+                            <div class="grid gap-2 py-4 md:grid-cols-[8rem_1fr]">
+                                <strong class="text-primary">WGW does</strong>
+                                <span class="text-secondary"
+                                    >route selection, header forwarding, and no
+                                    seller key persistence.</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <pre
+                        class="overflow-x-auto whitespace-pre-wrap break-words border border-line bg-code p-4 font-mono text-xs leading-6 text-code-text md:whitespace-pre"><code>{cdpHelper}</code></pre>
+                </div>
+            </section>
+
+            <section
+                id="self-host"
+                class="border-b border-line bg-page px-5 py-16 md:px-8 lg:px-10"
+            >
+                <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+                    <div>
+                        <h2 class="max-w-xl text-3xl font-semibold text-primary md:text-4xl">
+                            Start hosted. Move the same router into your own
+                            runtime when policy asks.
+                        </h2>
+                        <p class="mt-4 max-w-xl leading-7 text-secondary">
+                            The public endpoint is the quickest path:
+                            <code>https://x402-router.wgw.lol</code>. If you
+                            need private routing rules, your own observability,
+                            or internal deployment controls, run the package as
+                            a Fetch handler.
+                        </p>
+                        <div class="mt-8 border-y border-line py-5">
+                            <dl class="grid gap-5 text-sm md:grid-cols-3">
+                                <div>
+                                    <dt class="font-semibold text-primary">
+                                        Runtime
+                                    </dt>
+                                    <dd class="mt-2 leading-6 text-secondary">
+                                        Cloudflare Workers, Node, Bun, Deno, or
+                                        any Fetch API host.
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold text-primary">
+                                        State
+                                    </dt>
+                                    <dd class="mt-2 leading-6 text-secondary">
+                                        No database and no router-side seller
+                                        secrets.
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold text-primary">
+                                        License
+                                    </dt>
+                                    <dd class="mt-2 leading-6 text-secondary">
+                                        FSL-1.1-ALv2, with Apache-2.0 conversion
+                                        after 2 years.
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <pre
+                        class="overflow-x-auto whitespace-pre-wrap break-words border border-line bg-code p-4 font-mono text-xs leading-6 text-code-text md:whitespace-pre"><code>{selfHost}</code></pre>
+                </div>
+            </section>
+
+            <section class="bg-band px-5 py-12 md:px-8 lg:px-10">
+                <div
+                    class="mx-auto flex max-w-7xl flex-col gap-5 md:flex-row md:items-center md:justify-between"
+                >
+                    <div>
+                        <h2 class="text-2xl font-semibold text-primary">
+                            Replace your facilitator URL first, self-host later
+                            if policy requires it.
+                        </h2>
+                        <p class="mt-2 max-w-2xl text-secondary">
+                            Start with <code>x402-router.wgw.lol</code>. Keep
+                            the same package ready for your own Worker when you
+                            need control.
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <a
+                            class="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-5 text-sm font-semibold text-black hover:bg-accent-high"
+                            href="/docs/integration/">Read integration docs</a
+                        >
+                        <a
+                            class="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-5 text-sm font-semibold text-primary hover:border-accent hover:text-accent"
+                            href="/docs/self-hosting/">Read self-hosting docs</a
+                        >
+                    </div>
+                </div>
+            </section>
+        </main>
+    </body>
+</html>
