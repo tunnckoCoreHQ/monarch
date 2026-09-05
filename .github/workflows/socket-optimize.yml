@@ -1,6 +1,7 @@
-# Runs Socket Optimize on Monday at 06:00 UTC or manually. When it changes anything, opens a pull
-# request as the PAT owner and enables auto-merge, so the PR gets the normal checks and GitHub
-# merges it when the required check passes.
+# Runs Socket Optimize on Monday at 06:00 UTC or manually. Verified overrides are pushed straight
+# to master by the PAT owner, a repository admin, so the push is a real push that runs ci and
+# needs no pull request. When the overrides fail verification, the diff is opened as a pull
+# request that needs attention. When there is nothing to push, an issue links the failed run.
 #
 # SECURITY: this job can read the Socket secret and the PAT. Keep the master-only guard: without
 # it, a manual run could execute modified workflow code with those credentials.
@@ -19,15 +20,19 @@ concurrency:
   group: socket-optimize
   cancel-in-progress: false
 
+env:
+  BRANCH: socket-optimize
+  ATTENTION_TITLE: "socket optimize: needs attention"
+  FAILURE_TITLE: "socket optimize: run failed"
+
 jobs:
   socket_optimize:
     permissions:
       contents: read
+      issues: write
     # Only the default branch may run this, including manual dispatches, so a modified branch cannot reach the secrets.
     if: github.ref == 'refs/heads/master'
     runs-on: blacksmith-2vcpu-ubuntu-2404
-    env:
-      BRANCH: socket-optimize
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,6 +44,9 @@ jobs:
           cache: true
           run-install: true
           node-version: "lts"
+      - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: v1.7.1
       - run: pnpm dlx socket@1.1.167 optimize
         env:
           SOCKET_SECURITY_API_TOKEN: ${{ secrets.SOCKET_SECURITY_API_TOKEN }}
@@ -49,22 +57,58 @@ jobs:
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+      # Commit before verifying so a failed verification can still be pushed as a pull request.
       - if: steps.diff.outputs.changed == 'true'
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          pnpm install --no-frozen-lockfile
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "chore(deps): apply socket optimize overrides"
+      - if: steps.diff.outputs.changed == 'true'
+        run: vp run check
+      - if: steps.diff.outputs.changed == 'true'
+        run: vp run test
+      - if: steps.diff.outputs.changed == 'true'
+        run: vp run solidity:check
       - if: steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.OLSTENLARCK_HQ_PAT }}
         run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git switch -c "$BRANCH"
-          git add -A
-          git commit -m "chore(deps): apply socket optimize overrides"
+          # Give Git push its credential only after verification passes.
           git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push --force origin "$BRANCH"
-          if ! gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json number >/dev/null 2>&1; then
+          git fetch origin master
+          git rebase origin/master
+          git push origin HEAD:master
+      - if: failure() && steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.OLSTENLARCK_HQ_PAT }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git diff --quiet || git commit -qam "chore(deps): apply socket optimize overrides" || true
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push --force origin "HEAD:refs/heads/$BRANCH"
+          if gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" --json number >/dev/null 2>&1; then
+            gh pr comment "$BRANCH" --repo "$GITHUB_REPOSITORY" --body "Verification failed again: $RUN_URL"
+          else
             gh pr create --repo "$GITHUB_REPOSITORY" --base master --head "$BRANCH" \
-              --title "chore(deps): apply socket optimize overrides" \
-              --body "Weekly Socket Optimize run. Merges automatically once the required checks pass."
+              --title "$ATTENTION_TITLE" \
+              --body "Socket Optimize produced overrides that failed verification: $RUN_URL
+
+          Read the failing check, point the broken override back at the original package in pnpm-workspace.yaml (optimize keeps any override that is not an @socketregistry spec), or fix the code the replacement exposed. Then approve and merge."
           fi
-          gh pr merge "$BRANCH" --repo "$GITHUB_REPOSITORY" --auto --squash
+      - if: failure() && steps.diff.outputs.changed != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DISPATCH_URL: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/socket-optimize.yml
+        run: |
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$FAILURE_TITLE\" in:title" --json number,title --jq ".[] | select(.title == \"$FAILURE_TITLE\") | .number" | head -1)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Failed again: $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$FAILURE_TITLE" \
+              --body "Socket Optimize failed before producing any changes: $RUN_URL
+
+          Fix the cause, then rerun it from $DISPATCH_URL."
+          fi
