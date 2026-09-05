@@ -112,6 +112,15 @@ export default defineConfig({
       //   input: ["**/*.ts", "!**/dist/**/*", "!**/node_modules/**/*"],
       // },
 
+      // Builds publishable packages in dependency order before publishing. A package that emits
+      // or bundles declares a build script; packages without one are published as they are.
+      build: {
+        command:
+          "if jq -es 'map(.scripts.build) | any' packages/*/package.json > /dev/null; then vp run --filter './packages/*' build; fi",
+        input: ["packages/*/**", "!**/dist/**", "!**/node_modules/**", "!**/test/**"],
+        output: ["packages/*/dist/**"],
+      },
+
       test: {
         command: "vp test",
         input: [
