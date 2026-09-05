@@ -11,17 +11,16 @@ const env: Env = {
 };
 const claims: JWTPayload = {
   iss: "https://token.actions.githubusercontent.com",
-  aud: "https://npm.wgw.lol",
-  sub: "repo:tunnckoCoreHQ@51462759/monarch@1299813376:ref:refs/heads/master",
+  aud: "npm:npm.wgw.lol",
+  sub: "repo:tunnckoCoreHQ@51462759/monarch@1299813376:environment:nightly",
   repository: "tunnckoCoreHQ/monarch",
   repository_id: "1299813376",
   repository_owner_id: "51462759",
   ref: "refs/heads/master",
-  workflow_ref: "tunnckoCoreHQ/monarch/.github/workflows/typescript.yml@refs/heads/master",
-  job_workflow_ref:
-    "tunnckoCoreHQ/monarch/.github/workflows/packages-nightly.yml@refs/heads/master",
+  environment: "nightly",
   event_name: "push",
 };
+const exchangeUrl = "https://npm.wgw.lol/-/npm/v1/oidc/token/exchange/package/@tunnckocore%2fcalc";
 let privateKey: CryptoKey;
 let jwks: { keys: object[] };
 const upstream = vi.fn();
@@ -60,10 +59,18 @@ async function token(overrides: JWTPayload = {}, key = privateKey) {
     .sign(key);
 }
 
+function exchange(bearer: string | undefined, url = exchangeUrl) {
+  return app.request(
+    url,
+    { method: "POST", headers: bearer ? { authorization: `Bearer ${bearer}` } : {} },
+    env,
+  );
+}
+
 function publish(
   bearer: string,
   tag = "nightly",
-  version = "0.1.3-nightly.123.1.20260904.abcdef0",
+  version = "0.1.3-nightly.20260904234045.abcdef0",
 ) {
   return app.request(
     "https://npm.wgw.lol/@tunnckocore%2fcalc",
@@ -80,6 +87,57 @@ function publish(
   );
 }
 
+const invalidClaims: JWTPayload[] = [
+  { repository: "attacker/monarch" },
+  { repository_id: "123" },
+  { repository_owner_id: "123" },
+  { ref: "refs/heads/feature" },
+  { environment: undefined },
+  { environment: "staging" },
+  { iss: "https://attacker.example" },
+  { aud: "https://npm.wgw.lol" },
+  { aud: "npm:registry.npmjs.org" },
+  { exp: 1 },
+];
+
+describe("OIDC token exchange", () => {
+  it("returns the verified GitHub token for a scoped package", async () => {
+    const bearer = await token();
+    const response = await exchange(bearer);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ token: bearer });
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("issues a token that the publish route accepts", async () => {
+    const { token: exchanged } = (await (await exchange(await token())).json()) as {
+      token: string;
+    };
+    expect((await publish(exchanged)).status).toBe(201);
+    expect(upstream.mock.calls[0][1].headers.get("authorization")).toBe(
+      "Bearer write-service-token",
+    );
+  });
+
+  it.each(invalidClaims)("rejects invalid identity claims %j", async (overrides) => {
+    expect((await exchange(await token(overrides))).status).toBe(401);
+  });
+
+  it("rejects a missing bearer and a forged signature", async () => {
+    expect((await exchange(undefined)).status).toBe(401);
+    const forged = await generateKeyPair("RS256");
+    expect((await exchange(await token({}, forged.privateKey))).status).toBe(401);
+  });
+
+  it("knows only @tunnckocore packages", async () => {
+    const bearer = await token();
+    for (const name of ["calc", "@other%2fcalc", "@tunnckocore%2f..%2fcalc"]) {
+      const response = await exchange(bearer, `${exchangeUrl.replace(/[^/]+$/, "")}${name}`);
+      expect(response.status).toBe(404);
+    }
+  });
+});
+
 describe("CI publishing authorization", () => {
   it("verifies the signature and substitutes the worker token for a master nightly", async () => {
     expect((await publish(await token())).status).toBe(201);
@@ -92,36 +150,15 @@ describe("CI publishing authorization", () => {
     );
   });
 
-  it("allows stable publishing after successful master checks", async () => {
+  it("allows the latest environment to publish stable versions", async () => {
     const bearer = await token({
-      job_workflow_ref:
-        "tunnckoCoreHQ/monarch/.github/workflows/packages-release.yml@refs/heads/master",
+      environment: "latest",
+      sub: "repo:tunnckoCoreHQ@51462759/monarch@1299813376:environment:latest",
     });
     expect((await publish(bearer, "latest", "0.1.3")).status).toBe(201);
   });
 
-  it.each([
-    { repository: "attacker/monarch" },
-    { repository_id: "123" },
-    { repository_owner_id: "123" },
-    { ref: "refs/heads/feature" },
-    { event_name: "pull_request" },
-    { event_name: "workflow_run" },
-    { job_workflow_ref: undefined },
-    { job_workflow_ref: "tunnckoCoreHQ/monarch/.github/workflows/other.yml@refs/heads/master" },
-    {
-      job_workflow_ref:
-        "tunnckoCoreHQ/monarch/.github/workflows/packages-nightly.yml@refs/heads/feature",
-    },
-    { sub: "repo:tunnckoCoreHQ/monarch:pull_request" },
-    { sub: "repo:tunnckoCoreHQ/monarch:ref:refs/heads/master" },
-    { sub: "repo:tunnckoCoreHQ@123/monarch@1299813376:ref:refs/heads/master" },
-    { sub: "repo:tunnckoCoreHQ@51462759/monarch@123:ref:refs/heads/master" },
-    { workflow_ref: "tunnckoCoreHQ/monarch/.github/workflows/other.yml@refs/heads/master" },
-    { iss: "https://attacker.example" },
-    { aud: "https://other.example" },
-    { exp: 1 },
-  ])("rejects invalid identity claims %j", async (overrides) => {
+  it.each(invalidClaims)("rejects invalid identity claims %j", async (overrides) => {
     expect((await publish(await token(overrides))).status).toBe(401);
     expect(upstream).not.toHaveBeenCalled();
   });
@@ -132,8 +169,12 @@ describe("CI publishing authorization", () => {
     expect(upstream).not.toHaveBeenCalled();
   });
 
-  it("allows an automated master dispatch to publish nightly", async () => {
-    expect((await publish(await token({ event_name: "workflow_dispatch" }))).status).toBe(201);
+  it("does not depend on the triggering event or workflow file", async () => {
+    const bearer = await token({
+      event_name: "workflow_dispatch",
+      workflow_ref: "tunnckoCoreHQ/monarch/.github/workflows/anything.yml@refs/heads/master",
+    });
+    expect((await publish(bearer)).status).toBe(201);
   });
 
   it("prevents a nightly token from modifying latest", async () => {
@@ -141,11 +182,8 @@ describe("CI publishing authorization", () => {
     expect(upstream).not.toHaveBeenCalled();
   });
 
-  it("prevents a stable workflow from publishing a prerelease as latest", async () => {
-    const bearer = await token({
-      job_workflow_ref:
-        "tunnckoCoreHQ/monarch/.github/workflows/packages-release.yml@refs/heads/master",
-    });
+  it("prevents the latest environment from publishing a prerelease as latest", async () => {
+    const bearer = await token({ environment: "latest" });
     expect((await publish(bearer, "latest")).status).toBe(403);
     expect(upstream).not.toHaveBeenCalled();
   });

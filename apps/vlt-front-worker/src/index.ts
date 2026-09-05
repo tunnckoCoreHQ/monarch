@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { validatePublishRequest, verifyPublishToken } from "./utils";
+import type { PublishTag } from "./utils";
 
 // COMMIT_SHA arrives as a deploy-time var, see the deploy script.
 const app = new Hono<{ Bindings: Env & { COMMIT_SHA?: string } }>();
@@ -11,6 +12,32 @@ app.get("/-/health", (c) => {
   const link = `https://github.com/tunnckoCoreHQ/monarch${label}`;
 
   return c.json({ ok: true, link, commit: sha ?? "unknwon" });
+});
+
+// Trusted publishing: npm-compatible clients POST the GitHub OIDC token here and use the
+// returned token as the bearer for the publish itself. VLT has no OIDC support, so this worker
+// is the exchange endpoint. The verified GitHub token is returned as-is; the write handler
+// below verifies it again on every request.
+app.post("/-/npm/v1/oidc/token/exchange/package/*", async (c) => {
+  let name: string;
+  try {
+    name = decodeURIComponent(c.req.path.slice("/-/npm/v1/oidc/token/exchange/package/".length));
+  } catch {
+    return c.json({ message: "Invalid package name" }, 400);
+  }
+  if (!/^@tunnckocore\/[a-z0-9][a-z0-9._-]*$/.test(name)) {
+    return c.json({ message: "Package not found" }, 404);
+  }
+  const bearer = /^Bearer\s+(.+)$/i.exec(c.req.header("authorization") ?? "")?.[1];
+  if (!bearer) {
+    return c.json({ message: "Unauthorized" }, 401);
+  }
+  try {
+    await verifyPublishToken(bearer);
+  } catch {
+    return c.json({ message: "Unauthorized" }, 401);
+  }
+  return c.json({ token: bearer });
 });
 
 app.all("*", async (c) => {
@@ -53,7 +80,7 @@ app.all("*", async (c) => {
     }
 
     if (bearer.split(".").length === 3) {
-      let tag: "nightly" | "latest";
+      let tag: PublishTag;
       try {
         tag = await verifyPublishToken(bearer);
       } catch {
