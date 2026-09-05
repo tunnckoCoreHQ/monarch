@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@tunnckocore/x402-router": ["./src/index.ts"],
+      "@tunnckocore/x402-router/cdp": ["./src/cdp.ts"]
+    }
+  },
+  "extends": "../../tsconfig.json",
+  "include": ["example.ts", "src/**/*.ts", "test/**/*.ts"]
+}
