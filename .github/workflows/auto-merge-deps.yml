@@ -1,9 +1,9 @@
-# Enables GitHub auto-merge on Dependabot pull requests. GitHub merges them once the master
-# ruleset's required check passes, using the PAT owner's identity so the merge triggers the
-# master workflows like any other push.
+# Approves Dependabot pull requests and enables GitHub auto-merge on them. The master ruleset
+# requires one approval, which the PAT owner gives here; GitHub merges once the required checks
+# pass, using the PAT owner's identity so the merge triggers the master workflows like any push.
 #
 # SECURITY: the job runs no repository code. The PAT comes from Dependabot secrets and is used
-# only to enable auto-merge. Keep the actor gate; do not extend it to other PR authors.
+# only to approve and enable auto-merge. Keep the actor gate; do not extend it to other authors.
 
 name: auto-merge-deps
 
@@ -21,4 +21,6 @@ jobs:
       - env:
           GH_TOKEN: ${{ secrets.OLSTENLARCK_HQ_PAT }}
           PR: ${{ github.event.pull_request.number }}
-        run: gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --auto --squash
+        run: |
+          gh pr review "$PR" --repo "$GITHUB_REPOSITORY" --approve --body "Dependabot update; merges when the required checks pass."
+          gh pr merge "$PR" --repo "$GITHUB_REPOSITORY" --auto --squash
