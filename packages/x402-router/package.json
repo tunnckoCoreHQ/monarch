@@ -1,0 +1,39 @@
+{
+  "name": "@tunnckocore/x402-router",
+  "version": "0.1.2",
+  "license": "FSL-1.1-ALv2",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./cdp": {
+      "types": "./dist/cdp.d.ts",
+      "default": "./dist/cdp.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack src/index.ts --clean --dts --format esm --platform neutral && vp pack src/cdp.ts --no-clean --dts --format esm --platform neutral --deps.never-bundle @coinbase/cdp-sdk --on-success \"[ ! -f dist/index.mjs ] || mv dist/index.mjs dist/index.js; [ ! -f dist/index.d.mts ] || mv dist/index.d.mts dist/index.d.ts; [ ! -f dist/cdp.mjs ] || mv dist/cdp.mjs dist/cdp.js; [ ! -f dist/cdp.d.mts ] || mv dist/cdp.d.mts dist/cdp.d.ts\"",
+    "check": "vp check --fix",
+    "prepublishOnly": "vp run build",
+    "test": "vp test --run"
+  },
+  "dependencies": {
+    "@coinbase/cdp-sdk": "catalog:"
+  },
+  "devDependencies": {
+    "@hono/node-server": "catalog:",
+    "@x402/core": "catalog:",
+    "@x402/evm": "catalog:",
+    "@x402/hono": "catalog:",
+    "@x402/svm": "catalog:",
+    "hono": "catalog:"
+  }
+}

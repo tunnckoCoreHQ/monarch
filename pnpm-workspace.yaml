@@ -20,6 +20,13 @@ catalogMode: prefer
 
 catalogs:
   default:
+    "@coinbase/cdp-sdk": ^1.51.2
+    "@hono/node-server": ^2.0.6
+    "@x402/core": ^2.17.0
+    "@x402/evm": ^2.17.0
+    "@x402/hono": ^2.17.0
+    "@x402/svm": ^2.17.0
+    hono: ^4.12.27
     vite: npm:@voidzero-dev/vite-plus-core@0.2.8
     vite-plus: 0.2.8
     "@vitest/coverage-v8": 4.1.10
