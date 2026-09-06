@@ -1,6 +1,6 @@
 {
   "name": "@tunnckocore/x402-router",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "license": "FSL-1.1-ALv2",
   "files": [
     "dist"
