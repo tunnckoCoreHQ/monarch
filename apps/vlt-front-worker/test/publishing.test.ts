@@ -138,6 +138,30 @@ describe("OIDC token exchange", () => {
   });
 });
 
+describe("package visibility", () => {
+  it("reports scoped packages as not public so pnpm skips provenance", async () => {
+    const response = await app.request(
+      "https://npm.wgw.lol/-/package/@tunnckocore%2fcalc/visibility",
+      { method: "GET" },
+      env,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ public: false });
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("knows only @tunnckocore packages", async () => {
+    for (const name of ["calc", "@other%2fcalc"]) {
+      const response = await app.request(
+        `https://npm.wgw.lol/-/package/${name}/visibility`,
+        { method: "GET" },
+        env,
+      );
+      expect(response.status).toBe(404);
+    }
+  });
+});
+
 describe("CI publishing authorization", () => {
   it("verifies the signature and substitutes the worker token for a master nightly", async () => {
     expect((await publish(await token())).status).toBe(201);
