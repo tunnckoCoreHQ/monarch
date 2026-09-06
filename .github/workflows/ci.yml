@@ -149,8 +149,8 @@ jobs:
 
   release:
     needs: test
-    # A manual run publishes whatever the merged release PR left unpublished, for recovery.
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # A manual run on master publishes whatever the merged release PR left unpublished.
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')
     environment: latest
     permissions:
       contents: read
