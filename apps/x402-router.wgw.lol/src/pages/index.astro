@@ -1,0 +1,401 @@
+---
+import "../styles.css";
+
+const supported = [
+    ["Ethereum Mainnet", "PrimeV", "1.2s settlement"],
+    ["Base + other EVMs", "CDP", "pass-through JWT"],
+    ["Solana", "CDP", "same x402 flow"],
+    ["Test/dev networks", "x402.org", "live discovery"],
+];
+
+const pageTitle = "WGW x402 Router";
+const pageDescription =
+    "A hosted and self-hostable x402 v2 facilitator router for PrimeV, x402.org, and CDP-backed payment networks.";
+const routerOrigin = Astro.url.origin;
+const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages/x402-router`;
+---
+
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={Astro.url} />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={Astro.url} />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+    </head>
+    <body class="bg-page text-primary antialiased">
+        <main>
+            <section
+                class="relative isolate overflow-hidden border-b border-line"
+            >
+                <div class="hero-grid absolute inset-0 -z-10"></div>
+                <div
+                    class="hero-shell mx-auto flex max-w-7xl flex-col justify-between gap-8 px-5 py-8 md:px-8 lg:px-10"
+                >
+                    <nav
+                        class="flex items-center justify-between text-sm text-secondary"
+                    >
+                        <a href="/" class="font-semibold"
+                            ><span class="text-accent">x402-router</span
+                            >.wgw.lol</a
+                        >
+                        <div class="flex items-center gap-5">
+                            <a
+                                class="text-secondary hover:text-accent hover:underline hover:underline-offset-4"
+                                href="/docs/">Docs</a
+                            >
+                            <a
+                                class="text-secondary hover:text-accent hover:underline hover:underline-offset-4"
+                                href="/docs/self-hosting/">Self-hosting</a
+                            >
+                            <a
+                                class="inline-flex items-center gap-1.5 text-secondary hover:text-accent hover:underline hover:underline-offset-4"
+                                href={sourceUrl}
+                                rel="noreferrer external"
+                                target="_blank"
+                                >GitHub
+                                <svg
+                                    class="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                    viewBox="0 0 16 16"
+                                    fill="currentColor"
+                                >
+                                    <path
+                                        d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.39 0-.19-.01-.84-.01-1.52-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.15-.68-.52-.01-.53.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.09-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.4 7.4 0 0 1 8 4.04c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.82-3.65 4.03.29.26.54.75.54 1.52 0 1.09-.01 1.97-.01 2.24 0 .21.15.47.55.39A8.06 8.06 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
+                                    ></path>
+                                </svg></a
+                            >
+                        </div>
+                    </nav>
+
+                    <div class="grid grid-cols-1 gap-10 md:grid-cols-2">
+                        <div class="flex flex-col justify-center">
+                            <div class="max-w-2xl">
+                                <div class="mb-5 flex flex-wrap gap-2 text-sm">
+                                    <span
+                                        class="rounded-full border border-line bg-panel px-3 py-1 text-accent"
+                                    >
+                                        Open Source
+                                    </span>
+                                    <span
+                                        class="rounded-full border border-line bg-panel px-3 py-1 text-secondary"
+                                    >
+                                        stateless router
+                                    </span>
+                                    <span
+                                        class="rounded-full border border-line bg-panel px-3 py-1 text-secondary"
+                                    >
+                                        hosted or self-hosted
+                                    </span>
+                                </div>
+                                <h1
+                                    class="text-4xl font-semibold leading-none text-primary md:text-5xl lg:text-6xl"
+                                >
+                                    One x402 endpoint. Many facilitators.
+                                </h1>
+                                <p
+                                    class="mt-6 max-w-2xl text-lg leading-8 text-muted"
+                                >
+                                    Keep your existing x402 middleware and
+                                    payment requirements. The router receives
+                                    normal facilitator requests, checks the
+                                    payment network and available auth, then
+                                    forwards them to PrimeV, x402.org, or CDP.
+                                </p>
+                                <div class="mt-8 flex flex-wrap gap-3">
+                                    <a
+                                        href="/docs/getting-started/"
+                                        class="inline-flex h-11 items-center justify-center rounded-md border border-accent bg-panel px-5 text-sm font-semibold text-accent hover:bg-accent hover:text-page"
+                                    >
+                                        Read the docs
+                                    </a>
+                                    <a
+                                        href={sourceUrl}
+                                        rel="noreferrer external"
+                                        target="_blank"
+                                        class="inline-flex h-11 items-center justify-center rounded-md border border-edge px-5 text-sm font-semibold text-primary hover:border-accent"
+                                    >
+                                        View package
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center">
+                            <div
+                                class="w-full overflow-hidden rounded-lg border border-line bg-frame shadow-2xl shadow-black/40"
+                            >
+                                <div
+                                    class="flex items-center justify-between border-b border-line bg-panel px-3 py-2 text-xs text-secondary"
+                                >
+                                    <span>router status</span>
+                                    <span
+                                        id="router-health"
+                                        class="inline-flex items-center gap-2 text-secondary"
+                                    >
+                                        <span
+                                            id="router-health-dot"
+                                            class="h-2 w-2 rounded-full bg-secondary"
+                                        ></span>
+                                        <span id="router-health-label"
+                                            >checking</span
+                                        >
+                                    </span>
+                                </div>
+                                <div class="p-3">
+                                    <pre
+                                        class="overflow-x-auto whitespace-pre-wrap break-words rounded-md border border-line bg-code p-3 font-mono text-[11px] leading-5 text-code-text md:whitespace-pre md:text-xs"><code><span class="text-info">import</span> &#123; <span class="text-primary">createCdpAuthHeaders</span> &#125; <span class="text-info">from</span> <span class="text-warn">"@tunnckocore/x402-router/cdp"</span>;
+
+<span class="text-info">const</span> <span class="text-primary">facilitator</span> = <span class="text-info">new</span> <span class="text-accent">HTTPFacilitatorClient</span>(&#123;
+  <span class="text-secondary">url</span>: <span class="text-warn">"{routerOrigin}"</span>,
+  <span class="text-secondary">createAuthHeaders</span>: () =&gt;
+    <span class="text-accent">createCdpAuthHeaders</span>(&#123;
+      <span class="text-secondary">apiKeyId</span>: <span class="text-primary">process</span>.<span class="text-secondary">env</span>.<span class="text-primary">CDP_API_KEY_ID</span>,
+      <span class="text-secondary">apiKeySecret</span>: <span class="text-primary">process</span>.<span class="text-secondary">env</span>.<span class="text-primary">CDP_API_KEY_SECRET</span>,
+    &#125;),
+&#125;);</code></pre>
+                                    <div
+                                        class="mt-3 grid gap-2 sm:grid-cols-2 sm:gap-3"
+                                    >
+                                        {
+                                            supported.map(
+                                                ([
+                                                    network,
+                                                    upstream,
+                                                    detail,
+                                                ]) => (
+                                                    <div class="rounded-md border border-soft bg-panel p-2.5 sm:p-3">
+                                                        <div class="flex items-center justify-between gap-3">
+                                                            <div class="text-sm font-medium text-primary">
+                                                                {network}
+                                                            </div>
+                                                            <div class="flex shrink-0 items-center gap-2 text-xs text-info">
+                                                                <span class="h-2 w-2 rounded-full bg-info" />
+                                                                {upstream}
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-1 text-xs text-secondary">
+                                                            {detail}
+                                                        </div>
+                                                    </div>
+                                                ),
+                                            )
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-sm">
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-3"
+                        >
+                            <div class="flex flex-wrap items-center gap-3">
+                                <span class="text-secondary">x402 request</span>
+                                <span class="text-edge">-></span>
+                                <span class="text-accent">router</span>
+                                <span class="text-edge">-></span>
+                                <span class="text-primary">PrimeV</span>
+                                <span class="text-edge">/</span>
+                                <span class="text-primary">x402.org</span>
+                                <span class="text-edge">/</span>
+                                <span class="text-primary">CDP</span>
+                            </div>
+                            <span class="text-secondary">
+                                x402 v2 only, no seller keys stored
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section
+                class="border-b border-line bg-band px-5 py-16 md:px-8 lg:px-10"
+            >
+                <div class="mx-auto max-w-7xl lg:px-10">
+                    <div class="grid gap-8 md:grid-cols-[0.9fr_1.1fr]">
+                        <div>
+                            <p class="text-sm font-semibold text-accent">
+                                Why it exists
+                            </p>
+                            <h2
+                                class="mt-3 text-3xl font-semibold text-primary md:text-4xl"
+                            >
+                                Keep one x402 integration while facilitators
+                                keep changing.
+                            </h2>
+                        </div>
+                        <div class="divide-y divide-line border-y border-line">
+                            <div
+                                class="grid gap-3 py-5 md:grid-cols-[11rem_1fr]"
+                            >
+                                <h3 class="font-semibold text-primary">
+                                    Same server flow
+                                </h3>
+                                <p class="leading-7 text-secondary">
+                                    Your middleware still talks to a
+                                    facilitator. The router only decides where
+                                    each verify or settle request should go.
+                                </p>
+                            </div>
+                            <div
+                                class="grid gap-3 py-5 md:grid-cols-[11rem_1fr]"
+                            >
+                                <h3 class="font-semibold text-primary">
+                                    Seller-owned auth
+                                </h3>
+                                <p class="leading-7 text-secondary">
+                                    CDP credentials stay on your server and
+                                    become short-lived headers. The hosted
+                                    router does not store seller keys.
+                                </p>
+                            </div>
+                            <div
+                                class="grid gap-3 py-5 md:grid-cols-[11rem_1fr]"
+                            >
+                                <h3 class="font-semibold text-primary">
+                                    Live support list
+                                </h3>
+                                <p class="leading-7 text-secondary">
+                                    Supported networks are discovered from
+                                    upstream facilitators and filtered to x402
+                                    v2 before clients see them.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-page px-5 py-14 md:px-8 lg:px-10">
+                <div class="mx-auto max-w-7xl lg:px-10">
+                    <div
+                        class="flex flex-col gap-6 rounded-lg border border-line bg-panel p-5 md:flex-row md:items-center md:justify-between md:p-6"
+                    >
+                        <div>
+                            <p class="text-sm font-semibold text-accent">
+                                Self-hosting
+                            </p>
+                            <h2
+                                class="mt-2 text-2xl font-semibold text-primary"
+                            >
+                                Hosted by default. Yours when you need it.
+                            </h2>
+                            <p class="mt-2 max-w-2xl text-secondary">
+                                The hosted router is ready to use. Self-host the
+                                same Worker when you want private
+                                infrastructure, custom policy, or non-commercial
+                                deployments under the fair-source license.
+                            </p>
+                        </div>
+                        <a
+                            href="/docs/self-hosting/"
+                            class="inline-flex h-11 shrink-0 items-center justify-center rounded-md border border-edge px-5 text-sm font-semibold text-primary hover:border-accent"
+                        >
+                            Self-hosting notes
+                        </a>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer class="border-t border-line bg-band px-5 py-8 md:px-8 lg:px-10">
+            <div class="mx-auto max-w-7xl lg:px-10">
+                <div
+                    class="flex flex-col gap-4 text-sm text-secondary md:flex-row md:items-center md:justify-between"
+                >
+                    <div>
+                        License <a
+                            class="font-semibold text-accent underline decoration-accent/40 underline-offset-4 hover:text-accent-high"
+                            href="https://fsf.software"
+                            rel="noreferrer external"
+                            target="_blank">FSL-1.1-ALv2</a
+                        >
+                    </div>
+                    <nav class="flex flex-wrap gap-x-5 gap-y-2">
+                        <a
+                            class="text-secondary hover:text-accent hover:underline hover:underline-offset-4"
+                            href="/docs/">Docs</a
+                        >
+                        <a
+                            class="text-secondary hover:text-accent hover:underline hover:underline-offset-4"
+                            href="/docs/self-hosting/">Self-hosting</a
+                        >
+                        <a
+                            class="inline-flex items-center gap-1.5 text-secondary hover:text-accent hover:underline hover:underline-offset-4"
+                            href={sourceUrl}
+                            rel="noreferrer external"
+                            target="_blank"
+                            >GitHub
+                            <svg
+                                class="h-3.5 w-3.5"
+                                aria-hidden="true"
+                                viewBox="0 0 16 16"
+                                fill="currentColor"
+                            >
+                                <path
+                                    d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.39 0-.19-.01-.84-.01-1.52-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.15-.68-.52-.01-.53.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.09-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.4 7.4 0 0 1 8 4.04c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.82-3.65 4.03.29.26.54.75.54 1.52 0 1.09-.01 1.97-.01 2.24 0 .21.15.47.55.39A8.06 8.06 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
+                                ></path>
+                            </svg></a
+                        >
+                    </nav>
+                </div>
+            </div>
+        </footer>
+        <script is:inline>
+            const health = document.querySelector("#router-health");
+            const dot = document.querySelector("#router-health-dot");
+            const label = document.querySelector("#router-health-label");
+
+            fetch("/health", {
+                headers: { accept: "application/json" },
+            })
+                .then((response) =>
+                    response.ok ? response.json() : Promise.reject(),
+                )
+                .then((body) => {
+                    const ok = body && body.ok === true;
+
+                    health?.classList.remove(
+                        "text-secondary",
+                        "text-accent",
+                        "text-danger",
+                    );
+                    dot?.classList.remove(
+                        "bg-secondary",
+                        "bg-accent",
+                        "bg-danger",
+                        "animate-pulse",
+                    );
+
+                    health?.classList.add(ok ? "text-accent" : "text-danger");
+                    dot?.classList.add(ok ? "bg-accent" : "bg-danger");
+                    dot?.classList.toggle("animate-pulse", ok);
+                    if (label) {
+                        label.textContent = ok ? "online" : "offline";
+                    }
+                })
+                .catch(() => {
+                    health?.classList.remove("text-secondary", "text-accent");
+                    health?.classList.add("text-danger");
+                    dot?.classList.remove(
+                        "bg-secondary",
+                        "bg-accent",
+                        "animate-pulse",
+                    );
+                    dot?.classList.add("bg-danger");
+                    if (label) {
+                        label.textContent = "offline";
+                    }
+                });
+        </script>
+    </body>
+</html>
