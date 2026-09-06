@@ -7,16 +7,20 @@
   ],
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./cdp": {
-      "types": "./dist/cdp.d.ts",
-      "default": "./dist/cdp.js"
-    }
+    ".": "./src/index.ts",
+    "./cdp": "./src/cdp.ts"
   },
   "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./cdp": {
+        "types": "./dist/cdp.d.ts",
+        "default": "./dist/cdp.js"
+      }
+    },
     "access": "public"
   },
   "scripts": {
