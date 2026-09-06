@@ -54,14 +54,16 @@ jobs:
         env:
           SOCKET_SECURITY_API_TOKEN: ${{ secrets.SOCKET_SECURITY_API_TOKEN }}
       # Socket CLI 1.1.167 writes overrides to package.json, a field pnpm 11 no longer reads. Move
-      # them to pnpm-workspace.yaml so they take effect. Delete this step once Socket writes the
-      # workspace file itself; its unreleased source already does.
+      # them to pnpm-workspace.yaml so they take effect. Keys are quoted because scoped names start
+      # with "@", and the duplicate check reads only the overrides block. Delete this step once
+      # Socket writes the workspace file itself; its unreleased source already does.
       - run: |
           if jq -e '.pnpm.overrides' package.json > /dev/null; then
             grep -q '^overrides:' pnpm-workspace.yaml || printf '\noverrides:\n' >> pnpm-workspace.yaml
+            existing=$(awk '/^overrides:/ { block = 1; next } /^[^ ]/ { block = 0 } block && /^  / { sub(/^  "?/, ""); sub(/"?:.*/, ""); print }' pnpm-workspace.yaml)
             jq -r '.pnpm.overrides | to_entries[] | "\(.key)\t\(.value)"' package.json |
               while IFS=$'\t' read -r name spec; do
-                grep -qF "  $name:" pnpm-workspace.yaml || sed -i "/^overrides:/a\\  $name: \"$spec\"" pnpm-workspace.yaml
+                grep -qxF "$name" <<< "$existing" || sed -i "/^overrides:/a\\  \"$name\": \"$spec\"" pnpm-workspace.yaml
               done
             jq 'del(.pnpm)' package.json > package.json.tmp && mv package.json.tmp package.json
           fi
