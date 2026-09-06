@@ -8,6 +8,7 @@ import {
 
 export type X402Endpoint = "verify" | "settle";
 
+// foo bar
 export type X402RouterOutboundFetch = (url: URL, init: RequestInit) => Promise<Response>;
 
 export type X402RouterOptions = {
