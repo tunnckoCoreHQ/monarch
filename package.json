@@ -24,18 +24,5 @@
     "vite-plus": "catalog:",
     "wrangler": "catalog:"
   },
-  "packageManager": "pnpm@11.21.0",
-  "pnpm": {
-    "overrides": {
-      "es-define-property": "npm:@socketregistry/es-define-property@^1",
-      "es-set-tostringtag": "npm:@socketregistry/es-set-tostringtag@^1",
-      "function-bind": "npm:@socketregistry/function-bind@^1",
-      "gopd": "npm:@socketregistry/gopd@^1",
-      "has-symbols": "npm:@socketregistry/has-symbols@^1",
-      "has-tostringtag": "npm:@socketregistry/has-tostringtag@^1",
-      "hasown": "npm:@socketregistry/hasown@^1",
-      "shell-quote": "npm:shell-quote@^1",
-      "yocto-spinner": "npm:@socketregistry/yocto-spinner@^1"
-    }
-  }
+  "packageManager": "pnpm@11.21.0"
 }
