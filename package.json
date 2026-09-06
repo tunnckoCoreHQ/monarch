@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "changeset": "changeset",
-    "packages:version": "changeset version && pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile && vp run check && vp run test",
+    "packages:version": "changeset version && vp install --lockfile-only --ignore-scripts --no-frozen-lockfile && vp run check && vp run test",
     "prepare": "vp config --no-agent",
     "solidity:build": "vp run --filter './solidity/*' build",
     "solidity:fmt": "vp run --filter './solidity/*' fmt",

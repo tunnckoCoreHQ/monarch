@@ -50,7 +50,7 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
         with:
           version: v1.7.1
-      - run: pnpm dlx socket@1.1.167 optimize
+      - run: vp dlx socket@1.1.167 optimize
         env:
           SOCKET_SECURITY_API_TOKEN: ${{ secrets.SOCKET_SECURITY_API_TOKEN }}
       - id: diff
@@ -63,7 +63,7 @@ jobs:
       # Commit before verifying so a failed verification can still be pushed as a pull request.
       - if: steps.diff.outputs.changed == 'true'
         run: |
-          pnpm install --no-frozen-lockfile
+          vp install --no-frozen-lockfile
           git add -A
           git commit -m "chore(deps): apply socket optimize overrides"
       - if: steps.diff.outputs.changed == 'true'
