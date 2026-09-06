@@ -115,6 +115,35 @@ contract AuctionHouseTest is Test {
         assertEq(collection.ownerOf(3), address(auctionHouse));
     }
 
+    function test_StartAtMinimumPrice() public {
+        uint96 minimum = auctionHouse.MIN_STARTING_PRICE();
+        assertEq(minimum, 0.001 ether);
+        uint64 auctionId = _startAuction(seller, 1, minimum, DURATION);
+
+        assertEq(auctionHouse.minimumBid(auctionId), minimum);
+        _bid(bidder, auctionId, minimum, minimum);
+        assertEq(auctionHouse.getAuction(auctionId).highestBid, minimum);
+    }
+
+    function test_RevertWhen_StartingPriceBelowMinimum() public {
+        uint96 minimum = auctionHouse.MIN_STARTING_PRICE();
+        vm.startPrank(seller);
+        collection.approve(address(auctionHouse), 1);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(AuctionHouse.StartingPriceTooLow.selector, 0, minimum)
+        );
+        auctionHouse.startAuction(1, 0, DURATION);
+        vm.expectRevert(
+            abi.encodeWithSelector(AuctionHouse.StartingPriceTooLow.selector, minimum - 1, minimum)
+        );
+        auctionHouse.startAuction(1, minimum - 1, DURATION);
+        vm.stopPrank();
+
+        assertEq(collection.ownerOf(1), seller);
+        assertEq(auctionHouse.totalAuctions(), 0);
+    }
+
     function test_QuoteShowsBonusAndTotalPayment() public {
         uint64 auctionId = _startAuction(seller, 1, STARTING_PRICE, DURATION);
         _bid(bidder, auctionId, STARTING_PRICE, STARTING_PRICE);
@@ -208,6 +237,90 @@ contract AuctionHouseTest is Test {
 
         assertEq(collection.ownerOf(1), seller);
         assertEq(address(factory).balance, 0);
+    }
+
+    function test_CancelReturnsTokenAndAllowsRelisting() public {
+        uint64 auctionId = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+
+        vm.prank(seller);
+        vm.expectEmit(true, true, true, true, address(auctionHouse));
+        emit AuctionHouse.AuctionCancelled(auctionId, 1, seller);
+        auctionHouse.cancelAuction(auctionId);
+
+        assertEq(collection.ownerOf(1), seller);
+        assertFalse(auctionHouse.canSettle(auctionId));
+        assertEq(auctionHouse.credits(seller), 0);
+        assertEq(address(factory).balance, 0);
+        vm.expectRevert(AuctionHouse.AuctionNotFound.selector);
+        auctionHouse.getAuction(auctionId);
+        vm.expectRevert(AuctionHouse.AuctionNotFound.selector);
+        auctionHouse.cancelAuction(auctionId);
+        vm.expectRevert(AuctionHouse.AuctionNotFound.selector);
+        auctionHouse.settle(auctionId);
+        vm.prank(bidder);
+        vm.expectRevert(AuctionHouse.AuctionNotFound.selector);
+        auctionHouse.bid{value: STARTING_PRICE}(auctionId, STARTING_PRICE, STARTING_PRICE);
+
+        uint64 nextAuctionId = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+        assertEq(nextAuctionId, auctionId + 1);
+        _bid(bidder, nextAuctionId, STARTING_PRICE, STARTING_PRICE);
+        assertEq(auctionHouse.getAuction(nextAuctionId).highestBidder, bidder);
+    }
+
+    function test_CancelAfterDeadlineWithoutBids() public {
+        uint64 auctionId = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+        vm.warp(block.timestamp + DURATION);
+
+        vm.prank(seller);
+        auctionHouse.cancelAuction(auctionId);
+
+        assertEq(collection.ownerOf(1), seller);
+        assertFalse(auctionHouse.canSettle(auctionId));
+    }
+
+    function test_RevertWhen_NonSellerCancels() public {
+        uint64 auctionId = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+
+        vm.prank(bidder);
+        vm.expectRevert(AuctionHouse.Unauthorized.selector);
+        auctionHouse.cancelAuction(auctionId);
+
+        assertEq(collection.ownerOf(1), address(auctionHouse));
+        assertEq(auctionHouse.getAuction(auctionId).seller, seller);
+    }
+
+    function test_RevertWhen_CancellingAfterAcceptedBid() public {
+        uint64 auctionId = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+        _bid(bidder, auctionId, STARTING_PRICE, STARTING_PRICE);
+
+        vm.prank(seller);
+        vm.expectRevert(AuctionHouse.AuctionHasBids.selector);
+        auctionHouse.cancelAuction(auctionId);
+
+        vm.warp(block.timestamp + DURATION);
+        vm.prank(seller);
+        vm.expectRevert(AuctionHouse.AuctionHasBids.selector);
+        auctionHouse.cancelAuction(auctionId);
+
+        assertEq(collection.ownerOf(1), address(auctionHouse));
+        assertEq(auctionHouse.getAuction(auctionId).highestBidder, bidder);
+        assertEq(address(auctionHouse).balance, STARTING_PRICE);
+        auctionHouse.settle(auctionId);
+        assertEq(collection.ownerOf(1), bidder);
+    }
+
+    function test_RejectedBidDoesNotBlockCancellation() public {
+        uint64 auctionId = _startAuction(seller, 1, STARTING_PRICE, DURATION);
+
+        vm.prank(bidder);
+        vm.expectRevert(
+            abi.encodeWithSelector(AuctionHouse.IncorrectPayment.selector, 0, STARTING_PRICE)
+        );
+        auctionHouse.bid(auctionId, STARTING_PRICE, STARTING_PRICE);
+
+        vm.prank(seller);
+        auctionHouse.cancelAuction(auctionId);
+        assertEq(collection.ownerOf(1), seller);
     }
 
     function test_WithdrawPaysCredit() public {
@@ -419,6 +532,7 @@ contract AuctionHouseTest is Test {
     }
 
     function testFuzz_MinimumKeepsSellerAhead(uint96 firstBid, uint96 offeredBid) public {
+        firstBid = uint96(bound(firstBid, auctionHouse.MIN_STARTING_PRICE(), type(uint96).max));
         vm.deal(bidder, 1 << 128);
         vm.deal(nextBidder, 1 << 128);
         uint64 auctionId = _startAuction(seller, 1, firstBid, DURATION);
@@ -461,7 +575,7 @@ contract AuctionHouseTest is Test {
             vm.deal(accounts[i], 1 << 128);
         }
         uint64[2] memory auctionIds = [
-            _startAuction(seller, 1, 0, DURATION),
+            _startAuction(seller, 1, auctionHouse.MIN_STARTING_PRICE(), DURATION),
             _startAuction(secondSeller, 3, 1 ether, DURATION * 2)
         ];
         uint256[2] memory previousCosts;

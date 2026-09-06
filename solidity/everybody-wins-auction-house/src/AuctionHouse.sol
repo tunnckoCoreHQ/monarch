@@ -22,6 +22,7 @@ contract AuctionHouse is Initializable {
         uint256 ethRequired;
     }
 
+    uint96 public constant MIN_STARTING_PRICE = 0.001 ether;
     uint256 public constant BASE_INCREMENT = 5;
     uint256 public constant BONUS_INCREMENT = 1;
     uint256 public constant MAX_BONUS = 10;
@@ -41,6 +42,7 @@ contract AuctionHouse is Initializable {
     error AuctionBidTooLow(uint256 actual, uint256 minimum);
     error AuctionCostTooHigh(uint256 actual, uint256 maximum);
     error AuctionEnded();
+    error AuctionHasBids();
     error AuctionNotEnded();
     error AuctionNotFound();
     error IncorrectPayment(uint256 actual, uint256 expected);
@@ -48,6 +50,7 @@ contract AuctionHouse is Initializable {
     error NoFunds();
     error ReentrancyGuard();
     error SellerCannotBid();
+    error StartingPriceTooLow(uint256 actual, uint256 minimum);
     error TransferETHFailed();
     error Unauthorized();
     error ZeroAddress();
@@ -79,6 +82,9 @@ contract AuctionHouse is Initializable {
         uint256 settlerReward
     );
     event FundsWithdrawn(address indexed account, uint256 amount);
+    event AuctionCancelled(
+        uint64 indexed auctionId, uint256 indexed tokenId, address indexed seller
+    );
 
     constructor(address protocol_) {
         if (protocol_ == address(0)) {
@@ -114,6 +120,9 @@ contract AuctionHouse is Initializable {
         nonReentrant
         returns (uint64 auctionId)
     {
+        if (startingPrice < MIN_STARTING_PRICE) {
+            revert StartingPriceTooLow(startingPrice, MIN_STARTING_PRICE);
+        }
         if (duration == 0) {
             revert InvalidDuration();
         }
@@ -188,6 +197,21 @@ contract AuctionHouse is Initializable {
         auction.bidCount = nextBidCount;
 
         emit AuctionBidPlaced(auctionId, msg.sender, bidAmount, previousBidder, bonus, creditUsed);
+    }
+
+    function cancelAuction(uint64 auctionId) external nonReentrant {
+        Auction memory auction = _activeAuction(auctionId);
+        if (msg.sender != auction.seller) {
+            revert Unauthorized();
+        }
+        if (auction.bidCount != 0) {
+            revert AuctionHasBids();
+        }
+
+        delete auctions[auctionId];
+        collection.transferFrom(address(this), auction.seller, auction.tokenId);
+
+        emit AuctionCancelled(auctionId, auction.tokenId, auction.seller);
     }
 
     function settle(uint64 auctionId) external nonReentrant {
