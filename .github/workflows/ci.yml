@@ -125,12 +125,12 @@ jobs:
           base=$BEFORE
           git cat-file -e "$base^{commit}" 2>/dev/null || base=HEAD~1
           # Changed workspace packages and their dependents, read before snapshot versioning edits manifests.
-          changed=$(pnpm ls --filter "...[$base]" --depth -1 --json | jq -r '.[].name')
+          changed=$(vp pm ls --filter "...[$base]" --json -- --depth -1 | jq -r '.[].name')
           if ! compgen -G '.changeset/*.md' > /dev/null; then
             echo "Not published: no pending changesets" | tee -a "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
-          pnpm changeset version --snapshot nightly
+          vp exec changeset version --snapshot nightly
           filters=()
           published=()
           for manifest in $(git diff --name-only -- 'packages/*/package.json'); do
@@ -144,7 +144,7 @@ jobs:
             exit 0
           fi
           vp run build
-          pnpm -r publish "${filters[@]}" --tag nightly --no-git-checks
+          vp pm publish -r "${filters[@]}" --tag nightly --no-git-checks
           printf 'Published %s with nightly\n' "${published[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
 
   release:
@@ -178,6 +178,6 @@ jobs:
         with:
           github-token: ${{ secrets.OLSTENLARCK_HQ_PAT }}
           version-script: vp run packages:version
-          publish-script: "${{ startsWith(github.event.head_commit.message, 'chore: release packages') && 'vp run build && pnpm changeset publish' || '' }}"
+          publish-script: "${{ startsWith(github.event.head_commit.message, 'chore: release packages') && 'vp run build && vp exec changeset publish' || '' }}"
           commit-message: "chore: release packages"
           pr-title: "chore: release packages"
