@@ -6,7 +6,7 @@ An ETH auction protocol for existing [ERC-721](https://eips.ethereum.org/EIPS/ei
 
 1. **Create the collection's auction house.** Any holder can ask the factory to create one. Each collection gets one shared house, where its holders can run separate auctions. Creating that house does not give the holder control over other auctions or protocol fees.
 
-2. **List an NFT.** Its owner approves the house, chooses a starting price and duration, and starts an auction. The house takes custody of the NFT until settlement.
+2. **List an NFT.** Its owner approves the house, chooses a starting price of at least 0.001 ETH and a duration, and starts an auction. The house takes custody of the NFT until settlement or cancellation.
 
 3. **Bid and reward the previous bidder.** The bid shown to the buyer should include the bonus. Internally, the contract calculates the total from `bidAmount` plus a bonus. The first bid has no bonus. The second bid adds 2% of `bidAmount`, the third adds 3%, and so on, capped at 10%. The previous bidder receives their `bidAmount` plus the incoming bonus as withdrawable credit. Credit can also fund bids in other auctions within the same house. The `maxTotalCost` argument limits the combined ETH and credit spent.
 
@@ -30,7 +30,11 @@ Alice bids **1 ETH**. Bob outbids her with a total bid of **1.0812 ETH**, consis
 
 The seller and current highest bidder cannot bid. Deadlines do not extend when someone bids. Contract winners must manage NFT custody themselves.
 
-"Everybody wins" describes the intended distribution. Outbid refunds cover prior bid costs before gas, but tiny bids can earn zero bonus because of rounding. The final winner pays for the NFT.
+The seller can call `cancelAuction(auctionId)` before any bid has been accepted, including after the deadline. Cancellation returns the NFT to the seller and removes the auction. After an accepted bid, the auction must reach its deadline and settle.
+
+The protocol-wide `MIN_STARTING_PRICE` is fixed at 0.001 ETH. Every house enforces it before taking custody of an NFT.
+
+"Everybody wins" describes the intended distribution. Outbid refunds cover prior bid costs before gas. The final winner pays for the NFT.
 
 ## FAQ
 
