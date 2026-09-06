@@ -149,7 +149,8 @@ jobs:
 
   release:
     needs: test
-    if: github.event_name == 'push'
+    # A manual run on master publishes whatever the merged release PR left unpublished.
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master')
     environment: latest
     permissions:
       contents: read
@@ -173,11 +174,13 @@ jobs:
           run-install: true
           node-version: "lts"
       # With pending changesets this opens or updates the release PR. Publishing runs only for the
-      # merged release PR itself, so a new package cannot reach latest without a reviewed release.
+      # merged release PR itself or a manual run, so a new package cannot reach latest without a
+      # reviewed release. The action does not use a shell for publish-script, so it must be one
+      # command; packages:publish chains the build and the publish.
       - uses: changesets/action@8488615a623b1b9c987934bb89eae8af6a946ac1 # v2.1.1
         with:
           github-token: ${{ secrets.OLSTENLARCK_HQ_PAT }}
           version-script: vp run packages:version
-          publish-script: "${{ startsWith(github.event.head_commit.message, 'chore: release packages') && 'vp run build && vp exec changeset publish' || '' }}"
+          publish-script: "${{ (github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'chore: release packages')) && 'vp run packages:publish' || '' }}"
           commit-message: "chore: release packages"
           pr-title: "chore: release packages"
