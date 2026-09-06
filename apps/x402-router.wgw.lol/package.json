@@ -6,21 +6,22 @@
   "type": "module",
   "scripts": {
     "astro": "vp exec astro",
-    "build": "vp run --no-cache generate-public && vp exec astro build && vp run build:cf",
+    "build": "vp run --filter @tunnckocore/x402-router build && vp run --no-cache generate-public && vp exec astro build && vp run build:cf",
     "build:cf": "vp exec wrangler deploy --dry-run",
     "check": "vp check --fix",
     "deploy": "vp exec wrangler deploy --config dist/server/wrangler.json",
-    "dev": "WGW_ASTRO_NO_ADAPTER=1 vp exec astro dev",
+    "dev": "vp run --filter @tunnckocore/x402-router build && WGW_ASTRO_NO_ADAPTER=1 vp exec astro dev",
     "dev:cf": "vp run build && vp exec wrangler dev --config dist/server/wrangler.json --local",
     "generate-public": "node scripts/generate-public.mjs",
     "generate-types": "vp exec wrangler types",
+    "prepare": "vp run --filter @tunnckocore/x402-router build",
     "preview": "vp exec astro preview"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^14.1.2",
     "@astrojs/starlight": "0.41.2",
     "@tailwindcss/vite": "4.3.1",
-    "@tunnckocore/x402-router": "https://registry.npmjs.org/@tunnckocore/x402-router/-/x402-router-0.1.2.tgz",
+    "@tunnckocore/x402-router": "workspace:^",
     "astro": "catalog:",
     "tailwindcss": "4.3.1"
   },
