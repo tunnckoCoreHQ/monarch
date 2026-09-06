@@ -40,6 +40,22 @@ app.post("/-/npm/v1/oidc/token/exchange/package/*", async (c) => {
   return c.json({ token: bearer });
 });
 
+// pnpm asks for package visibility before attaching provenance. VLT packages are private and
+// provenance would publish build metadata to Sigstore's public log, so answer "not public" and
+// pnpm skips provenance without a warning. Publishing to npm is unaffected: pnpm asks npm there.
+app.get("/-/package/:name/visibility", (c) => {
+  let name: string;
+  try {
+    name = decodeURIComponent(c.req.param("name"));
+  } catch {
+    return c.notFound();
+  }
+  if (!/^@tunnckocore\/[a-z0-9][a-z0-9._-]*$/.test(name)) {
+    return c.notFound();
+  }
+  return c.json({ public: false });
+});
+
 app.all("*", async (c) => {
   const request = c.req.raw;
   const url = new URL(request.url);
