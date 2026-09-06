@@ -2,6 +2,20 @@
 
 Standalone x402 v2 facilitator router for any WinterCG Fetch API runtime. Or call it "x402 facilitator multiplexer" if you want the fancy name. 😂
 
+## Install
+
+Add the scope to `.npmrc`, so it will resolve only `@tunnckocore` packages from there:
+
+```
+@tunnckocore:registry=https://npm.wgw.lol/
+```
+
+then install with package manager as usual
+
+```bash
+npm install @tunnckocore/x402-router
+```
+
 ## Highlights
 
 - **One facilitator URL.** The standard x402 stack talks to one endpoint; the router handles upstream choice.
