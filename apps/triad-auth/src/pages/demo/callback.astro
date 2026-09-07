@@ -68,6 +68,7 @@ export const prerender = true;
   </section>
 
   <script>
+    import { isRecord, responseError } from "../../utils";
     import {
       fetchDiscovery,
       tokenExchangeRequest,
@@ -199,9 +200,10 @@ export const prerender = true;
                 verifier,
               }),
             });
-            const body = (await response.json()) as { id_token?: string; error_description?: string };
-            if (!response.ok || !body.id_token)
-              {throw new Error(body.error_description ?? "Token exchange failed.");}
+            const body: unknown = await response.json();
+            if (!response.ok || !isRecord(body) || typeof body.id_token !== "string" || !body.id_token) {
+              throw responseError(body, "Token exchange failed.");
+            }
 
             status.textContent =
               "Code exchanged. Verifying ES256 signature, issuer, audience, expiry, and identity claims.";

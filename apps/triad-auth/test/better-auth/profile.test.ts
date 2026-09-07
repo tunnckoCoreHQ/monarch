@@ -59,8 +59,9 @@ describe("Triad profile claim resolver", () => {
 
   it("rejects malformed encrypted profile values instead of coercing them", async () => {
     const malformed = await sealProfileEncryptedData(ENCRYPTION_SECRETS, "acc_subject", {
+      // @ts-expect-error The encrypted fixture deliberately contains an invalid email type.
       profileEmail: 42,
-    } as unknown as CapturedProfile);
+    });
 
     await expect(
       resolver.resolveProfileClaims({ id: "acc_subject", encryptedData: malformed }, ["email"]),

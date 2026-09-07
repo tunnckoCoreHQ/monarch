@@ -79,11 +79,12 @@ const profiles: Record<WalletProfileId, WalletProfile> = {
 };
 
 export function walletProfile(value: unknown): WalletProfile {
-  if (typeof value !== "string" || !WALLET_PROFILE_IDS.includes(value as WalletProfileId)) {
+  const id = WALLET_PROFILE_IDS.find((id) => id === value);
+  if (id === undefined) {
     throw new Error("Wallet profile is required and must be supported");
   }
 
-  return profiles[value as WalletProfileId];
+  return profiles[id];
 }
 
 export function walletAccountIndex(value: unknown): number {

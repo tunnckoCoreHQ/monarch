@@ -137,7 +137,7 @@ function assertProviderIdentity(
     typeof user.name !== "string" ||
     !ACCOUNT_SUB_PATTERN.test(user.name) ||
     typeof provider !== "string" ||
-    !IDENTITY_PROVIDERS.includes(provider as AuthenticationProvider) ||
+    !IDENTITY_PROVIDERS.some((supported) => supported === provider) ||
     typeof user.providerSub !== "string" ||
     !new RegExp(`^pid_${provider}_[0-9a-f]{64}$`).test(user.providerSub)
   ) {

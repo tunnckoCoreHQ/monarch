@@ -1,15 +1,11 @@
-import { base64UrlDecode } from "../utils";
+import { base64UrlDecode, isRecord } from "../utils";
 import { signPrfWallet } from "../better-auth/wallet/signatures";
 import type { WalletProfileId } from "../better-auth/wallet/profiles";
 
 export function passkeyPrfResult(extensionResults: unknown): Uint8Array<ArrayBuffer> {
-  const prf =
-    typeof extensionResults === "object" && extensionResults !== null
-      ? Reflect.get(extensionResults, "prf")
-      : undefined;
-  const results = typeof prf === "object" && prf !== null ? Reflect.get(prf, "results") : undefined;
-  const first =
-    typeof results === "object" && results !== null ? Reflect.get(results, "first") : undefined;
+  const prf = isRecord(extensionResults) ? extensionResults.prf : undefined;
+  const results = isRecord(prf) ? prf.results : undefined;
+  const first = isRecord(results) ? results.first : undefined;
   if (!(first instanceof ArrayBuffer) || first.byteLength !== 32) {
     throw new Error("This passkey did not produce the required PRF result");
   }

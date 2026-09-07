@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import {
   createTriadDeviceAuthorization,
@@ -12,15 +12,29 @@ function createDeviceEnv(registeredClients: readonly string[] = []) {
   return {
     AUTH_ORIGIN: "https://AUTH.EXAMPLE.com:443/",
     DB: {
-      prepare: () => ({
-        bind: (clientId: unknown) => ({
-          first: async () =>
-            typeof clientId === "string" && registeredClients.includes(clientId)
-              ? { registered: 1 }
-              : null,
-        }),
-      }),
-    } as unknown as D1Database,
+      prepare: () => {
+        const first = vi.fn<D1PreparedStatement["first"]>();
+        const statement: D1PreparedStatement = {
+          bind: (clientId: unknown) => {
+            first.mockResolvedValue(
+              typeof clientId === "string" && registeredClients.includes(clientId)
+                ? { registered: 1 }
+                : null,
+            );
+            return statement;
+          },
+          first,
+          all: vi.fn(),
+          raw: vi.fn(),
+          run: vi.fn(),
+        };
+        return statement;
+      },
+      batch: vi.fn(),
+      exec: vi.fn(),
+      withSession: vi.fn(),
+      dump: vi.fn(),
+    } satisfies D1Database,
   };
 }
 

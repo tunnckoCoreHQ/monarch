@@ -128,6 +128,8 @@ export function createTriadAuthOptions<const Configuration extends TriadAuthConf
   ]);
   const baseURL = normalizeAuthOrigin(env.AUTH_ORIGIN);
 
+  // SAFETY: The empty fallback is used only without configuration. The supplied
+  // configuration keeps its exact plugin tuple so Better Auth can infer endpoints.
   const {
     database: _database,
     baseURL: _baseURL,

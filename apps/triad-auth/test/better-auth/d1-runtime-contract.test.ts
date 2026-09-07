@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 describe("Better Auth direct D1 runtime", () => {
   it("initializes from a D1 binding without an adapter", async () => {
-    const statement = {
+    const statement: D1PreparedStatement = {
       bind: () => statement,
       all: async () => ({
         success: true,
@@ -18,12 +18,25 @@ describe("Better Auth direct D1 runtime", () => {
           changes: 0,
         },
       }),
-    } as unknown as D1PreparedStatement;
-    const database = {
+      first: async () => null,
+      raw: () => {
+        throw new Error("Unexpected raw query");
+      },
+      run: () => {
+        throw new Error("Unexpected write");
+      },
+    };
+    const database: D1Database = {
       prepare: () => statement,
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
-    } as unknown as D1Database;
+      withSession: () => {
+        throw new Error("Unexpected session");
+      },
+      dump: () => {
+        throw new Error("Unexpected dump");
+      },
+    };
     const auth = betterAuth({
       database,
       baseURL: "http://localhost",

@@ -1,3 +1,5 @@
+import { isRecord } from "./utils";
+
 const DAY_MS = 86_400_000;
 const NPM_DOWNLOADS_START = "2015-01-10";
 
@@ -69,7 +71,7 @@ function splitByYear(from: Date, to: Date): DateRange[] {
   return ranges;
 }
 
-export async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
+export async function fetchJSON(url: string, signal?: AbortSignal): Promise<unknown> {
   const response = await fetch(url, { signal });
 
   if (!response.ok) {
@@ -81,7 +83,7 @@ export async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T
     );
   }
 
-  return response.json() as Promise<T>;
+  return response.json();
 }
 
 export async function fetchPackageCreationDay(
@@ -90,14 +92,11 @@ export async function fetchPackageCreationDay(
 ): Promise<string> {
   const name = encodeURIComponent(packageName);
 
-  const metadata = await fetchJSON<NpmPackageMetadata>(
-    `https://registry.npmjs.org/${name}`,
-    signal,
-  );
+  const metadata = await fetchJSON(`https://registry.npmjs.org/${name}`, signal);
 
-  const created = metadata.time?.created;
+  const created = isRecord(metadata) && isRecord(metadata.time) ? metadata.time.created : undefined;
 
-  if (!created) {
+  if (typeof created !== "string" || !created) {
     throw new Error(`Package metadata has no creation date: ${packageName}`);
   }
 
@@ -144,16 +143,25 @@ export async function fetchNpmDownloadRecords({
     ranges.map(async (range) => {
       const period = `${range.from}:${range.to}`;
 
-      const result = await fetchJSON<NpmDownloadsResponse>(
+      const result = await fetchJSON(
         `https://api.npmjs.org/downloads/range/${period}/${name}`,
         signal,
       );
 
-      if (!Array.isArray(result.downloads)) {
+      if (!isRecord(result) || !Array.isArray(result.downloads)) {
         throw new TypeError(`Invalid downloads response for ${packageName}`);
       }
 
-      return result.downloads;
+      return result.downloads.map((record): DownloadRecord => {
+        if (
+          !isRecord(record) ||
+          typeof record.day !== "string" ||
+          typeof record.downloads !== "number"
+        ) {
+          throw new TypeError(`Invalid downloads response for ${packageName}`);
+        }
+        return { day: record.day, downloads: record.downloads };
+      });
     }),
   );
 
@@ -256,10 +264,11 @@ export function matchesRecord<T extends { day: string }>(
 
 export async function* fetchNDJSON<T extends { day: string } = DownloadRecord>(
   url: string,
+  decode: (value: unknown) => T,
   options: FetchRowsOptions<T> = {},
 ): AsyncGenerator<T, void, void> {
   for await (const line of fetchLines(url, options.signal)) {
-    const record = JSON.parse(line) as T;
+    const record = decode(JSON.parse(line));
     const action = matchesRecord(record, options);
 
     if (action === "stop") {

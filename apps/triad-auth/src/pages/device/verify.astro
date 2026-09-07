@@ -66,23 +66,7 @@ export const prerender = true;
 
   <script>
     import { renderDisclosures } from "../../scripts/disclosure-controls";
-    import { responseError } from "../../utils";
-
-    type SessionResult = { user?: { id?: string } } | null;
-    type DeviceResult = {
-      client_id?: string;
-      error?: string;
-      error_description?: string;
-      message?: string;
-      resource?: string | string[];
-      scope?: string;
-      status?: string;
-      success?: boolean;
-    };
-    type DeviceDisclosureResult = {
-      error?: string;
-      scopes?: string[];
-    };
+    import { isRecord, responseError } from "../../utils";
 
     const summary = document.querySelector<HTMLElement>("#device-summary")!;
     const signedOut = document.querySelector<HTMLElement>("#device-sign-in")!;
@@ -172,11 +156,11 @@ export const prerender = true;
           `/api/auth/device?user_code=${encodeURIComponent(input.value)}`,
           { headers: { accept: "application/json" } },
         );
-        const body = (await response.json()) as DeviceResult;
+        const body: unknown = await response.json();
         if (current !== inspection) {
           return;
         }
-        if (!response.ok) {
+        if (!response.ok || !isRecord(body)) {
           throw responseError(body, "That device code is invalid or expired.");
         }
         if (body.status !== "pending") {
@@ -184,7 +168,7 @@ export const prerender = true;
           status.dataset.tone = "error";
           return;
         }
-        if (!body.client_id) {
+        if (typeof body.client_id !== "string" || !body.client_id) {
           throw new Error("The device request has no client identity.");
         }
 
@@ -202,11 +186,11 @@ export const prerender = true;
           `/api/auth/device/disclosure?user_code=${encodeURIComponent(input.value)}`,
           { headers: { accept: "application/json" } },
         );
-        const disclosureBody = (await disclosureResponse.json()) as DeviceDisclosureResult;
+        const disclosureBody: unknown = await disclosureResponse.json();
         if (current !== inspection) {
           return;
         }
-        if (!disclosureResponse.ok || !Array.isArray(disclosureBody.scopes)) {
+        if (!disclosureResponse.ok || !isRecord(disclosureBody) || !Array.isArray(disclosureBody.scopes) || !disclosureBody.scopes.every((scope) => typeof scope === "string")) {
           throw responseError(disclosureBody, "The requested disclosures could not be inspected.");
         }
 
@@ -259,8 +243,8 @@ export const prerender = true;
           },
           body: JSON.stringify({ userCode: input.value }),
         });
-        const body = (await response.json()) as DeviceResult;
-        if (!response.ok || body.success !== true) {
+        const body: unknown = await response.json();
+        if (!response.ok || !isRecord(body) || body.success !== true) {
           throw responseError(body, "The device request could not be completed.");
         }
 
@@ -299,11 +283,11 @@ export const prerender = true;
         const response = await fetch("/api/auth/get-session", {
           headers: { accept: "application/json" },
         });
-        const session = (await response.json()) as SessionResult;
+        const session: unknown = await response.json();
         if (!response.ok) {
           throw new Error("The browser session could not be checked.");
         }
-        if (!session?.user?.id) {
+        if (!isRecord(session) || !isRecord(session.user) || typeof session.user.id !== "string" || !session.user.id) {
           summary.textContent = "Sign in before authorizing a device request.";
           signedOut.hidden = false;
           return;

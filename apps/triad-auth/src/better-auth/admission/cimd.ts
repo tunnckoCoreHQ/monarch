@@ -1,5 +1,6 @@
 import { createCimdClientDiscovery as createBetterAuthCimdDiscovery } from "@better-auth/cimd";
 import { validateClientIdUrl, type CimdOptions } from "@better-auth/cimd";
+import { isRecord } from "../../utils";
 
 export const CIMD_REVALIDATION_INTERVAL_SECONDS = 60 * 60;
 export const CIMD_ORIGIN_BOUND_FIELDS = [
@@ -26,16 +27,6 @@ export interface CimdAdmissionDependencies {
   resolveHostname?: ResolveHostname;
 }
 
-interface DnsAnswer {
-  data?: unknown;
-  type?: unknown;
-}
-
-interface DnsResponse {
-  Answer?: unknown;
-  Status?: unknown;
-}
-
 async function queryDns(fetcher: Fetcher, hostname: string, type: "A" | "AAAA") {
   const url = new URL(DNS_OVER_HTTPS_URL);
   url.searchParams.set("name", hostname);
@@ -50,16 +41,22 @@ async function queryDns(fetcher: Fetcher, hostname: string, type: "A" | "AAAA") 
     throw new Error("DNS lookup failed");
   }
 
-  const body = (await response.json()) as DnsResponse;
-  if (body.Status !== 0 || (body.Answer !== undefined && !Array.isArray(body.Answer))) {
+  const body: unknown = await response.json();
+  if (
+    !isRecord(body) ||
+    body.Status !== 0 ||
+    (body.Answer !== undefined && !Array.isArray(body.Answer))
+  ) {
     throw new Error("DNS lookup failed");
   }
 
   const expectedType = type === "A" ? 1 : 28;
 
-  return ((body.Answer ?? []) as DnsAnswer[])
-    .filter((answer) => answer.type === expectedType && typeof answer.data === "string")
-    .map((answer) => answer.data as string);
+  return (body.Answer ?? []).flatMap((answer) =>
+    isRecord(answer) && answer.type === expectedType && typeof answer.data === "string"
+      ? [answer.data]
+      : [],
+  );
 }
 
 export function createDnsOverHttpsResolver(fetcher: Fetcher = globalThis.fetch): ResolveHostname {

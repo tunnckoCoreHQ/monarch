@@ -37,6 +37,7 @@ export const prerender = true;
   <script>
     import { renderDisclosures } from "../scripts/disclosure-controls";
     import { inspectOAuthQuery } from "../scripts/demo-protocol";
+    import { isRecord, responseError } from "../utils";
 
     const panel = document.querySelector<HTMLElement>("#consent-panel")!;
     const approve = document.querySelector<HTMLButtonElement>("#approve")!;
@@ -87,9 +88,9 @@ export const prerender = true;
             oauth_query: inspected.oauthQuery,
           }),
         });
-        const body = (await response.json()) as { url?: string; error_description?: string };
-        if (!response.ok || !body.url) {
-          fail(body.error_description ?? "This request could not be completed. Return to the demo and try again.");
+        const body: unknown = await response.json();
+        if (!response.ok || !isRecord(body) || typeof body.url !== "string" || !body.url) {
+          fail(responseError(body, "This request could not be completed. Return to the demo and try again.").message);
           return;
         }
 
@@ -104,16 +105,12 @@ export const prerender = true;
       const endpoint = new URL("/api/auth/oauth2/public-client", location.origin);
       endpoint.searchParams.set("client_id", inspected.clientId);
       const response = await fetch(endpoint, { headers: { accept: "application/json" } });
-      const client = (await response.json()) as {
-        client_id?: string;
-        client_name?: string;
-        error_description?: string;
-      };
-      if (!response.ok || client.client_id !== inspected.clientId) {
-        throw new Error(client.error_description ?? "This authorization request expired.");
+      const client: unknown = await response.json();
+      if (!response.ok || !isRecord(client) || client.client_id !== inspected.clientId) {
+        throw responseError(client, "This authorization request expired.");
       }
 
-      const clientDisplay = client.client_name?.trim() || client.client_id;
+      const clientDisplay = typeof client.client_name === "string" && client.client_name.trim() || client.client_id;
       document.querySelector("#client-name")!.textContent = clientDisplay;
       document.querySelector("#resource-name")!.textContent = inspected.resources.join(" · ");
       document.querySelector("#consent-summary")!.textContent =

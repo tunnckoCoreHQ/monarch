@@ -20,6 +20,7 @@
     "@types/bun": "catalog:types",
     "@types/node": "catalog:types",
     "@vitest/coverage-v8": "catalog:",
+    "oxlint": "catalog:",
     "typescript": "catalog:types",
     "vite": "catalog:",
     "vite-plus": "catalog:",

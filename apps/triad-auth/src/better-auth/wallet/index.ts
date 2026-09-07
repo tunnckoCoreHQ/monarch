@@ -183,7 +183,7 @@ function invalid(message: string): never {
 
 function parseRedirectUris(value: string): string[] {
   try {
-    const parsed = JSON.parse(value) as unknown;
+    const parsed: unknown = JSON.parse(value);
     if (Array.isArray(parsed) && parsed.every((uri) => typeof uri === "string")) {
       return parsed;
     }
@@ -198,7 +198,7 @@ function webAuthnTransports(value: string | null): AuthenticatorTransportFuture[
   if (!value) {
     return undefined;
   }
-  const supported = new Set<AuthenticatorTransportFuture>([
+  const supported = new Set<string>([
     "ble",
     "cable",
     "hybrid",
@@ -209,9 +209,7 @@ function webAuthnTransports(value: string | null): AuthenticatorTransportFuture[
   ]);
   const transports = value
     .split(",")
-    .filter((transport): transport is AuthenticatorTransportFuture =>
-      supported.has(transport as AuthenticatorTransportFuture),
-    );
+    .filter((transport): transport is AuthenticatorTransportFuture => supported.has(transport));
 
   return transports.length > 0 ? transports : undefined;
 }
@@ -253,11 +251,11 @@ async function readBoundedJson(request: Request): Promise<Record<string, unknown
   } catch {
     invalid("Request body must be valid JSON");
   }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+  if (!isRecord(parsed)) {
     invalid("Request body must be a JSON object");
   }
 
-  return parsed as Record<string, unknown>;
+  return parsed;
 }
 
 const passkeySelection =
@@ -638,7 +636,19 @@ function authenticationResponse(value: unknown): AuthenticationResponseJSON {
     invalid("Passkey assertion is required");
   }
 
-  return value as unknown as AuthenticationResponseJSON;
+  return {
+    ...value,
+    id: value.id,
+    rawId: value.rawId,
+    type: value.type,
+    response: {
+      ...value.response,
+      clientDataJSON: value.response.clientDataJSON,
+      authenticatorData: value.response.authenticatorData,
+      signature: value.response.signature,
+    },
+    clientExtensionResults: value.clientExtensionResults,
+  };
 }
 
 function walletString(value: unknown, name: string, maximum: number): string {

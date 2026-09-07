@@ -118,7 +118,7 @@ export function canonicalDisclosureScopes(requested: readonly string[] = []): Di
     throw new Error("duplicate disclosure scopes are not allowed");
   }
   for (const scope of requested) {
-    if (!DISCLOSURE_SCOPES.includes(scope as DisclosureScope)) {
+    if (!DISCLOSURE_SCOPES.some((supported) => supported === scope)) {
       throw new Error(`unsupported disclosure scope: ${scope}`);
     }
   }
@@ -135,9 +135,9 @@ export function claimsForDisclosureScopes(scopes: readonly DisclosureScope[]): D
 
 export function validateProviderDisclosureScopes(
   provider: DisclosureProvider,
-  scopes: readonly DisclosureScope[],
+  scopes: readonly string[],
 ): void {
-  const supported = new Set<DisclosureScope>(["openid", ...PROVIDER_DISCLOSURE_SCOPES[provider]]);
+  const supported = new Set<string>(["openid", ...PROVIDER_DISCLOSURE_SCOPES[provider]]);
 
   for (const scope of scopes) {
     if (!supported.has(scope)) {
