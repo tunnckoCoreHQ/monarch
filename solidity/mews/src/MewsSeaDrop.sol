@@ -46,8 +46,10 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
                 )
             )
         );
-        _mintCats(0x9D9db340778139774cF73DFB7Bf27498Fa67978F, 1);
-        _mintCats(0x6C22d03544609Db5128736706d90D66fC7f45388, 1);
+        _prepareMint(0x9D9db340778139774cF73DFB7Bf27498Fa67978F, 1);
+        _mint(0x9D9db340778139774cF73DFB7Bf27498Fa67978F, 1);
+        _prepareMint(0x6C22d03544609Db5128736706d90D66fC7f45388, 1);
+        _mint(0x6C22d03544609Db5128736706d90D66fC7f45388, 1);
         emit SeaDropTokenDeployed();
     }
 

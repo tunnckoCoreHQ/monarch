@@ -114,6 +114,18 @@ contract MewsSeaDropTest is Test {
         assertEq(FEE.balance, uint256(PRICE) * 3 * 5 / 100);
     }
 
+    function testConstructorDoesNotCallRecipientCode() public {
+        address first = 0x9D9db340778139774cF73DFB7Bf27498Fa67978F;
+        address second = 0x6C22d03544609Db5128736706d90D66fC7f45388;
+        vm.etch(first, hex"60006000fd");
+        vm.etch(second, hex"60006000fd");
+        MewsSeaDrop fresh = _deploy(GENESIS);
+        assertEq(fresh.balanceOf(first), 1);
+        assertEq(fresh.balanceOf(second), 1);
+        assertEq(fresh.tokenSeed(1), fresh.mintSeed(first, 1));
+        assertEq(fresh.tokenSeed(2), fresh.mintSeed(second, 2));
+    }
+
     function testOnlySeaDropCanMint() public {
         vm.prank(ALICE);
         vm.expectRevert(INonFungibleSeaDropToken.OnlyAllowedSeaDrop.selector);

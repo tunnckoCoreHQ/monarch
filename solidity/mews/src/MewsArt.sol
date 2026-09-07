@@ -75,6 +75,11 @@ abstract contract MewsArt is ERC721A, ReentrancyGuard {
     }
 
     function _mintCats(address minter, uint256 quantity) internal {
+        _prepareMint(minter, quantity);
+        _safeMint(minter, quantity);
+    }
+
+    function _prepareMint(address minter, uint256 quantity) internal {
         if (quantity == 0) {
             revert InvalidMint();
         }
@@ -98,7 +103,6 @@ abstract contract MewsArt is ERC721A, ReentrancyGuard {
                 _collisionSeeds[tokenId] = seed;
             }
         }
-        _safeMint(minter, quantity);
     }
 
     function _startTokenId() internal pure override returns (uint256) {
