@@ -58,6 +58,7 @@ contract MewsSeaDropTest is Test {
     ISeaDrop internal seaDrop;
     MewsRenderer internal renderer;
     MewsSeaDrop internal mews;
+    mapping(bytes32 => bool) private _seenImages;
 
     function setUp() public {
         vm.chainId(8453);
@@ -119,14 +120,13 @@ contract MewsSeaDropTest is Test {
         mews.mintSeaDrop(ALICE, 1);
     }
 
-    function testMintDoesNotCallTheRenderer() public {
-        bytes memory code = address(renderer).code;
-        vm.etch(address(renderer), hex"60006000fd");
+    function testMintDoesNotRenderSVGOrJSON() public {
+        vm.mockCallRevert(address(renderer), MewsRenderer.render.selector, hex"01");
+        vm.mockCallRevert(address(renderer), MewsRenderer.tokenURI.selector, hex"01");
         MewsSeaDrop fresh = _deploy(GENESIS);
         assertEq(fresh.totalSupply(), 2);
         _mintAlice(3);
         assertEq(mews.totalSupply(), 5);
-        vm.etch(address(renderer), code);
         assertEq(mews.tokenData(5).seed, mews.mintSeed(ALICE, 5));
     }
 
@@ -317,7 +317,7 @@ contract MewsSeaDropTest is Test {
         mews.generate(selected);
     }
 
-    function testFullSupplyUsesTheCompleteMinterSeed() public {
+    function testFullSupplyHasOneThousandUniqueImages() public {
         mews.updatePublicDrop(SEA_DROP, PublicDrop(PRICE, 100, 2000, 1000, 500, true));
         _mintAlice(500);
         vm.prank(BOB);
@@ -325,10 +325,10 @@ contract MewsSeaDropTest is Test {
         assertEq(mews.totalSupply(), 1000);
         assertEq(mews.maxSupply(), 1000);
         for (uint256 id = 1; id <= 1000; ++id) {
-            address minter = id == 1
-                ? 0x9D9db340778139774cF73DFB7Bf27498Fa67978F
-                : id == 2 ? 0x6C22d03544609Db5128736706d90D66fC7f45388 : id <= 502 ? ALICE : BOB;
-            bytes32 seed = keccak256(abi.encode(GENESIS, keccak256(abi.encode(minter)), id));
+            bytes32 seed = mews.tokenSeed(id);
+            bytes32 image = keccak256(bytes(renderer.render(0, seed)));
+            assertFalse(_seenImages[image], "duplicate image");
+            _seenImages[image] = true;
             assertEq(abi.encode(mews.tokenData(id)), abi.encode(renderer.generate(seed)));
             if (id == 1 || id == 1000) {
                 assertEq(mews.tokenURI(id), renderer.tokenURI(id, seed));

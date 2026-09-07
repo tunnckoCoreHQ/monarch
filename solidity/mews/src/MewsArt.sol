@@ -20,6 +20,8 @@ abstract contract MewsArt is ERC721A, ReentrancyGuard {
 
     // ERC721A's extraData retains the batch's first token ID across transfers.
     mapping(uint256 => address) private _batchMinters;
+    mapping(bytes32 => bool) private _usedVisuals;
+    mapping(uint256 => bytes32) private _collisionSeeds;
 
     constructor(bytes32 genesisSeed, MewsRenderer renderer_) ERC721A("Mews", "MEWS") {
         provenanceHash = genesisSeed;
@@ -31,7 +33,9 @@ abstract contract MewsArt is ERC721A, ReentrancyGuard {
     }
 
     function tokenSeed(uint256 tokenId) public view returns (bytes32) {
-        return mintSeed(_batchMinters[_ownershipOf(tokenId).extraData], tokenId);
+        address minter = _batchMinters[_ownershipOf(tokenId).extraData];
+        bytes32 resolved = _collisionSeeds[tokenId];
+        return resolved == bytes32(0) ? mintSeed(minter, tokenId) : resolved;
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
@@ -77,7 +81,23 @@ abstract contract MewsArt is ERC721A, ReentrancyGuard {
         if (quantity > MAX_SUPPLY - _totalMinted()) {
             revert SupplyExceeded();
         }
-        _batchMinters[_nextTokenId()] = minter;
+        uint256 firstTokenId = _nextTokenId();
+        _batchMinters[firstTokenId] = minter;
+        for (uint256 i; i < quantity; ++i) {
+            uint256 tokenId = firstTokenId + i;
+            bytes32 initialSeed = mintSeed(minter, tokenId);
+            bytes32 seed = initialSeed;
+            bytes32 visual = renderer.visualHash(seed);
+            uint256 attempt;
+            while (seed == bytes32(0) || _usedVisuals[visual]) {
+                seed = keccak256(abi.encode(initialSeed, ++attempt));
+                visual = renderer.visualHash(seed);
+            }
+            _usedVisuals[visual] = true;
+            if (attempt != 0) {
+                _collisionSeeds[tokenId] = seed;
+            }
+        }
         _safeMint(minter, quantity);
     }
 

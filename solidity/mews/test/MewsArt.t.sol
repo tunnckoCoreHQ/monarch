@@ -67,15 +67,58 @@ contract MewsArtTest is Test {
         }
     }
 
-    function testMintDoesNotCallRenderer() public {
-        bytes memory code = address(renderer).code;
-        vm.etch(address(renderer), hex"60006000fd");
+    function testMintDoesNotRenderSVGOrJSON() public {
+        vm.mockCallRevert(address(renderer), MewsRenderer.render.selector, hex"01");
+        vm.mockCallRevert(address(renderer), MewsRenderer.tokenURI.selector, hex"01");
         Mews another = new Mews(GENESIS, renderer);
         vm.prank(ALICE);
         another.mint(3);
         assertEq(another.totalSupply(), 3);
-        vm.etch(address(renderer), code);
         assertEq(another.tokenSeed(3), mews.mintSeed(ALICE, 3));
+    }
+
+    function testCollidingSeedsAreRetriedWithinAndAcrossBatches() public {
+        bytes32 first = mews.mintSeed(ALICE, 1);
+        bytes32 second = bytes32(uint256(first) + 3_981_312);
+        assertNotEq(first, second);
+        assertEq(renderer.visualHash(first), renderer.visualHash(second));
+        vm.mockCall(
+            address(renderer),
+            abi.encodeCall(MewsRenderer.mintSeed, (GENESIS, ALICE, 2)),
+            abi.encode(second)
+        );
+        vm.mockCall(
+            address(renderer),
+            abi.encodeCall(MewsRenderer.mintSeed, (GENESIS, ALICE, 3)),
+            abi.encode(second)
+        );
+        Mews split = new Mews(GENESIS, renderer);
+        vm.startPrank(ALICE);
+        mews.mint(2);
+        mews.mint(1);
+        split.mint(1);
+        split.mint(2);
+        vm.stopPrank();
+
+        assertEq(mews.tokenSeed(1), first);
+        assertEq(mews.tokenSeed(2), keccak256(abi.encode(second, uint256(1))));
+        assertEq(mews.tokenSeed(3), keccak256(abi.encode(second, uint256(2))));
+        for (uint256 id = 1; id <= 3; ++id) {
+            assertEq(mews.tokenSeed(id), split.tokenSeed(id));
+            for (uint256 previous = 1; previous < id; ++previous) {
+                assertNotEq(
+                    renderer.visualHash(mews.tokenSeed(id)),
+                    renderer.visualHash(mews.tokenSeed(previous))
+                );
+            }
+        }
+
+        bytes32 resolved = mews.tokenSeed(2);
+        bytes memory raw = abi.encode(mews.tokenData(2));
+        vm.prank(ALICE);
+        mews.transferFrom(ALICE, BOB, 2);
+        assertEq(mews.tokenSeed(2), resolved);
+        assertEq(abi.encode(mews.tokenData(2)), raw);
     }
 
     function testSharedGenerationUnlockAndOwnership() public {

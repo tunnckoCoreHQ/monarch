@@ -20,7 +20,7 @@ A collection of 1,000 pixel cats on Base. Sitting, smiling, or loafing, each Mew
 
 Eyes and shadows are darker versions of the coat. Face dots contrast with the eyes, and collar dots lighten or darken to stay visible. Happy cats keep their longer nose and never wear collars.
 
-Every trait comes from the collection's fixed genesis seed, the original minter's address, and the token ID. Two Mews can share the same visible traits.
+Every trait starts from the collection's fixed genesis seed, the original minter's address, and the token ID. If that produces a cat already in the collection, the contract retries with a new hash until it finds an unused appearance. Every minted Mew has a distinct appearance, which stays fixed after minting.
 
 ## Mint
 
