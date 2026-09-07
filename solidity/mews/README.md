@@ -40,7 +40,7 @@ The SeaDrop wrapper implements OpenSea's creator-token transfer validation. Depl
 
 The renderer exposes `generate(bytes32 seed)` for both collection artwork and standalone generation. Both NFT contracts expose `tokenData(uint256 tokenId)`. These return a `TokenData` struct containing the seed, typed traits, and resolved OKLCH colors. Lightness is a percentage, chroma is in thousandths, and hue is in degrees. The `hasCollar` field indicates whether collar colors are used.
 
-Open [preview/cats-12.html](./preview/cats-12.html) for the full collection. The gallery embeds all 1,000 SVGs and displays 36 per page. Individual SVGs are also in [preview/rendered](./preview/rendered/). The original artwork is in [references](./references/).
+Open [preview/cats-12.html](./preview/cats-12.html) for the full collection. The gallery embeds all 1,000 SVGs and displays 36 per page. The preview command writes individual SVGs to `preview/rendered/`; only the golden test image is tracked separately. The original artwork is in [references](./references/).
 
 The existing gallery is preserved from the earlier basic NFT. Running the preview script generates a new gallery using the current shared renderer and basic NFT. It mints the full supply and exports every NFT through `tokenURI`. Its genesis seed is a fixed demonstration value.
 
