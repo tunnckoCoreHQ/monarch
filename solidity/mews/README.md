@@ -35,19 +35,11 @@ Every trait starts from the collection's fixed genesis seed, the original minter
 | Creator allocation | 20 total, included in the supply |
 | Secondary royalties | 5% |
 
-Two creator tokens are minted at deployment, one to each collaborator. The remaining 18 can be claimed during the private creator window. Mint counts stay with the original wallet, so transferring cats does not reset a wallet's limit.
+All 20 creator tokens are minted at deployment: five to `0x9D9db340778139774cF73DFB7Bf27498Fa67978F` and fifteen to `0x6C22d03544609Db5128736706d90D66fC7f45388`. There is no private creator stage. Mint counts stay with the original wallet, so transferring cats does not reset a wallet's limit.
 
 ### Schedule
 
-All dates are in 2026. These are the configured launch times.
-
-| Event | UTC | Eastern | Pacific |
-| --- | --- | --- | --- |
-| Creator mint opens | Sep 7, 21:50 | Sep 7, 5:50 PM EDT | Sep 7, 2:50 PM PDT |
-| Public mint opens | Sep 7, 22:00 | Sep 7, 6 PM EDT | Sep 7, 3 PM PDT |
-| Public mint closes | Sep 21, 22:00 | Sep 21, 6 PM EDT | Sep 21, 3 PM PDT |
-
-The creator window lasts ten minutes. Public minting lasts two weeks, unless the collection sells out first.
+The public mint schedule will be set and published through OpenSea Studio. The price and wallet limit above are the planned settings. Deploying the contracts does not open the public mint.
 
 ## Make your own combinations
 
@@ -108,7 +100,11 @@ From the monorepo root, simulate with:
 vp run --filter mews deploy --rpc-url https://mainnet.base.org
 ```
 
-Add `--broadcast` to deploy. The [deployment script](./script/Deploy.s.sol) contains the launch settings. No interactive prompt or command-line key is needed.
+Add `--broadcast` to deploy. The [deployment script](./script/Deploy.s.sol) deploys the renderer and NFT, sets 5% royalties, and sets the transfer validator. It does not configure the sale. No interactive prompt or command-line key is needed.
+
+After deployment, connect the owner wallet to OpenSea Studio, open Mews, and configure the collection profile, public mint schedule, price, wallet limit, and payout address. Studio submits these settings through the owner-only `multiConfigure` method. It uses the upstream SeaDrop ABI and supports public drops, drop metadata, allowlists, payouts, fee recipients, and payers. Fixed supply, base URI, provenance changes, token gating, and signed-mint settings are ignored.
+
+The collection URI starts empty and can be set through `multiConfigure` or `setContractURI`. Keep the planned 10% OpenSea mint fee and the same 5% creator earnings, enable earnings enforcement in Studio, then publish the mint page. Until the public drop is configured and its start time arrives, public minting is closed.
 
 </details>
 

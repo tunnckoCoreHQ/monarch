@@ -3,7 +3,6 @@ pragma solidity ^0.8.30;
 
 import {Ownable} from "solady/auth/Ownable.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {Base64} from "solady/utils/Base64.sol";
 import {MewsArt} from "./MewsArt.sol";
 import {MewsRenderer} from "./MewsRenderer.sol";
 import {ICreatorToken, ITransferValidator} from "./seadrop/TransferValidation.sol";
@@ -12,13 +11,11 @@ import {
     INonFungibleSeaDropToken,
     ISeaDropTokenContractMetadata,
     IERC2981,
-    PublicDrop,
-    AllowListData
+    MultiConfigureStruct
 } from "./seadrop/SeaDropInterfaces.sol";
 
 contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
     error InvalidSeaDrop();
-    error ProvenanceHashImmutable();
     error InvalidTransferValidator();
     ISeaDrop public immutable seaDrop;
     string public contractURI;
@@ -28,7 +25,8 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
 
     event SeaDropTokenDeployed();
     event RoyaltyInfoUpdated(address receiver, uint256 bps);
-    event ContractURIUpdated();
+    event ContractURIUpdated(string newContractURI);
+    event AllowedSeaDropUpdated(address[] allowedSeaDrop);
 
     constructor(bytes32 genesisSeed, MewsRenderer renderer_, ISeaDrop seaDrop_)
         MewsArt(genesisSeed, renderer_)
@@ -38,24 +36,19 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
         }
         _initializeOwner(msg.sender);
         seaDrop = seaDrop_;
-        contractURI = string.concat(
-            "data:application/json;base64,",
-            Base64.encode(
-                bytes(
-                    '{"name":"Mews","symbol":"MEWS","description":"Pixel-perfect pastel Mews, generated and rendered entirely on-chain.","collaborators":["0x9d9db340778139774cf73dfb7bf27498fa67978f","0x6c22d03544609db5128736706d90d66fc7f45388"]}'
-                )
-            )
-        );
-        _prepareMint(0x9D9db340778139774cF73DFB7Bf27498Fa67978F, 1);
-        _mint(0x9D9db340778139774cF73DFB7Bf27498Fa67978F, 1);
-        _prepareMint(0x6C22d03544609Db5128736706d90D66fC7f45388, 1);
-        _mint(0x6C22d03544609Db5128736706d90D66fC7f45388, 1);
+        _prepareMint(0x9D9db340778139774cF73DFB7Bf27498Fa67978F, 5);
+        _mint(0x9D9db340778139774cF73DFB7Bf27498Fa67978F, 5);
+        _prepareMint(0x6C22d03544609Db5128736706d90D66fC7f45388, 15);
+        _mint(0x6C22d03544609Db5128736706d90D66fC7f45388, 15);
+        address[] memory allowedSeaDrop = new address[](1);
+        allowedSeaDrop[0] = address(seaDrop_);
+        emit AllowedSeaDropUpdated(allowedSeaDrop);
         emit SeaDropTokenDeployed();
     }
 
-    function setContractURI(string calldata uri) external onlyOwner {
+    function setContractURI(string calldata uri) public onlyOwner {
         contractURI = uri;
-        emit ContractURIUpdated();
+        emit ContractURIUpdated(uri);
     }
 
     function mintSeaDrop(address minter, uint256 quantity) external nonReentrant {
@@ -73,10 +66,6 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
 
     function maxSupply() external pure returns (uint256) {
         return MAX_SUPPLY;
-    }
-
-    function setProvenanceHash(bytes32) external pure {
-        revert ProvenanceHashImmutable();
     }
 
     function setRoyaltyInfo(ISeaDropTokenContractMetadata.RoyaltyInfo calldata info)
@@ -130,27 +119,35 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
         emit TransferValidatorUpdated(previous, validator);
     }
 
-    function updatePublicDrop(address drop, PublicDrop calldata settings) external onlyOwner {
-        _checkSeaDrop(drop);
-        seaDrop.updatePublicDrop(settings);
-    }
-
-    function updateAllowList(address drop, AllowListData calldata settings) external onlyOwner {
-        _checkSeaDrop(drop);
-        seaDrop.updateAllowList(settings);
-    }
-
-    function updateCreatorPayoutAddress(address drop, address recipient) external onlyOwner {
-        _checkSeaDrop(drop);
-        seaDrop.updateCreatorPayoutAddress(recipient);
-    }
-
-    function updateAllowedFeeRecipient(address drop, address recipient, bool allowed)
-        external
-        onlyOwner
-    {
-        _checkSeaDrop(drop);
-        seaDrop.updateAllowedFeeRecipient(recipient, allowed);
+    function multiConfigure(MultiConfigureStruct calldata config) external onlyOwner {
+        _checkSeaDrop(config.seaDropImpl);
+        if (bytes(config.contractURI).length != 0) {
+            setContractURI(config.contractURI);
+        }
+        if (config.publicDrop.startTime != 0 || config.publicDrop.endTime != 0) {
+            seaDrop.updatePublicDrop(config.publicDrop);
+        }
+        if (bytes(config.dropURI).length != 0) {
+            seaDrop.updateDropURI(config.dropURI);
+        }
+        if (config.allowListData.merkleRoot != bytes32(0)) {
+            seaDrop.updateAllowList(config.allowListData);
+        }
+        if (config.creatorPayoutAddress != address(0)) {
+            seaDrop.updateCreatorPayoutAddress(config.creatorPayoutAddress);
+        }
+        for (uint256 i; i < config.allowedFeeRecipients.length; ++i) {
+            seaDrop.updateAllowedFeeRecipient(config.allowedFeeRecipients[i], true);
+        }
+        for (uint256 i; i < config.disallowedFeeRecipients.length; ++i) {
+            seaDrop.updateAllowedFeeRecipient(config.disallowedFeeRecipients[i], false);
+        }
+        for (uint256 i; i < config.allowedPayers.length; ++i) {
+            seaDrop.updatePayer(config.allowedPayers[i], true);
+        }
+        for (uint256 i; i < config.disallowedPayers.length; ++i) {
+            seaDrop.updatePayer(config.disallowedPayers[i], false);
+        }
     }
 
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {

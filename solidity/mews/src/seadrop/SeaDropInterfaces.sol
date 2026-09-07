@@ -38,6 +38,29 @@ struct SignedMintValidationParams {
     uint16 maxFeeBps;
 }
 
+// Field order and types match the upstream MultiConfigureStruct ABI.
+struct MultiConfigureStruct {
+    uint256 maxSupply;
+    string baseURI;
+    string contractURI;
+    address seaDropImpl;
+    PublicDrop publicDrop;
+    string dropURI;
+    AllowListData allowListData;
+    address creatorPayoutAddress;
+    bytes32 provenanceHash;
+    address[] allowedFeeRecipients;
+    address[] disallowedFeeRecipients;
+    address[] allowedPayers;
+    address[] disallowedPayers;
+    address[] tokenGatedAllowedNftTokens;
+    TokenGatedDropStage[] tokenGatedDropStages;
+    address[] disallowedTokenGatedAllowedNftTokens;
+    address[] signers;
+    SignedMintValidationParams[] signedMintValidationParams;
+    address[] disallowedSigners;
+}
+
 struct MintParams {
     uint256 mintPrice;
     uint256 maxTotalMintableByWallet;
@@ -171,4 +194,7 @@ interface ISeaDrop {
     function updatePayer(address payer, bool allowed) external;
     function getPublicDrop(address nft) external view returns (PublicDrop memory);
     function getCreatorPayoutAddress(address nft) external view returns (address);
+    function getAllowListMerkleRoot(address nft) external view returns (bytes32);
+    function getFeeRecipientIsAllowed(address nft, address recipient) external view returns (bool);
+    function getPayerIsAllowed(address nft, address payer) external view returns (bool);
 }

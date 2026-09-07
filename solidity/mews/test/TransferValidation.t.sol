@@ -64,16 +64,16 @@ contract TransferValidationTest is Test {
     }
 
     function testOwnerWalletTransfersNeedNoRoyaltyAuthorization() public {
-        bytes32 seed = mews.tokenSeed(3);
+        bytes32 seed = mews.tokenSeed(21);
         vm.prank(ALICE);
-        mews.transferFrom(ALICE, BOB, 3);
-        assertEq(mews.ownerOf(3), BOB);
-        assertEq(mews.tokenSeed(3), seed);
+        mews.transferFrom(ALICE, BOB, 21);
+        assertEq(mews.ownerOf(21), BOB);
+        assertEq(mews.tokenSeed(21), seed);
         // Smart wallets also retain the owner-initiated transfer path.
         vm.etch(BOB, hex"00");
         vm.prank(BOB);
-        mews.transferFrom(BOB, ALICE, 3);
-        assertEq(mews.ownerOf(3), ALICE);
+        mews.transferFrom(BOB, ALICE, 21);
+        assertEq(mews.ownerOf(21), ALICE);
     }
 
     function testApprovedOperatorNeedsAuthorizationForEachToken() public {
@@ -83,27 +83,27 @@ contract TransferValidationTest is Test {
         vm.expectRevert(
             bytes4(keccak256("StrictAuthorizedTransferSecurityRegistry__UnauthorizedTransfer()"))
         );
-        mews.transferFrom(ALICE, BOB, 3);
+        mews.transferFrom(ALICE, BOB, 21);
         vm.prank(AUTHORIZER);
-        registry.beforeAuthorizedTransfer(address(mews), 3);
+        registry.beforeAuthorizedTransfer(address(mews), 21);
         vm.prank(OPERATOR);
         vm.expectRevert(
             bytes4(keccak256("StrictAuthorizedTransferSecurityRegistry__UnauthorizedTransfer()"))
         );
-        mews.transferFrom(ALICE, BOB, 4);
+        mews.transferFrom(ALICE, BOB, 22);
         vm.prank(OPERATOR);
-        mews.safeTransferFrom(ALICE, BOB, 3);
-        assertEq(mews.ownerOf(3), BOB);
-        assertEq(mews.ownerOf(4), ALICE);
+        mews.safeTransferFrom(ALICE, BOB, 21);
+        assertEq(mews.ownerOf(21), BOB);
+        assertEq(mews.ownerOf(22), ALICE);
         vm.prank(AUTHORIZER);
-        registry.afterAuthorizedTransfer(address(mews), 3);
+        registry.afterAuthorizedTransfer(address(mews), 21);
         vm.prank(BOB);
         mews.setApprovalForAll(OPERATOR, true);
         vm.prank(OPERATOR);
         vm.expectRevert(
             bytes4(keccak256("StrictAuthorizedTransferSecurityRegistry__UnauthorizedTransfer()"))
         );
-        mews.transferFrom(BOB, ALICE, 3);
+        mews.transferFrom(BOB, ALICE, 21);
     }
 
     function testUnauthorizedAccountCannotAuthorizeTransfers() public {
@@ -113,19 +113,19 @@ contract TransferValidationTest is Test {
                 keccak256("StrictAuthorizedTransferSecurityRegistry__CallerIsNotValidAuthorizer()")
             )
         );
-        registry.beforeAuthorizedTransfer(address(mews), 3);
+        registry.beforeAuthorizedTransfer(address(mews), 21);
     }
 
     function testMintSkipsValidationAndOwnerCanDisableValidator() public {
         vm.etch(VALIDATOR, hex"60006000fd");
         vm.prank(DROP);
         mews.mintSeaDrop(ALICE, 2);
-        assertEq(mews.totalSupply(), 7);
+        assertEq(mews.totalSupply(), 25);
         mews.setTransferValidator(address(0));
         vm.prank(ALICE);
-        mews.approve(OPERATOR, 3);
+        mews.approve(OPERATOR, 21);
         vm.prank(OPERATOR);
-        mews.transferFrom(ALICE, BOB, 3);
-        assertEq(mews.ownerOf(3), BOB);
+        mews.transferFrom(ALICE, BOB, 21);
+        assertEq(mews.ownerOf(21), BOB);
     }
 }

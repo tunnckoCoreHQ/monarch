@@ -53,14 +53,14 @@ contract MewsArtTest is Test {
             deployCode("MewsSeaDrop.sol:MewsSeaDrop", abi.encode(GENESIS, renderer, ISeaDrop(drop)))
         );
         vm.prank(0x9D9db340778139774cF73DFB7Bf27498Fa67978F);
-        mews.mint(1);
+        mews.mint(5);
         vm.prank(0x6C22d03544609Db5128736706d90D66fC7f45388);
-        mews.mint(1);
+        mews.mint(15);
         vm.prank(ALICE);
         mews.mint(3);
         vm.prank(drop);
         seaDropNft.mintSeaDrop(ALICE, 3);
-        for (uint256 id = 1; id <= 5; ++id) {
+        for (uint256 id = 1; id <= 23; ++id) {
             assertEq(mews.tokenSeed(id), seaDropNft.tokenSeed(id));
             assertEq(mews.tokenURI(id), seaDropNft.tokenURI(id));
             assertEq(abi.encode(mews.tokenData(id)), abi.encode(seaDropNft.tokenData(id)));
