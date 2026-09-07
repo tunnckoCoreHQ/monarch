@@ -47,6 +47,9 @@ catalogs:
     '@openzeppelin/contracts':
       specifier: 5.6.1
       version: 5.6.1
+    '@oxlint/plugins':
+      specifier: 1.76.0
+      version: 1.76.0
     '@vitest/coverage-v8':
       specifier: 4.1.10
       version: 4.1.10
@@ -125,6 +128,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:types
         version: 5.20260831.1
+      '@oxlint/plugins':
+        specifier: 'catalog:'
+        version: 1.76.0
       '@types/bun':
         specifier: catalog:types
         version: 1.4.0
@@ -2184,6 +2190,10 @@ packages:
 
   '@oxlint/plugins@1.73.0':
     resolution: {integrity: sha512-OhgMQeMmZA0dcFcX4/priaJZWdFECxiClgq6mRX6aatZEcV9PbKC3P3/v8U1hVjviT1i5U+vR8lAtBV6m4FXAA==}
+    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+
+  '@oxlint/plugins@1.76.0':
+    resolution: {integrity: sha512-twmbsVrYAjkaOw6I2pDiYSAxVLNOV8kcqMzajJ599SpqXzea+GjDCZVad1VUqNR/4thWjM4PER5n+3/TQtTkZQ==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
   '@pagefind/darwin-arm64@1.5.2':
@@ -6876,6 +6886,8 @@ snapshots:
     optional: true
 
   '@oxlint/plugins@1.73.0': {}
+
+  '@oxlint/plugins@1.76.0': {}
 
   '@pagefind/darwin-arm64@1.5.2':
     optional: true
