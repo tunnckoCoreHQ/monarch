@@ -3,6 +3,7 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {LibString} from "solady/utils/LibString.sol";
+import {Base64} from "solady/utils/Base64.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {IERC721A} from "erc721a/IERC721A.sol";
@@ -183,15 +184,23 @@ contract MewsSeaDropTest is Test {
         config.signedMintValidationParams = new SignedMintValidationParams[](1);
         config.disallowedSigners = new address[](1);
 
+        string memory expectedURI = string.concat(
+            "data:application/json;base64,",
+            Base64.encode(
+                bytes(
+                    '{"name":"Mews","symbol":"MEWS","description":"Pixel-perfect pastel Mews, generated and rendered entirely on-chain.","collaborators":["0x9d9db340778139774cf73dfb7bf27498fa67978f","0x6c22d03544609db5128736706d90d66fc7f45388"]}'
+                )
+            )
+        );
         vm.expectEmit(false, false, false, true, address(mews));
-        emit MewsSeaDrop.ContractURIUpdated(config.contractURI);
+        emit MewsSeaDrop.ContractURIUpdated(expectedURI);
         vm.expectEmit(true, false, false, true, SEA_DROP);
         emit DropURIUpdated(address(mews), config.dropURI);
         (bool success,) = address(mews).call(abi.encodeWithSelector(bytes4(0x911f456b), config));
         assertTrue(success, "Studio selector call failed");
         assertEq(mews.maxSupply(), 1000);
         assertEq(mews.provenanceHash(), GENESIS);
-        assertEq(mews.contractURI(), config.contractURI);
+        assertEq(mews.contractURI(), expectedURI);
         assertEq(abi.encode(seaDrop.getPublicDrop(address(mews))), abi.encode(config.publicDrop));
         assertEq(seaDrop.getCreatorPayoutAddress(address(mews)), PAYOUT);
         assertEq(seaDrop.getAllowListMerkleRoot(address(mews)), config.allowListData.merkleRoot);
@@ -215,13 +224,14 @@ contract MewsSeaDropTest is Test {
         assertEq(mews.balanceOf(ALICE), 1);
     }
 
-    function testEmptyConfigurationPreservesExistingSettings() public {
+    function testEmptyConfigurationRestoresContractURIAndPreservesSeaDropSettings() public {
+        string memory defaultURI = mews.contractURI();
         mews.setContractURI("ipfs://keep-profile");
         PublicDrop memory before = seaDrop.getPublicDrop(address(mews));
         MultiConfigureStruct memory config;
         config.seaDropImpl = SEA_DROP;
         mews.multiConfigure(config);
-        assertEq(mews.contractURI(), "ipfs://keep-profile");
+        assertEq(mews.contractURI(), defaultURI);
         assertEq(abi.encode(seaDrop.getPublicDrop(address(mews))), abi.encode(before));
         assertEq(seaDrop.getCreatorPayoutAddress(address(mews)), PAYOUT);
         assertTrue(seaDrop.getFeeRecipientIsAllowed(address(mews), FEE));

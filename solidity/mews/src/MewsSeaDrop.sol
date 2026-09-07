@@ -3,6 +3,7 @@ pragma solidity ^0.8.30;
 
 import {Ownable} from "solady/auth/Ownable.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {Base64} from "solady/utils/Base64.sol";
 import {MewsArt} from "./MewsArt.sol";
 import {MewsRenderer} from "./MewsRenderer.sol";
 import {ICreatorToken, ITransferValidator} from "./seadrop/TransferValidation.sol";
@@ -46,7 +47,7 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
         emit SeaDropTokenDeployed();
     }
 
-    function setContractURI(string calldata uri) public onlyOwner {
+    function setContractURI(string memory uri) public onlyOwner {
         contractURI = uri;
         emit ContractURIUpdated(uri);
     }
@@ -121,9 +122,16 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
 
     function multiConfigure(MultiConfigureStruct calldata config) external onlyOwner {
         _checkSeaDrop(config.seaDropImpl);
-        if (bytes(config.contractURI).length != 0) {
-            setContractURI(config.contractURI);
-        }
+        setContractURI(
+            string.concat(
+                "data:application/json;base64,",
+                Base64.encode(
+                    bytes(
+                        '{"name":"Mews","symbol":"MEWS","description":"Pixel-perfect pastel Mews, generated and rendered entirely on-chain.","collaborators":["0x9d9db340778139774cf73dfb7bf27498fa67978f","0x6c22d03544609db5128736706d90d66fc7f45388"]}'
+                    )
+                )
+            )
+        );
         if (config.publicDrop.startTime != 0 || config.publicDrop.endTime != 0) {
             seaDrop.updatePublicDrop(config.publicDrop);
         }

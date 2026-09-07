@@ -104,7 +104,7 @@ Add `--broadcast` to deploy. The [deployment script](./script/Deploy.s.sol) depl
 
 After deployment, connect the owner wallet to OpenSea Studio, open Mews, and configure the collection profile, public mint schedule, price, wallet limit, and payout address. Studio submits these settings through the owner-only `multiConfigure` method. It uses the upstream SeaDrop ABI and supports public drops, drop metadata, allowlists, payouts, fee recipients, and payers. Fixed supply, base URI, provenance changes, token gating, and signed-mint settings are ignored.
 
-The collection URI starts empty and can be set through `multiConfigure` or `setContractURI`. Keep the planned 10% OpenSea mint fee and the same 5% creator earnings, enable earnings enforcement in Studio, then publish the mint page. Until the public drop is configured and its start time arrives, public minting is closed.
+The collection URI starts empty. Every `multiConfigure` call sets the hardcoded Mews collection metadata and ignores the supplied `contractURI` field. The owner can change it separately with `setContractURI`. Keep the planned 10% OpenSea mint fee and the same 5% creator earnings, enable earnings enforcement in Studio, then publish the mint page. Until the public drop is configured and its start time arrives, public minting is closed.
 
 </details>
 
