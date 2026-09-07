@@ -1,0 +1,39 @@
+{
+  "name": "mews",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Mews pixel cats on Base",
+  "license": "Apache-2.0",
+  "author": "tunnckoCore",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tunnckoCoreHQ/monarch.git",
+    "directory": "solidity/mews"
+  },
+  "scripts": {
+    "build": "forge build",
+    "check": "vp run fmt && vp run lint && vp run test && vp run build",
+    "deploy": "forge script script/Deploy.s.sol:Deploy",
+    "fmt": "forge fmt",
+    "gas": "forge snapshot --no-match-test testFuzz",
+    "lint": "forge lint --deny warnings --out out/lint --cache-path cache/lint",
+    "preview": "forge script script/Preview.s.sol:Preview --gas-limit 2000000000",
+    "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi",
+    "test": "forge test"
+  },
+  "dependencies": {
+    "erc721a": "catalog:",
+    "solady": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "catalog:types",
+    "@types/bun": "catalog:types",
+    "@types/node": "catalog:types",
+    "@vitest/coverage-v8": "catalog:",
+    "forge-std": "github:foundry-rs/forge-std#v1.16.1",
+    "typescript": "catalog:types",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "catalog:"
+  }
+}

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mews — Cat preview</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+        background: oklch(0.18 0.015 280);
+        color: oklch(0.95 0.015 80);
+        font-family: ui-monospace, monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 1488px;
+        margin: auto;
+        padding: 48px 32px;
+      }
+      header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 40px;
+      }
+      h1 {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        font-size: clamp(48px, 7vw, 80px);
+        font-weight: 800;
+        letter-spacing: -0.065em;
+        line-height: 1;
+      }
+      header p {
+        margin: 0;
+        color: oklch(0.73 0.02 280);
+        font-size: 14px;
+      }
+      figure {
+        margin: 0;
+        width: 256px;
+      }
+      section {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, 256px);
+        justify-content: center;
+        column-gap: 24px;
+        row-gap: 32px;
+      }
+      a {
+        display: block;
+        width: 256px;
+        height: 256px;
+      }
+      a:focus-visible {
+        outline: 3px solid oklch(0.8 0.14 195);
+        outline-offset: 5px;
+      }
+      img {
+        display: block;
+        width: 256px;
+        height: 256px;
+        image-rendering: pixelated;
+      }
+      figcaption {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding-top: 12px;
+        font-size: 13px;
+      }
+      figcaption span:last-child {
+        color: oklch(0.66 0.02 280);
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 32px 16px;
+        }
+        header {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 16px;
+          margin-bottom: 32px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Mews</h1>
+        <p>10 cats. A first look.</p>
+      </header>
+      <section
+        aria-label="Cat preview"
+        class="grid grid-cols-[repeat(auto-fit,256px)] justify-center gap-x-6 gap-y-8"
+      >
+        <figure>
+          <a href="./preview/01.svg" aria-label="Open Mews 01, Coral"
+            ><img src="./preview/01.svg" width="256" height="256" alt="Coral pixel cat"
+          /></a>
+          <figcaption><span>Coral</span><span>01</span></figcaption>
+        </figure>
+        <figure>
+          <a href="./preview/02.svg" aria-label="Open Mews 02, Tangerine"
+            ><img src="./preview/02.svg" width="256" height="256" alt="Tangerine pixel cat"
+          /></a>
+          <figcaption><span>Tangerine</span><span>02</span></figcaption>
+        </figure>
+        <figure>
+          <a href="./preview/03.svg" aria-label="Open Mews 03, Lemon"
+            ><img src="./preview/03.svg" width="256" height="256" alt="Lemon pixel cat"
+          /></a>
+          <figcaption><span>Lemon</span><span>03</span></figcaption>
+        </figure>
+        <figure>
+          <a href="./preview/04.svg" aria-label="Open Mews 04, Mint"
+            ><img src="./preview/04.svg" width="256" height="256" alt="Mint pixel cat"
+          /></a>
+          <figcaption><span>Mint</span><span>04</span></figcaption>
+        </figure>
+        <figure>
+          <a href="./preview/05.svg" aria-label="Open Mews 05, Lagoon"
+            ><img src="./preview/05.svg" width="256" height="256" alt="Lagoon pixel cat"
+          /></a>
+          <figcaption><span>Lagoon</span><span>05</span></figcaption>
+        </figure>
+        <figure>
+          <a href="./preview/06.svg" aria-label="Open Mews 06, Azure"
+            ><img src="./preview/06.svg" width="256" height="256" alt="Azure pixel cat"
+          /></a>
+          <figcaption><span>Azure</span><span>06</span></figcaption>
+        </figure>
+        <figure>
+          <a href="./preview/07.svg" aria-label="Open Mews 07, Iris"
+            ><img src="./preview/07.svg" width="256" height="256" alt="Iris pixel cat"
+          /></a>
+          <figcaption><span>Iris</span><span>07</span></figcaption>
+        </figure>
+        <figure>
+          <a href="./preview/08.svg" aria-label="Open Mews 08, Orchid"
+            ><img src="./preview/08.svg" width="256" height="256" alt="Orchid pixel cat"
+          /></a>
+          <figcaption><span>Orchid</span><span>08</span></figcaption>
+        </figure>
+        <figure>
+          <a href="./preview/09.svg" aria-label="Open Mews 09, Rose"
+            ><img src="./preview/09.svg" width="256" height="256" alt="Rose pixel cat"
+          /></a>
+          <figcaption><span>Rose</span><span>09</span></figcaption>
+        </figure>
+        <figure>
+          <a href="./preview/10.svg" aria-label="Open Mews 10, Midnight"
+            ><img src="./preview/10.svg" width="256" height="256" alt="Midnight pixel cat"
+          /></a>
+          <figcaption><span>Midnight</span><span>10</span></figcaption>
+        </figure>
+      </section>
+    </main>
+  </body>
+</html>

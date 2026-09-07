@@ -18,6 +18,8 @@ This is a Solidity/TypeScript/Rust monorepo for multiple projects and languages.
 - TypeScript toolchain is managed by VitePlus and `vp run check` is enough.
 - Solidity projects are formatted, linted and build with Foundry, not Pnpm/VitePlus/Oxc.
 - Solidity linting/format/build should happen with `vp`. At the root, `vp run solidity:check` runs fmt, lint, test, and build for every Solidity project with caching, `vp run solidity:test` runs only the tests with caching, and `vp run solidity:testing` runs all project test scripts in parallel without cache for a fresh fuzz. Prefer the per-project filter for day-to-day work.
+- For changes within one Solidity project, run `vp run --filter <project> check`; use the root `vp run solidity:check` when changes span Solidity projects, without repeating the filtered check.
+- Root `vp run check` handles TypeScript and non-Solidity formatting; run it only when those files need checking, not automatically alongside Solidity checks.
 - Call `vp run --filter glyph-protocol test` to run Solidity tests only for that project. Same for any other project-scoped Solidity Forge command.
 - Every Solidity/Foundry project has `fmt`, `test`, `lint` and `build` scripts.
 
