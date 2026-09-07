@@ -95,7 +95,20 @@ vp run --filter mews preview
 
 The command prints the path to a new gallery file. Open it in a browser. It also exports individual SVGs to `preview/rendered/`.
 
-The [deployment script](./script/Deploy.s.sol) contains the launch configuration. It simulates unless run with `--broadcast`.
+</details>
+
+<details>
+<summary>Deploy from an .env file</summary>
+
+Copy `.env.example` to `.env` inside `solidity/mews` and set `PRIVATE_KEY` to the key for `0x6C22d03544609Db5128736706d90D66fC7f45388`. The file is ignored by Git. Forge loads it automatically; the script rejects a key for a different wallet.
+
+From the monorepo root, simulate with:
+
+```sh
+vp run --filter mews deploy --rpc-url https://mainnet.base.org
+```
+
+Add `--broadcast` to deploy. The [deployment script](./script/Deploy.s.sol) contains the launch settings. No interactive prompt or command-line key is needed.
 
 </details>
 

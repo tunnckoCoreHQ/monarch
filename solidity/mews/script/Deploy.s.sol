@@ -17,6 +17,7 @@ contract Deploy is Script {
     using SafeCastLib for uint256;
 
     error InvalidConfiguration();
+    error InvalidDeployerKey();
 
     address internal constant SEA_DROP = 0x00005EA00Ac477B1030CE78506496e8C2dE24bf5;
     address internal constant OPENSEA_FEE_RECIPIENT = 0x0000a26b00c1F0DF003000390027140000fAa719;
@@ -25,10 +26,9 @@ contract Deploy is Script {
     bytes32 internal constant GENESIS_SEED =
         keccak256("Pixel-perfect pastel Mews, generated and rendered entirely on-chain.");
 
-    // Sign with DEPLOYER's wallet. Dates can be overridden with
+    // PRIVATE_KEY is loaded from the project's .env file. Dates can be overridden with
     // PRIVATE_START_TIME, START_TIME, END_TIME; defaults are documented below.
     // Run through `vp run --filter mews deploy --rpc-url <Base RPC>` for a dry run.
-    // Forge accepts --interactive for a private-key prompt or --account for a keystore.
     function run()
         external
         returns (MewsRenderer renderer, MewsSeaDrop mews, MintParams memory creatorStage)
@@ -62,7 +62,7 @@ contract Deploy is Script {
             restrictFeeRecipients: true
         });
 
-        vm.startBroadcast(DEPLOYER);
+        _startBroadcast();
         renderer = MewsRenderer(deployCode("MewsRenderer.sol:MewsRenderer"));
         mews = new MewsSeaDrop(GENESIS_SEED, renderer, ISeaDrop(SEA_DROP));
         mews.updateCreatorPayoutAddress(SEA_DROP, DEPLOYER);
@@ -76,5 +76,13 @@ contract Deploy is Script {
         mews.setTransferValidator(TRANSFER_VALIDATOR);
         mews.updatePublicDrop(SEA_DROP, drop);
         vm.stopBroadcast();
+    }
+
+    function _startBroadcast() internal virtual {
+        uint256 privateKey = vm.envUint("PRIVATE_KEY");
+        if (privateKey == 0 || vm.addr(privateKey) != DEPLOYER) {
+            revert InvalidDeployerKey();
+        }
+        vm.startBroadcast(privateKey);
     }
 }

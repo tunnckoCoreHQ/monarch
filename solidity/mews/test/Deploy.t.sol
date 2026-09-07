@@ -14,6 +14,13 @@ import {
 } from "../src/seadrop/SeaDropInterfaces.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
+// Exercise deployment without needing the real wallet's signing key in tests.
+contract DeploySimulation is Deploy {
+    function _startBroadcast() internal override {
+        vm.startBroadcast(DEPLOYER);
+    }
+}
+
 contract DeployTest is Test {
     address internal constant SEA_DROP = 0x00005EA00Ac477B1030CE78506496e8C2dE24bf5;
     address internal constant FEE = 0x0000a26b00c1F0DF003000390027140000fAa719;
@@ -36,10 +43,17 @@ contract DeployTest is Test {
         vm.setEnv("PRIVATE_START_TIME", "100");
         vm.setEnv("START_TIME", "200");
         vm.setEnv("END_TIME", "300");
-        Deploy deploy = Deploy(deployCode("Deploy.s.sol:Deploy"));
+        Deploy deploy = Deploy(deployCode("Deploy.t.sol:DeploySimulation"));
         (, mews, creatorStage) = deploy.run();
         creator = mews.owner();
         vm.deal(BUYER, 1 ether);
+    }
+
+    function testDeploymentRejectsWrongSigningKey() public {
+        vm.setEnv("PRIVATE_KEY", "1");
+        Deploy deploy = Deploy(deployCode("Deploy.s.sol:Deploy"));
+        vm.expectRevert(Deploy.InvalidDeployerKey.selector);
+        deploy.run();
     }
 
     function testDeployConfiguresSequentialFreeAndPublicMints() public {
