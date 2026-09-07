@@ -39,7 +39,14 @@ All 20 creator tokens are minted at deployment: five to `0x9D9db340778139774cF73
 
 ### Schedule
 
-The public mint schedule will be set and published through OpenSea Studio. The price and wallet limit above are the planned settings. Deploying the contracts does not open the public mint.
+The planned public mint schedule is below. All dates are in 2026.
+
+| Event | UTC | Eastern | Pacific |
+| --- | --- | --- | --- |
+| Public mint opens | Sep 8, 22:00 | Sep 8, 6 PM EDT | Sep 8, 3 PM PDT |
+| Public mint closes | Sep 22, 22:00 | Sep 22, 6 PM EDT | Sep 22, 3 PM PDT |
+
+The public mint lasts two weeks, unless the collection sells out first. Configure and publish these dates through OpenSea Studio, along with the planned price and wallet limit above. Deploying the contracts does not open the public mint.
 
 ## Make your own combinations
 
