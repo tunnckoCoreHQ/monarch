@@ -1,3 +1,8 @@
+import type {
+  PublicKeyCredentialRequestOptionsJSON,
+  PublicKeyCredentialCreationOptionsJSON,
+} from "@simplewebauthn/browser";
+
 export type PublicJwk =
   | { crv: "P-256" | "P-384" | "P-521"; kty: "EC"; x: string; y: string }
   | { crv: "Ed25519"; kty: "OKP"; x: string }
@@ -40,6 +45,54 @@ export function base64UrlDecode(value: string): Uint8Array<ArrayBuffer> {
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function decodeAuthenticationOptions(value: unknown): PublicKeyCredentialRequestOptionsJSON {
+  if (!isRecord(value) || typeof value.challenge !== "string") {
+    throw new Error("Triad returned invalid passkey authentication options.");
+  }
+
+  return { ...value, challenge: value.challenge };
+}
+
+export function decodeRegistrationOptions(value: unknown): PublicKeyCredentialCreationOptionsJSON {
+  if (
+    !isRecord(value) ||
+    typeof value.challenge !== "string" ||
+    !isRecord(value.rp) ||
+    typeof value.rp.name !== "string" ||
+    !isRecord(value.user) ||
+    typeof value.user.id !== "string" ||
+    typeof value.user.name !== "string" ||
+    typeof value.user.displayName !== "string" ||
+    !Array.isArray(value.pubKeyCredParams)
+  ) {
+    throw new Error("Triad returned invalid passkey registration options.");
+  }
+
+  const pubKeyCredParams = value.pubKeyCredParams.map((parameter) => {
+    if (
+      !isRecord(parameter) ||
+      parameter.type !== "public-key" ||
+      typeof parameter.alg !== "number"
+    ) {
+      throw new Error("Triad returned invalid passkey registration options.");
+    }
+    return { type: "public-key" as const, alg: parameter.alg };
+  });
+
+  return {
+    ...value,
+    challenge: value.challenge,
+    rp: { ...value.rp, name: value.rp.name },
+    user: {
+      ...value.user,
+      id: value.user.id,
+      name: value.user.name,
+      displayName: value.user.displayName,
+    },
+    pubKeyCredParams,
+  };
 }
 
 function publicKeyParameter(value: unknown, expectedBytes?: number): value is string {

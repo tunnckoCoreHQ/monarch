@@ -57,12 +57,20 @@ function createServices() {
 }
 
 function createDeviceDatabase(record: { scope: string } | null) {
-  const first = vi.fn(async () => record);
-  const bind = vi.fn(() => ({ first }));
-  const prepare = vi.fn(() => ({ bind }));
+  const first = vi.fn<D1PreparedStatement["first"]>().mockResolvedValue(record);
+  const bind = vi.fn<D1PreparedStatement["bind"]>();
+  const statement: D1PreparedStatement = { first, bind, all: vi.fn(), raw: vi.fn(), run: vi.fn() };
+  bind.mockReturnValue(statement);
+  const prepare = vi.fn<D1Database["prepare"]>().mockReturnValue(statement);
 
   return {
-    database: { prepare } as unknown as D1Database,
+    database: {
+      prepare,
+      batch: vi.fn(),
+      exec: vi.fn(),
+      withSession: vi.fn(),
+      dump: vi.fn(),
+    } satisfies D1Database,
     spies: { bind, first, prepare },
   };
 }

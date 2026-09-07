@@ -47,6 +47,9 @@ catalogs:
     '@openzeppelin/contracts':
       specifier: 5.6.1
       version: 5.6.1
+    '@oxlint/plugins':
+      specifier: 1.76.0
+      version: 1.76.0
     '@vitest/coverage-v8':
       specifier: 4.1.10
       version: 4.1.10
@@ -74,6 +77,9 @@ catalogs:
     jose:
       specifier: ^6.2.10
       version: 6.2.10
+    oxlint:
+      specifier: 1.76.0
+      version: 1.76.0
     solady:
       specifier: 0.1.26
       version: 0.1.26
@@ -125,6 +131,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:types
         version: 5.20260831.1
+      '@oxlint/plugins':
+        specifier: 'catalog:'
+        version: 1.76.0
       '@types/bun':
         specifier: catalog:types
         version: 1.4.0
@@ -134,6 +143,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.76.0(oxlint-tsgolint@7.0.2001)(vite-plus@0.2.8(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.8(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.2)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0))
       typescript:
         specifier: catalog:types
         version: 7.0.2
@@ -2184,6 +2196,10 @@ packages:
 
   '@oxlint/plugins@1.73.0':
     resolution: {integrity: sha512-OhgMQeMmZA0dcFcX4/priaJZWdFECxiClgq6mRX6aatZEcV9PbKC3P3/v8U1hVjviT1i5U+vR8lAtBV6m4FXAA==}
+    engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
+
+  '@oxlint/plugins@1.76.0':
+    resolution: {integrity: sha512-twmbsVrYAjkaOw6I2pDiYSAxVLNOV8kcqMzajJ599SpqXzea+GjDCZVad1VUqNR/4thWjM4PER5n+3/TQtTkZQ==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
   '@pagefind/darwin-arm64@1.5.2':
@@ -6876,6 +6892,8 @@ snapshots:
     optional: true
 
   '@oxlint/plugins@1.73.0': {}
+
+  '@oxlint/plugins@1.76.0': {}
 
   '@pagefind/darwin-arm64@1.5.2':
     optional: true

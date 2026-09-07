@@ -48,13 +48,13 @@ const emptySchemaResult = {
     changed_db: false,
     changes: 0,
   },
-};
+} satisfies D1Result<never>;
 
 function createSchemaIntrospectionStatement(
   expectedParameters: readonly unknown[],
 ): D1PreparedStatement {
   let boundParameters: unknown[] = [];
-  const statement = {
+  const statement: D1PreparedStatement = {
     bind: (...values: unknown[]) => {
       boundParameters = values;
 
@@ -73,12 +73,12 @@ function createSchemaIntrospectionStatement(
     first: unsupportedQuery,
     raw: unsupportedQuery,
     run: unsupportedQuery,
-  } as unknown as D1PreparedStatement;
+  };
 
   return statement;
 }
 
-export const authSchemaDatabase = {
+export const authSchemaDatabase: D1Database = {
   prepare: (query: string) => {
     if (query === schemaIntrospectionQuery) {
       return createSchemaIntrospectionStatement(schemaIntrospectionParameters);
@@ -91,4 +91,6 @@ export const authSchemaDatabase = {
   },
   batch: unsupportedQuery,
   exec: unsupportedQuery,
-} as unknown as D1Database;
+  withSession: unsupportedQuery,
+  dump: unsupportedQuery,
+};

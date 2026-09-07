@@ -89,12 +89,11 @@ export const prerender = true;
       startAuthentication,
       startRegistration,
       type AuthenticationResponseJSON,
-      type PublicKeyCredentialCreationOptionsJSON,
       type PublicKeyCredentialRequestOptionsJSON,
     } from "@simplewebauthn/browser";
     import { inspectOAuthQuery } from "../scripts/demo-protocol";
     import { passkeyPrfResult, signWithPrfWallet, walletPrfExtension } from "../scripts/prf-wallet";
-    import { isRecord, isoDate, jsonResponse, responseError } from "../utils";
+    import { decodeAuthenticationOptions, decodeRegistrationOptions, isRecord, isoDate, jsonResponse, responseError } from "../utils";
     import {
       accountSubjectWebAuthnUserId,
       passkeyWebAuthnUserId,
@@ -149,22 +148,6 @@ export const prerender = true;
       return { [property]: typeof value[property] === "string" ? value[property] : undefined };
     }
 
-    function decodeAuthenticationOptions(value: unknown): PublicKeyCredentialRequestOptionsJSON {
-      if (!isRecord(value) || typeof value.challenge !== "string") {
-        throw new Error("Triad returned invalid passkey authentication options.");
-      }
-
-      return value as unknown as PublicKeyCredentialRequestOptionsJSON;
-    }
-
-    function decodeRegistrationOptions(value: unknown): PublicKeyCredentialCreationOptionsJSON {
-      if (!isRecord(value) || typeof value.challenge !== "string" || !isRecord(value.user) || !Array.isArray(value.pubKeyCredParams)) {
-        throw new Error("Triad returned invalid passkey registration options.");
-      }
-
-      return value as unknown as PublicKeyCredentialCreationOptionsJSON;
-    }
-
     function decodeAccountPasskeys(value: unknown): AccountPasskey[] {
       if (!Array.isArray(value)) {
         throw new Error("Triad returned an invalid Passkey list.");
@@ -215,7 +198,7 @@ export const prerender = true;
 
       return {
         request_id: value.request_id,
-        options: value.options as unknown as PublicKeyCredentialRequestOptionsJSON,
+        options: decodeAuthenticationOptions(value.options),
         prf_salt: value.prf_salt,
         signing_message: value.signing_message,
         wallet_profile: value.wallet_profile,
@@ -451,6 +434,8 @@ export const prerender = true;
         throw new Error("No Ethereum wallet provider is available in this browser.");
       }
 
+      // SAFETY: The injected wallet exposes the callable request method checked above.
+      // Its result remains unknown until the calling operation validates it.
       return candidate as EthereumProvider;
     }
 
@@ -460,6 +445,7 @@ export const prerender = true;
         throw new Error("The wallet did not return a valid Ethereum address.");
       }
 
+      // SAFETY: The check above accepts only a 20-byte hex address with a 0x prefix.
       return address as `0x${string}`;
     }
 

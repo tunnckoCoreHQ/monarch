@@ -79,6 +79,23 @@ test("serves the live merged supported response with cache headers", async () =>
   expect(body.kinds).toContainEqual({ network: BASE_SEPOLIA, scheme: "upto", x402Version: 2 });
 });
 
+test.each([
+  null,
+  { kinds: [null] },
+  { kinds: [{ network: 1, scheme: "exact", x402Version: 2 }] },
+  { kinds: [], extensions: [1] },
+  { kinds: [], signers: { "eip155:*": [1] } },
+])("falls back to static support for malformed discovery metadata %j", async (metadata) => {
+  const kind = { network: ETHEREUM_MAINNET, scheme: "exact", x402Version: 2 };
+  const router = createX402Router({
+    fetch: async () => Response.json(metadata),
+    upstreams: [{ facilitatorUrl: PRIMEV_FACILITATOR_URL, name: "primev", supportedKinds: [kind] }],
+  });
+  const response = await router.fetch(new Request("https://router.example/supported"));
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toEqual({ kinds: [kind] });
+});
+
 test("falls back to static upstream support when supported fetch fails", async () => {
   const router = createX402Router({
     cacheControl: "public, max-age=3600",

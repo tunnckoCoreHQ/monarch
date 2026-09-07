@@ -5,6 +5,7 @@ import { createTriadConfiguration } from "./configuration";
 import type { TriadEnv } from "./env";
 
 const schemaEnv = {
+  // SAFETY: Schema generation constructs auth options without serving static assets.
   ASSETS: {} as Fetcher,
   DB: authSchemaDatabase,
   AUTH_ORIGIN: "http://localhost",

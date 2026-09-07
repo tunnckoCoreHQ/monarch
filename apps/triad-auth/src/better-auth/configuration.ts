@@ -48,6 +48,7 @@ function validateProviderAuthorization(
   }
 
   try {
+    // SAFETY: The validator rejects every scope outside the provider's supported set.
     validateProviderDisclosureScopes(
       provider satisfies DisclosureProvider,
       scopes as readonly DisclosureScope[],

@@ -60,7 +60,7 @@ export const prerender = true;
       type WalletProfileId,
     } from "../../better-auth/wallet/profiles";
     import { passkeyPrfResult, signWithPrfWallet, walletPrfExtension } from "../../scripts/prf-wallet";
-    import { isRecord, isoDate, jsonResponse } from "../../utils";
+    import { decodeAuthenticationOptions, isRecord, isoDate, jsonResponse } from "../../utils";
 
     interface WalletInspection {
       client: { id: string; name: string };
@@ -125,6 +125,7 @@ export const prerender = true;
               : null,
         };
       });
+      const walletProfile = WALLET_PROFILE_IDS.find((id) => id === walletRequest.wallet_profile);
       if (
         typeof client.id !== "string" ||
         typeof client.name !== "string" ||
@@ -132,7 +133,7 @@ export const prerender = true;
         typeof walletRequest.namespace !== "string" ||
         typeof walletRequest.namespace_subject !== "string" ||
         typeof walletRequest.wallet_profile !== "string" ||
-        !WALLET_PROFILE_IDS.includes(walletRequest.wallet_profile as WalletProfileId) ||
+        walletProfile === undefined ||
         typeof walletRequest.account_index !== "number" ||
         typeof walletRequest.derivation_path !== "string" ||
         typeof value.identity_source !== "string" ||
@@ -147,7 +148,7 @@ export const prerender = true;
           message: walletRequest.message,
           namespace: walletRequest.namespace,
           namespace_subject: walletRequest.namespace_subject,
-          wallet_profile: walletRequest.wallet_profile as WalletInspection["request"]["wallet_profile"],
+          wallet_profile: walletProfile,
           account_index: walletRequest.account_index,
           derivation_path: walletRequest.derivation_path,
           ...(typeof walletRequest.chain_id === "number" ? { chain_id: walletRequest.chain_id } : {}),
@@ -173,7 +174,7 @@ export const prerender = true;
 
       return {
         request_id: value.request_id,
-        options: value.options as unknown as PublicKeyCredentialRequestOptionsJSON,
+        options: decodeAuthenticationOptions(value.options),
         prf_salt: value.prf_salt,
         signing_message: value.signing_message,
         expires_at: value.expires_at,

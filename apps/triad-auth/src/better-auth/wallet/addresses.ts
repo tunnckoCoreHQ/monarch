@@ -40,6 +40,7 @@ export async function openDerivedWalletAddresses(
     throw new Error("Derived Wallet address record is invalid");
   }
 
+  // SAFETY: The record check above rejects every non-string property value.
   return record as Record<string, string>;
 }
 

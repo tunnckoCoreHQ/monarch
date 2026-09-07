@@ -268,6 +268,7 @@ export async function verifyPrfWalletSignature(
     return false;
   }
 
+  // SAFETY: The checks above enforce a hex address and a 65-byte hex signature.
   return verifyMessage({
     address: address as `0x${string}`,
     message,

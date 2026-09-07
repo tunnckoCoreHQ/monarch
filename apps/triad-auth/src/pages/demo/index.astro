@@ -164,6 +164,7 @@ export const prerender = true;
   </style>
 
   <script>
+    import { isRecord, responseError } from "../../utils";
     import {
       authorizationRequest,
       canonicalScopeRequest,
@@ -337,25 +338,22 @@ export const prerender = true;
                 client_id: deviceClientId,
               }),
         });
-        const body = (await response.json()) as {
-          access_token?: string;
-          error?: string;
-          expires_in?: number;
-          id_token?: string;
-          token_type?: string;
-        };
+        const body: unknown = await response.json();
         if (!deviceWorking) {
           return;
         }
+        if (!isRecord(body)) {
+          throw new Error("The device response is invalid.");
+        }
         if (
           response.ok &&
-          body.access_token &&
+          typeof body.access_token === "string" && body.access_token &&
           body.token_type === "Bearer" &&
           typeof body.expires_in === "number"
         ) {
           stopDevicePolling();
           if (isOAuthDevice) {
-            if (!body.id_token) {
+            if (typeof body.id_token !== "string" || !body.id_token) {
               throw new Error("The OAuth device response did not include an identity token.");
             }
 
@@ -369,7 +367,7 @@ export const prerender = true;
           return;
         }
 
-        const decision = devicePollDecision(body.error ?? "invalid_grant", deviceIntervalMs);
+        const decision = devicePollDecision(typeof body.error === "string" ? body.error : "invalid_grant", deviceIntervalMs);
         deviceIntervalMs = decision.intervalMs;
         deviceMessage(decision.message, decision.continuePolling ? "working" : "error");
         if (decision.continuePolling) {
@@ -437,23 +435,20 @@ export const prerender = true;
           signal: deviceController.signal,
           body: request,
         });
-        const body = (await response.json()) as {
-          device_code?: string;
-          error_description?: string;
-          expires_in?: number;
-          interval?: number;
-          user_code?: string;
-          verification_uri_complete?: string;
-        };
+        const body: unknown = await response.json();
         if (
           !response.ok ||
+          !isRecord(body) ||
+          typeof body.device_code !== "string" ||
           !body.device_code ||
+          typeof body.user_code !== "string" ||
           !body.user_code ||
+          typeof body.verification_uri_complete !== "string" ||
           !body.verification_uri_complete ||
           typeof body.expires_in !== "number" ||
           typeof body.interval !== "number"
         ) {
-          throw new Error(body.error_description ?? "invalid device response");
+          throw responseError(body, "invalid device response");
         }
 
         deviceCode = body.device_code;
@@ -525,9 +520,9 @@ export const prerender = true;
           application_type: "web",
         }),
       });
-      const body = (await response.json()) as { client_id?: string; error_description?: string };
-      if (!response.ok || !body.client_id) {
-        throw new Error(body.error_description ?? "Public client registration failed.");
+      const body: unknown = await response.json();
+      if (!response.ok || !isRecord(body) || typeof body.client_id !== "string" || !body.client_id) {
+        throw responseError(body, "Public client registration failed.");
       }
 
       return body.client_id;
@@ -551,9 +546,9 @@ export const prerender = true;
           scope: requestedScope,
         }),
       });
-      const body = (await response.json()) as { client_id?: string; error_description?: string };
-      if (!response.ok || !body.client_id) {
-        throw new Error(body.error_description ?? "OAuth device client registration failed.");
+      const body: unknown = await response.json();
+      if (!response.ok || !isRecord(body) || typeof body.client_id !== "string" || !body.client_id) {
+        throw responseError(body, "OAuth device client registration failed.");
       }
 
       return body.client_id;
@@ -563,12 +558,9 @@ export const prerender = true;
       const authorizationResponse = await fetch(authorization, {
         headers: { accept: "application/json" },
       });
-      const authorizationBody = (await authorizationResponse.json()) as {
-        error_description?: string;
-        url?: string;
-      };
-      if (!authorizationResponse.ok || !authorizationBody.url) {
-        throw new Error(authorizationBody.error_description ?? "Authorization could not start.");
+      const authorizationBody: unknown = await authorizationResponse.json();
+      if (!authorizationResponse.ok || !isRecord(authorizationBody) || typeof authorizationBody.url !== "string" || !authorizationBody.url) {
+        throw responseError(authorizationBody, "Authorization could not start.");
       }
 
       const signedAuthorization = new URL(authorizationBody.url, location.origin);
@@ -606,13 +598,9 @@ export const prerender = true;
           oauth_query: signedAuthorization.search.slice(1),
         }),
       });
-      const body = (await response.json()) as {
-        error_description?: string;
-        message?: string;
-        url?: string;
-      };
-      if (!response.ok || !body.url) {
-        throw new Error(body.error_description ?? body.message ?? "Provider sign-in could not start.");
+      const body: unknown = await response.json();
+      if (!response.ok || !isRecord(body) || typeof body.url !== "string" || !body.url) {
+        throw responseError(body, "Provider sign-in could not start.");
       }
 
       location.assign(body.url);

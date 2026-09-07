@@ -13,7 +13,7 @@ const encoder = new TextEncoder();
 
 export async function sha256Hex(value: string | Uint8Array): Promise<string> {
   const bytes = typeof value === "string" ? encoder.encode(value) : value;
-  const digest = await crypto.subtle.digest("SHA-256", bytes as unknown as BufferSource);
+  const digest = await crypto.subtle.digest("SHA-256", new Uint8Array(bytes));
 
   return toHex(new Uint8Array(digest)).slice(2);
 }

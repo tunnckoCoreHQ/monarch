@@ -295,7 +295,7 @@ export function createTokenComposition({
       "pubkey",
       "cosekey",
     ],
-  } as NonNullable<OAuthOptions<Scope[]>["advertisedMetadata"]> & {
+  } satisfies NonNullable<OAuthOptions<Scope[]>["advertisedMetadata"]> & {
     subject_types_supported: readonly ["pairwise"];
   };
 

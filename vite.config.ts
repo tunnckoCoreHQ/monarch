@@ -11,6 +11,7 @@ const solidityProjects = readdirSync(solidityRoot, { withFileTypes: true })
 // A project opts into extra root-level checks by defining a `check:extra` script.
 // vp inlines the filtered run as package tasks, so it executes in the project directory.
 function checkExtra(project: string): string[] {
+  // SAFETY: These are checked-in package manifests whose script values are strings.
   const manifest = JSON.parse(readFileSync(`${solidityRoot}${project}/package.json`, "utf8")) as {
     scripts?: Record<string, string>;
   };
@@ -30,6 +31,18 @@ export default defineConfig({
   },
   fmt: {
     ignorePatterns: [
+      ".agent/**",
+      ".agents/**",
+      ".claude/**",
+      ".codex/**",
+      ".continue/**",
+      ".cursor/**",
+      ".gemini/**",
+      ".opencode/**",
+      ".pi/**",
+      ".roo/**",
+      ".windsurf/**",
+      "tools/oxlint/anti-slop/**",
       "**/.astro/**",
       "**/.git/**",
       "**/.superpowers/**",
@@ -46,7 +59,23 @@ export default defineConfig({
     sortPackageJson: { sortScripts: true },
   },
   lint: {
+    jsPlugins: [
+      { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
+      { name: "anti-slop-effect", specifier: "./tools/oxlint/anti-slop/effect/index.ts" },
+    ],
     ignorePatterns: [
+      ".agent/**",
+      ".agents/**",
+      ".claude/**",
+      ".codex/**",
+      ".continue/**",
+      ".cursor/**",
+      ".gemini/**",
+      ".opencode/**",
+      ".pi/**",
+      ".roo/**",
+      ".windsurf/**",
+      "tools/oxlint/anti-slop/**",
       "**/.astro/**",
       "**/.superpowers/**",
       "**/.wrangler/**",
@@ -58,11 +87,36 @@ export default defineConfig({
       "!**/solidity/**/*",
     ],
     rules: {
+      "anti-slop/no-chained-type-assertions": "error",
+      "anti-slop/no-conditional-empty-object-spread": "off",
+      "anti-slop/no-known-value-widening": "off",
+      "anti-slop/no-module-mocking": "error",
+      "anti-slop/no-object-parameters": "error",
+      "anti-slop/no-reflect-apply": "error",
+      "anti-slop/no-reflect-get": "off",
+      "anti-slop/no-runtime-typeof": "off",
+      "anti-slop/no-shape-in-symbol-names": "off",
+      "anti-slop/no-unknown-parameters": "off",
+      "anti-slop/no-unknown-returns": "off",
+      "anti-slop/no-unknown-type-aliases": "error",
+      "anti-slop/no-unsafe-dictionary-type": "off",
+      "anti-slop/no-widen-then-assert": "error",
+      "anti-slop/require-safety-comment-for-type-assertion": "error",
       curly: ["error", "all"],
       "typescript/await-thenable": "off",
       "typescript/no-base-to-string": "off",
       "typescript/unbound-method": "off",
     },
+    overrides: [
+      {
+        files: ["**/test/**", "**/*.test.*", "**/*.spec.*"],
+        rules: { "anti-slop/require-safety-comment-for-type-assertion": "off" },
+      },
+      {
+        files: ["apps/vlt-front-worker/**"],
+        rules: { "anti-slop-effect/no-service-constructor-imports": "error" },
+      },
+    ],
     options: { typeAware: true, typeCheck: true },
   },
   run: {

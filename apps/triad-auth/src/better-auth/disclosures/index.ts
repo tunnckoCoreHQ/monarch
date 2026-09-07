@@ -118,7 +118,7 @@ export function canonicalDisclosureScopes(requested: readonly string[] = []): Di
     throw new Error("duplicate disclosure scopes are not allowed");
   }
   for (const scope of requested) {
-    if (!DISCLOSURE_SCOPES.includes(scope as DisclosureScope)) {
+    if (!DISCLOSURE_SCOPES.some((supported) => supported === scope)) {
       throw new Error(`unsupported disclosure scope: ${scope}`);
     }
   }

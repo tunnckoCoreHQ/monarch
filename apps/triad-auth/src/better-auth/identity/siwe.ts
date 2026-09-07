@@ -1,5 +1,5 @@
 import { siwe } from "better-auth/plugins";
-import { verifyMessage } from "viem";
+import { isAddress, isHex, verifyMessage } from "viem";
 
 import type { TriadEnv } from "../env";
 
@@ -12,11 +12,14 @@ export function createEthereumAuthentication(env: TriadEnv) {
     anonymous: true,
     getNonce: async () => crypto.randomUUID().replaceAll("-", ""),
     verifyMessage: async ({ message, signature, address }) => {
+      if (!isAddress(address) || !isHex(signature)) {
+        return false;
+      }
       try {
         return await verifyMessage({
-          address: address as `0x${string}`,
+          address,
           message,
-          signature: signature as `0x${string}`,
+          signature,
         });
       } catch {
         return false;

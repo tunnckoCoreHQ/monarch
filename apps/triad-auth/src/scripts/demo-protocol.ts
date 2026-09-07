@@ -1,6 +1,6 @@
 import { decodeProtectedHeader, importJWK, jwtVerify } from "jose";
 
-import { base64UrlEncode, decodePublicJwk, type PublicJwk } from "../utils";
+import { base64UrlEncode, decodePublicJwk, isRecord, type PublicJwk } from "../utils";
 
 export interface AuthorizationServerMetadata {
   authorization_endpoint: string;
@@ -123,25 +123,37 @@ async function json(response: Response): Promise<unknown> {
 }
 
 function authorizationServerMetadata(value: unknown): AuthorizationServerMetadata {
-  if (!value || typeof value !== "object") {
+  if (!isRecord(value)) {
     throw new Error("The authorization server metadata is invalid.");
   }
 
-  const candidate = value as Record<string, unknown>;
-  for (const field of [
-    "authorization_endpoint",
-    "device_authorization_endpoint",
-    "issuer",
-    "jwks_uri",
-    "registration_endpoint",
-    "token_endpoint",
-  ] as const) {
-    if (typeof candidate[field] !== "string") {
-      throw new Error("The authorization server metadata is invalid.");
-    }
+  const {
+    authorization_endpoint,
+    device_authorization_endpoint,
+    issuer,
+    jwks_uri,
+    registration_endpoint,
+    token_endpoint,
+  } = value;
+  if (
+    typeof authorization_endpoint !== "string" ||
+    typeof device_authorization_endpoint !== "string" ||
+    typeof issuer !== "string" ||
+    typeof jwks_uri !== "string" ||
+    typeof registration_endpoint !== "string" ||
+    typeof token_endpoint !== "string"
+  ) {
+    throw new Error("The authorization server metadata is invalid.");
   }
 
-  return candidate as unknown as AuthorizationServerMetadata;
+  return {
+    authorization_endpoint,
+    device_authorization_endpoint,
+    issuer,
+    jwks_uri,
+    registration_endpoint,
+    token_endpoint,
+  };
 }
 
 function absoluteHttpUrl(value: string): boolean {
@@ -159,7 +171,7 @@ function canonicalDisclosureScopes(requested: readonly string[]): DisclosureScop
   if (
     unique.size !== requested.length ||
     !unique.has("openid") ||
-    [...unique].some((scope) => !disclosureScopeOrder.includes(scope as DisclosureScope))
+    [...unique].some((scope) => !disclosureScopeOrder.some((supported) => supported === scope))
   ) {
     throw new Error("The authorization request contains unsupported scopes.");
   }
@@ -215,6 +227,7 @@ function optionalPublicJwk(payload: Record<string, unknown>): PublicJwk | undefi
 }
 
 function optionalValue<Key extends keyof VerifiedProfile>(key: Key, value: VerifiedProfile[Key]) {
+  // SAFETY: The computed property uses the same key and value type constrained by Key.
   return value === undefined ? {} : ({ [key]: value } as Pick<VerifiedProfile, Key>);
 }
 
@@ -323,7 +336,9 @@ export function canonicalScopeRequest(
   selected: readonly string[],
 ): string {
   const selectedScopes = new Set(selected);
-  if ([...selectedScopes].some((scope) => !provider.scopes.includes(scope as ProfileScope))) {
+  if (
+    [...selectedScopes].some((scope) => !provider.scopes.some((supported) => supported === scope))
+  ) {
     throw new Error("The selected provider does not support every selected scope.");
   }
 
@@ -409,17 +424,14 @@ export async function verifyIdentityToken(
   }
 
   const jwks = await json(await fetch(discovery.jwks_uri, { signal }));
-  const keys =
-    jwks && typeof jwks === "object" && Array.isArray((jwks as { keys?: unknown }).keys)
-      ? (jwks as { keys: Record<string, unknown>[] }).keys
-      : [];
+  const keys = isRecord(jwks) && Array.isArray(jwks.keys) ? jwks.keys.filter(isRecord) : [];
   const jwk = keys.find((candidate) => isIdentitySigningKey(candidate, kid));
 
   if (!jwk) {
     throw new Error("The token has no matching ES256 signing key.");
   }
 
-  const key = await importJWK(jwk as JsonWebKey, "ES256");
+  const key = await importJWK(decodePublicJwk(jwk), "ES256");
   const { payload } = await jwtVerify(token, key, {
     algorithms: ["ES256"],
     audience: clientId,

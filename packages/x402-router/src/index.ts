@@ -5,6 +5,7 @@ import {
   type X402SupportedKind,
   type X402SupportedResponse,
 } from "./defaults";
+import { isRecord } from "./utils";
 
 export type X402Endpoint = "verify" | "settle";
 
@@ -21,16 +22,7 @@ export type X402RouterOptions = {
 
 const SUPPORTED_X402_VERSION = 2;
 
-type PaymentRequirements = {
-  network?: unknown;
-  scheme?: unknown;
-  x402Version?: unknown;
-};
-
-type X402FacilitatorPayload = {
-  paymentRequirements?: PaymentRequirements;
-  x402Version?: unknown;
-};
+type X402FacilitatorPayload = Record<string, unknown>;
 
 function corsHeaders(
   init?: HeadersInit,
@@ -163,6 +155,30 @@ async function authHeadersFor(
   return headers;
 }
 
+function isSupportedResponse(value: unknown): value is X402SupportedResponse {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.kinds) &&
+    value.kinds.every(
+      (kind) =>
+        isRecord(kind) &&
+        typeof kind.network === "string" &&
+        typeof kind.scheme === "string" &&
+        typeof kind.x402Version === "number" &&
+        (kind.extra === undefined || isRecord(kind.extra)),
+    ) &&
+    (value.extensions === undefined ||
+      (Array.isArray(value.extensions) &&
+        value.extensions.every((extension) => typeof extension === "string"))) &&
+    (value.signers === undefined ||
+      (isRecord(value.signers) &&
+        Object.values(value.signers).every(
+          (signers) =>
+            Array.isArray(signers) && signers.every((signer) => typeof signer === "string"),
+        )))
+  );
+}
+
 async function fetchSupportedForUpstream(
   request: Request,
   upstream: X402RouterUpstream,
@@ -193,9 +209,9 @@ async function fetchSupportedForUpstream(
       return staticSupportedFor(upstream);
     }
 
-    const supported = (await response.json()) as X402SupportedResponse;
+    const supported: unknown = await response.json();
 
-    if (!Array.isArray(supported.kinds)) {
+    if (!isSupportedResponse(supported)) {
       return staticSupportedFor(upstream);
     }
 
@@ -260,10 +276,10 @@ function routeFor(
 
 async function parsePayload(request: Request): Promise<X402FacilitatorPayload | null> {
   try {
-    const payload = (await request.json()) as unknown;
+    const payload: unknown = await request.json();
 
-    if (payload && typeof payload === "object") {
-      return payload as X402FacilitatorPayload;
+    if (isRecord(payload)) {
+      return payload;
     }
   } catch {
     return null;
@@ -274,6 +290,9 @@ async function parsePayload(request: Request): Promise<X402FacilitatorPayload | 
 
 function paymentRoute(payload: X402FacilitatorPayload) {
   const requirements = payload.paymentRequirements;
+  if (!isRecord(requirements)) {
+    return null;
+  }
   const network = requirements?.network;
   const scheme = requirements?.scheme;
   const version = requirements?.x402Version ?? payload.x402Version;
