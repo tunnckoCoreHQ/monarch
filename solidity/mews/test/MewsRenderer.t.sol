@@ -160,7 +160,7 @@ contract MewsRendererTest is Test {
                 keccak256("Mews preview genesis"), keccak256(abi.encode(uint256(123))), uint256(1)
             )
         );
-        assertEq(renderer.render(1, seed), vm.readFile("preview/rendered/1.svg"));
+        assertEq(renderer.render(1, seed), vm.readFile("test/fixtures/Mews.svg"));
     }
 
     function testRendererFitsDeploymentSizeLimit() public {

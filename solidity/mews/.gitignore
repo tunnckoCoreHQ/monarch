@@ -3,4 +3,3 @@ dist
 *.log
 .DS_Store
 preview/rendered/*
-!preview/rendered/1.svg
