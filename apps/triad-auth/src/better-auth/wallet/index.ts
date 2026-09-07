@@ -636,19 +636,9 @@ function authenticationResponse(value: unknown): AuthenticationResponseJSON {
     invalid("Passkey assertion is required");
   }
 
-  return {
-    ...value,
-    id: value.id,
-    rawId: value.rawId,
-    type: value.type,
-    response: {
-      ...value.response,
-      clientDataJSON: value.response.clientDataJSON,
-      authenticatorData: value.response.authenticatorData,
-      signature: value.response.signature,
-    },
-    clientExtensionResults: value.clientExtensionResults,
-  };
+  // SAFETY: The required fields are checked above; WebAuthn verification checks the assertion.
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- TypeScript does not retain these field checks on Record<string, unknown>.
+  return value as unknown as AuthenticationResponseJSON;
 }
 
 function walletString(value: unknown, name: string, maximum: number): string {

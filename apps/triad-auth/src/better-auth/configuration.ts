@@ -6,7 +6,11 @@ import { jwt } from "better-auth/plugins";
 import { createClientAdmissionFragment } from "./admission";
 import type { TriadAuthConfiguration } from "./auth";
 import { createTriadDeviceAuthorization } from "./device";
-import { type DisclosureProvider, validateProviderDisclosureScopes } from "./disclosures";
+import {
+  type DisclosureProvider,
+  type DisclosureScope,
+  validateProviderDisclosureScopes,
+} from "./disclosures";
 import type { TriadEnv } from "./env";
 import {
   createIdentityConfiguration,
@@ -44,7 +48,11 @@ function validateProviderAuthorization(
   }
 
   try {
-    validateProviderDisclosureScopes(provider satisfies DisclosureProvider, scopes);
+    // SAFETY: The validator rejects every scope outside the provider's supported set.
+    validateProviderDisclosureScopes(
+      provider satisfies DisclosureProvider,
+      scopes as readonly DisclosureScope[],
+    );
   } catch (reason) {
     throw new APIError("BAD_REQUEST", {
       message: reason instanceof Error ? reason.message : "Provider does not support these scopes",

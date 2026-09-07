@@ -135,9 +135,9 @@ export function claimsForDisclosureScopes(scopes: readonly DisclosureScope[]): D
 
 export function validateProviderDisclosureScopes(
   provider: DisclosureProvider,
-  scopes: readonly string[],
+  scopes: readonly DisclosureScope[],
 ): void {
-  const supported = new Set<string>(["openid", ...PROVIDER_DISCLOSURE_SCOPES[provider]]);
+  const supported = new Set<DisclosureScope>(["openid", ...PROVIDER_DISCLOSURE_SCOPES[provider]]);
 
   for (const scope of scopes) {
     if (!supported.has(scope)) {

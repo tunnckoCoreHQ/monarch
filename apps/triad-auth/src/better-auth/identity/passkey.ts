@@ -233,7 +233,7 @@ export function createPasskeyAuthentication(
             model: "passkey",
             where: [{ field: "credentialID", value: clientData.id }],
           });
-          const storedUserId = isRecord(storedPasskey) ? storedPasskey.userId : undefined;
+          const storedUserId = Reflect.get(storedPasskey ?? {}, "userId");
           if (typeof storedUserId !== "string" || storedUserId !== accountSub) {
             rejectPasskey("Passkey user handle does not match its Triad account");
           }
@@ -278,8 +278,8 @@ export function createPasskeyAuthentication(
                 { field: "userId", value: session.user.id },
               ],
             });
-            const publicKey = isRecord(storedPasskey) ? storedPasskey.publicKey : undefined;
-            const providerSub = session.user.providerSub;
+            const publicKey = Reflect.get(storedPasskey ?? {}, "publicKey");
+            const providerSub = Reflect.get(session.user, "providerSub");
             if (
               typeof publicKey === "string" &&
               typeof providerSub === "string" &&

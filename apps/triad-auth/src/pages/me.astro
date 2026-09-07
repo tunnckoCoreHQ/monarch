@@ -425,12 +425,11 @@ export const prerender = true;
     }
 
     function ethereumProvider(): EthereumProvider {
-      const candidate = "ethereum" in window ? window.ethereum : undefined;
+      const candidate = Reflect.get(window, "ethereum");
       if (
         typeof candidate !== "object" ||
         candidate === null ||
-        !("request" in candidate) ||
-        typeof candidate.request !== "function"
+        typeof Reflect.get(candidate, "request") !== "function"
       ) {
         throw new Error("No Ethereum wallet provider is available in this browser.");
       }

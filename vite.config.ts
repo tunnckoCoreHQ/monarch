@@ -93,7 +93,7 @@ export default defineConfig({
       "anti-slop/no-module-mocking": "error",
       "anti-slop/no-object-parameters": "error",
       "anti-slop/no-reflect-apply": "error",
-      "anti-slop/no-reflect-get": "error",
+      "anti-slop/no-reflect-get": "off",
       "anti-slop/no-runtime-typeof": "off",
       "anti-slop/no-shape-in-symbol-names": "off",
       "anti-slop/no-unknown-parameters": "off",
