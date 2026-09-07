@@ -55,16 +55,16 @@ catalogs:
       version: 4.1.10
     '@x402/core':
       specifier: ^2.17.0
-      version: 2.24.0
+      version: 2.25.0
     '@x402/evm':
       specifier: ^2.17.0
-      version: 2.24.0
+      version: 2.25.0
     '@x402/hono':
       specifier: ^2.17.0
-      version: 2.24.0
+      version: 2.25.0
     '@x402/svm':
       specifier: ^2.17.0
-      version: 2.24.0
+      version: 2.25.0
     astro:
       specifier: ^7.2.0
       version: 7.2.9
@@ -77,6 +77,9 @@ catalogs:
     jose:
       specifier: ^6.2.10
       version: 6.2.10
+    oxlint:
+      specifier: 1.80.0
+      version: 1.80.0
     solady:
       specifier: 0.1.26
       version: 0.1.26
@@ -141,7 +144,7 @@ importers:
         specifier: 'catalog:'
         version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
       oxlint:
-        specifier: 1.80.0
+        specifier: 'catalog:'
         version: 1.80.0(oxlint-tsgolint@7.0.2001)(vite-plus@0.2.8(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.8(@types/node@24.13.3)(esbuild@0.28.2)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.2)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0))
       typescript:
         specifier: catalog:types
@@ -295,23 +298,23 @@ importers:
     dependencies:
       '@coinbase/cdp-sdk':
         specifier: 'catalog:'
-        version: 1.55.0(@x402/core@2.24.0)(@x402/evm@2.24.0(typescript@7.0.2))(@x402/extensions@2.25.0(typescript@7.0.2))(@x402/svm@2.24.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2)))(debug@4.4.3(supports-color@10.2.2))(typescript@7.0.2)
+        version: 1.55.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@7.0.2))(@x402/extensions@2.25.0(typescript@7.0.2))(@x402/svm@2.25.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2)))(debug@4.4.3(supports-color@10.2.2))(typescript@7.0.2)
     devDependencies:
       '@hono/node-server':
         specifier: 'catalog:'
         version: 2.1.1(hono@4.13.5)
       '@x402/core':
         specifier: 'catalog:'
-        version: 2.24.0
+        version: 2.25.0
       '@x402/evm':
         specifier: 'catalog:'
-        version: 2.24.0(typescript@7.0.2)
+        version: 2.25.0(typescript@7.0.2)
       '@x402/hono':
         specifier: 'catalog:'
-        version: 2.24.0(hono@4.13.5)(typescript@7.0.2)
+        version: 2.25.0(hono@4.13.5)(typescript@7.0.2)
       '@x402/svm':
         specifier: 'catalog:'
-        version: 2.24.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2))
+        version: 2.25.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2))
       hono:
         specifier: 'catalog:'
         version: 4.13.5
@@ -3328,32 +3331,26 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@x402/core@2.24.0':
-    resolution: {integrity: sha512-zKFbG+RgUhBXT9RcBQZGPW1cZXL9xpiTv68XSSuO1SMoobudmVvxYgP/bhoxJuAoqJjjEceeAhT4/EcA/wolrQ==}
-
   '@x402/core@2.25.0':
     resolution: {integrity: sha512-5Ys0XYz3FKutxVKoXC46R/XPT/oaAbuj7ahzrlVHwQxZJPH9u6u91IOh0ztz+7G/zYGsaXR8l3ety205QtEnUw==}
 
-  '@x402/evm@2.24.0':
-    resolution: {integrity: sha512-npH4A8P/HurcMOjIsri0VrHCb/TNbiIZgCrUrL2c+rbuwpyOtIT+6KT/yfwD53ckOttEE44yJqeK32MCvJ1Tug==}
-
-  '@x402/extensions@2.24.0':
-    resolution: {integrity: sha512-OSPywa8o46a2xIrh+nJqpvXQrppIPNimuPwf5zGRhRZEdjXfBAoSydB+rFj15rKR6Fd0iVjjqsrwUE1FnOuMvg==}
+  '@x402/evm@2.25.0':
+    resolution: {integrity: sha512-EmnL4MyGW8weEUlq0qC1uJUeoBmtp9GWGwyPl+qkC0CYItRHn748puhYAxK8GsrofscQrt63HsFCB0Gp3iEROA==}
 
   '@x402/extensions@2.25.0':
     resolution: {integrity: sha512-7gXpYoHX8CkQ4bwUfzx0GS6VQlx810+GiGOAYhwsbTtIZFt/ahz/5CjCs7qfoKYcgAWcVyvBCl9U3FYYBX01nA==}
 
-  '@x402/hono@2.24.0':
-    resolution: {integrity: sha512-E6SjHyIlvwrB+w3R4Xd74aQUtmBhLIEBYQymIKQbC254wfhm5Co+vmRWpWomVHUwZfvQN/XX9tR2V0yw9Kbtuw==}
+  '@x402/hono@2.25.0':
+    resolution: {integrity: sha512-wjDY8dW3fY0VsKLkbGWtjqxfYbgRH1lUu+vACRx6jDyy5R6rS0GnHFcenEBvhjKgH1jCzyP32anp4+tRv1S3jg==}
     peerDependencies:
-      '@x402/paywall': ^2.24.0
+      '@x402/paywall': ^2.25.0
       hono: ^4.0.0
     peerDependenciesMeta:
       '@x402/paywall':
         optional: true
 
-  '@x402/svm@2.24.0':
-    resolution: {integrity: sha512-j/2ARlUaDipqGyMuQOCbxSr+Pr7sANsksL1HXMCqYmTnNhX8BqZGIYTXNxbkNON47QKaojSdRckXwHwX0oIVrg==}
+  '@x402/svm@2.25.0':
+    resolution: {integrity: sha512-Xs0GbtmVGiDiFz6RAuJXh0DFRbbpfXqlZzZQjX2k7O78G4gX2+segX6Aw76u4wWax7Xx+HGUBj68YPuyfPQBnw==}
     peerDependencies:
       '@solana/kit': '>=5.1.0'
 
@@ -6296,7 +6293,7 @@ snapshots:
 
   '@cloudflare/workers-types@5.20260831.1': {}
 
-  '@coinbase/cdp-sdk@1.55.0(@x402/core@2.24.0)(@x402/evm@2.24.0(typescript@7.0.2))(@x402/extensions@2.25.0(typescript@7.0.2))(@x402/svm@2.24.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2)))(debug@4.4.3(supports-color@10.2.2))(typescript@7.0.2)':
+  '@coinbase/cdp-sdk@1.55.0(@x402/core@2.25.0)(@x402/evm@2.25.0(typescript@7.0.2))(@x402/extensions@2.25.0(typescript@7.0.2))(@x402/svm@2.25.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2)))(debug@4.4.3(supports-color@10.2.2))(typescript@7.0.2)':
     dependencies:
       '@solana-program/system': 0.10.0(@solana/kit@5.5.1(typescript@7.0.2))
       '@solana-program/token': 0.9.0(@solana/kit@5.5.1(typescript@7.0.2))
@@ -6311,10 +6308,10 @@ snapshots:
       viem: 2.56.0(typescript@7.0.2)(zod@3.25.76)
       zod: 3.25.76
     optionalDependencies:
-      '@x402/core': 2.24.0
-      '@x402/evm': 2.24.0(typescript@7.0.2)
+      '@x402/core': 2.25.0
+      '@x402/evm': 2.25.0(typescript@7.0.2)
       '@x402/extensions': 2.25.0(typescript@7.0.2)
-      '@x402/svm': 2.24.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2))
+      '@x402/svm': 2.25.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2))
     transitivePeerDependencies:
       - bufferutil
       - debug
@@ -8106,39 +8103,17 @@ snapshots:
   '@voidzero-dev/vite-plus-win32-x64-msvc@0.2.8':
     optional: true
 
-  '@x402/core@2.24.0':
-    dependencies:
-      zod: 3.25.76
-
   '@x402/core@2.25.0':
     dependencies:
       zod: 3.25.76
-    optional: true
 
-  '@x402/evm@2.24.0(typescript@7.0.2)':
+  '@x402/evm@2.25.0(typescript@7.0.2)':
     dependencies:
-      '@x402/core': 2.24.0
+      '@x402/core': 2.25.0
       viem: 2.56.0(typescript@7.0.2)(zod@3.25.76)
       zod: 3.25.76
     transitivePeerDependencies:
       - bufferutil
-      - typescript
-      - utf-8-validate
-
-  '@x402/extensions@2.24.0(typescript@7.0.2)':
-    dependencies:
-      '@noble/curves': 1.9.1
-      '@scure/base': 1.2.6
-      '@signinwithethereum/siwe': 4.2.0(viem@2.56.0(typescript@7.0.2)(zod@3.25.76))
-      '@x402/core': 2.24.0
-      ajv: 8.20.0
-      jose: 5.10.0
-      tweetnacl: 1.0.3
-      viem: 2.56.0(typescript@7.0.2)(zod@3.25.76)
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - bufferutil
-      - ethers
       - typescript
       - utf-8-validate
 
@@ -8158,12 +8133,11 @@ snapshots:
       - ethers
       - typescript
       - utf-8-validate
-    optional: true
 
-  '@x402/hono@2.24.0(hono@4.13.5)(typescript@7.0.2)':
+  '@x402/hono@2.25.0(hono@4.13.5)(typescript@7.0.2)':
     dependencies:
-      '@x402/core': 2.24.0
-      '@x402/extensions': 2.24.0(typescript@7.0.2)
+      '@x402/core': 2.25.0
+      '@x402/extensions': 2.25.0(typescript@7.0.2)
       hono: 4.13.5
     transitivePeerDependencies:
       - bufferutil
@@ -8171,13 +8145,14 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@x402/svm@2.24.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2))':
+  '@x402/svm@2.25.0(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2))':
     dependencies:
+      '@noble/hashes': 1.8.0
       '@solana-program/compute-budget': 0.11.0(@solana/kit@5.5.1(typescript@7.0.2))
       '@solana-program/token': 0.9.0(@solana/kit@5.5.1(typescript@7.0.2))
       '@solana-program/token-2022': 0.6.1(@solana/kit@5.5.1(typescript@7.0.2))(@solana/sysvars@5.5.1(typescript@7.0.2))
       '@solana/kit': 5.5.1(typescript@7.0.2)
-      '@x402/core': 2.24.0
+      '@x402/core': 2.25.0
     transitivePeerDependencies:
       - '@solana/sysvars'
 
