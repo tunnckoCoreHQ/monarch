@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mews - Contract preview</title>
+    <style>
+      :root { color-scheme: light; background: oklch(0.97 0.012 85); color: oklch(0.66 0.04 300); font-family: ui-monospace, monospace; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { max-width: 1488px; margin: auto; padding: 32px 16px; }
+      header { margin-bottom: 32px; display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+      h1 { margin: 0; font: 800 48px/1 system-ui, sans-serif; letter-spacing: -0.06em; }
+      header p { margin: 0; font-size: 12px; }
+      section { display: grid; grid-template-columns: repeat(auto-fit, 160px); justify-content: center; gap: 24px 16px; }
+      nav { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 24px; font-size: 12px; }
+      section + nav { margin-top: 24px; margin-bottom: 0; }
+      button { padding: 8px 12px; border: 1px solid currentColor; border-radius: 4px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+      button:disabled { opacity: 0.4; cursor: default; }
+      button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+      figure { margin: 0; width: 160px; }
+      svg { display: block; width: 160px; height: 160px; image-rendering: pixelated; }
+      figcaption { padding-top: 10px; font-size: 12px; }
+      @media (min-width: 900px) {
+        main { padding: 48px 32px; }
+        h1 { font-size: 64px; }
+        section { grid-template-columns: repeat(auto-fit, 256px); gap: 32px 24px; }
+        figure, svg { width: 256px; }
+        svg { height: 256px; }
+      }
+      @media (max-width: 367px) {
+        main { padding-inline: 8px; }
+        section { grid-template-columns: repeat(auto-fit, 144px); gap: 24px 8px; }
+        figure, svg { width: 144px; }
+        svg { height: 144px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header><h1>Mews</h1><p>1,000 cats</p></header>
+      <nav aria-label="Gallery pages, top">
+        <button data-page="previous" type="button">Previous</button>
+        <output data-page-range aria-live="polite"></output>
+        <button data-page="next" type="button">Next</button>
+      </nav>
+      <section id="gallery" aria-label="Mews cats"></section>
+      <nav aria-label="Gallery pages, bottom">
+        <button data-page="previous" type="button">Previous</button>
+        <output data-page-range></output>
+        <button data-page="next" type="button">Next</button>
+      </nav>
+      <template id="cats">
+{{cats}}
+      </template>
+      <script>
+        const cats = Array.from(document.getElementById("cats").content.children);
+        const gallery = document.getElementById("gallery");
+        const previous = document.querySelectorAll("[data-page=previous]");
+        const next = document.querySelectorAll("[data-page=next]");
+        const ranges = document.querySelectorAll("[data-page-range]");
+        const pageSize = 36;
+        let page = 0;
+
+        function renderPage() {
+          const start = page * pageSize;
+          const end = Math.min(start + pageSize, cats.length);
+          gallery.replaceChildren(...cats.slice(start, end).map((cat) => cat.cloneNode(true)));
+          for (const button of previous) {
+            button.disabled = page === 0;
+          }
+          for (const button of next) {
+            button.disabled = end === cats.length;
+          }
+          for (const range of ranges) {
+            range.textContent = `${start + 1}–${end} of ${cats.length.toLocaleString()}`;
+          }
+        }
+
+        for (const button of previous) {
+          button.addEventListener("click", () => {
+            page -= 1;
+            renderPage();
+          });
+        }
+        for (const button of next) {
+          button.addEventListener("click", () => {
+            page += 1;
+            renderPage();
+          });
+        }
+        renderPage();
+      </script>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 128" width="480" height="128" shape-rendering="crispEdges">
+  <defs>
+    <g id="neko">
+      <rect x="8" y="0" width="8" height="8" fill="var(--b)"/>
+      <rect x="72" y="0" width="8" height="8" fill="var(--b)"/>
+      <rect x="0" y="8" width="24" height="8" fill="var(--b)"/>
+      <rect x="64" y="8" width="24" height="8" fill="var(--b)"/>
+      <rect x="0" y="16" width="8" height="8" fill="var(--b)"/>
+      <rect x="16" y="16" width="8" height="8" fill="var(--b)"/>
+      <rect x="64" y="16" width="8" height="8" fill="var(--b)"/>
+      <rect x="80" y="16" width="8" height="8" fill="var(--b)"/>
+      <rect x="0" y="24" width="88" height="8" fill="var(--b)"/>
+      <rect x="0" y="32" width="88" height="8" fill="var(--b)"/>
+      <rect x="0" y="40" width="16" height="8" fill="var(--b)"/>
+      <rect x="24" y="40" width="40" height="8" fill="var(--b)"/>
+      <rect x="72" y="40" width="16" height="8" fill="var(--b)"/>
+      <rect x="0" y="48" width="8" height="8" fill="var(--b)"/>
+      <rect x="16" y="48" width="24" height="8" fill="var(--b)"/>
+      <rect x="48" y="48" width="24" height="8" fill="var(--b)"/>
+      <rect x="80" y="48" width="8" height="8" fill="var(--b)"/>
+      <rect x="0" y="56" width="88" height="8" fill="var(--b)"/>
+      <rect x="8" y="64" width="64" height="8" fill="var(--b)"/>
+      <rect x="88" y="64" width="8" height="8" fill="var(--b)"/>
+      <rect x="8" y="72" width="64" height="8" fill="var(--b)"/>
+      <rect x="88" y="72" width="8" height="8" fill="var(--b)"/>
+      <rect x="8" y="80" width="64" height="8" fill="var(--b)"/>
+      <rect x="88" y="80" width="8" height="8" fill="var(--b)"/>
+      <rect x="8" y="88" width="24" height="8" fill="var(--b)"/>
+      <rect x="40" y="88" width="32" height="8" fill="var(--b)"/>
+      <rect x="72" y="64" width="8" height="8" fill="var(--s)"/>
+      <rect x="72" y="72" width="8" height="8" fill="var(--s)"/>
+      <rect x="72" y="80" width="8" height="8" fill="var(--s)"/>
+      <rect x="32" y="88" width="8" height="8" fill="var(--s)"/>
+      <rect x="72" y="88" width="24" height="8" fill="var(--s)"/>
+      <rect x="8" y="16" width="8" height="8" fill="var(--p)"/>
+      <rect x="72" y="16" width="8" height="8" fill="var(--p)"/>
+      <rect x="8" y="48" width="8" height="8" fill="var(--p)"/>
+      <rect x="40" y="48" width="8" height="8" fill="var(--p)"/>
+      <rect x="72" y="48" width="8" height="8" fill="var(--p)"/>
+      <rect x="16" y="40" width="8" height="8" fill="var(--e)"/>
+      <rect x="64" y="40" width="8" height="8" fill="var(--e)"/>
+    </g>
+  </defs>
+
+  <rect x="0" y="112" width="480" height="16" fill="#7E8F63"/>
+
+  <use href="#neko" transform="translate(12,16)" style="--b:#F2E3C9; --s:#D3B893; --p:#F2A0B5; --e:#3B3230"/>
+  <use href="#neko" transform="translate(228,16) scale(-1,1)" style="--b:#E89A4F; --s:#BF7231; --p:#F2A0B5; --e:#3B3230"/>
+  <use href="#neko" transform="translate(252,16)" style="--b:#9FA8B5; --s:#77808D; --p:#F2A0B5; --e:#3B3230"/>
+  <use href="#neko" transform="translate(372,16)" style="--b:#46445A; --s:#333147; --p:#E58BA4; --e:#D8E04A"/>
+</svg>
