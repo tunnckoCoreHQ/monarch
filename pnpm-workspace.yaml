@@ -37,6 +37,7 @@ catalogs:
     erc721a: 4.3.0
     viem: 2.56.0
     jose: ^6.2.10
+    "@oxlint/plugins": 1.76.0
   types:
     "@cloudflare/workers-types": 5.20260831.1
     "@types/bun": ^1.3.14

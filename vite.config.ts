@@ -30,6 +30,18 @@ export default defineConfig({
   },
   fmt: {
     ignorePatterns: [
+      ".agent/**",
+      ".agents/**",
+      ".claude/**",
+      ".codex/**",
+      ".continue/**",
+      ".cursor/**",
+      ".gemini/**",
+      ".opencode/**",
+      ".pi/**",
+      ".roo/**",
+      ".windsurf/**",
+      "tools/oxlint/anti-slop/**",
       "**/.astro/**",
       "**/.git/**",
       "**/.superpowers/**",
@@ -46,7 +58,26 @@ export default defineConfig({
     sortPackageJson: { sortScripts: true },
   },
   lint: {
+    // Disabled until the anti-slop rules and existing findings have been reviewed.
+    /*
+    jsPlugins: [
+      { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
+      { name: "anti-slop-effect", specifier: "./tools/oxlint/anti-slop/effect/index.ts" },
+    ],
+    */
     ignorePatterns: [
+      ".agent/**",
+      ".agents/**",
+      ".claude/**",
+      ".codex/**",
+      ".continue/**",
+      ".cursor/**",
+      ".gemini/**",
+      ".opencode/**",
+      ".pi/**",
+      ".roo/**",
+      ".windsurf/**",
+      "tools/oxlint/anti-slop/**",
       "**/.astro/**",
       "**/.superpowers/**",
       "**/.wrangler/**",
@@ -58,6 +89,24 @@ export default defineConfig({
       "!**/solidity/**/*",
     ],
     rules: {
+      /*
+      "anti-slop/no-chained-type-assertions": "error",
+      "anti-slop/no-conditional-empty-object-spread": "error",
+      "anti-slop/no-known-value-widening": "error",
+      "anti-slop/no-module-mocking": "error",
+      "anti-slop/no-object-parameters": "error",
+      "anti-slop/no-reflect-apply": "error",
+      "anti-slop/no-reflect-get": "error",
+      "anti-slop/no-runtime-typeof": "error",
+      "anti-slop/no-shape-in-symbol-names": "error",
+      "anti-slop/no-unknown-parameters": "error",
+      "anti-slop/no-unknown-returns": "error",
+      "anti-slop/no-unknown-type-aliases": "error",
+      "anti-slop/no-unsafe-dictionary-type": "error",
+      "anti-slop/no-widen-then-assert": "error",
+      "anti-slop/require-safety-comment-for-type-assertion": "error",
+      "anti-slop-effect/no-service-constructor-imports": "error",
+      */
       curly: ["error", "all"],
       "typescript/await-thenable": "off",
       "typescript/no-base-to-string": "off",
