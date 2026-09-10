@@ -3,9 +3,6 @@ pragma solidity ^0.8.30;
 
 /// @notice Canonical raw-trait resolution and presentation for Neko PFP tokens.
 interface INekoGenerator {
-    error InvalidTokenId();
-    error SeedSamplingExhausted(uint256 tokenId, uint8 desiredClass);
-
     struct RawTraits {
         uint8 sky;
         uint8 head;
@@ -32,8 +29,6 @@ interface INekoGenerator {
     }
 
     function deriveRawTraits(uint256 seed) external view returns (RawTraits memory);
-
-    function deriveTokenSeed(bytes32 genesisSeed, uint256 tokenId) external view returns (uint256);
 
     function generate(uint256 seed) external view returns (TokenData memory);
 

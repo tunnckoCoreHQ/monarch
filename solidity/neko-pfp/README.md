@@ -7,8 +7,8 @@ Fully on-chain generative 0xNeko SVG cat PFPs. Fixed supply 4663, deterministic 
 - `INekoGenerator`. Trait, token-data, and rendering interface.
 - `NekoBase`. Errors, limits, keccak domains, trait math, and visible/matrix/invisible trait generation.
 - `NekoRenderer`. SVG layers, metadata attributes, palette, toy lookup.
-- `NekoGenerator`. Pure core. Token-seed derivation, trait generation, validation, trait combination, SVG and JSON rendering.
-- `NekoArt`. The bridge between rendering and token state, like Mews's `MewsArt`. Holds the immutable renderer and seed commitment, token metadata, reveal, and fusion with on-chain ancestry. It enforces the lifetime mint cap.
+- `NekoGenerator`. Pure core. Trait generation, validation, trait combination, SVG and JSON rendering.
+- `NekoArt`. The bridge between rendering and token state, like Mews's `MewsArt`. Holds the immutable renderer and seed commitment, quota-aware deterministic token seeds (keyed 13-bit Feistel plus rejection sampling), token metadata, reveal, and fusion with on-chain ancestry. It enforces the lifetime mint cap.
 - `NekoPFP`. The SeaDrop-facing NFT. Holds ownership, one immutable SeaDrop address, collection metadata, and royalties. Its mint and reveal entrypoints call the bridge.
 - `seadrop/SeaDropInterfaces.sol`. The same SeaDrop ABI declarations as Mews. The SeaDrop interface ID is `0x1890fe8e`; the Studio `multiConfigure` selector is `0x911f456b`.
 
@@ -20,7 +20,7 @@ Supply is fixed at 4663. A nonzero `maxSupply` in `multiConfigure` must equal 46
 
 The NFT retains `setRoyaltyInfo`, `royaltyInfo`, `royaltyAddress`, and `royaltyBasisPoints`. Reveal emits `BatchMetadataUpdate`; fusion emits `MetadataUpdate` for the survivor, and the NFT advertises [ERC-4906](https://eips.ethereum.org/EIPS/eip-4906).
 
-The bridge exposes `renderer`, `tokenSeed`, `tokenURI`, and `tokenData`. Both the bridge and generator expose `generate(seed)` and `generate(rawTraits)`, which return traits and metadata values for an unfused cat. The generator also exposes `deriveTokenSeed(genesisSeed, tokenId)`. The existing seed algorithm, artwork, reveal, and fusion rules are preserved. The SeaDrop integration tests use the same deployed bytecode fixture as Mews.
+The bridge exposes `renderer`, `deriveTokenSeed`, `tokenSeed`, `tokenURI`, and `tokenData`. Both the bridge and generator expose `generate(seed)` and `generate(rawTraits)`, which return traits and metadata values for an unfused cat. The existing seed algorithm, artwork, reveal, and fusion rules are preserved. The SeaDrop integration tests use the same deployed bytecode fixture as Mews.
 
 ## Build and test
 
