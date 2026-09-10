@@ -7,20 +7,20 @@ Fully on-chain generative 0xNeko SVG cat PFPs. Fixed supply 4663, deterministic 
 - `INekoGenerator`. Trait, token-data, and rendering interface.
 - `NekoBase`. Errors, limits, keccak domains, trait math, and visible/matrix/invisible trait generation.
 - `NekoRenderer`. SVG layers, metadata attributes, palette, toy lookup.
-- `NekoGenerator`. Deployed generator. Trait derivation, validation, fusion combination, SVG and JSON rendering.
+- `NekoGenerator`. Pure core. Token-seed derivation, trait generation, validation, trait combination, SVG and JSON rendering.
 - `NekoArt`. The bridge between rendering and token state, like Mews's `MewsArt`. Holds the immutable renderer and seed commitment, token metadata, reveal, and fusion with on-chain ancestry. It enforces the lifetime mint cap.
-- `NekoPFP`. The SeaDrop-facing NFT, matching `MewsSeaDrop`. Holds ownership, one immutable SeaDrop address, collection metadata, royalties, and the transfer validator. Its mint and reveal entrypoints call the bridge.
-- `seadrop/SeaDropInterfaces.sol` and `TransferValidation.sol`. The same interface declarations as Mews. The SeaDrop interface ID is `0x1890fe8e`; the Studio `multiConfigure` selector is `0x911f456b`.
+- `NekoPFP`. The SeaDrop-facing NFT. Holds ownership, one immutable SeaDrop address, collection metadata, and royalties. Its mint and reveal entrypoints call the bridge.
+- `seadrop/SeaDropInterfaces.sol`. The same SeaDrop ABI declarations as Mews. The SeaDrop interface ID is `0x1890fe8e`; the Studio `multiConfigure` selector is `0x911f456b`.
 
 Dependencies are npm-only: `erc721a`, `solady`, and `viem` (allowlist tooling). No submodules, no vendored code. The SeaDrop protocol is not imported. It lives on-chain and receives configuration through `multiConfigure`.
 
-The `multiConfigure` method follows Mews. It supports public drops, drop URIs, allowlists, payouts, fee recipients, and payers. Empty drop fields skip their update. Every call sets Neko's built-in collection profile and ignores the supplied `contractURI`; the owner can override it separately with `setContractURI`. Base URI, provenance changes, token gating, and signed-mint fields are ignored.
+The `multiConfigure` method supports public drops, collection and drop URIs, allowlists, payouts, fee recipients, and payers. Empty fields skip their update. The owner can also change the collection profile with `setContractURI`. Base URI, provenance changes, token gating, and signed-mint fields are ignored.
 
 Supply is fixed at 4663. A nonzero `maxSupply` in `multiConfigure` must equal 4663 and emits `MaxSupplyUpdated`; zero skips that announcement. The owner can announce it separately with `setMaxSupply(4663)`. Deployment emits `AllowedSeaDropUpdated`, `SeaDropTokenDeployed`, and `MaxSupplyUpdated` for discovery and indexing.
 
-The NFT exposes Mews's royalty and transfer-validator methods: `setRoyaltyInfo`, `royaltyInfo`, `royaltyAddress`, `royaltyBasisPoints`, `setTransferValidator`, `getTransferValidator`, and `getTransferValidationFunction`. Transfers use the configured validator. Minting and fusion burns skip it. Reveal emits `BatchMetadataUpdate`; fusion emits `MetadataUpdate` for the survivor, and the NFT advertises [ERC-4906](https://eips.ethereum.org/EIPS/eip-4906).
+The NFT retains `setRoyaltyInfo`, `royaltyInfo`, `royaltyAddress`, and `royaltyBasisPoints`. Reveal emits `BatchMetadataUpdate`; fusion emits `MetadataUpdate` for the survivor, and the NFT advertises [ERC-4906](https://eips.ethereum.org/EIPS/eip-4906).
 
-The bridge exposes `renderer`, `tokenSeed`, `tokenURI`, and `tokenData`. The pure generator's methods and artwork are unchanged. The SeaDrop integration tests use the same deployed bytecode fixtures as Mews.
+The bridge exposes `renderer`, `tokenSeed`, `tokenURI`, and `tokenData`. Both the bridge and generator expose `generate(seed)` and `generate(rawTraits)`, which return traits and metadata values for an unfused cat. The generator also exposes `deriveTokenSeed(genesisSeed, tokenId)`. The existing seed algorithm, artwork, reveal, and fusion rules are preserved. The SeaDrop integration tests use the same deployed bytecode fixture as Mews.
 
 ## Build and test
 
@@ -53,7 +53,7 @@ Two phases. Allowlist first, public later.
 
 One leaf per allowlisted wallet: 3 free mints, claimable in one tx or several. SeaDrop caps are lifetime, not per stage, so the public cap includes the free mints: an allowlisted wallet that claimed all 3 can buy up to 7 more in public, everyone else up to 10.
 
-Deployment leaves royalties at zero and the transfer validator unset. The owner can configure them through the same methods as Mews.
+Royalties default to zero. The owner can configure them with `setRoyaltyInfo`.
 
 OpenSea takes 10% of primary mint proceeds (`feeBps = 1000` in every stage, `restrictFeeRecipients = true`, fee wallet `0x0000a26b00c1F0DF003000390027140000fAa719`, "OpenSea: Fees 3"). Free mints pay nothing, so the fee only touches the paid stages.
 
@@ -75,7 +75,7 @@ The commitment is exposed through the SeaDrop-standard `provenanceHash` getter a
 
 ### 2. Deploy
 
-One script, three transactions: deploy `NekoGenerator`, deploy `NekoPFP(commitment, renderer, seaDrop)`, then configure the payout address and OpenSea's fee wallet together through `multiConfigure`. That configuration call also sets the collection profile. The constructor leaves the profile empty, like Mews.
+One script, three transactions: deploy `NekoGenerator`, deploy `NekoPFP(commitment, renderer, seaDrop)`, then configure the payout address and OpenSea's fee wallet together through `multiConfigure`. The constructor sets Neko's initial collection metadata.
 
 ```
 GENESIS_SEED_COMMITMENT=$COMMITMENT PAYOUT_ADDRESS=<payout> \

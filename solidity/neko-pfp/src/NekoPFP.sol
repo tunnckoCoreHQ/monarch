@@ -3,10 +3,8 @@ pragma solidity ^0.8.30;
 
 import {Ownable} from "solady/auth/Ownable.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {Base64} from "solady/utils/Base64.sol";
 import {NekoArt} from "./NekoArt.sol";
 import {INekoGenerator} from "./INekoGenerator.sol";
-import {ICreatorToken, ITransferValidator} from "./seadrop/TransferValidation.sol";
 import {
     ISeaDrop,
     INonFungibleSeaDropToken,
@@ -15,15 +13,13 @@ import {
     MultiConfigureStruct
 } from "./seadrop/SeaDropInterfaces.sol";
 
-contract NekoPFP is NekoArt, Ownable, IERC2981, ICreatorToken {
+contract NekoPFP is NekoArt, Ownable, IERC2981 {
     error InvalidSeaDrop();
-    error InvalidTransferValidator();
     error FixedMaxSupply();
     ISeaDrop public immutable seaDrop;
     string public contractURI;
 
     ISeaDropTokenContractMetadata.RoyaltyInfo private _royalty;
-    address private _transferValidator;
 
     event SeaDropTokenDeployed();
     event RoyaltyInfoUpdated(address receiver, uint256 bps);
@@ -43,6 +39,16 @@ contract NekoPFP is NekoArt, Ownable, IERC2981, ICreatorToken {
         emit AllowedSeaDropUpdated(allowedSeaDrop);
         emit SeaDropTokenDeployed();
         emit ISeaDropTokenContractMetadata.MaxSupplyUpdated(MAX_SUPPLY);
+        emit ISeaDropTokenContractMetadata.ProvenanceHashUpdated(bytes32(0), genesisSeedCommitment);
+        setContractURI(
+            string.concat(
+                'data:application/json;utf8,{"name":"',
+                name(),
+                '","description":"Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"',
+                renderer_.generateUnrevealedImageURI(),
+                '"}'
+            )
+        );
     }
 
     function reveal(bytes32 seed) external onlyOwner {
@@ -113,42 +119,14 @@ contract NekoPFP is NekoArt, Ownable, IERC2981, ICreatorToken {
         );
     }
 
-    function getTransferValidator() external view returns (address) {
-        return _transferValidator;
-    }
-
-    function getTransferValidationFunction() external pure returns (bytes4, bool) {
-        return (ITransferValidator.validateTransfer.selector, true);
-    }
-
-    function setTransferValidator(address validator) external onlyOwner {
-        if (validator != address(0) && validator.code.length == 0) {
-            revert InvalidTransferValidator();
-        }
-        address previous = _transferValidator;
-        _transferValidator = validator;
-        emit TransferValidatorUpdated(previous, validator);
-    }
-
     function multiConfigure(MultiConfigureStruct calldata config) external onlyOwner {
         _checkSeaDrop(config.seaDropImpl);
         if (config.maxSupply != 0) {
             setMaxSupply(config.maxSupply);
         }
-        setContractURI(
-            string.concat(
-                "data:application/json;base64,",
-                Base64.encode(
-                    bytes(
-                        string.concat(
-                            '{"name":"0xNeko PFP","symbol":"NEKO","description":"Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"',
-                            renderer.generateUnrevealedImageURI(),
-                            '"}'
-                        )
-                    )
-                )
-            )
-        );
+        if (bytes(config.contractURI).length != 0) {
+            setContractURI(config.contractURI);
+        }
         if (config.publicDrop.startTime != 0 || config.publicDrop.endTime != 0) {
             seaDrop.updatePublicDrop(config.publicDrop);
         }
@@ -178,23 +156,8 @@ contract NekoPFP is NekoArt, Ownable, IERC2981, ICreatorToken {
     function supportsInterface(bytes4 interfaceId) public view override returns (bool) {
         // SeaDrop checks this compatibility ID before accepting drop configuration.
         return interfaceId == type(INonFungibleSeaDropToken).interfaceId
-            || interfaceId == type(IERC2981).interfaceId
-            || interfaceId == type(ICreatorToken).interfaceId || interfaceId == 0x49064906
+            || interfaceId == type(IERC2981).interfaceId || interfaceId == 0x49064906
             || super.supportsInterface(interfaceId);
-    }
-
-    function _beforeTokenTransfers(address from, address to, uint256 tokenId, uint256 quantity)
-        internal
-        override
-    {
-        super._beforeTokenTransfers(from, to, tokenId, quantity);
-        if (from == address(0) || to == address(0) || _transferValidator == address(0)) {
-            return;
-        }
-        for (uint256 i; i < quantity; ++i) {
-            ITransferValidator(_transferValidator)
-                .validateTransfer(msg.sender, from, to, tokenId + i);
-        }
     }
 
     function _checkSeaDrop(address drop) private view {

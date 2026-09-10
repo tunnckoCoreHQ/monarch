@@ -2,11 +2,22 @@
 pragma solidity ^0.8.30;
 
 import {LibString} from "solady/utils/LibString.sol";
+import {LibBytes} from "solady/utils/LibBytes.sol";
 import {NekoBase} from "./NekoBase.sol";
 
 /// @notice SVG scene composition, individual Neko art layers, metadata attributes,
 ///         palette labels, and toy lookup.
 abstract contract NekoRenderer is NekoBase {
+    string private constant BASE_COLORS = "oklch(0.63 0.3 25)" "oklch(0.72 0.28 55)"
+        "oklch(0.87 0.22 95)" "oklch(0.84 0.27 120)" "oklch(0.79 0.3 145)" "oklch(0.75 0.25 170)"
+        "oklch(0.7 0.21 180)" "oklch(0.78 0.2 200)" "oklch(0.8 0.18 220)" "oklch(0.55 0.33 260)"
+        "oklch(0.5 0.31 275)" "oklch(0.6 0.32 295)" "oklch(0.55 0.3 310)" "oklch(0.65 0.34 330)"
+        "oklch(0.75 0.24 5)" "oklch(0.68 0.26 15)" "oklch(0 0 0)" "oklch(1 0 0)" "oklch(0.7 0 0)"
+        "oklch(0.5 0.03 255)";
+    // Exclusive byte offsets into BASE_COLORS, stored as uint16 values.
+    bytes private constant BASE_COLOR_OFFSETS =
+        hex"001200250038004c005f00730086009900ac00c000d300e600f9010d011f0132013e014a0158016b";
+
     function _renderSVG(RawTraits memory traits, uint256 fusionMass)
         internal
         pure
@@ -301,27 +312,13 @@ abstract contract NekoRenderer is NekoBase {
     }
 
     function _baseColor(uint256 index) internal pure returns (string memory) {
-        if (index == 0) return "oklch(0.63 0.3 25)";
-        if (index == 1) return "oklch(0.72 0.28 55)";
-        if (index == 2) return "oklch(0.87 0.22 95)";
-        if (index == 3) return "oklch(0.84 0.27 120)";
-        if (index == 4) return "oklch(0.79 0.3 145)";
-        if (index == 5) return "oklch(0.75 0.25 170)";
-        if (index == 6) return "oklch(0.7 0.21 180)";
-        if (index == 7) return "oklch(0.78 0.2 200)";
-        if (index == 8) return "oklch(0.8 0.18 220)";
-        if (index == 9) return "oklch(0.55 0.33 260)";
-        if (index == 10) return "oklch(0.5 0.31 275)";
-        if (index == 11) return "oklch(0.6 0.32 295)";
-        if (index == 12) return "oklch(0.55 0.3 310)";
-        if (index == 13) return "oklch(0.65 0.34 330)";
-        if (index == 14) return "oklch(0.75 0.24 5)";
-        if (index == 15) return "oklch(0.68 0.26 15)";
-        if (index == BLACK) return "oklch(0 0 0)";
-        if (index == WHITE) return "oklch(1 0 0)";
-        if (index == GRAY) return "oklch(0.7 0 0)";
-
-        return "oklch(0.5 0.03 255)";
+        if (index >= COLOR_COUNT) {
+            index = SLATE;
+        }
+        uint256 end = uint256(LibBytes.load(BASE_COLOR_OFFSETS, index * 2)) >> 240;
+        uint256 start =
+            index == 0 ? 0 : uint256(LibBytes.load(BASE_COLOR_OFFSETS, (index - 1) * 2)) >> 240;
+        return LibString.slice(BASE_COLORS, start, end);
     }
 
     function _faceColor(uint256 index) internal pure returns (string memory) {
@@ -427,32 +424,16 @@ abstract contract NekoRenderer is NekoBase {
                 continue;
             }
             if (current == index) {
-                return _slice(names, start, i - start);
+                return LibString.slice(string(names), start, i);
             }
             ++current;
             start = i + 1;
         }
 
-        return _slice(names, start, names.length - start);
+        return LibString.slice(string(names), start);
     }
 
     function _toyGlyph(uint256 index) internal pure returns (string memory) {
-        bytes memory glyphs = bytes(TOY_GLYPHS);
-
-        return _slice(glyphs, index * 4, 4);
-    }
-
-    function _slice(bytes memory source, uint256 start, uint256 length)
-        internal
-        pure
-        returns (string memory)
-    {
-        bytes memory result = new bytes(length);
-
-        for (uint256 i; i < length; ++i) {
-            result[i] = source[start + i];
-        }
-
-        return string(result);
+        return LibString.slice(TOY_GLYPHS, index * 4, (index + 1) * 4);
     }
 }

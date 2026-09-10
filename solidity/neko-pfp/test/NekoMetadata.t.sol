@@ -19,7 +19,14 @@ contract NekoMetadataTest is NekoTestBase {
         assertEq(neko.maxSupply(), INTENDED_SUPPLY, "max supply mismatch");
         assertEq(neko.MAX_SUPPLY(), INTENDED_SUPPLY, "intended supply mismatch");
         assertEq(neko.PRIMARY_COLOR_QUOTA(), PRIMARY_COLOR_QUOTA, "primary color quota mismatch");
-        assertEq(neko.contractURI(), "");
+        assertEq(
+            neko.contractURI(),
+            string.concat(
+                'data:application/json;utf8,{"name":"0xNeko PFP","description":"Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"',
+                generator.generateUnrevealedImageURI(),
+                '"}'
+            )
+        );
     }
 
     function testUnrevealedTokenUsesPlaceholderAndHasNoSeed() public {

@@ -16,10 +16,17 @@ contract MockNekoGenerator is INekoGenerator {
     mapping(uint256 => Profile) private _profiles;
     mapping(uint256 => bool) private _hasTraits;
     mapping(uint256 => RawTraits) private _traits;
-    Profile private _forcedProfile;
 
-    function setForcedProfile(bool enabled, bool matrix, bool invisible, uint8 bodyIndex) external {
-        _forcedProfile = Profile(enabled, matrix, invisible, bodyIndex);
+    function deriveTokenSeed(bytes32 seed, uint256 tokenId) external pure returns (uint256) {
+        return uint256(keccak256(abi.encode(seed, tokenId)));
+    }
+
+    function generate(uint256 seed) external view returns (TokenData memory) {
+        return resolveTokenData(deriveRawTraits(seed), 1);
+    }
+
+    function generate(RawTraits calldata traits) external pure returns (TokenData memory) {
+        return resolveTokenData(traits, 1);
     }
 
     function setRawTraits(uint256 seed, RawTraits calldata traits) external {
@@ -28,7 +35,7 @@ contract MockNekoGenerator is INekoGenerator {
         _profiles[seed] = Profile(true, traits.matrix, traits.invisible, traits.body);
     }
 
-    function deriveRawTraits(uint256 seed) external view returns (RawTraits memory) {
+    function deriveRawTraits(uint256 seed) public view returns (RawTraits memory) {
         if (_hasTraits[seed]) {
             return _traits[seed];
         }
@@ -52,8 +59,8 @@ contract MockNekoGenerator is INekoGenerator {
         return traits;
     }
 
-    function resolveTokenData(RawTraits calldata traits, uint256 fusionMass)
-        external
+    function resolveTokenData(RawTraits memory traits, uint256 fusionMass)
+        public
         pure
         returns (TokenData memory data)
     {
@@ -151,11 +158,6 @@ contract MockNekoGenerator is INekoGenerator {
         view
         returns (bool matrix, bool invisible, uint8 bodyIndex)
     {
-        Profile memory forced = _forcedProfile;
-        if (forced.configured) {
-            return (forced.matrix, forced.invisible, forced.bodyIndex);
-        }
-
         Profile memory configured = _profiles[seed];
         if (configured.configured) {
             return (configured.matrix, configured.invisible, configured.bodyIndex);

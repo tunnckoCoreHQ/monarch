@@ -87,6 +87,23 @@ contract NekoEndToEndTest is Test {
         _assertCompleteVariantCoverage(coverage);
     }
 
+    function testSeedCorpusRemainsUnchanged() public view {
+        bytes32 digest;
+        for (uint256 tokenId = 1; tokenId <= INTENDED_SUPPLY; ++tokenId) {
+            digest = keccak256(abi.encode(digest, neko.deriveTokenSeed(GENESIS_SEED, tokenId)));
+        }
+        assertEq(digest, 0xce54511446019d560a5055cc6caa24164efd3fc839f04a5e11cd4293dc6fb2ef);
+    }
+
+    function testGenerateMethodsExposeThePureCoreThroughTheBridge() public view {
+        uint256 seed = neko.tokenSeed(1);
+        INekoGenerator.TokenData memory data = neko.tokenData(1);
+        assertEq(abi.encode(neko.generate(seed)), abi.encode(data));
+        assertEq(abi.encode(neko.generate(data.traits)), abi.encode(data));
+        assertEq(abi.encode(generator.generate(seed)), abi.encode(data));
+        assertEq(abi.encode(generator.generate(data.traits)), abi.encode(data));
+    }
+
     function scanActualRange(uint256 startTokenId, uint256 endTokenId)
         external
         view

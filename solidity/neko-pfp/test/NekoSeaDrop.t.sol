@@ -3,7 +3,6 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {LibString} from "solady/utils/LibString.sol";
-import {Base64} from "solady/utils/Base64.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
 import {NekoGenerator} from "../src/NekoGenerator.sol";
@@ -19,7 +18,6 @@ import {
     TokenGatedDropStage,
     SignedMintValidationParams
 } from "../src/seadrop/SeaDropInterfaces.sol";
-import {ICreatorToken} from "../src/seadrop/TransferValidation.sol";
 
 contract NekoSeaDropTest is Test {
     event DropURIUpdated(address indexed nftContract, string newDropURI);
@@ -71,13 +69,13 @@ contract NekoSeaDropTest is Test {
         assertEq(NekoPFP.multiConfigure.selector, bytes4(0x911f456b));
         assertTrue(neko.supportsInterface(type(INonFungibleSeaDropToken).interfaceId));
         assertTrue(neko.supportsInterface(type(IERC2981).interfaceId));
-        assertTrue(neko.supportsInterface(type(ICreatorToken).interfaceId));
         assertTrue(neko.supportsInterface(0x01ffc9a7));
         assertTrue(neko.supportsInterface(0x80ac58cd));
         assertTrue(neko.supportsInterface(0x5b5e139f));
         assertTrue(neko.supportsInterface(0x49064906));
         assertFalse(neko.supportsInterface(0xffffffff));
         assertLe(address(neko).code.length, 24_576);
+        assertLe(address(renderer).code.length, 24_576);
     }
 
     function testConstructorEmitsSeaDropDiscoveryEvents() public {
@@ -94,7 +92,7 @@ contract NekoSeaDropTest is Test {
 
     function testStudioConfiguresRealSeaDropAndBothMintStages() public {
         MultiConfigureStruct memory config = _config();
-        config.contractURI = "ipfs://ignored";
+        config.contractURI = "ipfs://collection";
         config.dropURI = "ipfs://drop";
         MintParams memory allowlist = MintParams(0, 3, 100, 2000, 1, SUPPLY, 1000, true);
         config.allowListData = AllowListData(
@@ -114,19 +112,7 @@ contract NekoSeaDropTest is Test {
         assertEq(seaDrop.getAllowListMerkleRoot(address(neko)), config.allowListData.merkleRoot);
         assertTrue(seaDrop.getFeeRecipientIsAllowed(address(neko), FEE));
         assertTrue(seaDrop.getPayerIsAllowed(address(neko), BOB));
-        string memory expectedURI = string.concat(
-            "data:application/json;base64,",
-            Base64.encode(
-                bytes(
-                    string.concat(
-                        '{"name":"0xNeko PFP","symbol":"NEKO","description":"Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"',
-                        renderer.generateUnrevealedImageURI(),
-                        '"}'
-                    )
-                )
-            )
-        );
-        assertEq(neko.contractURI(), expectedURI);
+        assertEq(neko.contractURI(), config.contractURI);
 
         vm.prank(ALICE);
         seaDrop.mintAllowList(address(neko), FEE, address(0), 3, allowlist, new bytes32[](0));
@@ -145,9 +131,8 @@ contract NekoSeaDropTest is Test {
         seaDrop.mintPublic{value: PRICE}(address(neko), FEE, address(0), 1);
     }
 
-    function testEmptyConfigRestoresProfileAndPreservesDropSettings() public {
+    function testEmptyConfigPreservesProfileAndDropSettings() public {
         neko.multiConfigure(_config());
-        string memory profile = neko.contractURI();
         neko.setContractURI("ipfs://custom");
         PublicDrop memory stage = seaDrop.getPublicDrop(address(neko));
         MultiConfigureStruct memory config;
@@ -163,8 +148,8 @@ contract NekoSeaDropTest is Test {
 
         vm.recordLogs();
         neko.multiConfigure(config);
-        assertEq(vm.getRecordedLogs().length, 1);
-        assertEq(neko.contractURI(), profile);
+        assertEq(vm.getRecordedLogs().length, 0);
+        assertEq(neko.contractURI(), "ipfs://custom");
         assertEq(neko.maxSupply(), SUPPLY);
         assertEq(neko.provenanceHash(), _commitment());
         assertEq(abi.encode(seaDrop.getPublicDrop(address(neko))), abi.encode(stage));
