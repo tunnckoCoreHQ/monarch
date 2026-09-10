@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import {Test} from "forge-std/Test.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {Deploy} from "../script/Deploy.s.sol";
+import {MewsRenderer} from "../src/MewsRenderer.sol";
 import {MewsSeaDrop} from "../src/MewsSeaDrop.sol";
 import {ISeaDrop, PublicDrop} from "../src/seadrop/SeaDropInterfaces.sol";
 
@@ -22,6 +23,7 @@ contract DeployTest is Test {
     address internal constant OWNER = 0x6C22d03544609Db5128736706d90D66fC7f45388;
     address internal constant COLLABORATOR = 0x9D9db340778139774cF73DFB7Bf27498Fa67978F;
     ISeaDrop internal seaDrop = ISeaDrop(SEA_DROP);
+    MewsRenderer internal renderer;
     MewsSeaDrop internal mews;
 
     function setUp() public {
@@ -32,13 +34,15 @@ contract DeployTest is Test {
         vm.store(SEA_DROP, bytes32(0), bytes32(uint256(1)));
         encoded = vm.readFile("test/fixtures/TransferValidator.hex");
         vm.etch(VALIDATOR, vm.parseBytes(LibString.slice(encoded, 0, bytes(encoded).length - 1)));
+        renderer = MewsRenderer(deployCode("MewsRenderer.sol:MewsRenderer"));
         Deploy deploy = Deploy(deployCode("Deploy.t.sol:DeploySimulation"));
-        (, mews) = deploy.run();
+        mews = deploy.run(renderer);
         vm.deal(BUYER, 1 ether);
     }
 
     function testDeploymentSetsAllocationAndRoyalties() public view {
         assertEq(mews.owner(), OWNER);
+        assertEq(address(mews.renderer()), address(renderer));
         assertEq(mews.totalSupply(), 20);
         assertEq(mews.balanceOf(COLLABORATOR), 5);
         assertEq(mews.balanceOf(OWNER), 15);
@@ -67,13 +71,19 @@ contract DeployTest is Test {
         vm.setEnv("PRIVATE_KEY", "1");
         Deploy deploy = Deploy(deployCode("Deploy.s.sol:Deploy"));
         vm.expectRevert(Deploy.InvalidDeployerKey.selector);
-        deploy.run();
+        deploy.run(renderer);
     }
 
     function testDeploymentRejectsOtherChains() public {
         vm.chainId(1);
         Deploy deploy = Deploy(deployCode("Deploy.t.sol:DeploySimulation"));
         vm.expectRevert(Deploy.InvalidConfiguration.selector);
-        deploy.run();
+        deploy.run(renderer);
+    }
+
+    function testDeploymentRejectsMissingRenderer() public {
+        Deploy deploy = Deploy(deployCode("Deploy.t.sol:DeploySimulation"));
+        vm.expectRevert(Deploy.InvalidConfiguration.selector);
+        deploy.run(MewsRenderer(address(0)));
     }
 }
