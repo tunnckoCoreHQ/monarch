@@ -177,6 +177,57 @@ contract SubdropTest is Test {
         subdrop.configure(looseParent, _config(REWARD, PRICE, 0));
     }
 
+    function test_RevertWhen_ConfigureFusesNameWrapperRejects() public {
+        uint32[3] memory rejected = [CANNOT_UNWRAP, uint32(4), IS_DOT_ETH];
+
+        for (uint256 i = 0; i < rejected.length; i++) {
+            Subdrop.DropConfig memory config = _config(REWARD, PRICE, 0);
+            config.fuses = rejected[i];
+
+            vm.prank(owner);
+            vm.expectRevert(Subdrop.InvalidFuses.selector);
+            subdrop.configure(parentNode, config);
+        }
+    }
+
+    function test_ConfigureParentOnlyFuses() public {
+        Subdrop.DropConfig memory config = _config(REWARD, PRICE, 0);
+        config.fuses = PARENT_CANNOT_CONTROL;
+        vm.prank(owner);
+        subdrop.configure(parentNode, config);
+
+        vm.prank(minter);
+        bytes32 node = subdrop.mint{value: PRICE}(parentNode, "dan");
+        (, uint32 fuses,) = nameWrapper.getData(uint256(node));
+        assertEq(fuses, PARENT_CANNOT_CONTROL);
+    }
+
+    function test_RemainingIsZeroWhenCapLoweredBelowMinted() public {
+        vm.prank(minter);
+        subdrop.mint{value: PRICE}(parentNode, "dan");
+        vm.prank(minter);
+        subdrop.mint{value: PRICE}(parentNode, "eve");
+
+        vm.prank(owner);
+        subdrop.configure(parentNode, _config(REWARD, PRICE, 1));
+
+        assertEq(subdrop.remaining(parentNode), 0);
+        vm.prank(minter);
+        vm.expectRevert(Subdrop.MintedOut.selector);
+        subdrop.mint{value: PRICE}(parentNode, "sam");
+    }
+
+    function test_RevertWhen_ReceivingUnexpectedERC1155() public {
+        vm.expectRevert(Subdrop.UnexpectedToken.selector);
+        subdrop.onERC1155Received(address(subdrop), address(0), 1, 1, "");
+
+        bytes32 node = _subnode(parentNode, "held");
+        nameWrapper.wrap(node, stranger, 0, PARENT_EXPIRY);
+        vm.prank(stranger);
+        vm.expectRevert(Subdrop.UnexpectedToken.selector);
+        nameWrapper.safeTransferFrom(stranger, address(subdrop), uint256(node), 1, "");
+    }
+
     function test_ConfigureWithoutParentFusesOnLooseParent() public {
         bytes32 looseParent = _subnode(ETH_NODE, "loose");
         nameWrapper.wrap(looseParent, owner, IS_DOT_ETH, PARENT_EXPIRY);

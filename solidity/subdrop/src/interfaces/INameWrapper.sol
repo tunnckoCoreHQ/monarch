@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 uint32 constant CANNOT_UNWRAP = 1;
 uint32 constant PARENT_CANNOT_CONTROL = 1 << 16;
 uint32 constant PARENT_CONTROLLED_FUSES = 0xFFFF0000;
+uint32 constant USER_SETTABLE_FUSES = 0xFFFDFFFF;
 
 /// @dev The subset of the ENS NameWrapper used by Subdrop.
 interface INameWrapper {

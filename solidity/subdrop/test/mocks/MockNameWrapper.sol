@@ -4,7 +4,8 @@ pragma solidity ^0.8.30;
 import {
     CANNOT_UNWRAP,
     PARENT_CANNOT_CONTROL,
-    PARENT_CONTROLLED_FUSES
+    PARENT_CONTROLLED_FUSES,
+    USER_SETTABLE_FUSES
 } from "../../src/interfaces/INameWrapper.sol";
 
 interface IERC1155Receiver {
@@ -73,6 +74,13 @@ contract MockNameWrapper {
             revert OperationProhibited(node);
         }
         if (fuses & PARENT_CONTROLLED_FUSES != 0 && parentFuses & CANNOT_UNWRAP == 0) {
+            revert OperationProhibited(node);
+        }
+        if (fuses & ~USER_SETTABLE_FUSES != 0) {
+            revert OperationProhibited(node);
+        }
+        uint32 emancipated = PARENT_CANNOT_CONTROL | CANNOT_UNWRAP;
+        if (fuses & ~PARENT_CONTROLLED_FUSES != 0 && fuses & emancipated != emancipated) {
             revert OperationProhibited(node);
         }
 

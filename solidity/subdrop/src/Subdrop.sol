@@ -9,7 +9,8 @@ import {
     CANNOT_UNWRAP,
     INameWrapper,
     PARENT_CANNOT_CONTROL,
-    PARENT_CONTROLLED_FUSES
+    PARENT_CONTROLLED_FUSES,
+    USER_SETTABLE_FUSES
 } from "./interfaces/INameWrapper.sol";
 
 /// @notice Mint-to-earn for wrapped ENS names. The parent owner configures a token reward, and
@@ -49,12 +50,14 @@ contract Subdrop {
     error DropNotFound();
     error DropIsPaused();
     error IncorrectPayment(uint256 actual, uint256 expected);
+    error InvalidFuses();
     error InvalidLabel();
     error LabelTaken();
     error MintedOut();
     error NotParentOwner();
     error ParentCannotBurnFuses();
     error ParentOwnerChanged();
+    error UnexpectedToken();
     error ZeroAddress();
 
     event DropConfigured(
@@ -187,7 +190,11 @@ contract Subdrop {
             return 0;
         }
 
-        count = drop.maxMints == 0 ? type(uint256).max : drop.maxMints - drop.minted;
+        if (drop.maxMints == 0) {
+            count = type(uint256).max;
+        } else if (drop.minted < drop.maxMints) {
+            count = drop.maxMints - drop.minted;
+        }
         if (drop.reward == 0) {
             return count;
         }
@@ -200,11 +207,19 @@ contract Subdrop {
         return affordable < count ? affordable : count;
     }
 
-    function onERC1155Received(address, address, uint256, uint256, bytes calldata)
+    /// @dev Accepts only the subname NameWrapper mints to Subdrop during `mint`, so nothing
+    /// else can be sent here and stranded.
+    function onERC1155Received(address operator, address from, uint256, uint256, bytes calldata)
         external
-        pure
+        view
         returns (bytes4)
     {
+        bool fromNameWrapper = msg.sender == address(nameWrapper);
+        bool ownMint = operator == address(this) && from == address(0);
+        if (!fromNameWrapper || !ownMint) {
+            revert UnexpectedToken();
+        }
+
         return this.onERC1155Received.selector;
     }
 
@@ -216,8 +231,18 @@ contract Subdrop {
             revert ZeroAddress();
         }
 
-        // NameWrapper only lets a parent burn parent-controlled fuses on children once it
-        // has burned CANNOT_UNWRAP itself. Catch that here instead of at every mint.
+        // Mirror the NameWrapper fuse rules here so a drop that fails at every mint cannot be
+        // configured: IS_DOT_ETH is never settable, and owner-controlled child fuses need the
+        // child emancipated with PARENT_CANNOT_CONTROL | CANNOT_UNWRAP.
+        bool settable = config.fuses & ~USER_SETTABLE_FUSES == 0;
+        bool burnsOwnerFuses = config.fuses & ~PARENT_CONTROLLED_FUSES != 0;
+        bool emancipates = config.fuses & DEFAULT_FUSES == DEFAULT_FUSES;
+        if (!settable || (burnsOwnerFuses && !emancipates)) {
+            revert InvalidFuses();
+        }
+
+        // The parent may burn parent-controlled fuses on children only after burning
+        // CANNOT_UNWRAP itself.
         (, uint32 parentFuses,) = nameWrapper.getData(uint256(parentNode));
         bool burnsParentFuses = config.fuses & PARENT_CONTROLLED_FUSES != 0;
         bool parentCanUnwrap = parentFuses & CANNOT_UNWRAP == 0;
