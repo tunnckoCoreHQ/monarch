@@ -30,6 +30,7 @@ export const Route = createFileRoute("/launch/")({
 
 interface NameState {
   node: `0x${string}`;
+  chainId: number;
   owner: Address;
   fuses: number;
   expiry: bigint;
@@ -69,8 +70,11 @@ function Launch() {
       return;
     }
 
-    // Drop what was loaded for another name so its values never show, or submit, for this one.
-    setState((previous) => (previous?.node === parsed.node ? previous : null));
+    // Drop what was loaded for another name or chain so its values never show, or submit, here.
+    const chainId = chainConfig.chain.id;
+    setState((previous) =>
+      previous?.node === parsed.node && previous.chainId === chainId ? previous : null,
+    );
 
     let cancelled = false;
     const client = publicClientFor(chainConfig);
@@ -92,7 +96,7 @@ function Launch() {
             });
       const drop = await loadDrop(client, chainConfig.subdrop, parsed.node);
       if (!cancelled) {
-        setState({ node: parsed.node, owner, fuses, expiry, approved, drop });
+        setState({ node: parsed.node, chainId, owner, fuses, expiry, approved, drop });
         setLoadError(null);
       }
     };
@@ -256,7 +260,7 @@ function Launch() {
 
       {parsed && state && ready && account ? (
         <DropForm
-          key={`${parsed.node}:${state.drop ? "live" : "new"}`}
+          key={`${state.chainId}:${parsed.node}:${state.drop ? "live" : "new"}`}
           node={parsed.node}
           name={parsed.name}
           account={account}
