@@ -29,6 +29,7 @@ export const Route = createFileRoute("/launch/")({
 });
 
 interface NameState {
+  node: `0x${string}`;
   owner: Address;
   fuses: number;
   expiry: bigint;
@@ -68,6 +69,9 @@ function Launch() {
       return;
     }
 
+    // Drop what was loaded for another name so its values never show, or submit, for this one.
+    setState((previous) => (previous?.node === parsed.node ? previous : null));
+
     let cancelled = false;
     const client = publicClientFor(chainConfig);
     const load = async () => {
@@ -88,7 +92,7 @@ function Launch() {
             });
       const drop = await loadDrop(client, chainConfig.subdrop, parsed.node);
       if (!cancelled) {
-        setState({ owner, fuses, expiry, approved, drop });
+        setState({ node: parsed.node, owner, fuses, expiry, approved, drop });
         setLoadError(null);
       }
     };
@@ -252,6 +256,7 @@ function Launch() {
 
       {parsed && state && ready && account ? (
         <DropForm
+          key={`${parsed.node}:${state.drop ? "live" : "new"}`}
           node={parsed.node}
           name={parsed.name}
           account={account}
@@ -437,10 +442,11 @@ function DropForm({
     };
   }, [mode, tokenAddress, account, chainConfig, budgetTx.status.state]);
 
-  const decimals = tokenInfo?.decimals ?? 18;
+  // A new token always has 18 decimals. An existing one must be read first.
+  const decimals = mode === "new" ? 18 : tokenInfo?.decimals;
 
   const approveBudget = () => {
-    if (!isAddress(tokenAddress)) {
+    if (!isAddress(tokenAddress) || decimals === undefined) {
       return;
     }
     let amount: bigint;
@@ -463,6 +469,10 @@ function DropForm({
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault();
+    if (decimals === undefined) {
+      setFormError("Token details have not loaded. Check the address and wait a moment.");
+      return;
+    }
 
     let priceWei: bigint;
     let rewardUnits: bigint;
@@ -649,7 +659,7 @@ function DropForm({
             <span className="text-xs text-muted">
               Child names get PARENT_CANNOT_CONTROL and CANNOT_UNWRAP.
             </span>
-            <Button type="submit" disabled={submitTx.busy}>
+            <Button type="submit" disabled={submitTx.busy || decimals === undefined}>
               {existing
                 ? "Update drop"
                 : mode === "new"
