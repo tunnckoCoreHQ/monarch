@@ -5,14 +5,13 @@ import {Test} from "forge-std/Test.sol";
 
 import {INekoGenerator} from "../src/INekoGenerator.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
+import {ISeaDrop} from "../src/seadrop/SeaDropInterfaces.sol";
 import {MockNekoGenerator} from "./mocks/MockNekoGenerator.sol";
 
 contract TestableNekoPFP is NekoPFP {
-    constructor(
-        address[] memory allowedSeaDrop,
-        INekoGenerator generator,
-        bytes32 genesisSeedCommitment
-    ) NekoPFP("Neko", "NEKO", allowedSeaDrop, generator, genesisSeedCommitment) {}
+    constructor(ISeaDrop seaDrop, INekoGenerator generator, bytes32 genesisSeedCommitment)
+        NekoPFP(genesisSeedCommitment, generator, seaDrop)
+    {}
 
     function setGenesisSeedForTest(bytes32 seed) external {
         genesisSeed = seed;
@@ -42,7 +41,7 @@ abstract contract NekoTestBase is Test {
         internal
         returns (TestableNekoPFP)
     {
-        return new TestableNekoPFP(_allowedSeaDrop(), generator_, commitment);
+        return new TestableNekoPFP(ISeaDrop(SEA_DROP), generator_, commitment);
     }
 
     function _setRevealed() internal {
@@ -52,11 +51,6 @@ abstract contract NekoTestBase is Test {
     function _mint(address recipient, uint256 quantity) internal {
         vm.prank(SEA_DROP);
         neko.mintSeaDrop(recipient, quantity);
-    }
-
-    function _allowedSeaDrop() internal pure returns (address[] memory allowedSeaDrop) {
-        allowedSeaDrop = new address[](1);
-        allowedSeaDrop[0] = SEA_DROP;
     }
 
     function _commitment(bytes32 seed) internal pure returns (bytes32) {

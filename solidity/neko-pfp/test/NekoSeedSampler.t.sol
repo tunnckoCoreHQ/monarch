@@ -4,6 +4,7 @@ pragma solidity ^0.8.30;
 import {IERC721A} from "erc721a/IERC721A.sol";
 
 import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoArt} from "../src/NekoArt.sol";
 import {NekoTestBase} from "./NekoTestBase.sol";
 
 contract NekoSeedSamplerTest is NekoTestBase {
@@ -37,7 +38,7 @@ contract NekoSeedSamplerTest is NekoTestBase {
         generator.setForcedProfile(true, true, false, 16);
 
         vm.expectRevert(
-            abi.encodeWithSelector(NekoPFP.SeedSamplingExhausted.selector, 1, desiredClass)
+            abi.encodeWithSelector(NekoArt.SeedSamplingExhausted.selector, 1, desiredClass)
         );
         neko.deriveTokenSeed(GENESIS_SEED, 1);
     }
@@ -52,7 +53,7 @@ contract NekoSeedSamplerTest is NekoTestBase {
             "invisible non-quota profile was rejected"
         );
         vm.expectRevert(
-            abi.encodeWithSelector(NekoPFP.SeedSamplingExhausted.selector, quotaTokenId, quotaClass)
+            abi.encodeWithSelector(NekoArt.SeedSamplingExhausted.selector, quotaTokenId, quotaClass)
         );
         neko.deriveTokenSeed(GENESIS_SEED, quotaTokenId);
     }

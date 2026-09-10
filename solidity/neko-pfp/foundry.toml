@@ -10,7 +10,10 @@ optimizer_runs = 200
 bytecode_hash = "none"
 cbor_metadata = false
 allow_paths = ["../../node_modules"]
-fs_permissions = [{ access = "read-write", path = "./preview" }]
+fs_permissions = [
+  { access = "read-write", path = "./preview" },
+  { access = "read", path = "./test/fixtures" },
+]
 deny = "warnings"
 remappings = [
   "erc721a/=node_modules/erc721a/contracts/",

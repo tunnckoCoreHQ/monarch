@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 
 import {NekoGenerator} from "../src/NekoGenerator.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
+import {ISeaDrop, MultiConfigureStruct} from "../src/seadrop/SeaDropInterfaces.sol";
 
 /// @notice Deploys the generator and the NFT, then wires the SeaDrop payout and fee recipient.
 ///
@@ -27,14 +28,16 @@ contract Deploy is Script {
         address seaDrop = vm.envOr("SEADROP", CANONICAL_SEADROP);
         address feeRecipient = vm.envOr("FEE_RECIPIENT", OPENSEA_FEE_RECIPIENT);
 
-        address[] memory allowedSeaDrop = new address[](1);
-        allowedSeaDrop[0] = seaDrop;
+        MultiConfigureStruct memory config;
+        config.seaDropImpl = seaDrop;
+        config.creatorPayoutAddress = payout;
+        config.allowedFeeRecipients = new address[](1);
+        config.allowedFeeRecipients[0] = feeRecipient;
 
         vm.startBroadcast();
         generator = new NekoGenerator();
-        neko = new NekoPFP("0xNeko PFP", "NEKO", allowedSeaDrop, generator, commitment);
-        neko.updateCreatorPayoutAddress(seaDrop, payout);
-        neko.updateAllowedFeeRecipient(seaDrop, feeRecipient, true);
+        neko = new NekoPFP(commitment, generator, ISeaDrop(seaDrop));
+        neko.multiConfigure(config);
         vm.stopBroadcast();
     }
 }

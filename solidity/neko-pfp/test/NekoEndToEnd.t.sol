@@ -7,6 +7,8 @@ import {IERC721A} from "erc721a/IERC721A.sol";
 import {INekoGenerator} from "../src/INekoGenerator.sol";
 import {NekoGenerator} from "../src/NekoGenerator.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoArt} from "../src/NekoArt.sol";
+import {ISeaDrop} from "../src/seadrop/SeaDropInterfaces.sol";
 
 /// @notice End-to-end tests using only the production generator and production NFT contract.
 contract NekoEndToEndTest is Test {
@@ -63,10 +65,8 @@ contract NekoEndToEndTest is Test {
 
     function setUp() public {
         generator = new NekoGenerator();
-        address[] memory allowedSeaDrop = new address[](1);
-        allowedSeaDrop[0] = SEA_DROP;
         bytes32 commitment = keccak256(abi.encode(GENESIS_SEED_COMMITMENT_DOMAIN, GENESIS_SEED));
-        neko = new NekoPFP("Neko", "NEKO", allowedSeaDrop, generator, commitment);
+        neko = new NekoPFP(commitment, generator, ISeaDrop(SEA_DROP));
 
         vm.prank(SEA_DROP);
         neko.mintSeaDrop(ALICE, INTENDED_SUPPLY);
@@ -93,7 +93,7 @@ contract NekoEndToEndTest is Test {
         returns (VariantCoverage memory coverage)
     {
         for (uint256 tokenId = startTokenId; tokenId <= endTokenId; ++tokenId) {
-            uint256 seed = neko.seedOf(tokenId);
+            uint256 seed = neko.tokenSeed(tokenId);
             INekoGenerator.TokenData memory data = neko.tokenData(tokenId);
             assertEq(data.fusionMass, 1, "unfused production token has wrong mass");
             _recordTraitCoverage(coverage, data.traits);
@@ -111,7 +111,7 @@ contract NekoEndToEndTest is Test {
 
     function testActualNftMatchesProductionGeneratorAcrossCollectionSamples() public view {
         for (uint256 tokenId = 1; tokenId <= INTENDED_SUPPLY; tokenId += 73) {
-            uint256 seed = neko.seedOf(tokenId);
+            uint256 seed = neko.tokenSeed(tokenId);
             INekoGenerator.RawTraits memory nftTraits = neko.tokenData(tokenId).traits;
             INekoGenerator.RawTraits memory generatorTraits = generator.deriveRawTraits(seed);
 
@@ -122,7 +122,7 @@ contract NekoEndToEndTest is Test {
             );
         }
 
-        uint256 lastSeed = neko.seedOf(INTENDED_SUPPLY);
+        uint256 lastSeed = neko.tokenSeed(INTENDED_SUPPLY);
         assertEq(
             keccak256(abi.encode(neko.tokenData(INTENDED_SUPPLY).traits)),
             keccak256(abi.encode(generator.deriveRawTraits(lastSeed))),
@@ -163,7 +163,7 @@ contract NekoEndToEndTest is Test {
             4665,
             uint16(duplicates.first + 1),
             uint16(duplicates.second + 1),
-            NekoPFP.FusionAction.DuplicateMerge,
+            NekoArt.FusionAction.DuplicateMerge,
             0
         );
         vm.expectRevert(IERC721A.OwnerQueryForNonexistentToken.selector);
@@ -201,7 +201,7 @@ contract NekoEndToEndTest is Test {
             4665,
             uint16(survivorId + 1),
             uint16(consumedId + 1),
-            NekoPFP.FusionAction.Mutation,
+            NekoArt.FusionAction.Mutation,
             PARTIAL_MUTATION_MASK
         );
         string memory expectedMetadata = generator.generateTokenURI(survivorId, survivorAfter);
@@ -248,13 +248,13 @@ contract NekoEndToEndTest is Test {
         assertEq(neko.currentRoot(firstSurvivor), 4667, "actual combined ancestry root mismatch");
         assertEq(neko.totalSupply(), INTENDED_SUPPLY - 3, "actual interaction burn count mismatch");
 
-        (uint16 parentA, uint16 parentB, NekoPFP.FusionAction action, uint16 mutationMask) =
+        (uint16 parentA, uint16 parentB, NekoArt.FusionAction action, uint16 mutationMask) =
             neko.ancestryNode(4667);
         assertEq(parentA, 4665, "actual combined tree first parent mismatch");
         assertEq(parentB, 4666, "actual combined tree second parent mismatch");
         assertEq(
             uint256(action),
-            uint256(NekoPFP.FusionAction.DuplicateMerge),
+            uint256(NekoArt.FusionAction.DuplicateMerge),
             "actual combined tree action mismatch"
         );
         assertEq(mutationMask, 0, "actual combined tree merge mask mismatch");
@@ -297,7 +297,7 @@ contract NekoEndToEndTest is Test {
             4665,
             uint16(survivorId + 1),
             uint16(duplicateDonors.first + 1),
-            NekoPFP.FusionAction.Mutation,
+            NekoArt.FusionAction.Mutation,
             ALL_PARTS_MASK
         );
 
@@ -311,7 +311,7 @@ contract NekoEndToEndTest is Test {
         assertEq(neko.currentRoot(survivorId), 4666, "mass-three ancestry root mismatch");
         assertEq(neko.totalSupply(), INTENDED_SUPPLY - 2, "mass-three supply mismatch");
         _assertAncestryNode(
-            4666, 4665, uint16(duplicateDonors.second + 1), NekoPFP.FusionAction.DuplicateMerge, 0
+            4666, 4665, uint16(duplicateDonors.second + 1), NekoArt.FusionAction.DuplicateMerge, 0
         );
 
         INekoGenerator.RawTraits memory massFourTraits =
@@ -332,7 +332,7 @@ contract NekoEndToEndTest is Test {
             4667,
             4666,
             uint16(finalDonorId + 1),
-            NekoPFP.FusionAction.Mutation,
+            NekoArt.FusionAction.Mutation,
             PARTIAL_MUTATION_MASK
         );
     }
@@ -473,10 +473,10 @@ contract NekoEndToEndTest is Test {
         uint16 nodeId,
         uint16 expectedParentA,
         uint16 expectedParentB,
-        NekoPFP.FusionAction expectedAction,
+        NekoArt.FusionAction expectedAction,
         uint16 expectedMutationMask
     ) private view {
-        (uint16 parentA, uint16 parentB, NekoPFP.FusionAction action, uint16 mutationMask) =
+        (uint16 parentA, uint16 parentB, NekoArt.FusionAction action, uint16 mutationMask) =
             neko.ancestryNode(nodeId);
         assertEq(parentA, expectedParentA, "actual ancestry first parent mismatch");
         assertEq(parentB, expectedParentB, "actual ancestry second parent mismatch");
