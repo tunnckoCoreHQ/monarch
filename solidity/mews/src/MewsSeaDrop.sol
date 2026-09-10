@@ -18,6 +18,7 @@ import {
 contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
     error InvalidSeaDrop();
     error InvalidTransferValidator();
+    error FixedMaxSupply();
     ISeaDrop public immutable seaDrop;
     string public contractURI;
 
@@ -45,6 +46,7 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
         allowedSeaDrop[0] = address(seaDrop_);
         emit AllowedSeaDropUpdated(allowedSeaDrop);
         emit SeaDropTokenDeployed();
+        emit ISeaDropTokenContractMetadata.MaxSupplyUpdated(MAX_SUPPLY);
     }
 
     function setContractURI(string memory uri) public onlyOwner {
@@ -67,6 +69,14 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
 
     function maxSupply() external pure returns (uint256) {
         return MAX_SUPPLY;
+    }
+
+    function setMaxSupply(uint256 supply) public onlyOwner {
+        if (supply != MAX_SUPPLY) {
+            revert FixedMaxSupply();
+        }
+        // OpenSea indexes the supply event even when the cap is fixed.
+        emit ISeaDropTokenContractMetadata.MaxSupplyUpdated(MAX_SUPPLY);
     }
 
     function setRoyaltyInfo(ISeaDropTokenContractMetadata.RoyaltyInfo calldata info)
@@ -122,6 +132,9 @@ contract MewsSeaDrop is MewsArt, Ownable, IERC2981, ICreatorToken {
 
     function multiConfigure(MultiConfigureStruct calldata config) external onlyOwner {
         _checkSeaDrop(config.seaDropImpl);
+        if (config.maxSupply != 0) {
+            setMaxSupply(config.maxSupply);
+        }
         setContractURI(
             string.concat(
                 "data:application/json;base64,",

@@ -24,11 +24,13 @@ Every trait starts from the collection's fixed genesis seed, the original minter
 
 ## Mint
 
-**Pending deployment.** The collection address and OpenSea mint link are not available yet.
+Mint through [OpenSea](https://opensea.io/collection/mewscats/overview).
 
 | Detail | Setting |
 | --- | --- |
 | Network | Base |
+| Collection | [0x41c11fc8169a3051BCab720c7f5e16BaE1Bd3db8](https://basescan.org/address/0x41c11fc8169a3051BCab720c7f5e16BaE1Bd3db8) |
+| Renderer | [0xea012Da68Da3903D6FD081508239a6ECB4a51576](https://basescan.org/address/0xea012Da68Da3903D6FD081508239a6ECB4a51576) |
 | Total supply | 1,000 |
 | Public mint price | 0.00042 ETH, plus network gas |
 | Public wallet limit | 10 mints |
@@ -37,16 +39,18 @@ Every trait starts from the collection's fixed genesis seed, the original minter
 
 All 20 creator tokens are minted at deployment: five to `0x9D9db340778139774cF73DFB7Bf27498Fa67978F` and fifteen to `0x6C22d03544609Db5128736706d90D66fC7f45388`. There is no private creator stage. Mint counts stay with the original wallet, so transferring cats does not reset a wallet's limit.
 
+The [first deployment](https://basescan.org/address/0xdb01024fBb2a3A8d8037dA80BF99Ea82840d2f21) has its public mint closed. The collection above replaces it and reuses its renderer.
+
 ### Schedule
 
-The planned public mint schedule is below. All dates are in 2026.
+The configured public mint schedule is below. All dates are in 2026.
 
 | Event | UTC | Eastern | Pacific |
 | --- | --- | --- | --- |
 | Public mint opens | Sep 8, 22:00 | Sep 8, 6 PM EDT | Sep 8, 3 PM PDT |
 | Public mint closes | Sep 22, 22:00 | Sep 22, 6 PM EDT | Sep 22, 3 PM PDT |
 
-The public mint lasts two weeks, unless the collection sells out first. Configure and publish these dates through OpenSea Studio, along with the planned price and wallet limit above. Deploying the contracts does not open the public mint.
+The public mint lasts two weeks, unless the collection sells out first. These dates, the price, and the wallet limit are configured on SeaDrop. A new deployment leaves the public mint closed until its sale is configured.
 
 ## Make your own combinations
 
@@ -77,7 +81,7 @@ For an existing Mew, call `tokenURI(tokenId)` for its image and metadata, or `to
 
 The artwork, genesis seed, and supply cap are fixed. The collection owner can update the mint settings, collection profile, royalty rate, payout addresses, and transfer validator.
 
-The launch configuration supports royalty enforcement on OpenSea. Transfers you send directly from your own wallet are allowed. Marketplace and vault transfers must satisfy the validator's rules, so other integrations may need to be approved. OpenSea enforcement is activated during launch setup.
+Transfers you send directly from your own wallet, including a smart wallet, are allowed. The deployed collection uses validator list 21, which preserves OpenSea's authorizer and allows the Seaport operator used by Net Bazaar. OpenSea reports 5% required creator earnings. The Seaport exception also permits other orders through that operator without royalty authorization, so royalties are not guaranteed across all marketplaces. Other marketplace and vault transfers must satisfy the validator's rules.
 
 ## Explore the source
 
@@ -101,15 +105,16 @@ The command prints the path to a new gallery file. Open it in a browser. It also
 
 Copy `.env.example` to `.env` inside `solidity/mews` and set `PRIVATE_KEY` to the key for `0x6C22d03544609Db5128736706d90D66fC7f45388`. The file is ignored by Git. Forge loads it automatically; the script rejects a key for a different wallet.
 
-From the monorepo root, simulate with:
+From the monorepo root, simulate with the existing renderer address:
 
 ```sh
-vp run --filter mews deploy --rpc-url https://mainnet.base.org
+vp run --filter mews deploy --rpc-url https://mainnet.base.org \
+  --sig "run(address)" 0xea012Da68Da3903D6FD081508239a6ECB4a51576
 ```
 
-Add `--broadcast` to deploy. The [deployment script](./script/Deploy.s.sol) deploys the renderer and NFT, sets 5% royalties, and sets the transfer validator. It does not configure the sale. No interactive prompt or command-line key is needed.
+Add `--broadcast` to deploy. The [deployment script](./script/Deploy.s.sol) accepts an existing renderer as an argument, rejects an address without contract code, deploys the NFT, sets 5% royalties, and sets the transfer validator. It does not configure the sale or the custom validator list. No interactive prompt or command-line key is needed.
 
-After deployment, connect the owner wallet to OpenSea Studio, open Mews, and configure the collection profile, public mint schedule, price, wallet limit, and payout address. Studio submits these settings through the owner-only `multiConfigure` method. It uses the upstream SeaDrop ABI and supports public drops, drop metadata, allowlists, payouts, fee recipients, and payers. Fixed supply, base URI, provenance changes, token gating, and signed-mint settings are ignored.
+After deployment, connect the owner wallet to OpenSea Studio, open Mews, and configure the collection profile, public mint schedule, price, wallet limit, and payout address. Studio submits these settings through the owner-only `multiConfigure` method. It uses the upstream SeaDrop ABI and supports public drops, drop metadata, allowlists, payouts, fee recipients, and payers. Supply stays fixed at 1,000: a nonzero `maxSupply` must equal 1,000 and emits `MaxSupplyUpdated` for indexing. The constructor also emits this event, and the owner can emit it again with `setMaxSupply(1000)`. Base URI, provenance changes, token gating, and signed-mint settings are ignored.
 
 The collection URI starts empty. Every `multiConfigure` call sets the hardcoded Mews collection metadata and ignores the supplied `contractURI` field. The owner can change it separately with `setContractURI`. Keep the planned 10% OpenSea mint fee and the same 5% creator earnings, enable earnings enforcement in Studio, then publish the mint page. Until the public drop is configured and its start time arrives, public minting is closed.
 

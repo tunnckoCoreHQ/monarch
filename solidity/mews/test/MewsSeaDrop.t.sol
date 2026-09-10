@@ -153,16 +153,31 @@ contract MewsSeaDropTest is Test {
         emit MewsSeaDrop.AllowedSeaDropUpdated(allowed);
         vm.expectEmit(false, false, false, true);
         emit MewsSeaDrop.SeaDropTokenDeployed();
+        vm.expectEmit(false, false, false, true);
+        emit ISeaDropTokenContractMetadata.MaxSupplyUpdated(1000);
         _deploy(GENESIS);
     }
 
-    function testStudioSelectorConfiguresSupportedFieldsAndSkipsFixedFields() public {
+    function testOwnerCanReannounceSupplyButCannotChangeIt() public {
+        vm.expectEmit(false, false, false, true, address(mews));
+        emit ISeaDropTokenContractMetadata.MaxSupplyUpdated(1000);
+        mews.setMaxSupply(1000);
+        vm.expectRevert(MewsSeaDrop.FixedMaxSupply.selector);
+        mews.setMaxSupply(999);
+        vm.expectRevert(MewsSeaDrop.FixedMaxSupply.selector);
+        mews.setMaxSupply(1001);
+        vm.prank(ALICE);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        mews.setMaxSupply(1000);
+    }
+
+    function testStudioSelectorAnnouncesSupplyAndConfiguresSupportedFields() public {
         mews = _deploy(GENESIS);
         assertEq(MewsSeaDrop.multiConfigure.selector, bytes4(0x911f456b));
         MintParams memory allowlist = MintParams(0, 2, 100, 2000, 1, 1000, 1000, true);
         MultiConfigureStruct memory config;
         config.seaDropImpl = SEA_DROP;
-        config.maxSupply = 9999;
+        config.maxSupply = 1000;
         config.baseURI = "ipfs://ignored";
         config.provenanceHash = bytes32(uint256(99));
         config.contractURI = "ipfs://studio-collection";
@@ -192,6 +207,8 @@ contract MewsSeaDropTest is Test {
                 )
             )
         );
+        vm.expectEmit(false, false, false, true, address(mews));
+        emit ISeaDropTokenContractMetadata.MaxSupplyUpdated(1000);
         vm.expectEmit(false, false, false, true, address(mews));
         emit MewsSeaDrop.ContractURIUpdated(expectedURI);
         vm.expectEmit(true, false, false, true, SEA_DROP);

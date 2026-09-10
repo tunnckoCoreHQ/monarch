@@ -17,13 +17,12 @@ contract Deploy is Script {
         keccak256("Pixel-perfect pastel Mews, generated and rendered entirely on-chain.");
 
     // PRIVATE_KEY is loaded from the project's .env file. Configure the sale in OpenSea Studio.
-    // Run through `vp run --filter mews deploy --rpc-url <Base RPC>` for a dry run.
-    function run() external returns (MewsRenderer renderer, MewsSeaDrop mews) {
-        if (block.chainid != 8453) {
+    // Pass the existing renderer with --sig "run(address)" <renderer>.
+    function run(MewsRenderer renderer) external returns (MewsSeaDrop mews) {
+        if (block.chainid != 8453 || address(renderer).code.length == 0) {
             revert InvalidConfiguration();
         }
         _startBroadcast();
-        renderer = MewsRenderer(deployCode("MewsRenderer.sol:MewsRenderer"));
         mews = new MewsSeaDrop(GENESIS_SEED, renderer, ISeaDrop(SEA_DROP));
         mews.setRoyaltyInfo(ISeaDropTokenContractMetadata.RoyaltyInfo(DEPLOYER, 500));
         mews.setTransferValidator(TRANSFER_VALIDATOR);
