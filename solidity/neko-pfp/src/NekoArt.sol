@@ -2,25 +2,23 @@
 pragma solidity ^0.8.30;
 
 import {ERC721A} from "erc721a/ERC721A.sol";
+import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 
-import {INekoGenerator} from "./INekoGenerator.sol";
-import {ERC721SeaDropCompat} from "./seadrop/ERC721SeaDropCompat.sol";
+import {Base64} from "solady/utils/Base64.sol";
+import {LibString} from "solady/utils/LibString.sol";
+import {NekoRenderer} from "./NekoRenderer.sol";
+import {NekoSeedSampler} from "./NekoSeedSampler.sol";
 
-/// @title Neko PFP
-/// @notice Fixed-supply Neko minting, committed reveal, deterministic quota-aware
-///         token seeds, and the burn-based fusion game: duplicate merging, trait
-///         mutation, fusion mass, and ancestry. The SeaDrop-facing mint API,
-///         royalties, and passthroughs live in `ERC721SeaDropCompat`.
-contract NekoPFP is ERC721SeaDropCompat {
+/// @notice Connects the pure renderer to token seeds, reveal, fusion, and ancestry.
+abstract contract NekoArt is ERC721A, ReentrancyGuard, NekoSeedSampler {
+    error InvalidMint();
+    error SupplyExceeded();
     error GeneratorAddressIsZero();
-    error IntendedSupplyExceeded(uint256 mintedBefore, uint256 quantity);
     error GenesisSeedCommitmentIsZero();
     error GenesisSeedAlreadyRevealed();
     error GenesisSeedNotRevealed();
     error GenesisSeedCommitmentMismatch(bytes32 expected, bytes32 actual);
-    error ProvenanceHashImmutable();
     error MintNotComplete(uint256 minted, uint256 required);
-    error SeedSamplingExhausted(uint256 tokenId, uint8 desiredClass);
     error CannotMergeTokenWithItself();
     error CannotMutateTokenWithItself();
     error MergeCallerNotOwnerNorApproved(uint256 tokenId);
@@ -43,9 +41,8 @@ contract NekoPFP is ERC721SeaDropCompat {
     }
 
     event GenesisSeedRevealed(bytes32 indexed genesisSeed);
-    event CollectionUpdated(uint256 maxSupply, uint256 startBlock, bool open);
-    /// @dev ERC-4906 single-token metadata update; `BatchMetadataUpdate` is inherited.
     event MetadataUpdate(uint256 _tokenId);
+    event BatchMetadataUpdate(uint256 fromTokenId, uint256 toTokenId);
     event NekoMerged(
         uint256 indexed survivorTokenId, uint256 indexed consumedTokenId, uint256 newFusionMass
     );
@@ -58,26 +55,12 @@ contract NekoPFP is ERC721SeaDropCompat {
         uint256 newFusionMass
     );
 
-    uint256 public constant INTENDED_SUPPLY = 4663;
-    uint256 public constant PRIMARY_COLOR_QUOTA = 96;
-
-    uint256 private constant MAX_SEED_SAMPLING_ATTEMPTS = 512;
-    uint8 private constant NON_QUOTA_CLASS = 0;
-    uint8 private constant BLACK_CLASS = 1;
-    uint8 private constant WHITE_CLASS = 2;
-    uint8 private constant BLACK_BODY_INDEX = 16;
-    uint8 private constant WHITE_BODY_INDEX = 17;
     uint16 private constant MUTATION_ALLOWED_MASK = 0x1fff;
-    bytes32 private constant CLASS_PERMUTATION_DOMAIN =
-        keccak256("NekoPFPSeaDrop.classPermutation.v1");
-    bytes32 private constant TOKEN_SEED_DOMAIN = keccak256("NekoPFPSeaDrop.tokenSeed.v1");
-    bytes32 private constant SEED_RETRY_DOMAIN = keccak256("NekoPFPSeaDrop.seedRetry.v1");
     bytes32 private constant GENESIS_SEED_COMMITMENT_DOMAIN =
         keccak256("NekoPFPSeaDrop.genesisSeedCommitment.v1");
 
-    INekoGenerator public immutable generator;
-    uint256 public immutable startBlock;
-    bool public constant open = true;
+    NekoRenderer public immutable renderer;
+    bytes32 public immutable provenanceHash;
     bytes32 public genesisSeed;
     bool public revealed;
 
@@ -85,12 +68,12 @@ contract NekoPFP is ERC721SeaDropCompat {
     mapping(uint256 => uint16) public mutationCount;
     mapping(uint256 => uint16) public ancestryRoot;
     mapping(uint16 => AncestryNode) public ancestryNode;
-    uint16 public nextNodeId = uint16(INTENDED_SUPPLY + 2);
+    uint16 public nextNodeId = uint16(MAX_SUPPLY + 2);
 
     mapping(uint256 => bool) private _burnedToken;
     mapping(uint256 => uint256) private _fusionMassOverride;
     mapping(uint256 => bool) private _hasMutatedTraits;
-    mapping(uint256 => INekoGenerator.RawTraits) private _mutatedTraits;
+    mapping(uint256 => NekoRenderer.Traits) private _mutatedTraits;
 
     modifier onlyRevealed() {
         if (!revealed) {
@@ -99,62 +82,33 @@ contract NekoPFP is ERC721SeaDropCompat {
         _;
     }
 
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        address[] memory allowedSeaDrop_,
-        INekoGenerator generator_,
-        bytes32 genesisSeedCommitment_
-    ) ERC721SeaDropCompat(name_, symbol_, allowedSeaDrop_) {
-        if (address(generator_) == address(0)) {
+    constructor(bytes32 genesisSeedCommitment_, NekoRenderer renderer_)
+        ERC721A("0xNeko PFP", "NEKO")
+    {
+        if (address(renderer_) == address(0)) {
             revert GeneratorAddressIsZero();
         }
         if (genesisSeedCommitment_ == bytes32(0)) {
             revert GenesisSeedCommitmentIsZero();
         }
 
-        generator = generator_;
-        startBlock = block.number;
-
-        maxSupply = INTENDED_SUPPLY;
-        emit MaxSupplyUpdated(INTENDED_SUPPLY);
-
-        // The seed commitment is stored in the SeaDrop-standard `provenanceHash` slot
-        // and made immutable by overriding `setProvenanceHash` to always revert.
+        renderer = renderer_;
         provenanceHash = genesisSeedCommitment_;
-        emit ProvenanceHashUpdated(bytes32(0), genesisSeedCommitment_);
-
-        contractURI = string.concat(
-            'data:application/json;utf8,{"name":"',
-            name_,
-            '","description":"Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"',
-            generator_.generateUnrevealedImageURI(),
-            '"}'
-        );
-
-        emit ContractURIUpdated(contractURI);
-        emit CollectionUpdated(INTENDED_SUPPLY, block.number, true);
     }
 
     // ------------------------------------------------------------------
     // Committed reveal and deterministic seeds
     // ------------------------------------------------------------------
 
-    /// @notice The seed commitment lives in the inherited `provenanceHash` slot and is fixed at
-    ///         deploy time; the SeaDrop-standard setter is disabled to preserve that guarantee.
-    function setProvenanceHash(bytes32) external pure override {
-        revert ProvenanceHashImmutable();
-    }
-
     /// @notice Reveals the committed collection seed after all lifetime mints complete.
-    function reveal(bytes32 seed) external onlyOwner {
+    function _reveal(bytes32 seed) internal {
         if (revealed) {
             revert GenesisSeedAlreadyRevealed();
         }
 
         uint256 minted = _totalMinted();
-        if (minted != INTENDED_SUPPLY) {
-            revert MintNotComplete(minted, INTENDED_SUPPLY);
+        if (minted != MAX_SUPPLY) {
+            revert MintNotComplete(minted, MAX_SUPPLY);
         }
 
         bytes32 suppliedCommitment = keccak256(abi.encode(GENESIS_SEED_COMMITMENT_DOMAIN, seed));
@@ -171,14 +125,14 @@ contract NekoPFP is ERC721SeaDropCompat {
 
     /// @notice Derives a token seed from a candidate collection seed for offline verification.
     function deriveTokenSeed(bytes32 seed, uint256 tokenId) public view returns (uint256) {
-        if (tokenId == 0 || tokenId > INTENDED_SUPPLY) {
+        if (tokenId == 0 || tokenId > MAX_SUPPLY) {
             revert OwnerQueryForNonexistentToken();
         }
 
-        return _sampleTokenSeed(seed, tokenId);
+        return _sampleTokenSeed(renderer, seed, tokenId);
     }
 
-    function seedOf(uint256 tokenId) public view returns (uint256) {
+    function tokenSeed(uint256 tokenId) public view returns (uint256) {
         if (!revealed || !_tokenExists(tokenId)) {
             return 0;
         }
@@ -201,14 +155,14 @@ contract NekoPFP is ERC721SeaDropCompat {
             revert URIQueryForNonexistentToken();
         }
         if (!revealed) {
-            return generator.generateUnrevealedTokenURI(tokenId);
+            return _unrevealedTokenURI(tokenId);
         }
 
-        uint256 seed = seedOf(tokenId);
-        return generator.generateTokenURI(tokenId, _resolveTokenData(tokenId, seed));
+        uint256 seed = tokenSeed(tokenId);
+        return renderer.tokenURI(tokenId, _resolveTokenData(tokenId, seed));
     }
 
-    function tokenData(uint256 tokenId) public view returns (INekoGenerator.TokenData memory) {
+    function tokenData(uint256 tokenId) public view returns (NekoRenderer.TokenData memory) {
         if (!_tokenExists(tokenId)) {
             revert URIQueryForNonexistentToken();
         }
@@ -217,6 +171,46 @@ contract NekoPFP is ERC721SeaDropCompat {
         }
 
         return _resolveTokenData(tokenId);
+    }
+
+    function generate(uint256 seed) public view returns (NekoRenderer.TokenData memory) {
+        return renderer.generate(seed);
+    }
+
+    function generate(NekoRenderer.Traits calldata traits)
+        public
+        view
+        returns (NekoRenderer.TokenData memory)
+    {
+        return renderer.generate(traits);
+    }
+
+    /// @dev A fixed purple cat on a mint sky stands in for every token until reveal.
+    function _placeholderTraits() private pure returns (NekoRenderer.Traits memory placeholder) {
+        placeholder.sky = 5;
+        placeholder.head = 12;
+        placeholder.face = 5;
+        placeholder.body = 12;
+        placeholder.tail = 12;
+        placeholder.legs = [12, 12, 12, 12];
+        placeholder.eyes = [5, 5];
+        placeholder.mouth = 5;
+    }
+
+    function _unrevealedImage() internal view returns (string memory) {
+        string memory svg = renderer.render(renderer.generate(_placeholderTraits()));
+        return string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(svg)));
+    }
+
+    function _unrevealedTokenURI(uint256 tokenId) private view returns (string memory) {
+        string memory json = string.concat(
+            '{"name":"0xNeko PFP #',
+            LibString.toString(tokenId),
+            ' - Unrevealed","description":"Art reveals after mint completion. Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"',
+            _unrevealedImage(),
+            '","attributes":[{"trait_type":"Status","value":"Unrevealed"}]}'
+        );
+        return string.concat("data:application/json;base64,", Base64.encode(bytes(json)));
     }
 
     // ------------------------------------------------------------------
@@ -232,7 +226,7 @@ contract NekoPFP is ERC721SeaDropCompat {
     }
 
     function currentRoot(uint256 tokenId) public view returns (uint16) {
-        if (tokenId == 0 || tokenId > _totalMinted() || tokenId > INTENDED_SUPPLY) {
+        if (tokenId == 0 || tokenId > _totalMinted() || tokenId > MAX_SUPPLY) {
             revert OwnerQueryForNonexistentToken();
         }
 
@@ -254,10 +248,10 @@ contract NekoPFP is ERC721SeaDropCompat {
         _requireAuthorization(sender, survivorTokenId, false);
         _requireAuthorization(sender, consumedTokenId, false);
 
-        INekoGenerator.TokenData memory survivorData = _resolveTokenData(survivorTokenId);
-        INekoGenerator.TokenData memory consumedData = _resolveTokenData(consumedTokenId);
-        bytes32 survivorSignature = generator.catSignature(survivorData.traits);
-        bytes32 consumedSignature = generator.catSignature(consumedData.traits);
+        NekoRenderer.TokenData memory survivorData = _resolveTokenData(survivorTokenId);
+        NekoRenderer.TokenData memory consumedData = _resolveTokenData(consumedTokenId);
+        bytes32 survivorSignature = renderer.visualHash(survivorData.traits);
+        bytes32 consumedSignature = renderer.visualHash(consumedData.traits);
         if (survivorSignature != consumedSignature) {
             revert CatSignatureMismatch(survivorSignature, consumedSignature);
         }
@@ -298,16 +292,16 @@ contract NekoPFP is ERC721SeaDropCompat {
             revert InvalidMutationSelectionMask(consumedPartsMask);
         }
 
-        INekoGenerator.TokenData memory survivorData = _resolveTokenData(survivorTokenId);
-        INekoGenerator.TokenData memory consumedData = _resolveTokenData(consumedTokenId);
-        bytes32 survivorSignature = generator.catSignature(survivorData.traits);
-        bytes32 consumedSignature = generator.catSignature(consumedData.traits);
+        NekoRenderer.TokenData memory survivorData = _resolveTokenData(survivorTokenId);
+        NekoRenderer.TokenData memory consumedData = _resolveTokenData(consumedTokenId);
+        bytes32 survivorSignature = renderer.visualHash(survivorData.traits);
+        bytes32 consumedSignature = renderer.visualHash(consumedData.traits);
         if (survivorSignature == consumedSignature) {
             revert CatSignatureMatch(survivorSignature);
         }
 
-        INekoGenerator.RawTraits memory combinedTraits =
-            generator.combineRawTraits(survivorData.traits, consumedData.traits, consumedPartsMask);
+        NekoRenderer.Traits memory combinedTraits =
+            renderer.combine(consumedData.traits, survivorData.traits, consumedPartsMask);
         if (_rawTraitsEqual(survivorData.traits, combinedTraits)) {
             revert MutationHasNoEffect();
         }
@@ -340,6 +334,16 @@ contract NekoPFP is ERC721SeaDropCompat {
     // Internals
     // ------------------------------------------------------------------
 
+    function _mintCats(address minter, uint256 quantity) internal {
+        if (quantity == 0) {
+            revert InvalidMint();
+        }
+        if (quantity > MAX_SUPPLY - _totalMinted()) {
+            revert SupplyExceeded();
+        }
+        _safeMint(minter, quantity);
+    }
+
     function _startTokenId() internal pure override returns (uint256) {
         return 1;
     }
@@ -351,13 +355,6 @@ contract NekoPFP is ERC721SeaDropCompat {
     {
         super._beforeTokenTransfers(from, to, startTokenId, quantity);
 
-        if (from == address(0)) {
-            uint256 mintedBefore = _totalMinted();
-            if (mintedBefore > INTENDED_SUPPLY || quantity > INTENDED_SUPPLY - mintedBefore) {
-                revert IntendedSupplyExceeded(mintedBefore, quantity);
-            }
-            return;
-        }
         if (to != address(0)) {
             return;
         }
@@ -377,35 +374,33 @@ contract NekoPFP is ERC721SeaDropCompat {
     function _resolveTokenData(uint256 tokenId)
         internal
         view
-        returns (INekoGenerator.TokenData memory)
+        returns (NekoRenderer.TokenData memory)
     {
-        return _resolveTokenData(tokenId, seedOf(tokenId));
+        return _resolveTokenData(tokenId, tokenSeed(tokenId));
     }
 
     function _resolveTokenData(uint256 tokenId, uint256 seed)
         internal
         view
-        returns (INekoGenerator.TokenData memory)
+        returns (NekoRenderer.TokenData memory)
     {
         if (!revealed) {
             revert GenesisSeedNotRevealed();
         }
 
-        return generator.resolveTokenData(
-            _effectiveRawTraits(tokenId, seed), _effectiveFusionMass(tokenId)
-        );
+        return renderer.generate(_effectiveRawTraits(tokenId, seed), _effectiveFusionMass(tokenId));
     }
 
     function _effectiveRawTraits(uint256 tokenId, uint256 seed)
         internal
         view
-        returns (INekoGenerator.RawTraits memory)
+        returns (NekoRenderer.Traits memory)
     {
         if (_hasMutatedTraits[tokenId]) {
             return _mutatedTraits[tokenId];
         }
 
-        return generator.deriveRawTraits(seed);
+        return renderer.traits(seed);
     }
 
     function _effectiveFusionMass(uint256 tokenId) internal view returns (uint256) {
@@ -468,86 +463,11 @@ contract NekoPFP is ERC721SeaDropCompat {
         revert MergeCallerNotOwnerNorApproved(tokenId);
     }
 
-    function _rawTraitsEqual(INekoGenerator.RawTraits memory a, INekoGenerator.RawTraits memory b)
+    function _rawTraitsEqual(NekoRenderer.Traits memory a, NekoRenderer.Traits memory b)
         private
         pure
         returns (bool)
     {
         return keccak256(abi.encode(a)) == keccak256(abi.encode(b));
-    }
-
-    // ------------------------------------------------------------------
-    // Deterministic profile-class permutation and quota-aware seed sampling
-    // ------------------------------------------------------------------
-
-    function _sampleTokenSeed(bytes32 seed, uint256 tokenId) internal view returns (uint256) {
-        uint8 desiredClass = _desiredProfileClass(seed, tokenId);
-
-        for (uint256 attempt; attempt < MAX_SEED_SAMPLING_ATTEMPTS; ++attempt) {
-            bytes32 domain = attempt == 0 ? TOKEN_SEED_DOMAIN : SEED_RETRY_DOMAIN;
-            uint256 candidate = uint256(keccak256(abi.encode(domain, seed, tokenId, attempt)));
-            if (_profileMatches(candidate, desiredClass)) {
-                return candidate;
-            }
-        }
-
-        revert SeedSamplingExhausted(tokenId, desiredClass);
-    }
-
-    function _desiredProfileClass(bytes32 seed, uint256 tokenId) private pure returns (uint8) {
-        uint256 position = _classPermutationPosition(seed, tokenId);
-        if (position < PRIMARY_COLOR_QUOTA) {
-            return BLACK_CLASS;
-        }
-        if (position < PRIMARY_COLOR_QUOTA * 2) {
-            return WHITE_CLASS;
-        }
-
-        return NON_QUOTA_CLASS;
-    }
-
-    /// @dev Cycle-walking a keyed 13-bit Feistel permutation yields an exact permutation of 0..4662.
-    function _classPermutationPosition(bytes32 seed, uint256 tokenId)
-        private
-        pure
-        returns (uint256 position)
-    {
-        position = tokenId - 1;
-        do {
-            position = _permute13(seed, position);
-        } while (position >= INTENDED_SUPPLY);
-    }
-
-    function _permute13(bytes32 seed, uint256 value) private pure returns (uint256) {
-        uint256 left = value >> 7;
-        uint256 right = value & 0x7f;
-        for (uint256 round; round < 4; ++round) {
-            left ^= uint256(keccak256(abi.encode(CLASS_PERMUTATION_DOMAIN, seed, round * 2, right)))
-            & 0x3f;
-            right ^= uint256(
-                keccak256(abi.encode(CLASS_PERMUTATION_DOMAIN, seed, round * 2 + 1, left))
-            ) & 0x7f;
-        }
-
-        return (left << 7) | right;
-    }
-
-    function _profileMatches(uint256 seed, uint8 desiredClass) private view returns (bool) {
-        (bool matrix, bool invisible, uint8 bodyIndex) = generator.generationProfile(seed);
-
-        if (matrix && bodyIndex == BLACK_BODY_INDEX) {
-            return false;
-        }
-        if (invisible) {
-            return desiredClass == NON_QUOTA_CLASS;
-        }
-        if (bodyIndex == BLACK_BODY_INDEX) {
-            return desiredClass == BLACK_CLASS;
-        }
-        if (bodyIndex == WHITE_BODY_INDEX) {
-            return desiredClass == WHITE_CLASS;
-        }
-
-        return desiredClass == NON_QUOTA_CLASS;
     }
 }

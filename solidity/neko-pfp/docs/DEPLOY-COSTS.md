@@ -1,21 +1,20 @@
 # Deploy costs: Ethereum mainnet vs Robinhood Chain
 
-Measured 2026-08-25. Gas comes from a fork simulation of `script/Deploy.s.sol` against mainnet (`forge script`, wallet-style estimates with the safety buffer included). Prices are spot: ETH $2,483.84 (CoinGecko API), gas prices read live with `cast gas-price` from `ethereum-rpc.publicnode.com` and `rpc.mainnet.chain.robinhood.com`. Recompute before launch; all four numbers move.
+Measured 2026-08-25. Deploy gas comes from a fork simulation of `script/Deploy.s.sol` against mainnet (`forge script`, wallet-style estimates with the safety buffer included). The `multiConfigure` rows are execution gas measured 2026-09-11 in `forge test` against the deployed SeaDrop bytecode fixture; add the 21k intrinsic cost for a wallet quote. Prices are spot: ETH $2,483.84 (CoinGecko API), gas prices read live with `cast gas-price` from `ethereum-rpc.publicnode.com` and `rpc.mainnet.chain.robinhood.com`. Recompute before launch; all four numbers move.
 
 ## Gas per transaction
 
-| #   | Transaction                  | Gas (est)      |
-| --- | ---------------------------- | -------------- |
-| 1   | deploy `NekoGenerator`       | 6,442,464      |
-| 2   | deploy `NekoPFP`             | 8,325,343      |
-| 3   | `updateCreatorPayoutAddress` | 79,587         |
-| 4   | `updateAllowedFeeRecipient`  | 138,024        |
-|     | **deploy total**             | **14,985,418** |
-| 5   | `updateAllowList` (later)    | ~100,000       |
-| 6   | `updatePublicDrop` (later)   | ~100,000       |
-| 7   | `reveal` (after mint-out)    | ~100,000       |
+| #   | Transaction                              | Gas (est)              |
+| --- | ---------------------------------------- | ---------------------- |
+| 1   | deploy `NekoRenderer`                    | 6,442,464              |
+| 2   | deploy `NekoSeaDrop`                     | 8,325,343              |
+| 3   | `multiConfigure` (payout, fee recipient) | 103,401 exec, ~125k tx |
+|     | **deploy total**                         | **~14,893,000**        |
+| 4   | `multiConfigure` (allowlist, later)      | 34,966 exec            |
+| 5   | `multiConfigure` (public drop, later)    | 35,663 exec            |
+| 6   | `reveal` (after mint-out)                | ~100,000               |
 
-The two deploys are 98% of the total. The generator carries ~22.7kB of runtime code (SVG palettes, matrix background, toys); the NFT carries ~20.6kB plus a constructor that renders the full unrevealed image on-chain into `contractURI`.
+The two deploys are 99% of the total. The renderer carries ~23.4kB of runtime code (SVG palettes, matrix background, toys); the NFT carries ~20.3kB plus a constructor that renders the full unrevealed image on-chain into `contractURI`.
 
 ## Ethereum mainnet (chain id 1)
 
@@ -30,7 +29,7 @@ Gas price at measurement: 0.26 gwei (`cast gas-price`); the fork simulation pric
 | 0.57 gwei            | 0.00848            | $21.05             |
 | 2 gwei (busy day)    | 0.02997            | $74.44             |
 
-The three later txs (allowlist, public drop, reveal) add ~300k gas: under $0.20 at 0.26 gwei, ~$1.50 at 2 gwei.
+The three later txs (allowlist, public drop, reveal) add ~170k gas: under $0.10 at 0.26 gwei, ~$0.85 at 2 gwei.
 
 ## Mint cost on mainnet
 
