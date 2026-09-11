@@ -62,7 +62,7 @@ contract NekoRendererTest is Test {
         generator.combine(traits, traits, 0);
     }
 
-    function testRenderedUrisStaySelfContainedAndHashExactBytes() public view {
+    function testRenderedUrisStaySelfContained() public view {
         uint256 seed = 0x4444;
         uint256 tokenId = 42;
         NekoRenderer.Traits memory traits = generator.traits(seed);
@@ -318,5 +318,42 @@ contract NekoRendererTest is Test {
         for (uint256 i; i < 4; ++i) {
             assertEq(traits.legs[i], traits.sky, "invisible leg differs from sky");
         }
+    }
+
+    /// @dev Pins the exact rendered bytes of 1500 generated cats and 30 combined cats.
+    ///      The digest was recorded on master before the renderer split.
+    function testRenderedBytesMatchRecordedDigest() public view {
+        bytes32 digest;
+        for (uint256 start = 1; start <= 1500; start += 25) {
+            digest = this.renderDigestChunk(digest, start, start + 25);
+        }
+        assertEq(
+            digest,
+            0xfed5bf5fe5aad9238682fdd8878d365d69d0a05a65e0d8729380eb2a6401cb68,
+            "rendered bytes changed"
+        );
+    }
+
+    function renderDigestChunk(bytes32 digest, uint256 start, uint256 end)
+        external
+        view
+        returns (bytes32)
+    {
+        for (uint256 i = start; i < end; ++i) {
+            uint256 seed = uint256(keccak256(abi.encode("digest", i)));
+            NekoRenderer.Traits memory traits = generator.traits(seed);
+            NekoRenderer.TokenData memory data = generator.generate(traits, i % 7 == 0 ? i : 1);
+            digest = keccak256(abi.encode(digest, generator.tokenURI(i, data)));
+            if (i % 50 == 0) {
+                uint256 donorSeed = uint256(keccak256(abi.encode("digest2", i)));
+                NekoRenderer.Traits memory donor = generator.traits(donorSeed);
+                NekoRenderer.Traits memory combined =
+                    generator.combine(traits, donor, uint16(i % 0x1fff + 1));
+                digest = keccak256(
+                    abi.encode(digest, generator.render(generator.generate(combined, 3)))
+                );
+            }
+        }
+        return digest;
     }
 }
