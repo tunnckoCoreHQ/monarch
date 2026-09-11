@@ -4,9 +4,9 @@ pragma solidity ^0.8.30;
 import {IERC721A} from "erc721a/IERC721A.sol";
 
 import {NekoRenderer} from "../src/NekoRenderer.sol";
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
 import {NekoArt} from "../src/NekoArt.sol";
-import {NekoTestBase, TestableNekoPFP} from "./NekoTestBase.sol";
+import {NekoTestBase, TestableNekoSeaDrop} from "./NekoTestBase.sol";
 
 contract NekoFusionTest is NekoTestBase {
     function setUp() public override {
@@ -77,7 +77,7 @@ contract NekoFusionTest is NekoTestBase {
         _mint(ALICE, 4);
         NekoRenderer.Traits memory survivor = _baseTraits(5, 1);
         NekoRenderer.Traits memory donor = _baseTraits(7, 2);
-        NekoRenderer.Traits memory mutated = generator.combine(survivor, donor, 0x0008);
+        NekoRenderer.Traits memory mutated = generator.combine(donor, survivor, 0x0008);
         NekoRenderer.Traits memory firstDuplicate = mutated;
         NekoRenderer.Traits memory secondDuplicate = mutated;
         firstDuplicate.toy = 8;
@@ -245,7 +245,7 @@ contract NekoFusionTest is NekoTestBase {
     }
 
     function testFusionIsDisabledBeforeReveal() public {
-        TestableNekoPFP unrevealed =
+        TestableNekoSeaDrop unrevealed =
             _deploy(NekoRenderer(address(generator)), _commitment(GENESIS_SEED));
         vm.prank(SEA_DROP);
         unrevealed.mintSeaDrop(ALICE, 2);

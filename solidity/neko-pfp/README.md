@@ -8,7 +8,7 @@ Fully on-chain generative 0xNeko SVG cat PFPs. Fixed supply 4663, deterministic 
 - `NekoRenderer`. Deployed renderer with the Mews surface: `traits`, `generate`, `combine`, `visualHash`, `profile`, `render`, and `tokenURI`.
 - `NekoSeedSampler`. Quota-aware deterministic token seeds (keyed 13-bit Feistel plus rejection sampling), inherited by the bridge.
 - `NekoArt`. The bridge between rendering and token state, like Mews's `MewsArt`. Holds the immutable renderer and seed commitment, token seeds, the unrevealed placeholder, token metadata, reveal, and fusion with on-chain ancestry. It enforces the lifetime mint cap.
-- `NekoPFP`. The SeaDrop-facing NFT. Holds ownership, one immutable SeaDrop address, collection metadata, and royalties. Its mint and reveal entrypoints call the bridge.
+- `NekoSeaDrop`. The SeaDrop-facing NFT. Holds ownership, one immutable SeaDrop address, collection metadata, and royalties. Its mint and reveal entrypoints call the bridge.
 - `seadrop/SeaDropInterfaces.sol`. The same SeaDrop ABI declarations as Mews. The SeaDrop interface ID is `0x1890fe8e`; the Studio `multiConfigure` selector is `0x911f456b`.
 
 Dependencies are npm-only: `erc721a`, `solady`, and `viem` (allowlist tooling). No submodules, no vendored code. The SeaDrop protocol is not imported. It lives on-chain and receives configuration through `multiConfigure`.
@@ -74,7 +74,7 @@ The commitment is exposed through the SeaDrop-standard `provenanceHash` getter a
 
 ### 2. Deploy
 
-One script, three transactions: deploy `NekoRenderer`, deploy `NekoPFP(commitment, renderer, seaDrop)`, then configure the payout address and OpenSea's fee wallet together through `multiConfigure`. The constructor sets Neko's initial collection metadata.
+One script, three transactions: deploy `NekoRenderer`, deploy `NekoSeaDrop(commitment, renderer, seaDrop)`, then configure the payout address and OpenSea's fee wallet together through `multiConfigure`. The constructor sets Neko's initial collection metadata.
 
 ```
 GENESIS_SEED_COMMITMENT=$COMMITMENT PAYOUT_ADDRESS=<payout> \

@@ -6,7 +6,7 @@ import {Base64} from "solady/utils/Base64.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
 import {NekoRenderer} from "../src/NekoRenderer.sol";
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
 import {ISeaDrop} from "../src/seadrop/SeaDropInterfaces.sol";
 
 /// @notice Shared tokenURI-to-SVG decoding for the local preview scripts.
@@ -50,13 +50,13 @@ contract PreviewDeploy is PreviewBase {
     bytes32 internal constant GENESIS_SEED = keccak256("neko-pfp.new-neko.genesis-seed.v1");
     uint256 internal constant MINT_BATCH = 500;
 
-    function run() external returns (NekoRenderer renderer, NekoPFP neko) {
+    function run() external returns (NekoRenderer renderer, NekoSeaDrop neko) {
         vm.createDir("preview", true);
 
         vm.startBroadcast();
         (, address broadcaster,) = vm.readCallers();
         renderer = new NekoRenderer();
-        neko = new NekoPFP(
+        neko = new NekoSeaDrop(
             keccak256(abi.encode(GENESIS_SEED_COMMITMENT_DOMAIN, GENESIS_SEED)),
             renderer,
             ISeaDrop(broadcaster)
@@ -75,11 +75,11 @@ contract PreviewDeploy is PreviewBase {
         vm.stopBroadcast();
 
         console.log("NekoRenderer:", address(renderer));
-        console.log("NekoPFP:", address(neko));
+        console.log("NekoSeaDrop:", address(neko));
     }
 }
 
-/// @notice Reads every revealed tokenURI from a deployed NekoPFP and writes the decoded
+/// @notice Reads every revealed tokenURI from a deployed NekoSeaDrop and writes the decoded
 ///         SVGs to `preview/<tokenId>.svg`.
 ///
 ///         Run (no broadcast; needs a large gas limit for the full sweep):
@@ -88,7 +88,7 @@ contract PreviewDeploy is PreviewBase {
 contract PreviewExport is PreviewBase {
     function run() external {
         vm.createDir("preview", true);
-        NekoPFP neko = NekoPFP(vm.envAddress("NEKO"));
+        NekoSeaDrop neko = NekoSeaDrop(vm.envAddress("NEKO"));
         uint256 supply = neko.MAX_SUPPLY();
         for (uint256 tokenId = 1; tokenId <= supply; ++tokenId) {
             vm.writeFile(_fileName(tokenId), _svgFromTokenURI(neko.tokenURI(tokenId)));

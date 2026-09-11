@@ -7,7 +7,7 @@ Measured 2026-08-25. Deploy gas comes from a fork simulation of `script/Deploy.s
 | #   | Transaction                              | Gas (est)              |
 | --- | ---------------------------------------- | ---------------------- |
 | 1   | deploy `NekoRenderer`                    | 6,442,464              |
-| 2   | deploy `NekoPFP`                         | 8,325,343              |
+| 2   | deploy `NekoSeaDrop`                     | 8,325,343              |
 | 3   | `multiConfigure` (payout, fee recipient) | 103,401 exec, ~125k tx |
 |     | **deploy total**                         | **~14,893,000**        |
 | 4   | `multiConfigure` (allowlist, later)      | 34,966 exec            |

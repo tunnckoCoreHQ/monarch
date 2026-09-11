@@ -7,9 +7,9 @@ import {LibString} from "solady/utils/LibString.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
 import {NekoRenderer} from "../src/NekoRenderer.sol";
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
 import {NekoArt} from "../src/NekoArt.sol";
-import {NekoTestBase, TestableNekoPFP} from "./NekoTestBase.sol";
+import {NekoTestBase, TestableNekoSeaDrop} from "./NekoTestBase.sol";
 
 contract NekoMetadataTest is NekoTestBase {
     event GenesisSeedRevealed(bytes32 indexed genesisSeed);
@@ -143,7 +143,7 @@ contract NekoMetadataTest is NekoTestBase {
     }
 
     function testRevealAcceptsCommittedZeroSeed() public {
-        TestableNekoPFP zeroSeedNeko =
+        TestableNekoSeaDrop zeroSeedNeko =
             _deploy(NekoRenderer(address(generator)), _commitment(bytes32(0)));
         vm.prank(SEA_DROP);
         zeroSeedNeko.mintSeaDrop(ALICE, INTENDED_SUPPLY);

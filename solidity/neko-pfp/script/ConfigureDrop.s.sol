@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 import {Script} from "forge-std/Script.sol";
 
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
 import {
     AllowListData,
     PublicDrop,
@@ -34,7 +34,7 @@ contract ConfigureDrop is Script {
     uint16 internal constant OPENSEA_FEE_BPS = 1000;
 
     function allowlist() external {
-        NekoPFP neko = NekoPFP(vm.envAddress("NEKO"));
+        NekoSeaDrop neko = NekoSeaDrop(vm.envAddress("NEKO"));
         address seaDrop = vm.envOr("SEADROP", CANONICAL_SEADROP);
 
         MultiConfigureStruct memory config;
@@ -51,7 +51,7 @@ contract ConfigureDrop is Script {
     }
 
     function publicDrop() external {
-        NekoPFP neko = NekoPFP(vm.envAddress("NEKO"));
+        NekoSeaDrop neko = NekoSeaDrop(vm.envAddress("NEKO"));
         address seaDrop = vm.envOr("SEADROP", CANONICAL_SEADROP);
 
         MultiConfigureStruct memory config;

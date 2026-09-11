@@ -2,15 +2,15 @@
 pragma solidity ^0.8.30;
 
 import {NekoRenderer} from "../src/NekoRenderer.sol";
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
 import {NekoArt} from "../src/NekoArt.sol";
 import {ISeaDrop, INonFungibleSeaDropToken} from "../src/seadrop/SeaDropInterfaces.sol";
 import {NekoTestBase} from "./NekoTestBase.sol";
 
-contract NekoPFPTest is NekoTestBase {
+contract NekoMintTest is NekoTestBase {
     function testConstructorRejectsZeroSeaDrop() public {
-        vm.expectRevert(NekoPFP.InvalidSeaDrop.selector);
-        new NekoPFP(
+        vm.expectRevert(NekoSeaDrop.InvalidSeaDrop.selector);
+        new NekoSeaDrop(
             _commitment(GENESIS_SEED), NekoRenderer(address(generator)), ISeaDrop(address(0))
         );
     }

@@ -62,7 +62,7 @@ contract NekoRenderer is NekoRendererCore {
         data.fusionMass = fusionMass;
     }
 
-    function combine(Traits calldata survivor, Traits calldata consumed, uint16 consumedPartsMask)
+    function combine(Traits calldata consumed, Traits calldata survivor, uint16 consumedPartsMask)
         external
         pure
         returns (Traits memory combined)

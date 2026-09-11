@@ -4,7 +4,7 @@ pragma solidity ^0.8.30;
 import {Script, console} from "forge-std/Script.sol";
 
 import {NekoRenderer} from "../src/NekoRenderer.sol";
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
 import {ISeaDrop, PublicDrop, MultiConfigureStruct} from "../src/seadrop/SeaDropInterfaces.sol";
 
 /// @notice Throwaway probe: measures real `mintPublic` gas against the deployed SeaDrop
@@ -19,7 +19,7 @@ contract MintGasProbe is Script {
         vm.deal(minter, 10 ether);
 
         NekoRenderer renderer = new NekoRenderer();
-        NekoPFP neko = new NekoPFP(bytes32(uint256(1)), renderer, ISeaDrop(SEADROP));
+        NekoSeaDrop neko = new NekoSeaDrop(bytes32(uint256(1)), renderer, ISeaDrop(SEADROP));
 
         MultiConfigureStruct memory config;
         config.seaDropImpl = SEADROP;

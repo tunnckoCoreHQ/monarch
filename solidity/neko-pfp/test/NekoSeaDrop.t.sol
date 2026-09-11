@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {Base64} from "solady/utils/Base64.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
 import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {
     ISeaDrop,
@@ -33,7 +33,7 @@ contract NekoSeaDropTest is Test {
     uint80 internal constant PRICE = 0.001 ether;
     ISeaDrop internal seaDrop = ISeaDrop(SEA_DROP);
     NekoRenderer internal renderer;
-    NekoPFP internal neko;
+    NekoSeaDrop internal neko;
 
     function setUp() public {
         vm.chainId(8453);
@@ -47,7 +47,7 @@ contract NekoSeaDropTest is Test {
         vm.etch(SEA_DROP, runtime);
         vm.store(SEA_DROP, bytes32(0), bytes32(uint256(1)));
         renderer = new NekoRenderer();
-        neko = new NekoPFP(_commitment(), renderer, seaDrop);
+        neko = new NekoSeaDrop(_commitment(), renderer, seaDrop);
         vm.deal(ALICE, 10 ether);
         vm.deal(BOB, 10 ether);
     }
@@ -67,7 +67,7 @@ contract NekoSeaDropTest is Test {
 
     function testInterfaceIdsMatchSeaDropAndStudio() public view {
         assertEq(type(INonFungibleSeaDropToken).interfaceId, bytes4(0x1890fe8e));
-        assertEq(NekoPFP.multiConfigure.selector, bytes4(0x911f456b));
+        assertEq(NekoSeaDrop.multiConfigure.selector, bytes4(0x911f456b));
         assertTrue(neko.supportsInterface(type(INonFungibleSeaDropToken).interfaceId));
         assertTrue(neko.supportsInterface(type(IERC2981).interfaceId));
         assertTrue(neko.supportsInterface(0x01ffc9a7));
@@ -83,12 +83,12 @@ contract NekoSeaDropTest is Test {
         address[] memory allowed = new address[](1);
         allowed[0] = SEA_DROP;
         vm.expectEmit(false, false, false, true);
-        emit NekoPFP.AllowedSeaDropUpdated(allowed);
+        emit NekoSeaDrop.AllowedSeaDropUpdated(allowed);
         vm.expectEmit(false, false, false, true);
-        emit NekoPFP.SeaDropTokenDeployed();
+        emit NekoSeaDrop.SeaDropTokenDeployed();
         vm.expectEmit(false, false, false, true);
         emit ISeaDropTokenContractMetadata.MaxSupplyUpdated(SUPPLY);
-        new NekoPFP(_commitment(), renderer, seaDrop);
+        new NekoSeaDrop(_commitment(), renderer, seaDrop);
     }
 
     function testStudioConfiguresRealSeaDropAndBothMintStages() public {
@@ -180,11 +180,11 @@ contract NekoSeaDropTest is Test {
         vm.expectEmit(false, false, false, true, address(neko));
         emit ISeaDropTokenContractMetadata.MaxSupplyUpdated(SUPPLY);
         neko.setMaxSupply(SUPPLY);
-        vm.expectRevert(NekoPFP.FixedMaxSupply.selector);
+        vm.expectRevert(NekoSeaDrop.FixedMaxSupply.selector);
         neko.setMaxSupply(SUPPLY - 1);
-        vm.expectRevert(NekoPFP.FixedMaxSupply.selector);
+        vm.expectRevert(NekoSeaDrop.FixedMaxSupply.selector);
         neko.setMaxSupply(SUPPLY + 1);
-        vm.expectRevert(NekoPFP.FixedMaxSupply.selector);
+        vm.expectRevert(NekoSeaDrop.FixedMaxSupply.selector);
         neko.setMaxSupply(0);
         vm.prank(ALICE);
         vm.expectRevert(Ownable.Unauthorized.selector);
@@ -194,10 +194,10 @@ contract NekoSeaDropTest is Test {
     function testStudioRejectsInvalidSupplySeaDropAndCaller() public {
         MultiConfigureStruct memory config = _config();
         config.maxSupply = SUPPLY - 1;
-        vm.expectRevert(NekoPFP.FixedMaxSupply.selector);
+        vm.expectRevert(NekoSeaDrop.FixedMaxSupply.selector);
         neko.multiConfigure(config);
         config.maxSupply = SUPPLY + 1;
-        vm.expectRevert(NekoPFP.FixedMaxSupply.selector);
+        vm.expectRevert(NekoSeaDrop.FixedMaxSupply.selector);
         neko.multiConfigure(config);
         config.maxSupply = SUPPLY;
         config.seaDropImpl = BOB;
@@ -239,7 +239,7 @@ contract NekoSeaDropTest is Test {
         vm.expectRevert(Ownable.Unauthorized.selector);
         neko.setRoyaltyInfo(info);
         vm.expectEmit(false, false, false, true, address(neko));
-        emit NekoPFP.RoyaltyInfoUpdated(BOB, 750);
+        emit NekoSeaDrop.RoyaltyInfoUpdated(BOB, 750);
         neko.setRoyaltyInfo(info);
         (address receiver, uint256 amount) = neko.royaltyInfo(1, 1 ether);
         assertEq(receiver, BOB);

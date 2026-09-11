@@ -13,7 +13,7 @@ import {
     MultiConfigureStruct
 } from "./seadrop/SeaDropInterfaces.sol";
 
-contract NekoPFP is NekoArt, Ownable, IERC2981 {
+contract NekoSeaDrop is NekoArt, Ownable, IERC2981 {
     error InvalidSeaDrop();
     error FixedMaxSupply();
     ISeaDrop public immutable seaDrop;

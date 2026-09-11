@@ -81,8 +81,8 @@ contract MockNekoRenderer {
     }
 
     function combine(
-        NekoRenderer.Traits calldata survivor,
         NekoRenderer.Traits calldata consumed,
+        NekoRenderer.Traits calldata survivor,
         uint16 consumedPartsMask
     ) external pure returns (NekoRenderer.Traits memory combined) {
         combined = survivor;

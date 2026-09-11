@@ -4,13 +4,13 @@ pragma solidity ^0.8.30;
 import {Test} from "forge-std/Test.sol";
 
 import {NekoRenderer} from "../src/NekoRenderer.sol";
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
 import {ISeaDrop} from "../src/seadrop/SeaDropInterfaces.sol";
 import {MockNekoRenderer} from "./mocks/MockNekoRenderer.sol";
 
-contract TestableNekoPFP is NekoPFP {
+contract TestableNekoSeaDrop is NekoSeaDrop {
     constructor(ISeaDrop seaDrop, NekoRenderer generator, bytes32 genesisSeedCommitment)
-        NekoPFP(genesisSeedCommitment, generator, seaDrop)
+        NekoSeaDrop(genesisSeedCommitment, generator, seaDrop)
     {}
 
     function setGenesisSeedForTest(bytes32 seed) external {
@@ -30,7 +30,7 @@ abstract contract NekoTestBase is Test {
         keccak256("NekoPFPSeaDrop.genesisSeedCommitment.v1");
 
     MockNekoRenderer internal generator;
-    TestableNekoPFP internal neko;
+    TestableNekoSeaDrop internal neko;
 
     function setUp() public virtual {
         generator = new MockNekoRenderer();
@@ -39,9 +39,9 @@ abstract contract NekoTestBase is Test {
 
     function _deploy(NekoRenderer generator_, bytes32 commitment)
         internal
-        returns (TestableNekoPFP)
+        returns (TestableNekoSeaDrop)
     {
-        return new TestableNekoPFP(ISeaDrop(SEA_DROP), generator_, commitment);
+        return new TestableNekoSeaDrop(ISeaDrop(SEA_DROP), generator_, commitment);
     }
 
     function _setRevealed() internal {

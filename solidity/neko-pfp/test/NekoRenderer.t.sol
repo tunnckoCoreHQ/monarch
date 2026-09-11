@@ -42,7 +42,7 @@ contract NekoRendererTest is Test {
     function testCombineAllPartsReproducesConsumedTraits() public view {
         NekoRenderer.Traits memory survivor = generator.traits(0x1111);
         NekoRenderer.Traits memory consumed = generator.traits(0x2222);
-        NekoRenderer.Traits memory combined = generator.combine(survivor, consumed, 0x1fff);
+        NekoRenderer.Traits memory combined = generator.combine(consumed, survivor, 0x1fff);
 
         assertEq(
             keccak256(abi.encode(combined)),
@@ -102,7 +102,7 @@ contract NekoRendererTest is Test {
         NekoRenderer.Traits memory consumed = generator.traits(0xc0ffee);
         uint16 mask = 0x1245;
 
-        NekoRenderer.Traits memory combined = generator.combine(survivor, consumed, mask);
+        NekoRenderer.Traits memory combined = generator.combine(consumed, survivor, mask);
 
         assertEq(combined.sky, consumed.sky, "selected sky was not copied");
         assertEq(combined.face, consumed.face, "selected face was not copied");
@@ -348,7 +348,7 @@ contract NekoRendererTest is Test {
                 uint256 donorSeed = uint256(keccak256(abi.encode("digest2", i)));
                 NekoRenderer.Traits memory donor = generator.traits(donorSeed);
                 NekoRenderer.Traits memory combined =
-                    generator.combine(traits, donor, uint16(i % 0x1fff + 1));
+                    generator.combine(donor, traits, uint16(i % 0x1fff + 1));
                 digest = keccak256(
                     abi.encode(digest, generator.render(generator.generate(combined, 3)))
                 );

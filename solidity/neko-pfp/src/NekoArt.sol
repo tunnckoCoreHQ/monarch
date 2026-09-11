@@ -301,7 +301,7 @@ abstract contract NekoArt is ERC721A, ReentrancyGuard, NekoSeedSampler {
         }
 
         NekoRenderer.Traits memory combinedTraits =
-            renderer.combine(survivorData.traits, consumedData.traits, consumedPartsMask);
+            renderer.combine(consumedData.traits, survivorData.traits, consumedPartsMask);
         if (_rawTraitsEqual(survivorData.traits, combinedTraits)) {
             revert MutationHasNoEffect();
         }

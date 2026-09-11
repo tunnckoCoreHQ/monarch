@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {IERC721A} from "erc721a/IERC721A.sol";
 
 import {NekoRenderer} from "../src/NekoRenderer.sol";
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
 import {NekoArt} from "../src/NekoArt.sol";
 import {ISeaDrop} from "../src/seadrop/SeaDropInterfaces.sol";
 
@@ -60,12 +60,12 @@ contract NekoEndToEndTest is Test {
     bytes32 private constant TOKEN_SEED_DOMAIN = keccak256("NekoPFPSeaDrop.tokenSeed.v1");
 
     NekoRenderer private generator;
-    NekoPFP private neko;
+    NekoSeaDrop private neko;
 
     function setUp() public {
         generator = new NekoRenderer();
         bytes32 commitment = keccak256(abi.encode(GENESIS_SEED_COMMITMENT_DOMAIN, GENESIS_SEED));
-        neko = new NekoPFP(commitment, generator, ISeaDrop(SEA_DROP));
+        neko = new NekoSeaDrop(commitment, generator, ISeaDrop(SEA_DROP));
 
         vm.prank(SEA_DROP);
         neko.mintSeaDrop(ALICE, INTENDED_SUPPLY);
@@ -192,7 +192,7 @@ contract NekoEndToEndTest is Test {
         NekoRenderer.TokenData memory consumedBefore = neko.tokenData(consumedId);
         bytes32 metadataBefore = keccak256(bytes(neko.tokenURI(survivorId)));
         NekoRenderer.Traits memory expected =
-            generator.combine(survivorBefore.traits, consumedBefore.traits, PARTIAL_MUTATION_MASK);
+            generator.combine(consumedBefore.traits, survivorBefore.traits, PARTIAL_MUTATION_MASK);
         assertTrue(
             keccak256(abi.encode(expected)) != keccak256(abi.encode(survivorBefore.traits)),
             "selected production mutation has no effect"
@@ -298,7 +298,7 @@ contract NekoEndToEndTest is Test {
         assertEq(neko.currentRoot(survivorId), survivorId + 1, "mass-one ancestry root mismatch");
 
         NekoRenderer.Traits memory massTwoTraits =
-            generator.combine(initialTraits, duplicateDonorData.traits, ALL_PARTS_MASK);
+            generator.combine(duplicateDonorData.traits, initialTraits, ALL_PARTS_MASK);
         vm.prank(ALICE);
         neko.mutate(survivorId, duplicateDonors.first, ALL_PARTS_MASK);
 
@@ -330,7 +330,7 @@ contract NekoEndToEndTest is Test {
         );
 
         NekoRenderer.Traits memory massFourTraits =
-            generator.combine(massTwoTraits, finalDonorTraits, PARTIAL_MUTATION_MASK);
+            generator.combine(finalDonorTraits, massTwoTraits, PARTIAL_MUTATION_MASK);
         uint8 massFourSlopTier = _expectedSlopTier(massFourTraits);
         assertTrue(massFourSlopTier > 0, "mass-four mutation did not produce slop");
         vm.prank(ALICE);
@@ -441,7 +441,7 @@ contract NekoEndToEndTest is Test {
             }
 
             NekoRenderer.Traits memory combined =
-                generator.combine(survivorTraits, donorTraits, PARTIAL_MUTATION_MASK);
+                generator.combine(donorTraits, survivorTraits, PARTIAL_MUTATION_MASK);
             if (
                 keccak256(abi.encode(combined)) != keccak256(abi.encode(survivorTraits))
                     && _expectedSlopTier(combined) > 0
