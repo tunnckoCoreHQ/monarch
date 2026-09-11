@@ -15,6 +15,8 @@ fs_permissions = [
   { access = "read", path = "./test/fixtures" },
 ]
 deny = "warnings"
+# Kept as a backup of the original renderer. Not compiled.
+skip = ["src/NekoRendererOG.sol"]
 remappings = [
   "erc721a/=node_modules/erc721a/contracts/",
   "solady/=node_modules/solady/src/",
@@ -22,10 +24,10 @@ remappings = [
 ]
 
 [lint]
-# every narrowing cast is bounded by the palette and mask ranges (see NekoBase.sol)
+# every narrowing cast is bounded by the palette and mask ranges (see NekoRendererCore.sol)
 exclude_lints = ["unsafe-typecast"]
 severity = ["high", "med", "low"]
-ignore = ["node_modules/**"]
+ignore = ["node_modules/**", "src/NekoRendererOG.sol"]
 
 [fuzz]
 runs = 256
