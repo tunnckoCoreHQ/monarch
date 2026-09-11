@@ -4,21 +4,20 @@ pragma solidity ^0.8.30;
 import {Test} from "forge-std/Test.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
-import {INekoGenerator} from "../src/INekoGenerator.sol";
-import {NekoBase} from "../src/NekoBase.sol";
-import {NekoGenerator} from "../src/NekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
+import {NekoRendererCore} from "../src/NekoRendererCore.sol";
 
-contract NekoGeneratorTest is Test {
-    NekoGenerator private generator;
+contract NekoRendererTest is Test {
+    NekoRenderer private generator;
 
     function setUp() public {
-        generator = new NekoGenerator();
+        generator = new NekoRenderer();
     }
 
     function testGenerationProfileMatchesDerivedTraits() public view {
         for (uint256 seed; seed < 128; ++seed) {
-            INekoGenerator.RawTraits memory traits = generator.deriveRawTraits(seed);
-            (bool matrix, bool invisible, uint8 bodyIndex) = generator.generationProfile(seed);
+            NekoRenderer.Traits memory traits = generator.traits(seed);
+            (bool matrix, bool invisible, uint8 bodyIndex) = generator.profile(seed);
 
             assertEq(traits.matrix, matrix, "matrix profile differs from raw traits");
             assertEq(traits.invisible, invisible, "invisible profile differs from raw traits");
@@ -28,23 +27,22 @@ contract NekoGeneratorTest is Test {
     }
 
     function testResolveComputesFusionSummaryAndRejectsInvalidMass() public {
-        INekoGenerator.RawTraits memory traits = generator.deriveRawTraits(0xdecafbad);
-        INekoGenerator.TokenData memory data = generator.resolveTokenData(traits, 8);
+        NekoRenderer.Traits memory traits = generator.traits(0xdecafbad);
+        NekoRenderer.TokenData memory data = generator.generate(traits, 8);
 
         assertEq(data.fusionMass, 8, "fusion mass changed during resolution");
         assertEq(
             keccak256(abi.encode(data.traits)), keccak256(abi.encode(traits)), "traits changed"
         );
 
-        vm.expectRevert(NekoBase.InvalidFusionMass.selector);
-        generator.resolveTokenData(traits, 0);
+        vm.expectRevert(NekoRendererCore.InvalidFusionMass.selector);
+        generator.generate(traits, 0);
     }
 
     function testCombineAllPartsReproducesConsumedTraits() public view {
-        INekoGenerator.RawTraits memory survivor = generator.deriveRawTraits(0x1111);
-        INekoGenerator.RawTraits memory consumed = generator.deriveRawTraits(0x2222);
-        INekoGenerator.RawTraits memory combined =
-            generator.combineRawTraits(survivor, consumed, 0x1fff);
+        NekoRenderer.Traits memory survivor = generator.traits(0x1111);
+        NekoRenderer.Traits memory consumed = generator.traits(0x2222);
+        NekoRenderer.Traits memory combined = generator.combine(survivor, consumed, 0x1fff);
 
         assertEq(
             keccak256(abi.encode(combined)),
@@ -54,62 +52,37 @@ contract NekoGeneratorTest is Test {
     }
 
     function testCatSignatureIgnoresToyAndRejectsEmptyMutationMask() public {
-        INekoGenerator.RawTraits memory traits = generator.deriveRawTraits(0x3333);
-        bytes32 signature = generator.catSignature(traits);
+        NekoRenderer.Traits memory traits = generator.traits(0x3333);
+        bytes32 signature = generator.visualHash(traits);
         traits.toy = traits.toy == 36 ? 0 : traits.toy + 1;
 
-        assertEq(generator.catSignature(traits), signature, "toy changed the cat signature");
+        assertEq(generator.visualHash(traits), signature, "toy changed the cat signature");
 
-        vm.expectRevert(NekoBase.InvalidMutationSelectionMask.selector);
-        generator.combineRawTraits(traits, traits, 0);
+        vm.expectRevert(NekoRendererCore.InvalidMutationSelectionMask.selector);
+        generator.combine(traits, traits, 0);
     }
 
-    function testRenderedUrisStaySelfContainedAndHashExactBytes() public view {
+    function testRenderedUrisStaySelfContained() public view {
         uint256 seed = 0x4444;
         uint256 tokenId = 42;
-        INekoGenerator.RawTraits memory traits = generator.deriveRawTraits(seed);
-        INekoGenerator.TokenData memory data = generator.resolveTokenData(traits, 2);
+        NekoRenderer.Traits memory traits = generator.traits(seed);
+        NekoRenderer.TokenData memory data = generator.generate(traits, 2);
 
-        string memory svg = generator.generateSVG(data);
-        (string memory imageURI, bytes32 contentHash) = generator.generateImageURI(data);
-        string memory tokenURI = generator.generateTokenURI(tokenId, data);
+        string memory svg = generator.render(data);
+        string memory tokenURI = generator.tokenURI(tokenId, data);
 
         assertTrue(LibString.startsWith(svg, "<svg "), "rendered SVG has no root element");
         assertTrue(LibString.contains(svg, "fusion-diamond"), "fused SVG has no star marker");
-        assertTrue(
-            LibString.startsWith(imageURI, "data:image/svg+xml;base64,"),
-            "image URI is not embedded"
-        );
-        assertEq(contentHash, keccak256(bytes(imageURI)), "content hash does not cover image URI");
         assertTrue(
             LibString.startsWith(tokenURI, "data:application/json;base64,"),
             "token metadata is not embedded"
         );
     }
 
-    function testUnrevealedMetadataUsesSharedImageAndTokenSpecificName() public view {
-        string memory imageURI = generator.generateUnrevealedImageURI();
-        string memory tokenURI = generator.generateUnrevealedTokenURI(7);
-        string memory nextTokenURI = generator.generateUnrevealedTokenURI(8);
-
-        assertTrue(
-            LibString.startsWith(imageURI, "data:image/svg+xml;base64,"),
-            "unrevealed image is not embedded"
-        );
-        assertTrue(
-            LibString.startsWith(tokenURI, "data:application/json;base64,"),
-            "unrevealed metadata is not embedded"
-        );
-        assertTrue(
-            keccak256(bytes(tokenURI)) != keccak256(bytes(nextTokenURI)),
-            "unrevealed metadata does not include the token id"
-        );
-    }
-
     function testDerivedTraitsMaintainStructuralInvariantsAcrossBroadSeedSet() public view {
         for (uint256 i; i < 1024; ++i) {
             uint256 seed = uint256(keccak256(abi.encode("structural invariant sample", i)));
-            INekoGenerator.RawTraits memory traits = generator.deriveRawTraits(seed);
+            NekoRenderer.Traits memory traits = generator.traits(seed);
 
             _assertTraitRanges(traits);
             _assertDerivedFlags(traits);
@@ -125,12 +98,11 @@ contract NekoGeneratorTest is Test {
     }
 
     function testSelectiveCombinationCopiesRequestedPartsAndPreservesTheRest() public view {
-        INekoGenerator.RawTraits memory survivor = generator.deriveRawTraits(0x51a7);
-        INekoGenerator.RawTraits memory consumed = generator.deriveRawTraits(0xc0ffee);
+        NekoRenderer.Traits memory survivor = generator.traits(0x51a7);
+        NekoRenderer.Traits memory consumed = generator.traits(0xc0ffee);
         uint16 mask = 0x1245;
 
-        INekoGenerator.RawTraits memory combined =
-            generator.combineRawTraits(survivor, consumed, mask);
+        NekoRenderer.Traits memory combined = generator.combine(survivor, consumed, mask);
 
         assertEq(combined.sky, consumed.sky, "selected sky was not copied");
         assertEq(combined.face, consumed.face, "selected face was not copied");
@@ -149,7 +121,7 @@ contract NekoGeneratorTest is Test {
     function testRenderingCoversEveryPaletteColorAndToy() public view {
         bytes32 previousHash;
         for (uint8 color; color < 20; ++color) {
-            INekoGenerator.RawTraits memory traits = _uniformTraits(color, color);
+            NekoRenderer.Traits memory traits = _uniformTraits(color, color);
             bytes32 currentHash = _renderVariant(color + 1, traits, 1);
             if (color != 0) {
                 assertTrue(currentHash != previousHash, "palette color did not change metadata");
@@ -159,7 +131,7 @@ contract NekoGeneratorTest is Test {
 
         previousHash = bytes32(0);
         for (uint8 toy; toy < 37; ++toy) {
-            INekoGenerator.RawTraits memory traits = _uniformTraits(5, toy);
+            NekoRenderer.Traits memory traits = _uniformTraits(5, toy);
             bytes32 currentHash = _renderVariant(toy + 1, traits, 1);
             if (toy != 0) {
                 assertTrue(currentHash != previousHash, "toy did not change metadata");
@@ -169,12 +141,12 @@ contract NekoGeneratorTest is Test {
     }
 
     function testComplexAlternateAndSpecialClassMetadataCombinations() public view {
-        INekoGenerator.RawTraits memory matrix = _uniformTraits(5, 36);
+        NekoRenderer.Traits memory matrix = _uniformTraits(5, 36);
         matrix.sky = 0;
         matrix.matrix = true;
         bytes32 matrixHash = _renderVariant(1, matrix, 2);
 
-        INekoGenerator.RawTraits memory invisible = _uniformTraits(7, 35);
+        NekoRenderer.Traits memory invisible = _uniformTraits(7, 35);
         invisible.sky = 7;
         invisible.invisible = true;
         bytes32 invisibleHash = _renderVariant(2, invisible, 3);
@@ -192,7 +164,7 @@ contract NekoGeneratorTest is Test {
     }
 
     function testRejectsMalformedNestedTraitsAndDerivedFlags() public {
-        INekoGenerator.RawTraits memory traits = _uniformTraits(5, 1);
+        NekoRenderer.Traits memory traits = _uniformTraits(5, 1);
         traits.sky = 20;
         _expectInvalidRawTraits(traits);
 
@@ -214,45 +186,39 @@ contract NekoGeneratorTest is Test {
     }
 
     function testRenderingRejectsInconsistentTokenSummary() public {
-        INekoGenerator.RawTraits memory traits = _alternateTraits(1, 1);
-        INekoGenerator.TokenData memory data = generator.resolveTokenData(traits, 8);
+        NekoRenderer.Traits memory traits = _alternateTraits(1, 1);
+        NekoRenderer.TokenData memory data = generator.generate(traits, 8);
 
         data.slopTier += 1;
-        vm.expectRevert(NekoBase.InvalidTokenData.selector);
-        generator.generateSVG(data);
+        vm.expectRevert(NekoRendererCore.InvalidTokenData.selector);
+        generator.render(data);
 
-        data = generator.resolveTokenData(traits, 8);
+        data = generator.generate(traits, 8);
         data.fusionMass = 0;
-        vm.expectRevert(NekoBase.InvalidFusionMass.selector);
-        generator.generateTokenURI(1, data);
+        vm.expectRevert(NekoRendererCore.InvalidFusionMass.selector);
+        generator.tokenURI(1, data);
 
         data.fusionMass = 4664;
-        vm.expectRevert(NekoBase.InvalidFusionMass.selector);
-        generator.generateTokenURI(1, data);
+        vm.expectRevert(NekoRendererCore.InvalidFusionMass.selector);
+        generator.tokenURI(1, data);
     }
 
-    function _expectInvalidRawTraits(INekoGenerator.RawTraits memory traits) private {
-        vm.expectRevert(NekoBase.InvalidRawTraits.selector);
-        generator.resolveTokenData(traits, 1);
+    function _expectInvalidRawTraits(NekoRenderer.Traits memory traits) private {
+        vm.expectRevert(NekoRendererCore.InvalidTraits.selector);
+        generator.generate(traits, 1);
     }
 
-    function _renderVariant(
-        uint256 tokenId,
-        INekoGenerator.RawTraits memory traits,
-        uint256 fusionMass
-    ) private view returns (bytes32 tokenURIHash) {
-        INekoGenerator.TokenData memory data = generator.resolveTokenData(traits, fusionMass);
-        string memory svg = generator.generateSVG(data);
-        (string memory imageURI, bytes32 contentHash) = generator.generateImageURI(data);
-        string memory tokenURI = generator.generateTokenURI(tokenId, data);
+    function _renderVariant(uint256 tokenId, NekoRenderer.Traits memory traits, uint256 fusionMass)
+        private
+        view
+        returns (bytes32 tokenURIHash)
+    {
+        NekoRenderer.TokenData memory data = generator.generate(traits, fusionMass);
+        string memory svg = generator.render(data);
+        string memory tokenURI = generator.tokenURI(tokenId, data);
 
         assertTrue(LibString.startsWith(svg, "<svg "), "variant SVG has no root element");
         assertTrue(LibString.contains(svg, 'id="toy"'), "variant SVG omitted toy");
-        assertTrue(
-            LibString.startsWith(imageURI, "data:image/svg+xml;base64,"),
-            "variant image is not embedded"
-        );
-        assertEq(contentHash, keccak256(bytes(imageURI)), "variant image hash mismatch");
         assertTrue(
             LibString.startsWith(tokenURI, "data:application/json;base64,"),
             "variant metadata is not embedded"
@@ -263,7 +229,7 @@ contract NekoGeneratorTest is Test {
     function _uniformTraits(uint8 body, uint8 toy)
         private
         pure
-        returns (INekoGenerator.RawTraits memory traits)
+        returns (NekoRenderer.Traits memory traits)
     {
         traits.sky = body == 0 ? 1 : 0;
         traits.head = body;
@@ -283,7 +249,7 @@ contract NekoGeneratorTest is Test {
     function _alternateTraits(uint8 eyeMask, uint8 legMask)
         private
         pure
-        returns (INekoGenerator.RawTraits memory traits)
+        returns (NekoRenderer.Traits memory traits)
     {
         traits = _uniformTraits(5, 36);
         traits.head = 6;
@@ -306,7 +272,7 @@ contract NekoGeneratorTest is Test {
         }
     }
 
-    function _assertTraitRanges(INekoGenerator.RawTraits memory traits) private pure {
+    function _assertTraitRanges(NekoRenderer.Traits memory traits) private pure {
         assertTrue(traits.sky < 20, "sky is outside palette");
         assertTrue(traits.head < 20, "head is outside palette");
         assertTrue(traits.face < 13, "face is outside face palette");
@@ -322,7 +288,7 @@ contract NekoGeneratorTest is Test {
         }
     }
 
-    function _assertDerivedFlags(INekoGenerator.RawTraits memory traits) private pure {
+    function _assertDerivedFlags(NekoRenderer.Traits memory traits) private pure {
         uint8 expectedLegMask;
         for (uint8 i; i < 4; ++i) {
             if (traits.legs[i] != traits.body) {
@@ -345,12 +311,49 @@ contract NekoGeneratorTest is Test {
         assertEq(traits.alternateEyeMask, expectedEyeMask, "alternate eye mask mismatch");
     }
 
-    function _assertInvisibleBodyMatchesSky(INekoGenerator.RawTraits memory traits) private pure {
+    function _assertInvisibleBodyMatchesSky(NekoRenderer.Traits memory traits) private pure {
         assertEq(traits.head, traits.sky, "invisible head differs from sky");
         assertEq(traits.body, traits.sky, "invisible body differs from sky");
         assertEq(traits.tail, traits.sky, "invisible tail differs from sky");
         for (uint256 i; i < 4; ++i) {
             assertEq(traits.legs[i], traits.sky, "invisible leg differs from sky");
         }
+    }
+
+    /// @dev Pins the exact rendered bytes of 1500 generated cats and 30 combined cats.
+    ///      The digest was recorded on master before the renderer split.
+    function testRenderedBytesMatchRecordedDigest() public view {
+        bytes32 digest;
+        for (uint256 start = 1; start <= 1500; start += 25) {
+            digest = this.renderDigestChunk(digest, start, start + 25);
+        }
+        assertEq(
+            digest,
+            0xfed5bf5fe5aad9238682fdd8878d365d69d0a05a65e0d8729380eb2a6401cb68,
+            "rendered bytes changed"
+        );
+    }
+
+    function renderDigestChunk(bytes32 digest, uint256 start, uint256 end)
+        external
+        view
+        returns (bytes32)
+    {
+        for (uint256 i = start; i < end; ++i) {
+            uint256 seed = uint256(keccak256(abi.encode("digest", i)));
+            NekoRenderer.Traits memory traits = generator.traits(seed);
+            NekoRenderer.TokenData memory data = generator.generate(traits, i % 7 == 0 ? i : 1);
+            digest = keccak256(abi.encode(digest, generator.tokenURI(i, data)));
+            if (i % 50 == 0) {
+                uint256 donorSeed = uint256(keccak256(abi.encode("digest2", i)));
+                NekoRenderer.Traits memory donor = generator.traits(donorSeed);
+                NekoRenderer.Traits memory combined =
+                    generator.combine(traits, donor, uint16(i % 0x1fff + 1));
+                digest = keccak256(
+                    abi.encode(digest, generator.render(generator.generate(combined, 3)))
+                );
+            }
+        }
+        return digest;
     }
 }

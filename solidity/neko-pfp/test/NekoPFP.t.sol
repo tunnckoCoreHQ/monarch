@@ -1,21 +1,28 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.30;
 
-import {INekoGenerator} from "../src/INekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
-import {ERC721SeaDropCompat} from "../src/seadrop/ERC721SeaDropCompat.sol";
-import {INonFungibleSeaDropToken} from "../src/seadrop/INonFungibleSeaDropToken.sol";
+import {NekoArt} from "../src/NekoArt.sol";
+import {ISeaDrop, INonFungibleSeaDropToken} from "../src/seadrop/SeaDropInterfaces.sol";
 import {NekoTestBase} from "./NekoTestBase.sol";
 
 contract NekoPFPTest is NekoTestBase {
+    function testConstructorRejectsZeroSeaDrop() public {
+        vm.expectRevert(NekoPFP.InvalidSeaDrop.selector);
+        new NekoPFP(
+            _commitment(GENESIS_SEED), NekoRenderer(address(generator)), ISeaDrop(address(0))
+        );
+    }
+
     function testConstructorRejectsZeroGenerator() public {
-        vm.expectRevert(NekoPFP.GeneratorAddressIsZero.selector);
-        _deploy(INekoGenerator(address(0)), _commitment(GENESIS_SEED));
+        vm.expectRevert(NekoArt.GeneratorAddressIsZero.selector);
+        _deploy(NekoRenderer(address(0)), _commitment(GENESIS_SEED));
     }
 
     function testConstructorRejectsZeroSeedCommitment() public {
-        vm.expectRevert(NekoPFP.GenesisSeedCommitmentIsZero.selector);
-        _deploy(generator, bytes32(0));
+        vm.expectRevert(NekoArt.GenesisSeedCommitmentIsZero.selector);
+        _deploy(NekoRenderer(address(generator)), bytes32(0));
     }
 
     function testSeaDropMintUsesConfiguredRecipientAndQuantity() public {
@@ -34,13 +41,7 @@ contract NekoPFPTest is NekoTestBase {
 
     function testMintRejectsQuantityAboveMaxSupply() public {
         vm.prank(SEA_DROP);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                ERC721SeaDropCompat.MintQuantityExceedsMaxSupply.selector,
-                INTENDED_SUPPLY + 1,
-                INTENDED_SUPPLY
-            )
-        );
+        vm.expectRevert(NekoArt.SupplyExceeded.selector);
         neko.mintSeaDrop(ALICE, INTENDED_SUPPLY + 1);
     }
 }

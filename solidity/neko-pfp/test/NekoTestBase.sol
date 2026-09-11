@@ -3,16 +3,15 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 
-import {INekoGenerator} from "../src/INekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
-import {MockNekoGenerator} from "./mocks/MockNekoGenerator.sol";
+import {ISeaDrop} from "../src/seadrop/SeaDropInterfaces.sol";
+import {MockNekoRenderer} from "./mocks/MockNekoRenderer.sol";
 
 contract TestableNekoPFP is NekoPFP {
-    constructor(
-        address[] memory allowedSeaDrop,
-        INekoGenerator generator,
-        bytes32 genesisSeedCommitment
-    ) NekoPFP("Neko", "NEKO", allowedSeaDrop, generator, genesisSeedCommitment) {}
+    constructor(ISeaDrop seaDrop, NekoRenderer generator, bytes32 genesisSeedCommitment)
+        NekoPFP(genesisSeedCommitment, generator, seaDrop)
+    {}
 
     function setGenesisSeedForTest(bytes32 seed) external {
         genesisSeed = seed;
@@ -30,19 +29,19 @@ abstract contract NekoTestBase is Test {
     bytes32 internal constant GENESIS_SEED_COMMITMENT_DOMAIN =
         keccak256("NekoPFPSeaDrop.genesisSeedCommitment.v1");
 
-    MockNekoGenerator internal generator;
+    MockNekoRenderer internal generator;
     TestableNekoPFP internal neko;
 
     function setUp() public virtual {
-        generator = new MockNekoGenerator();
-        neko = _deploy(generator, _commitment(GENESIS_SEED));
+        generator = new MockNekoRenderer();
+        neko = _deploy(NekoRenderer(address(generator)), _commitment(GENESIS_SEED));
     }
 
-    function _deploy(INekoGenerator generator_, bytes32 commitment)
+    function _deploy(NekoRenderer generator_, bytes32 commitment)
         internal
         returns (TestableNekoPFP)
     {
-        return new TestableNekoPFP(_allowedSeaDrop(), generator_, commitment);
+        return new TestableNekoPFP(ISeaDrop(SEA_DROP), generator_, commitment);
     }
 
     function _setRevealed() internal {
@@ -54,11 +53,6 @@ abstract contract NekoTestBase is Test {
         neko.mintSeaDrop(recipient, quantity);
     }
 
-    function _allowedSeaDrop() internal pure returns (address[] memory allowedSeaDrop) {
-        allowedSeaDrop = new address[](1);
-        allowedSeaDrop[0] = SEA_DROP;
-    }
-
     function _commitment(bytes32 seed) internal pure returns (bytes32) {
         return keccak256(abi.encode(GENESIS_SEED_COMMITMENT_DOMAIN, seed));
     }
@@ -66,7 +60,7 @@ abstract contract NekoTestBase is Test {
     function _baseTraits(uint8 body, uint8 toy)
         internal
         pure
-        returns (INekoGenerator.RawTraits memory traits)
+        returns (NekoRenderer.Traits memory traits)
     {
         traits.sky = body == 0 ? 1 : 0;
         traits.head = body;

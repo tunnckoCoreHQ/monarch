@@ -3,18 +3,9 @@ pragma solidity ^0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {NekoGenerator} from "../src/NekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
-import {PublicDrop} from "../src/seadrop/SeaDropStructs.sol";
-
-interface ISeaDropMint {
-    function mintPublic(
-        address nftContract,
-        address feeRecipient,
-        address minterIfNotPayer,
-        uint256 quantity
-    ) external payable;
-}
+import {ISeaDrop, PublicDrop, MultiConfigureStruct} from "../src/seadrop/SeaDropInterfaces.sol";
 
 /// @notice Throwaway probe: measures real `mintPublic` gas against the deployed SeaDrop
 ///         on a mainnet fork. Run with an RPC, never broadcast.
@@ -27,40 +18,39 @@ contract MintGasProbe is Script {
         address minter = address(0x1337);
         vm.deal(minter, 10 ether);
 
-        address[] memory allowedSeaDrop = new address[](1);
-        allowedSeaDrop[0] = SEADROP;
-        NekoGenerator generator = new NekoGenerator();
-        NekoPFP neko = new NekoPFP("Neko", "NEKO", allowedSeaDrop, generator, bytes32(uint256(1)));
+        NekoRenderer renderer = new NekoRenderer();
+        NekoPFP neko = new NekoPFP(bytes32(uint256(1)), renderer, ISeaDrop(SEADROP));
 
-        neko.updateCreatorPayoutAddress(SEADROP, payout);
-        neko.updateAllowedFeeRecipient(SEADROP, OPENSEA_FEE_RECIPIENT, true);
-        neko.updatePublicDrop(
-            SEADROP,
-            PublicDrop({
-                mintPrice: 0.01 ether,
-                startTime: uint48(block.timestamp - 1),
-                endTime: uint48(block.timestamp + 1 days),
-                maxTotalMintableByWallet: 10,
-                feeBps: 1000,
-                restrictFeeRecipients: true
-            })
-        );
+        MultiConfigureStruct memory config;
+        config.seaDropImpl = SEADROP;
+        config.creatorPayoutAddress = payout;
+        config.allowedFeeRecipients = new address[](1);
+        config.allowedFeeRecipients[0] = OPENSEA_FEE_RECIPIENT;
+        config.publicDrop = PublicDrop({
+            mintPrice: 0.01 ether,
+            startTime: uint48(block.timestamp - 1),
+            endTime: uint48(block.timestamp + 1 days),
+            maxTotalMintableByWallet: 10,
+            feeBps: 1000,
+            restrictFeeRecipients: true
+        });
+        neko.multiConfigure(config);
 
         vm.startPrank(minter);
         uint256 gasBefore = gasleft();
-        ISeaDropMint(SEADROP).mintPublic{value: 0.01 ether}(
+        ISeaDrop(SEADROP).mintPublic{value: 0.01 ether}(
             address(neko), OPENSEA_FEE_RECIPIENT, address(0), 1
         );
         console.log("mintPublic qty 1, first mint:", gasBefore - gasleft());
 
         gasBefore = gasleft();
-        ISeaDropMint(SEADROP).mintPublic{value: 0.01 ether}(
+        ISeaDrop(SEADROP).mintPublic{value: 0.01 ether}(
             address(neko), OPENSEA_FEE_RECIPIENT, address(0), 1
         );
         console.log("mintPublic qty 1, warm wallet:", gasBefore - gasleft());
 
         gasBefore = gasleft();
-        ISeaDropMint(SEADROP).mintPublic{value: 0.05 ether}(
+        ISeaDrop(SEADROP).mintPublic{value: 0.05 ether}(
             address(neko), OPENSEA_FEE_RECIPIENT, address(0), 5
         );
         console.log("mintPublic qty 5:", gasBefore - gasleft());

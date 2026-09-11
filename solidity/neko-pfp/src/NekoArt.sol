@@ -1,0 +1,473 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+pragma solidity ^0.8.30;
+
+import {ERC721A} from "erc721a/ERC721A.sol";
+import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
+
+import {Base64} from "solady/utils/Base64.sol";
+import {LibString} from "solady/utils/LibString.sol";
+import {NekoRenderer} from "./NekoRenderer.sol";
+import {NekoSeedSampler} from "./NekoSeedSampler.sol";
+
+/// @notice Connects the pure renderer to token seeds, reveal, fusion, and ancestry.
+abstract contract NekoArt is ERC721A, ReentrancyGuard, NekoSeedSampler {
+    error InvalidMint();
+    error SupplyExceeded();
+    error GeneratorAddressIsZero();
+    error GenesisSeedCommitmentIsZero();
+    error GenesisSeedAlreadyRevealed();
+    error GenesisSeedNotRevealed();
+    error GenesisSeedCommitmentMismatch(bytes32 expected, bytes32 actual);
+    error MintNotComplete(uint256 minted, uint256 required);
+    error CannotMergeTokenWithItself();
+    error CannotMutateTokenWithItself();
+    error MergeCallerNotOwnerNorApproved(uint256 tokenId);
+    error MutationCallerNotOwnerNorApproved(uint256 tokenId);
+    error CatSignatureMismatch(bytes32 survivorSignature, bytes32 consumedSignature);
+    error CatSignatureMatch(bytes32 signature);
+    error InvalidMutationSelectionMask(uint16 consumedPartsMask);
+    error MutationHasNoEffect();
+
+    enum FusionAction {
+        DuplicateMerge,
+        Mutation
+    }
+
+    struct AncestryNode {
+        uint16 parentA;
+        uint16 parentB;
+        FusionAction action;
+        uint16 mutationMask;
+    }
+
+    event GenesisSeedRevealed(bytes32 indexed genesisSeed);
+    event MetadataUpdate(uint256 _tokenId);
+    event BatchMetadataUpdate(uint256 fromTokenId, uint256 toTokenId);
+    event NekoMerged(
+        uint256 indexed survivorTokenId, uint256 indexed consumedTokenId, uint256 newFusionMass
+    );
+    event AncestryCombined(
+        uint256 indexed survivorTokenId,
+        uint256 indexed consumedTokenId,
+        uint16 indexed newRoot,
+        FusionAction action,
+        uint16 mutationMask,
+        uint256 newFusionMass
+    );
+
+    uint16 private constant MUTATION_ALLOWED_MASK = 0x1fff;
+    bytes32 private constant GENESIS_SEED_COMMITMENT_DOMAIN =
+        keccak256("NekoPFPSeaDrop.genesisSeedCommitment.v1");
+
+    NekoRenderer public immutable renderer;
+    bytes32 public immutable provenanceHash;
+    bytes32 public genesisSeed;
+    bool public revealed;
+
+    mapping(uint256 => uint16) public duplicateMergeCount;
+    mapping(uint256 => uint16) public mutationCount;
+    mapping(uint256 => uint16) public ancestryRoot;
+    mapping(uint16 => AncestryNode) public ancestryNode;
+    uint16 public nextNodeId = uint16(MAX_SUPPLY + 2);
+
+    mapping(uint256 => bool) private _burnedToken;
+    mapping(uint256 => uint256) private _fusionMassOverride;
+    mapping(uint256 => bool) private _hasMutatedTraits;
+    mapping(uint256 => NekoRenderer.Traits) private _mutatedTraits;
+
+    modifier onlyRevealed() {
+        if (!revealed) {
+            revert GenesisSeedNotRevealed();
+        }
+        _;
+    }
+
+    constructor(bytes32 genesisSeedCommitment_, NekoRenderer renderer_)
+        ERC721A("0xNeko PFP", "NEKO")
+    {
+        if (address(renderer_) == address(0)) {
+            revert GeneratorAddressIsZero();
+        }
+        if (genesisSeedCommitment_ == bytes32(0)) {
+            revert GenesisSeedCommitmentIsZero();
+        }
+
+        renderer = renderer_;
+        provenanceHash = genesisSeedCommitment_;
+    }
+
+    // ------------------------------------------------------------------
+    // Committed reveal and deterministic seeds
+    // ------------------------------------------------------------------
+
+    /// @notice Reveals the committed collection seed after all lifetime mints complete.
+    function _reveal(bytes32 seed) internal {
+        if (revealed) {
+            revert GenesisSeedAlreadyRevealed();
+        }
+
+        uint256 minted = _totalMinted();
+        if (minted != MAX_SUPPLY) {
+            revert MintNotComplete(minted, MAX_SUPPLY);
+        }
+
+        bytes32 suppliedCommitment = keccak256(abi.encode(GENESIS_SEED_COMMITMENT_DOMAIN, seed));
+        if (suppliedCommitment != provenanceHash) {
+            revert GenesisSeedCommitmentMismatch(provenanceHash, suppliedCommitment);
+        }
+
+        genesisSeed = seed;
+        revealed = true;
+
+        emit GenesisSeedRevealed(seed);
+        emit BatchMetadataUpdate(1, type(uint256).max);
+    }
+
+    /// @notice Derives a token seed from a candidate collection seed for offline verification.
+    function deriveTokenSeed(bytes32 seed, uint256 tokenId) public view returns (uint256) {
+        if (tokenId == 0 || tokenId > MAX_SUPPLY) {
+            revert OwnerQueryForNonexistentToken();
+        }
+
+        return _sampleTokenSeed(renderer, seed, tokenId);
+    }
+
+    function tokenSeed(uint256 tokenId) public view returns (uint256) {
+        if (!revealed || !_tokenExists(tokenId)) {
+            return 0;
+        }
+
+        return deriveTokenSeed(genesisSeed, tokenId);
+    }
+
+    // ------------------------------------------------------------------
+    // Token metadata
+    // ------------------------------------------------------------------
+
+    function tokenURI(uint256 tokenId)
+        public
+        view
+        virtual
+        override(ERC721A)
+        returns (string memory)
+    {
+        if (!_tokenExists(tokenId)) {
+            revert URIQueryForNonexistentToken();
+        }
+        if (!revealed) {
+            return _unrevealedTokenURI(tokenId);
+        }
+
+        uint256 seed = tokenSeed(tokenId);
+        return renderer.tokenURI(tokenId, _resolveTokenData(tokenId, seed));
+    }
+
+    function tokenData(uint256 tokenId) public view returns (NekoRenderer.TokenData memory) {
+        if (!_tokenExists(tokenId)) {
+            revert URIQueryForNonexistentToken();
+        }
+        if (!revealed) {
+            revert GenesisSeedNotRevealed();
+        }
+
+        return _resolveTokenData(tokenId);
+    }
+
+    function generate(uint256 seed) public view returns (NekoRenderer.TokenData memory) {
+        return renderer.generate(seed);
+    }
+
+    function generate(NekoRenderer.Traits calldata traits)
+        public
+        view
+        returns (NekoRenderer.TokenData memory)
+    {
+        return renderer.generate(traits);
+    }
+
+    /// @dev A fixed purple cat on a mint sky stands in for every token until reveal.
+    function _placeholderTraits() private pure returns (NekoRenderer.Traits memory placeholder) {
+        placeholder.sky = 5;
+        placeholder.head = 12;
+        placeholder.face = 5;
+        placeholder.body = 12;
+        placeholder.tail = 12;
+        placeholder.legs = [12, 12, 12, 12];
+        placeholder.eyes = [5, 5];
+        placeholder.mouth = 5;
+    }
+
+    function _unrevealedImage() internal view returns (string memory) {
+        string memory svg = renderer.render(renderer.generate(_placeholderTraits()));
+        return string.concat("data:image/svg+xml;base64,", Base64.encode(bytes(svg)));
+    }
+
+    function _unrevealedTokenURI(uint256 tokenId) private view returns (string memory) {
+        string memory json = string.concat(
+            '{"name":"0xNeko PFP #',
+            LibString.toString(tokenId),
+            ' - Unrevealed","description":"Art reveals after mint completion. Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"',
+            _unrevealedImage(),
+            '","attributes":[{"trait_type":"Status","value":"Unrevealed"}]}'
+        );
+        return string.concat("data:application/json;base64,", Base64.encode(bytes(json)));
+    }
+
+    // ------------------------------------------------------------------
+    // Fusion: the burn game
+    // ------------------------------------------------------------------
+
+    function fusionMass(uint256 tokenId) public view returns (uint256) {
+        if (!_tokenExists(tokenId)) {
+            revert OwnerQueryForNonexistentToken();
+        }
+
+        return _effectiveFusionMass(tokenId);
+    }
+
+    function currentRoot(uint256 tokenId) public view returns (uint16) {
+        if (tokenId == 0 || tokenId > _totalMinted() || tokenId > MAX_SUPPLY) {
+            revert OwnerQueryForNonexistentToken();
+        }
+
+        uint16 storedRoot = ancestryRoot[tokenId];
+        return storedRoot == 0 ? uint16(tokenId + 1) : storedRoot;
+    }
+
+    /// @notice Burns `consumedTokenId` into `survivorTokenId` when both cats match.
+    function merge(uint256 survivorTokenId, uint256 consumedTokenId)
+        external
+        onlyRevealed
+        nonReentrant
+    {
+        if (survivorTokenId == consumedTokenId) {
+            revert CannotMergeTokenWithItself();
+        }
+
+        address sender = _msgSenderERC721A();
+        _requireAuthorization(sender, survivorTokenId, false);
+        _requireAuthorization(sender, consumedTokenId, false);
+
+        NekoRenderer.TokenData memory survivorData = _resolveTokenData(survivorTokenId);
+        NekoRenderer.TokenData memory consumedData = _resolveTokenData(consumedTokenId);
+        bytes32 survivorSignature = renderer.visualHash(survivorData.traits);
+        bytes32 consumedSignature = renderer.visualHash(consumedData.traits);
+        if (survivorSignature != consumedSignature) {
+            revert CatSignatureMismatch(survivorSignature, consumedSignature);
+        }
+
+        (uint16 newRoot, uint256 newMass) = _combineLiveState(
+            survivorTokenId,
+            consumedTokenId,
+            FusionAction.DuplicateMerge,
+            0,
+            survivorData.fusionMass,
+            consumedData.fusionMass
+        );
+
+        _burn(consumedTokenId, true);
+
+        emit NekoMerged(survivorTokenId, consumedTokenId, newMass);
+        emit AncestryCombined(
+            survivorTokenId, consumedTokenId, newRoot, FusionAction.DuplicateMerge, 0, newMass
+        );
+        emit MetadataUpdate(survivorTokenId);
+    }
+
+    /// @notice Burns `consumedTokenId` and grafts its selected parts onto `survivorTokenId`.
+    function mutate(uint256 survivorTokenId, uint256 consumedTokenId, uint16 consumedPartsMask)
+        external
+        onlyRevealed
+        nonReentrant
+    {
+        if (survivorTokenId == consumedTokenId) {
+            revert CannotMutateTokenWithItself();
+        }
+
+        address sender = _msgSenderERC721A();
+        _requireAuthorization(sender, survivorTokenId, true);
+        _requireAuthorization(sender, consumedTokenId, true);
+
+        if (consumedPartsMask == 0 || (consumedPartsMask & ~MUTATION_ALLOWED_MASK) != 0) {
+            revert InvalidMutationSelectionMask(consumedPartsMask);
+        }
+
+        NekoRenderer.TokenData memory survivorData = _resolveTokenData(survivorTokenId);
+        NekoRenderer.TokenData memory consumedData = _resolveTokenData(consumedTokenId);
+        bytes32 survivorSignature = renderer.visualHash(survivorData.traits);
+        bytes32 consumedSignature = renderer.visualHash(consumedData.traits);
+        if (survivorSignature == consumedSignature) {
+            revert CatSignatureMatch(survivorSignature);
+        }
+
+        NekoRenderer.Traits memory combinedTraits =
+            renderer.combine(survivorData.traits, consumedData.traits, consumedPartsMask);
+        if (_rawTraitsEqual(survivorData.traits, combinedTraits)) {
+            revert MutationHasNoEffect();
+        }
+
+        (uint16 newRoot, uint256 newMass) = _combineLiveState(
+            survivorTokenId,
+            consumedTokenId,
+            FusionAction.Mutation,
+            consumedPartsMask,
+            survivorData.fusionMass,
+            consumedData.fusionMass
+        );
+        _hasMutatedTraits[survivorTokenId] = true;
+        _mutatedTraits[survivorTokenId] = combinedTraits;
+
+        _burn(consumedTokenId, true);
+
+        emit AncestryCombined(
+            survivorTokenId,
+            consumedTokenId,
+            newRoot,
+            FusionAction.Mutation,
+            consumedPartsMask,
+            newMass
+        );
+        emit MetadataUpdate(survivorTokenId);
+    }
+
+    // ------------------------------------------------------------------
+    // Internals
+    // ------------------------------------------------------------------
+
+    function _mintCats(address minter, uint256 quantity) internal {
+        if (quantity == 0) {
+            revert InvalidMint();
+        }
+        if (quantity > MAX_SUPPLY - _totalMinted()) {
+            revert SupplyExceeded();
+        }
+        _safeMint(minter, quantity);
+    }
+
+    function _startTokenId() internal pure override returns (uint256) {
+        return 1;
+    }
+
+    function _beforeTokenTransfers(address from, address to, uint256 startTokenId, uint256 quantity)
+        internal
+        virtual
+        override
+    {
+        super._beforeTokenTransfers(from, to, startTokenId, quantity);
+
+        if (to != address(0)) {
+            return;
+        }
+
+        for (uint256 i; i < quantity; ++i) {
+            _burnedToken[startTokenId + i] = true;
+            _clearBurnedTokenState(startTokenId + i);
+        }
+    }
+
+    /// @dev O(1) existence check. ERC721A's `_exists` walks back to the batch head,
+    ///      which costs O(tokenId) reads after a single full-collection batch mint.
+    function _tokenExists(uint256 tokenId) internal view returns (bool) {
+        return tokenId != 0 && tokenId <= _totalMinted() && !_burnedToken[tokenId];
+    }
+
+    function _resolveTokenData(uint256 tokenId)
+        internal
+        view
+        returns (NekoRenderer.TokenData memory)
+    {
+        return _resolveTokenData(tokenId, tokenSeed(tokenId));
+    }
+
+    function _resolveTokenData(uint256 tokenId, uint256 seed)
+        internal
+        view
+        returns (NekoRenderer.TokenData memory)
+    {
+        if (!revealed) {
+            revert GenesisSeedNotRevealed();
+        }
+
+        return renderer.generate(_effectiveRawTraits(tokenId, seed), _effectiveFusionMass(tokenId));
+    }
+
+    function _effectiveRawTraits(uint256 tokenId, uint256 seed)
+        internal
+        view
+        returns (NekoRenderer.Traits memory)
+    {
+        if (_hasMutatedTraits[tokenId]) {
+            return _mutatedTraits[tokenId];
+        }
+
+        return renderer.traits(seed);
+    }
+
+    function _effectiveFusionMass(uint256 tokenId) internal view returns (uint256) {
+        uint256 storedMass = _fusionMassOverride[tokenId];
+        return storedMass == 0 ? 1 : storedMass;
+    }
+
+    function _clearBurnedTokenState(uint256 tokenId) internal {
+        delete _fusionMassOverride[tokenId];
+        delete duplicateMergeCount[tokenId];
+        delete mutationCount[tokenId];
+        delete _hasMutatedTraits[tokenId];
+        delete _mutatedTraits[tokenId];
+    }
+
+    function _combineLiveState(
+        uint256 survivorTokenId,
+        uint256 consumedTokenId,
+        FusionAction action,
+        uint16 mutationMask,
+        uint256 survivorMass,
+        uint256 consumedMass
+    ) private returns (uint16 newRoot, uint256 newMass) {
+        uint16 parentA = currentRoot(survivorTokenId);
+        uint16 parentB = currentRoot(consumedTokenId);
+        uint16 newDuplicateCount =
+            duplicateMergeCount[survivorTokenId] + duplicateMergeCount[consumedTokenId];
+        uint16 newMutationCount = mutationCount[survivorTokenId] + mutationCount[consumedTokenId];
+        if (action == FusionAction.DuplicateMerge) {
+            ++newDuplicateCount;
+        } else {
+            ++newMutationCount;
+        }
+
+        newRoot = nextNodeId;
+        nextNodeId = newRoot + 1;
+        ancestryNode[newRoot] = AncestryNode({
+            parentA: parentA, parentB: parentB, action: action, mutationMask: mutationMask
+        });
+        ancestryRoot[survivorTokenId] = newRoot;
+
+        newMass = survivorMass + consumedMass;
+        _fusionMassOverride[survivorTokenId] = newMass;
+        duplicateMergeCount[survivorTokenId] = newDuplicateCount;
+        mutationCount[survivorTokenId] = newMutationCount;
+    }
+
+    function _requireAuthorization(address sender, uint256 tokenId, bool mutation) private view {
+        address tokenOwner = ownerOf(tokenId);
+        if (
+            sender == tokenOwner || getApproved(tokenId) == sender
+                || isApprovedForAll(tokenOwner, sender)
+        ) {
+            return;
+        }
+        if (mutation) {
+            revert MutationCallerNotOwnerNorApproved(tokenId);
+        }
+
+        revert MergeCallerNotOwnerNorApproved(tokenId);
+    }
+
+    function _rawTraitsEqual(NekoRenderer.Traits memory a, NekoRenderer.Traits memory b)
+        private
+        pure
+        returns (bool)
+    {
+        return keccak256(abi.encode(a)) == keccak256(abi.encode(b));
+    }
+}

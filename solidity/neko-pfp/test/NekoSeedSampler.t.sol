@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 import {IERC721A} from "erc721a/IERC721A.sol";
 
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoSeedSampler} from "../src/NekoSeedSampler.sol";
 import {NekoTestBase} from "./NekoTestBase.sol";
 
 contract NekoSeedSamplerTest is NekoTestBase {
@@ -20,7 +20,7 @@ contract NekoSeedSamplerTest is NekoTestBase {
         uint256 visibleWhite;
         for (uint256 tokenId = 1; tokenId <= INTENDED_SUPPLY; ++tokenId) {
             uint256 seed = neko.deriveTokenSeed(GENESIS_SEED, tokenId);
-            (, bool invisible, uint8 bodyIndex) = generator.generationProfile(seed);
+            (, bool invisible, uint8 bodyIndex) = generator.profile(seed);
             if (!invisible && bodyIndex == 16) {
                 ++visibleBlack;
             } else if (!invisible && bodyIndex == 17) {
@@ -37,7 +37,7 @@ contract NekoSeedSamplerTest is NekoTestBase {
         generator.setForcedProfile(true, true, false, 16);
 
         vm.expectRevert(
-            abi.encodeWithSelector(NekoPFP.SeedSamplingExhausted.selector, 1, desiredClass)
+            abi.encodeWithSelector(NekoSeedSampler.SeedSamplingExhausted.selector, 1, desiredClass)
         );
         neko.deriveTokenSeed(GENESIS_SEED, 1);
     }
@@ -52,7 +52,9 @@ contract NekoSeedSamplerTest is NekoTestBase {
             "invisible non-quota profile was rejected"
         );
         vm.expectRevert(
-            abi.encodeWithSelector(NekoPFP.SeedSamplingExhausted.selector, quotaTokenId, quotaClass)
+            abi.encodeWithSelector(
+                NekoSeedSampler.SeedSamplingExhausted.selector, quotaTokenId, quotaClass
+            )
         );
         neko.deriveTokenSeed(GENESIS_SEED, quotaTokenId);
     }
@@ -78,7 +80,7 @@ contract NekoSeedSamplerTest is NekoTestBase {
 
     function _desiredClassForToken(uint256 tokenId) private view returns (uint8) {
         uint256 acceptedSeed = neko.deriveTokenSeed(GENESIS_SEED, tokenId);
-        (, bool invisible, uint8 bodyIndex) = generator.generationProfile(acceptedSeed);
+        (, bool invisible, uint8 bodyIndex) = generator.profile(acceptedSeed);
         if (invisible) {
             return 0;
         }

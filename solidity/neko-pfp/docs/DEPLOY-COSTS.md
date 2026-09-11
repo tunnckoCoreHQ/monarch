@@ -6,7 +6,7 @@ Measured 2026-08-25. Gas comes from a fork simulation of `script/Deploy.s.sol` a
 
 | #   | Transaction                  | Gas (est)      |
 | --- | ---------------------------- | -------------- |
-| 1   | deploy `NekoGenerator`       | 6,442,464      |
+| 1   | deploy `NekoRenderer`        | 6,442,464      |
 | 2   | deploy `NekoPFP`             | 8,325,343      |
 | 3   | `updateCreatorPayoutAddress` | 79,587         |
 | 4   | `updateAllowedFeeRecipient`  | 138,024        |
@@ -15,7 +15,7 @@ Measured 2026-08-25. Gas comes from a fork simulation of `script/Deploy.s.sol` a
 | 6   | `updatePublicDrop` (later)   | ~100,000       |
 | 7   | `reveal` (after mint-out)    | ~100,000       |
 
-The two deploys are 98% of the total. The generator carries ~22.7kB of runtime code (SVG palettes, matrix background, toys); the NFT carries ~20.6kB plus a constructor that renders the full unrevealed image on-chain into `contractURI`.
+The two deploys are 98% of the total. The renderer carries ~22.7kB of runtime code (SVG palettes, matrix background, toys); the NFT carries ~20.6kB plus a constructor that renders the full unrevealed image on-chain into `contractURI`.
 
 ## Ethereum mainnet (chain id 1)
 
