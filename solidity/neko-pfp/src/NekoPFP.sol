@@ -4,7 +4,7 @@ pragma solidity ^0.8.30;
 import {Ownable} from "solady/auth/Ownable.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {NekoArt} from "./NekoArt.sol";
-import {INekoGenerator} from "./INekoGenerator.sol";
+import {NekoRenderer} from "./NekoRenderer.sol";
 import {
     ISeaDrop,
     INonFungibleSeaDropToken,
@@ -26,7 +26,7 @@ contract NekoPFP is NekoArt, Ownable, IERC2981 {
     event ContractURIUpdated(string newContractURI);
     event AllowedSeaDropUpdated(address[] allowedSeaDrop);
 
-    constructor(bytes32 genesisSeedCommitment, INekoGenerator renderer_, ISeaDrop seaDrop_)
+    constructor(bytes32 genesisSeedCommitment, NekoRenderer renderer_, ISeaDrop seaDrop_)
         NekoArt(genesisSeedCommitment, renderer_)
     {
         if (address(seaDrop_) == address(0)) {
@@ -45,7 +45,7 @@ contract NekoPFP is NekoArt, Ownable, IERC2981 {
                 'data:application/json;utf8,{"name":"',
                 name(),
                 '","description":"Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"',
-                renderer_.generateUnrevealedImageURI(),
+                _unrevealedImage(),
                 '"}'
             )
         );

@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {Base64} from "solady/utils/Base64.sol";
 import {LibString} from "solady/utils/LibString.sol";
 
-import {NekoGenerator} from "../src/NekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
 import {ISeaDrop} from "../src/seadrop/SeaDropInterfaces.sol";
 
@@ -50,15 +50,15 @@ contract PreviewDeploy is PreviewBase {
     bytes32 internal constant GENESIS_SEED = keccak256("neko-pfp.new-neko.genesis-seed.v1");
     uint256 internal constant MINT_BATCH = 500;
 
-    function run() external returns (NekoGenerator generator, NekoPFP neko) {
+    function run() external returns (NekoRenderer renderer, NekoPFP neko) {
         vm.createDir("preview", true);
 
         vm.startBroadcast();
         (, address broadcaster,) = vm.readCallers();
-        generator = new NekoGenerator();
+        renderer = new NekoRenderer();
         neko = new NekoPFP(
             keccak256(abi.encode(GENESIS_SEED_COMMITMENT_DOMAIN, GENESIS_SEED)),
-            generator,
+            renderer,
             ISeaDrop(broadcaster)
         );
 
@@ -74,7 +74,7 @@ contract PreviewDeploy is PreviewBase {
         neko.reveal(GENESIS_SEED);
         vm.stopBroadcast();
 
-        console.log("NekoGenerator:", address(generator));
+        console.log("NekoRenderer:", address(renderer));
         console.log("NekoPFP:", address(neko));
     }
 }

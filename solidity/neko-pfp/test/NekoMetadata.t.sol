@@ -2,9 +2,11 @@
 pragma solidity ^0.8.30;
 
 import {IERC721A} from "erc721a/IERC721A.sol";
+import {Base64} from "solady/utils/Base64.sol";
+import {LibString} from "solady/utils/LibString.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 
-import {INekoGenerator} from "../src/INekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
 import {NekoArt} from "../src/NekoArt.sol";
 import {NekoTestBase, TestableNekoPFP} from "./NekoTestBase.sol";
@@ -19,13 +21,12 @@ contract NekoMetadataTest is NekoTestBase {
         assertEq(neko.maxSupply(), INTENDED_SUPPLY, "max supply mismatch");
         assertEq(neko.MAX_SUPPLY(), INTENDED_SUPPLY, "intended supply mismatch");
         assertEq(neko.PRIMARY_COLOR_QUOTA(), PRIMARY_COLOR_QUOTA, "primary color quota mismatch");
-        assertEq(
-            neko.contractURI(),
-            string.concat(
-                'data:application/json;utf8,{"name":"0xNeko PFP","description":"Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"',
-                generator.generateUnrevealedImageURI(),
-                '"}'
-            )
+        assertTrue(
+            LibString.startsWith(
+                neko.contractURI(),
+                'data:application/json;utf8,{"name":"0xNeko PFP","description":"Fully on-chain, pixel-perfect generative 0xNeko SVG art.","image":"data:image/svg+xml;base64,'
+            ),
+            "collection metadata mismatch"
         );
     }
 
@@ -33,10 +34,18 @@ contract NekoMetadataTest is NekoTestBase {
         _mint(ALICE, 1);
 
         assertEq(neko.tokenSeed(1), 0, "unrevealed token exposed a seed");
-        assertEq(
-            neko.tokenURI(1),
-            generator.generateUnrevealedTokenURI(1),
-            "placeholder metadata mismatch"
+        string memory placeholder = _decodeJson(neko.tokenURI(1));
+        assertTrue(
+            LibString.contains(placeholder, '"name":"0xNeko PFP #1 - Unrevealed"'),
+            "placeholder name mismatch"
+        );
+        assertTrue(
+            LibString.contains(placeholder, '"image":"data:image/svg+xml;base64,'),
+            "placeholder image is not embedded"
+        );
+        assertTrue(
+            LibString.contains(placeholder, '{"trait_type":"Status","value":"Unrevealed"}'),
+            "placeholder status mismatch"
         );
 
         vm.expectRevert(NekoArt.GenesisSeedNotRevealed.selector);
@@ -134,7 +143,8 @@ contract NekoMetadataTest is NekoTestBase {
     }
 
     function testRevealAcceptsCommittedZeroSeed() public {
-        TestableNekoPFP zeroSeedNeko = _deploy(generator, _commitment(bytes32(0)));
+        TestableNekoPFP zeroSeedNeko =
+            _deploy(NekoRenderer(address(generator)), _commitment(bytes32(0)));
         vm.prank(SEA_DROP);
         zeroSeedNeko.mintSeaDrop(ALICE, INTENDED_SUPPLY);
 
@@ -149,11 +159,11 @@ contract NekoMetadataTest is NekoTestBase {
         _setRevealed();
         _mint(ALICE, 1);
         uint256 seed = neko.tokenSeed(1);
-        INekoGenerator.RawTraits memory expectedTraits = _baseTraits(7, 3);
+        NekoRenderer.Traits memory expectedTraits = _baseTraits(7, 3);
         generator.setRawTraits(seed, expectedTraits);
 
-        INekoGenerator.TokenData memory data = neko.tokenData(1);
-        string memory expectedTokenURI = generator.generateTokenURI(1, data);
+        NekoRenderer.TokenData memory data = neko.tokenData(1);
+        string memory expectedTokenURI = generator.tokenURI(1, data);
 
         assertEq(
             keccak256(abi.encode(data.traits)),
@@ -183,7 +193,7 @@ contract NekoMetadataTest is NekoTestBase {
     function testFusionBurnRemovesTokenMetadataAndPublicSeed() public {
         _setRevealed();
         _mint(ALICE, 2);
-        INekoGenerator.RawTraits memory duplicate = _baseTraits(5, 1);
+        NekoRenderer.Traits memory duplicate = _baseTraits(5, 1);
         generator.setRawTraits(neko.tokenSeed(1), duplicate);
         generator.setRawTraits(neko.tokenSeed(2), duplicate);
         assertTrue(neko.tokenSeed(2) != 0, "revealed token has no seed before burn");
@@ -204,5 +214,9 @@ contract NekoMetadataTest is NekoTestBase {
         vm.prank(SEA_DROP);
         vm.expectRevert(NekoArt.SupplyExceeded.selector);
         neko.mintSeaDrop(ALICE, 1);
+    }
+
+    function _decodeJson(string memory uri) private pure returns (string memory) {
+        return string(Base64.decode(LibString.slice(uri, 29)));
     }
 }

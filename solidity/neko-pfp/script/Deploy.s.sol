@@ -3,11 +3,11 @@ pragma solidity ^0.8.30;
 
 import {Script} from "forge-std/Script.sol";
 
-import {NekoGenerator} from "../src/NekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
 import {ISeaDrop, MultiConfigureStruct} from "../src/seadrop/SeaDropInterfaces.sol";
 
-/// @notice Deploys the generator and the NFT, then wires the SeaDrop payout and fee recipient.
+/// @notice Deploys the renderer and the NFT, then wires the SeaDrop payout and fee recipient.
 ///
 ///         Required env:
 ///           GENESIS_SEED_COMMITMENT  bytes32, keccak256(abi.encode(domain, seed)); see README
@@ -22,7 +22,7 @@ contract Deploy is Script {
     address internal constant CANONICAL_SEADROP = 0x00005EA00Ac477B1030CE78506496e8C2dE24bf5;
     address internal constant OPENSEA_FEE_RECIPIENT = 0x0000a26b00c1F0DF003000390027140000fAa719;
 
-    function run() external returns (NekoGenerator generator, NekoPFP neko) {
+    function run() external returns (NekoRenderer renderer, NekoPFP neko) {
         bytes32 commitment = vm.envBytes32("GENESIS_SEED_COMMITMENT");
         address payout = vm.envAddress("PAYOUT_ADDRESS");
         address seaDrop = vm.envOr("SEADROP", CANONICAL_SEADROP);
@@ -35,8 +35,8 @@ contract Deploy is Script {
         config.allowedFeeRecipients[0] = feeRecipient;
 
         vm.startBroadcast();
-        generator = new NekoGenerator();
-        neko = new NekoPFP(commitment, generator, ISeaDrop(seaDrop));
+        renderer = new NekoRenderer();
+        neko = new NekoPFP(commitment, renderer, ISeaDrop(seaDrop));
         neko.multiConfigure(config);
         vm.stopBroadcast();
     }

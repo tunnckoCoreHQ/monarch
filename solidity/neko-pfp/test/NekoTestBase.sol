@@ -3,13 +3,13 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 
-import {INekoGenerator} from "../src/INekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
 import {ISeaDrop} from "../src/seadrop/SeaDropInterfaces.sol";
-import {MockNekoGenerator} from "./mocks/MockNekoGenerator.sol";
+import {MockNekoRenderer} from "./mocks/MockNekoRenderer.sol";
 
 contract TestableNekoPFP is NekoPFP {
-    constructor(ISeaDrop seaDrop, INekoGenerator generator, bytes32 genesisSeedCommitment)
+    constructor(ISeaDrop seaDrop, NekoRenderer generator, bytes32 genesisSeedCommitment)
         NekoPFP(genesisSeedCommitment, generator, seaDrop)
     {}
 
@@ -29,15 +29,15 @@ abstract contract NekoTestBase is Test {
     bytes32 internal constant GENESIS_SEED_COMMITMENT_DOMAIN =
         keccak256("NekoPFPSeaDrop.genesisSeedCommitment.v1");
 
-    MockNekoGenerator internal generator;
+    MockNekoRenderer internal generator;
     TestableNekoPFP internal neko;
 
     function setUp() public virtual {
-        generator = new MockNekoGenerator();
-        neko = _deploy(generator, _commitment(GENESIS_SEED));
+        generator = new MockNekoRenderer();
+        neko = _deploy(NekoRenderer(address(generator)), _commitment(GENESIS_SEED));
     }
 
-    function _deploy(INekoGenerator generator_, bytes32 commitment)
+    function _deploy(NekoRenderer generator_, bytes32 commitment)
         internal
         returns (TestableNekoPFP)
     {
@@ -60,7 +60,7 @@ abstract contract NekoTestBase is Test {
     function _baseTraits(uint8 body, uint8 toy)
         internal
         pure
-        returns (INekoGenerator.RawTraits memory traits)
+        returns (NekoRenderer.Traits memory traits)
     {
         traits.sky = body == 0 ? 1 : 0;
         traits.head = body;

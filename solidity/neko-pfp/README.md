@@ -4,11 +4,10 @@ Fully on-chain generative 0xNeko SVG cat PFPs. Fixed supply 4663, deterministic 
 
 ## Contracts
 
-- `INekoGenerator`. Trait, token-data, and rendering interface.
-- `NekoBase`. Errors, limits, keccak domains, trait math, and visible/matrix/invisible trait generation.
-- `NekoRenderer`. SVG layers, metadata attributes, palette, toy lookup.
-- `NekoGenerator`. Pure core. Trait generation, validation, trait combination, SVG and JSON rendering.
-- `NekoArt`. The bridge between rendering and token state, like Mews's `MewsArt`. Holds the immutable renderer and seed commitment, quota-aware deterministic token seeds (keyed 13-bit Feistel plus rejection sampling), token metadata, reveal, and fusion with on-chain ancestry. It enforces the lifetime mint cap.
+- `NekoRendererCore`. Raw internals: errors, limits, keccak domains, trait math, visible/matrix/invisible trait generation, SVG layers, metadata attributes, palette, and toy lookup. Nothing public.
+- `NekoRenderer`. Deployed renderer with the Mews surface: `traits`, `generate`, `combine`, `visualHash`, `profile`, `render`, and `tokenURI`.
+- `NekoSeedSampler`. Quota-aware deterministic token seeds (keyed 13-bit Feistel plus rejection sampling), inherited by the bridge.
+- `NekoArt`. The bridge between rendering and token state, like Mews's `MewsArt`. Holds the immutable renderer and seed commitment, token seeds, the unrevealed placeholder, token metadata, reveal, and fusion with on-chain ancestry. It enforces the lifetime mint cap.
 - `NekoPFP`. The SeaDrop-facing NFT. Holds ownership, one immutable SeaDrop address, collection metadata, and royalties. Its mint and reveal entrypoints call the bridge.
 - `seadrop/SeaDropInterfaces.sol`. The same SeaDrop ABI declarations as Mews. The SeaDrop interface ID is `0x1890fe8e`; the Studio `multiConfigure` selector is `0x911f456b`.
 
@@ -20,7 +19,7 @@ Supply is fixed at 4663. A nonzero `maxSupply` in `multiConfigure` must equal 46
 
 The NFT retains `setRoyaltyInfo`, `royaltyInfo`, `royaltyAddress`, and `royaltyBasisPoints`. Reveal emits `BatchMetadataUpdate`; fusion emits `MetadataUpdate` for the survivor, and the NFT advertises [ERC-4906](https://eips.ethereum.org/EIPS/eip-4906).
 
-The bridge exposes `renderer`, `deriveTokenSeed`, `tokenSeed`, `tokenURI`, and `tokenData`. Both the bridge and generator expose `generate(seed)` and `generate(rawTraits)`, which return traits and metadata values for an unfused cat. The existing seed algorithm, artwork, reveal, and fusion rules are preserved. The SeaDrop integration tests use the same deployed bytecode fixture as Mews.
+The bridge exposes `renderer`, `deriveTokenSeed`, `tokenSeed`, `tokenURI`, and `tokenData`. Both the bridge and renderer expose `generate(seed)` and `generate(traits)`, which return traits and metadata values for an unfused cat. Before reveal, the bridge serves a fixed placeholder cat rendered through the same renderer. The existing seed algorithm, artwork, reveal, and fusion rules are preserved. The SeaDrop integration tests use the same deployed bytecode fixture as Mews.
 
 ## Build and test
 
@@ -75,7 +74,7 @@ The commitment is exposed through the SeaDrop-standard `provenanceHash` getter a
 
 ### 2. Deploy
 
-One script, three transactions: deploy `NekoGenerator`, deploy `NekoPFP(commitment, renderer, seaDrop)`, then configure the payout address and OpenSea's fee wallet together through `multiConfigure`. The constructor sets Neko's initial collection metadata.
+One script, three transactions: deploy `NekoRenderer`, deploy `NekoPFP(commitment, renderer, seaDrop)`, then configure the payout address and OpenSea's fee wallet together through `multiConfigure`. The constructor sets Neko's initial collection metadata.
 
 ```
 GENESIS_SEED_COMMITMENT=$COMMITMENT PAYOUT_ADDRESS=<payout> \
@@ -116,7 +115,7 @@ Studio flow, per OpenSea's [Create a primary drop](https://docs.opensea.io/docs/
 
 1. Sign in at [opensea.io/studio](https://opensea.io/studio) with the deployer wallet on the right chain. Studio calls `supportsInterface(0x1890fe8e)` and lists the contract. Discovery is by ownership; there is no import button because none is needed.
 2. Fill in collection details. Name and description come from the on-chain `contractURI`; add banner, logo, socials.
-3. Skip metadata upload. Studio's uploader is for off-chain `baseURI` collections. `NekoGenerator` returns full data URIs.
+3. Skip metadata upload. Studio's uploader is for off-chain `baseURI` collections. `NekoRenderer` returns full data URIs.
 4. Check the drop settings show the stages configured in steps 3 and 4. Studio and the configuration scripts use `multiConfigure`.
 5. Customize the landing page, then Publish. That signs an on-chain tx and turns on `opensea.io/collection/<slug>/drop`.
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {NekoGenerator} from "../src/NekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
 import {ISeaDrop, PublicDrop, MultiConfigureStruct} from "../src/seadrop/SeaDropInterfaces.sol";
 
@@ -18,8 +18,8 @@ contract MintGasProbe is Script {
         address minter = address(0x1337);
         vm.deal(minter, 10 ether);
 
-        NekoGenerator generator = new NekoGenerator();
-        NekoPFP neko = new NekoPFP(bytes32(uint256(1)), generator, ISeaDrop(SEADROP));
+        NekoRenderer renderer = new NekoRenderer();
+        NekoPFP neko = new NekoPFP(bytes32(uint256(1)), renderer, ISeaDrop(SEADROP));
 
         MultiConfigureStruct memory config;
         config.seaDropImpl = SEADROP;

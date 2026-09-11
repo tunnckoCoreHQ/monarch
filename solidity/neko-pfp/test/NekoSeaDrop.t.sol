@@ -3,9 +3,10 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {LibString} from "solady/utils/LibString.sol";
+import {Base64} from "solady/utils/Base64.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
-import {NekoGenerator} from "../src/NekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {
     ISeaDrop,
     IERC2981,
@@ -31,7 +32,7 @@ contract NekoSeaDropTest is Test {
     uint256 internal constant SUPPLY = 4663;
     uint80 internal constant PRICE = 0.001 ether;
     ISeaDrop internal seaDrop = ISeaDrop(SEA_DROP);
-    NekoGenerator internal renderer;
+    NekoRenderer internal renderer;
     NekoPFP internal neko;
 
     function setUp() public {
@@ -45,7 +46,7 @@ contract NekoSeaDropTest is Test {
         );
         vm.etch(SEA_DROP, runtime);
         vm.store(SEA_DROP, bytes32(0), bytes32(uint256(1)));
-        renderer = new NekoGenerator();
+        renderer = new NekoRenderer();
         neko = new NekoPFP(_commitment(), renderer, seaDrop);
         vm.deal(ALICE, 10 ether);
         vm.deal(BOB, 10 ether);
@@ -121,7 +122,9 @@ contract NekoSeaDropTest is Test {
         assertEq(neko.balanceOf(ALICE), 10);
         assertEq(PAYOUT.balance, PRICE * 7 * 9 / 10);
         assertEq(FEE.balance, PRICE * 7 / 10);
-        assertEq(neko.tokenURI(1), renderer.generateUnrevealedTokenURI(1));
+        string memory placeholder = string(Base64.decode(LibString.slice(neko.tokenURI(1), 29)));
+        assertTrue(LibString.contains(placeholder, '"name":"0xNeko PFP #1 - Unrevealed"'));
+        assertTrue(LibString.contains(placeholder, '"image":"data:image/svg+xml;base64,'));
         vm.prank(ALICE);
         neko.transferFrom(ALICE, BOB, 1);
         vm.prank(ALICE);
@@ -215,7 +218,7 @@ contract NekoSeaDropTest is Test {
         seaDrop.mintPublic{value: PRICE * SUPPLY}(address(neko), FEE, address(0), SUPPLY);
         neko.reveal(GENESIS);
         assertTrue(neko.revealed());
-        assertEq(neko.tokenURI(1), renderer.generateTokenURI(1, neko.tokenData(1)));
+        assertEq(neko.tokenURI(1), renderer.tokenURI(1, neko.tokenData(1)));
         (uint256 minted, uint256 total, uint256 maximum) = neko.getMintStats(ALICE);
         assertEq(minted, SUPPLY);
         assertEq(total, SUPPLY);

@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 import {IERC721A} from "erc721a/IERC721A.sol";
 
-import {INekoGenerator} from "../src/INekoGenerator.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
 import {NekoPFP} from "../src/NekoPFP.sol";
 import {NekoArt} from "../src/NekoArt.sol";
 import {NekoTestBase, TestableNekoPFP} from "./NekoTestBase.sol";
@@ -16,7 +16,7 @@ contract NekoFusionTest is NekoTestBase {
 
     function testMergeBurnsDuplicateAndCombinesMassAndAncestry() public {
         _mint(ALICE, 2);
-        INekoGenerator.RawTraits memory duplicate = _baseTraits(5, 1);
+        NekoRenderer.Traits memory duplicate = _baseTraits(5, 1);
         generator.setRawTraits(neko.tokenSeed(1), duplicate);
         duplicate.toy = 2;
         generator.setRawTraits(neko.tokenSeed(2), duplicate);
@@ -40,7 +40,7 @@ contract NekoFusionTest is NekoTestBase {
         vm.prank(ALICE);
         neko.mutate(1, 2, 0x0008);
 
-        INekoGenerator.TokenData memory data = neko.tokenData(1);
+        NekoRenderer.TokenData memory data = neko.tokenData(1);
         assertEq(data.traits.body, 7, "consumed body was not copied");
         assertEq(data.fusionMass, 2, "mutation mass mismatch");
         assertEq(neko.mutationCount(1), 1, "mutation count mismatch");
@@ -75,12 +75,11 @@ contract NekoFusionTest is NekoTestBase {
 
     function testChainedMutationAndMergesAccumulateMassCountsAndAncestry() public {
         _mint(ALICE, 4);
-        INekoGenerator.RawTraits memory survivor = _baseTraits(5, 1);
-        INekoGenerator.RawTraits memory donor = _baseTraits(7, 2);
-        INekoGenerator.RawTraits memory mutated =
-            generator.combineRawTraits(survivor, donor, 0x0008);
-        INekoGenerator.RawTraits memory firstDuplicate = mutated;
-        INekoGenerator.RawTraits memory secondDuplicate = mutated;
+        NekoRenderer.Traits memory survivor = _baseTraits(5, 1);
+        NekoRenderer.Traits memory donor = _baseTraits(7, 2);
+        NekoRenderer.Traits memory mutated = generator.combine(survivor, donor, 0x0008);
+        NekoRenderer.Traits memory firstDuplicate = mutated;
+        NekoRenderer.Traits memory secondDuplicate = mutated;
         firstDuplicate.toy = 8;
         secondDuplicate.toy = 9;
         generator.setRawTraits(neko.tokenSeed(1), survivor);
@@ -115,10 +114,10 @@ contract NekoFusionTest is NekoTestBase {
 
     function testCombiningPreviouslyFusedTreesPreservesBothHistories() public {
         _mint(ALICE, 4);
-        INekoGenerator.RawTraits memory first = _baseTraits(5, 1);
-        INekoGenerator.RawTraits memory firstDonor = _baseTraits(7, 2);
-        INekoGenerator.RawTraits memory second = _baseTraits(9, 3);
-        INekoGenerator.RawTraits memory secondDuplicate = second;
+        NekoRenderer.Traits memory first = _baseTraits(5, 1);
+        NekoRenderer.Traits memory firstDonor = _baseTraits(7, 2);
+        NekoRenderer.Traits memory second = _baseTraits(9, 3);
+        NekoRenderer.Traits memory secondDuplicate = second;
         secondDuplicate.toy = 4;
         generator.setRawTraits(neko.tokenSeed(1), first);
         generator.setRawTraits(neko.tokenSeed(2), firstDonor);
@@ -145,7 +144,7 @@ contract NekoFusionTest is NekoTestBase {
 
     function testPerTokenApprovalsMustCoverBothMergeParticipants() public {
         _mint(ALICE, 2);
-        INekoGenerator.RawTraits memory duplicate = _baseTraits(5, 1);
+        NekoRenderer.Traits memory duplicate = _baseTraits(5, 1);
         generator.setRawTraits(neko.tokenSeed(1), duplicate);
         generator.setRawTraits(neko.tokenSeed(2), duplicate);
 
@@ -204,12 +203,12 @@ contract NekoFusionTest is NekoTestBase {
 
     function testMergeRejectsDifferentSignatures() public {
         _mint(ALICE, 2);
-        INekoGenerator.RawTraits memory survivor = _baseTraits(5, 1);
-        INekoGenerator.RawTraits memory consumed = _baseTraits(7, 2);
+        NekoRenderer.Traits memory survivor = _baseTraits(5, 1);
+        NekoRenderer.Traits memory consumed = _baseTraits(7, 2);
         generator.setRawTraits(neko.tokenSeed(1), survivor);
         generator.setRawTraits(neko.tokenSeed(2), consumed);
-        bytes32 survivorSignature = generator.catSignature(survivor);
-        bytes32 consumedSignature = generator.catSignature(consumed);
+        bytes32 survivorSignature = generator.visualHash(survivor);
+        bytes32 consumedSignature = generator.visualHash(consumed);
 
         vm.prank(ALICE);
         vm.expectRevert(
@@ -222,11 +221,11 @@ contract NekoFusionTest is NekoTestBase {
 
     function testMutationRejectsMatchingSignaturesEvenWhenToysDiffer() public {
         _mint(ALICE, 2);
-        INekoGenerator.RawTraits memory duplicate = _baseTraits(5, 1);
+        NekoRenderer.Traits memory duplicate = _baseTraits(5, 1);
         generator.setRawTraits(neko.tokenSeed(1), duplicate);
         duplicate.toy = 2;
         generator.setRawTraits(neko.tokenSeed(2), duplicate);
-        bytes32 signature = generator.catSignature(duplicate);
+        bytes32 signature = generator.visualHash(duplicate);
 
         vm.prank(ALICE);
         vm.expectRevert(abi.encodeWithSelector(NekoArt.CatSignatureMatch.selector, signature));
@@ -235,8 +234,8 @@ contract NekoFusionTest is NekoTestBase {
 
     function testMutationRejectsSelectionThatDoesNotChangeSurvivor() public {
         _mint(ALICE, 2);
-        INekoGenerator.RawTraits memory survivor = _baseTraits(5, 1);
-        INekoGenerator.RawTraits memory consumed = _baseTraits(7, 1);
+        NekoRenderer.Traits memory survivor = _baseTraits(5, 1);
+        NekoRenderer.Traits memory consumed = _baseTraits(7, 1);
         generator.setRawTraits(neko.tokenSeed(1), survivor);
         generator.setRawTraits(neko.tokenSeed(2), consumed);
 
@@ -246,7 +245,8 @@ contract NekoFusionTest is NekoTestBase {
     }
 
     function testFusionIsDisabledBeforeReveal() public {
-        TestableNekoPFP unrevealed = _deploy(generator, _commitment(GENESIS_SEED));
+        TestableNekoPFP unrevealed =
+            _deploy(NekoRenderer(address(generator)), _commitment(GENESIS_SEED));
         vm.prank(SEA_DROP);
         unrevealed.mintSeaDrop(ALICE, 2);
 
@@ -265,7 +265,7 @@ contract NekoFusionTest is NekoTestBase {
 
     function testFusionBurnClearsConsumedLiveStateButPreservesAncestry() public {
         _mint(ALICE, 3);
-        INekoGenerator.RawTraits memory duplicate = _baseTraits(7, 2);
+        NekoRenderer.Traits memory duplicate = _baseTraits(7, 2);
         generator.setRawTraits(neko.tokenSeed(1), _baseTraits(5, 1));
         generator.setRawTraits(neko.tokenSeed(2), duplicate);
         generator.setRawTraits(neko.tokenSeed(3), duplicate);
