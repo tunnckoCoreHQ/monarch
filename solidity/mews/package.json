@@ -22,7 +22,8 @@
     "preview": "forge script script/Preview.s.sol:Preview --gas-limit 2000000000",
     "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi",
     "test": "forge test",
-    "test:fork": "FOUNDRY_PROFILE=fork forge test --match-contract ForkTest$ --fork-url https://mainnet.base.org"
+    "test:fork": "FOUNDRY_PROFILE=fork forge test --match-contract ForkTest$ --fork-url https://mainnet.base.org",
+    "verify:forwarder": "bash script/verify-forwarder.sh"
   },
   "dependencies": {
     "erc721a": "catalog:",
