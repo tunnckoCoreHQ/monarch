@@ -35,27 +35,30 @@ struct ExactInputSingleParams {
 }
 
 contract DeployForwarderSimulation is DeployForwarder {
+    function _automation() internal pure override returns (address) {
+        return address(0xA07);
+    }
+
     function _startBroadcast() internal override {
         vm.startBroadcast(DEPLOYER);
     }
 }
 
-// Runs against Base through `vp run --filter mews test:fork`.
+// Runs against Robinhood Chain through `vp run --filter mews test:fork`.
 contract MewsForwarderForkTest is Test {
     ILaunchFactory internal constant FACTORY =
         ILaunchFactory(0x815542E8b392389A1389E22E588E4B62A67Ade72);
     ILaunchLocker internal constant LOCKER =
         ILaunchLocker(0xcd1680D26922fcd9CabFbb8a56bA40C333fD842a);
     IUniversalRouter internal constant ROUTER =
-        IUniversalRouter(0x6fF5693b99212Da76ad316178A184AB56D299b43);
+        IUniversalRouter(0x8876789976dEcBfCbBbe364623C63652db8C0904);
     IPermit2 internal constant PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     address internal constant ACCOUNT = 0x8948da17f04ae9c83dD1fc78976D02cA4e9C7a8e;
+    address internal constant AUTOMATION = address(0xA07);
     address internal constant DEAD = 0x000000000000000000000000000000000000dEaD;
     address internal constant BUYER = address(0xB0B);
-    // The deployer holds 15 Mews, which passes the NFT gate.
-    address internal constant KEEPER = 0x6C22d03544609Db5128736706d90D66fC7f45388;
     address internal constant STRANGER = address(0xCAFE);
-    uint24 internal constant LP_FEE = 10_000;
+    uint24 internal constant LP_FEE = 30_000;
     bytes internal constant V4_SWAP = hex"10";
     bytes internal constant SWAP_SETTLE_TAKE = hex"060c0f";
     MewsForwarder internal forwarder;
@@ -86,9 +89,9 @@ contract MewsForwarderForkTest is Test {
     function testDeploymentRoutesFeesToForwarder() public view {
         assertEq(forwarder.token(), address(token));
         assertEq(address(forwarder.factory()), address(FACTORY));
-        assertEq(address(forwarder.factory()), address(FACTORY));
         assertEq(address(forwarder.locker()), address(LOCKER));
         assertEq(forwarder.account(), ACCOUNT);
+        assertEq(forwarder.automation(), AUTOMATION);
         assertEq(forwarder.owner(), ACCOUNT);
         assertTrue(LOCKER.tokenIdOf(address(token)) != 0);
         assertEq(key.currency0, address(0));
@@ -99,30 +102,30 @@ contract MewsForwarderForkTest is Test {
     function testFlushBurnsTokenFeesAndPaysEthFees() public {
         _swap(true, 1 ether);
         uint256 bought = token.balanceOf(BUYER);
-        assertGt(bought, 0);
+        assertGt(bought, forwarder.minTokens() * 2);
         vm.startPrank(BUYER);
         token.approve(address(PERMIT2), type(uint256).max);
         PERMIT2.approve(address(token), address(ROUTER), type(uint160).max, type(uint48).max);
         vm.stopPrank();
         _swap(false, SafeCastLib.toUint128(bought / 2));
 
-        // The locker sweeps stray ETH to the next collect, so expect the swap fee plus that.
-        uint256 stray =
-            address(LOCKER).balance - ILockerReserves(address(LOCKER)).reserved(address(0));
         vm.prank(STRANGER);
         vm.expectRevert(MewsForwarder.NotHolder.selector);
         forwarder.flush();
 
-        uint256 accountBefore = ACCOUNT.balance;
-        uint256 keeperBefore = KEEPER.balance;
-        vm.prank(KEEPER);
+        // The locker sweeps stray ETH to the next collect, so expect the swap fee plus that.
+        uint256 stray =
+            address(LOCKER).balance - ILockerReserves(address(LOCKER)).reserved(address(0));
+        uint256 automationBefore = AUTOMATION.balance;
+        uint256 buyerBefore = BUYER.balance;
+        vm.prank(BUYER);
         forwarder.flush();
 
-        uint256 reward = KEEPER.balance - keeperBefore;
-        uint256 ethFees = ACCOUNT.balance - accountBefore + reward;
-        assertApproxEqRel(ethFees, 0.01 ether + stray, 0.001e18);
+        uint256 reward = BUYER.balance - buyerBefore;
+        uint256 ethFees = AUTOMATION.balance - automationBefore + reward;
+        assertApproxEqRel(ethFees, 0.03 ether + stray, 0.001e18);
         assertEq(reward, ethFees / 100);
-        assertApproxEqRel(token.balanceOf(DEAD), bought / 200, 0.001e18);
+        assertApproxEqRel(token.balanceOf(DEAD), bought * 3 / 200, 0.001e18);
         assertEq(token.balanceOf(address(forwarder)), 0);
         assertEq(address(forwarder).balance, 0);
         assertEq(LOCKER.claimable(address(forwarder), address(0)), 0);

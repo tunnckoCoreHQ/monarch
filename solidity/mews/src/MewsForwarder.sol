@@ -26,8 +26,8 @@ interface IERC1155Transfer {
     ) external;
 }
 
-/// Fixed OpenLaunch fee recipient. Burns the launch token, forwards everything else to the
-/// operating account, and pays the caller a share of what gets forwarded.
+/// Fixed OpenLaunch fee recipient. Burns the launch token, sends ETH and other tokens to the
+/// automation, NFTs to the operating account, and pays the caller a share of what it settles.
 contract MewsForwarder is Ownable {
     using SafeTransferLib for address;
 
@@ -40,7 +40,7 @@ contract MewsForwarder is Ownable {
         address indexed caller, address indexed currency, uint256 forwarded, uint256 reward
     );
     event RewardUpdated(uint256 bps);
-    event AccessUpdated(uint256 minTokens, uint256 minNfts);
+    event MinTokensUpdated(uint256 minTokens);
 
     uint256 public constant MIN_REWARD_BPS = 100;
     uint256 public constant MAX_REWARD_BPS = 1000;
@@ -50,18 +50,17 @@ contract MewsForwarder is Ownable {
     ILaunchFactory public immutable factory;
     ILaunchLocker public immutable locker;
     address public immutable token;
-    address public immutable nft;
     address public immutable account;
+    address public immutable automation;
     uint256 public rewardBps = MIN_REWARD_BPS;
     uint256 public minTokens = 100_000 ether;
-    uint256 public minNfts = 3;
 
-    constructor(ILaunchFactory factory_, address token_, address nft_, address account_) {
+    constructor(ILaunchFactory factory_, address token_, address account_, address automation_) {
         factory = factory_;
         locker = factory_.locker();
         token = token_;
-        nft = nft_;
         account = account_;
+        automation = automation_;
         _initializeOwner(account_);
     }
 
@@ -69,14 +68,14 @@ contract MewsForwarder is Ownable {
     receive() external payable {}
 
     modifier onlyHolder() {
-        if (token.balanceOf(msg.sender) < minTokens && nft.balanceOf(msg.sender) < minNfts) {
+        if (token.balanceOf(msg.sender) < minTokens) {
             revert NotHolder();
         }
         _;
     }
 
-    // Holders of enough of the token or enough Mews collect the fees, burn the token, and settle
-    // ETH plus the launch's quote currency.
+    // Holders of enough of the token collect the fees, burn the token, and settle
+    // ETH plus the launch's quote currency to the automation.
     function flush() external onlyHolder {
         (uint256 tokenId,, address quote,,) = factory.infoOf(token);
         if (tokenId != 0) {
@@ -141,18 +140,17 @@ contract MewsForwarder is Ownable {
         emit RewardUpdated(bps);
     }
 
-    function setAccess(uint256 minTokens_, uint256 minNfts_) external onlyOwner {
+    function setMinTokens(uint256 minTokens_) external onlyOwner {
         minTokens = minTokens_;
-        minNfts = minNfts_;
-        emit AccessUpdated(minTokens_, minNfts_);
+        emit MinTokensUpdated(minTokens_);
     }
 
-    // The account is paid before the caller, so reentering from the reward finds nothing left.
+    // The automation is paid before the caller, so reentering from the reward finds nothing left.
     function _settle(address currency) private {
         uint256 balance = _balance(currency);
         uint256 forwarded = balance - balance * rewardBps / 10_000;
         if (forwarded != 0) {
-            _pay(currency, account, forwarded);
+            _pay(currency, automation, forwarded);
         }
         uint256 reward = _balance(currency);
         if (reward != 0) {

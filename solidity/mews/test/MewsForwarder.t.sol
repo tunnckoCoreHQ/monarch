@@ -134,20 +134,18 @@ contract MewsForwarderTest is Test {
 
     address internal constant DEAD = 0x000000000000000000000000000000000000dEaD;
     address internal constant ACCOUNT = address(0xACC);
+    address internal constant AUTOMATION = address(0xA07);
     address internal constant KEEPER = address(0xBEEF);
     address internal constant ALICE = address(0xA11CE);
     LaunchDouble internal launch;
-    Collectible internal mews;
     Coin internal token;
     MewsForwarder internal forwarder;
 
     function setUp() public {
         launch = new LaunchDouble();
         token = new Coin();
-        mews = new Collectible();
-        forwarder = new MewsForwarder(
-            ILaunchFactory(address(launch)), address(token), address(mews), ACCOUNT
-        );
+        forwarder =
+            new MewsForwarder(ILaunchFactory(address(launch)), address(token), ACCOUNT, AUTOMATION);
         token.mint(KEEPER, 100_000 ether);
     }
 
@@ -159,12 +157,11 @@ contract MewsForwarderTest is Test {
         assertEq(address(forwarder.factory()), address(launch));
         assertEq(address(forwarder.locker()), address(launch));
         assertEq(forwarder.token(), address(token));
-        assertEq(forwarder.nft(), address(mews));
         assertEq(forwarder.account(), ACCOUNT);
+        assertEq(forwarder.automation(), AUTOMATION);
         assertEq(forwarder.owner(), ACCOUNT);
         assertEq(forwarder.rewardBps(), 100);
         assertEq(forwarder.minTokens(), 100_000 ether);
-        assertEq(forwarder.minNfts(), 3);
     }
 
     function testFlushCollectsBurnsAndForwardsNativeQuote() public {
@@ -180,7 +177,7 @@ contract MewsForwarderTest is Test {
 
         assertEq(token.balanceOf(DEAD), 1000 ether);
         assertEq(token.balanceOf(address(forwarder)), 0);
-        assertEq(ACCOUNT.balance, 0.99 ether);
+        assertEq(AUTOMATION.balance, 0.99 ether);
         assertEq(KEEPER.balance, 0.01 ether);
         assertEq(address(forwarder).balance, 0);
         assertEq(launch.claimable(address(forwarder), address(0)), 0);
@@ -197,10 +194,10 @@ contract MewsForwarderTest is Test {
         forwarder.flush();
 
         assertEq(token.balanceOf(DEAD), 1000 ether);
-        assertEq(quote.balanceOf(ACCOUNT), 198 ether);
+        assertEq(quote.balanceOf(AUTOMATION), 198 ether);
         assertEq(quote.balanceOf(KEEPER), 2 ether);
         assertEq(quote.balanceOf(address(forwarder)), 0);
-        assertEq(ACCOUNT.balance, 0.99 ether);
+        assertEq(AUTOMATION.balance, 0.99 ether);
         assertEq(KEEPER.balance, 0.01 ether);
     }
 
@@ -209,7 +206,7 @@ contract MewsForwarderTest is Test {
         vm.prank(KEEPER);
         forwarder.flush();
 
-        assertEq(ACCOUNT.balance, 1.98 ether);
+        assertEq(AUTOMATION.balance, 1.98 ether);
         assertEq(KEEPER.balance, 0.02 ether);
     }
 
@@ -223,7 +220,7 @@ contract MewsForwarderTest is Test {
 
         assertEq(reenterer.rewards(), 1);
         assertEq(address(reenterer).balance, 0.01 ether);
-        assertEq(ACCOUNT.balance, 0.99 ether);
+        assertEq(AUTOMATION.balance, 0.99 ether);
     }
 
     function testFlushWithNothingIsANoOp() public {
@@ -231,7 +228,7 @@ contract MewsForwarderTest is Test {
         vm.prank(KEEPER);
         forwarder.flush();
 
-        assertEq(ACCOUNT.balance, 0);
+        assertEq(AUTOMATION.balance, 0);
         assertEq(KEEPER.balance, 0);
         assertEq(token.balanceOf(DEAD), 0);
     }
@@ -245,7 +242,7 @@ contract MewsForwarderTest is Test {
         vm.prank(KEEPER);
         forwarder.forward(address(other));
 
-        assertEq(other.balanceOf(ACCOUNT), 495 ether);
+        assertEq(other.balanceOf(AUTOMATION), 495 ether);
         assertEq(other.balanceOf(KEEPER), 5 ether);
     }
 
@@ -257,7 +254,7 @@ contract MewsForwarderTest is Test {
         forwarder.forward(address(taxed));
 
         assertEq(taxed.balanceOf(KEEPER), 9.9 ether);
-        assertEq(taxed.balanceOf(ACCOUNT), 980.1 ether);
+        assertEq(taxed.balanceOf(AUTOMATION), 980.1 ether);
         assertEq(taxed.balanceOf(address(forwarder)), 0);
     }
 
@@ -307,10 +304,11 @@ contract MewsForwarderTest is Test {
         assertEq(multi.balanceOf(address(forwarder), 1), 0);
     }
 
-    function testOnlyHoldersFlushAndForward() public {
+    function testOnlyTokenHoldersFlushAndForward() public {
         vm.deal(address(forwarder), 1 ether);
         Coin other = new Coin();
         other.mint(address(forwarder), 1 ether);
+        token.mint(ALICE, 99_999 ether);
 
         vm.startPrank(ALICE);
         vm.expectRevert(MewsForwarder.NotHolder.selector);
@@ -319,14 +317,7 @@ contract MewsForwarderTest is Test {
         forwarder.forward(address(other));
         vm.stopPrank();
 
-        token.mint(ALICE, 99_999 ether);
-        vm.prank(ALICE);
-        vm.expectRevert(MewsForwarder.NotHolder.selector);
-        forwarder.flush();
-
-        mews.mint(ALICE, 1);
-        mews.mint(ALICE, 2);
-        mews.mint(ALICE, 3);
+        token.mint(ALICE, 1 ether);
         vm.startPrank(ALICE);
         forwarder.flush();
         forwarder.forward(address(other));
@@ -335,20 +326,19 @@ contract MewsForwarderTest is Test {
         assertEq(other.balanceOf(ALICE), 0.01 ether);
     }
 
-    function testSetAccessIsOwnerOnly() public {
+    function testSetMinTokensIsOwnerOnly() public {
         vm.expectRevert(Ownable.Unauthorized.selector);
-        forwarder.setAccess(1, 1);
+        forwarder.setMinTokens(1);
 
         vm.prank(ACCOUNT);
-        forwarder.setAccess(500_000 ether, 1);
+        forwarder.setMinTokens(500_000 ether);
         assertEq(forwarder.minTokens(), 500_000 ether);
-        assertEq(forwarder.minNfts(), 1);
 
         vm.deal(address(forwarder), 1 ether);
         vm.prank(KEEPER);
         vm.expectRevert(MewsForwarder.NotHolder.selector);
         forwarder.flush();
-        mews.mint(KEEPER, 1);
+        token.mint(KEEPER, 400_000 ether);
         vm.prank(KEEPER);
         forwarder.flush();
         assertEq(KEEPER.balance, 0.01 ether);
@@ -370,7 +360,7 @@ contract MewsForwarderTest is Test {
         vm.deal(address(forwarder), 1 ether);
         vm.prank(KEEPER);
         forwarder.flush();
-        assertEq(ACCOUNT.balance, 0.9 ether);
+        assertEq(AUTOMATION.balance, 0.9 ether);
         assertEq(KEEPER.balance, 0.1 ether);
     }
 }

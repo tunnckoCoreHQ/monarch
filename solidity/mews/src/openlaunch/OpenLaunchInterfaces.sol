@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity ^0.8.30;
 
-// Subset of the OpenLaunch contracts used by Mews. On Base the factory is at
+// Subset of the OpenLaunch contracts used by Mews. On Base and Robinhood Chain the factory is at
 // 0x815542E8b392389A1389E22E588E4B62A67Ade72 and the locker at
 // 0xcd1680D26922fcd9CabFbb8a56bA40C333fD842a.
 
