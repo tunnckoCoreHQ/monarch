@@ -138,14 +138,17 @@ contract MewsForwarderTest is Test {
     address internal constant KEEPER = address(0xBEEF);
     address internal constant ALICE = address(0xA11CE);
     LaunchDouble internal launch;
+    Collectible internal mews;
     Coin internal token;
     MewsForwarder internal forwarder;
 
     function setUp() public {
         launch = new LaunchDouble();
+        mews = new Collectible();
         token = new Coin();
-        forwarder =
-            new MewsForwarder(ILaunchFactory(address(launch)), address(token), ACCOUNT, AUTOMATION);
+        forwarder = new MewsForwarder(
+            ILaunchFactory(address(launch)), address(token), address(mews), ACCOUNT, AUTOMATION
+        );
         token.mint(KEEPER, 100_000 ether);
     }
 
@@ -157,11 +160,13 @@ contract MewsForwarderTest is Test {
         assertEq(address(forwarder.factory()), address(launch));
         assertEq(address(forwarder.locker()), address(launch));
         assertEq(forwarder.token(), address(token));
+        assertEq(forwarder.nft(), address(mews));
         assertEq(forwarder.account(), ACCOUNT);
         assertEq(forwarder.automation(), AUTOMATION);
         assertEq(forwarder.owner(), ACCOUNT);
         assertEq(forwarder.rewardBps(), 100);
         assertEq(forwarder.minTokens(), 100_000 ether);
+        assertEq(forwarder.minNfts(), 3);
     }
 
     function testFlushCollectsBurnsAndForwardsNativeQuote() public {
@@ -304,11 +309,13 @@ contract MewsForwarderTest is Test {
         assertEq(multi.balanceOf(address(forwarder), 1), 0);
     }
 
-    function testOnlyTokenHoldersFlushAndForward() public {
+    function testOnlyHoldersFlushAndForward() public {
         vm.deal(address(forwarder), 1 ether);
         Coin other = new Coin();
         other.mint(address(forwarder), 1 ether);
         token.mint(ALICE, 99_999 ether);
+        mews.mint(ALICE, 1);
+        mews.mint(ALICE, 2);
 
         vm.startPrank(ALICE);
         vm.expectRevert(MewsForwarder.NotHolder.selector);
@@ -317,7 +324,7 @@ contract MewsForwarderTest is Test {
         forwarder.forward(address(other));
         vm.stopPrank();
 
-        token.mint(ALICE, 1 ether);
+        mews.mint(ALICE, 3);
         vm.startPrank(ALICE);
         forwarder.flush();
         forwarder.forward(address(other));
@@ -326,19 +333,24 @@ contract MewsForwarderTest is Test {
         assertEq(other.balanceOf(ALICE), 0.01 ether);
     }
 
-    function testSetMinTokensIsOwnerOnly() public {
+    function testSetMinTokensAndMinNftsAreOwnerOnly() public {
         vm.expectRevert(Ownable.Unauthorized.selector);
         forwarder.setMinTokens(1);
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        forwarder.setMinNfts(1);
 
-        vm.prank(ACCOUNT);
+        vm.startPrank(ACCOUNT);
         forwarder.setMinTokens(500_000 ether);
+        forwarder.setMinNfts(1);
+        vm.stopPrank();
         assertEq(forwarder.minTokens(), 500_000 ether);
+        assertEq(forwarder.minNfts(), 1);
 
         vm.deal(address(forwarder), 1 ether);
         vm.prank(KEEPER);
         vm.expectRevert(MewsForwarder.NotHolder.selector);
         forwarder.flush();
-        token.mint(KEEPER, 400_000 ether);
+        mews.mint(KEEPER, 1);
         vm.prank(KEEPER);
         forwarder.flush();
         assertEq(KEEPER.balance, 0.01 ether);

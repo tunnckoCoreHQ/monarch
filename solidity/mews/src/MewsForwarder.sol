@@ -41,6 +41,7 @@ contract MewsForwarder is Ownable {
     );
     event RewardUpdated(uint256 bps);
     event MinTokensUpdated(uint256 minTokens);
+    event MinNftsUpdated(uint256 minNfts);
 
     uint256 public constant MIN_REWARD_BPS = 100;
     uint256 public constant MAX_REWARD_BPS = 1000;
@@ -50,15 +51,24 @@ contract MewsForwarder is Ownable {
     ILaunchFactory public immutable factory;
     ILaunchLocker public immutable locker;
     address public immutable token;
+    address public immutable nft;
     address public immutable account;
     address public immutable automation;
     uint256 public rewardBps = MIN_REWARD_BPS;
     uint256 public minTokens = 100_000 ether;
+    uint256 public minNfts = 3;
 
-    constructor(ILaunchFactory factory_, address token_, address account_, address automation_) {
+    constructor(
+        ILaunchFactory factory_,
+        address token_,
+        address nft_,
+        address account_,
+        address automation_
+    ) {
         factory = factory_;
         locker = factory_.locker();
         token = token_;
+        nft = nft_;
         account = account_;
         automation = automation_;
         _initializeOwner(account_);
@@ -68,13 +78,13 @@ contract MewsForwarder is Ownable {
     receive() external payable {}
 
     modifier onlyHolder() {
-        if (token.balanceOf(msg.sender) < minTokens) {
+        if (token.balanceOf(msg.sender) < minTokens && nft.balanceOf(msg.sender) < minNfts) {
             revert NotHolder();
         }
         _;
     }
 
-    // Holders of enough of the token collect the fees, burn the token, and settle
+    // Holders of enough of the token or enough Mews collect the fees, burn the token, and settle
     // ETH plus the launch's quote currency to the automation.
     function flush() external onlyHolder {
         (uint256 tokenId,, address quote,,) = factory.infoOf(token);
@@ -143,6 +153,11 @@ contract MewsForwarder is Ownable {
     function setMinTokens(uint256 minTokens_) external onlyOwner {
         minTokens = minTokens_;
         emit MinTokensUpdated(minTokens_);
+    }
+
+    function setMinNfts(uint256 minNfts_) external onlyOwner {
+        minNfts = minNfts_;
+        emit MinNftsUpdated(minNfts_);
     }
 
     // The automation is paid before the caller, so reentering from the reward finds nothing left.
