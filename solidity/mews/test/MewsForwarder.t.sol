@@ -8,7 +8,7 @@ import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {MewsForwarder} from "../src/MewsForwarder.sol";
-import {ILaunchLocker} from "../src/openlaunch/OpenLaunchInterfaces.sol";
+import {ILaunchFactory} from "../src/openlaunch/OpenLaunchInterfaces.sol";
 
 contract Coin is ERC20 {
     function name() public pure override returns (string memory) {
@@ -61,17 +61,32 @@ contract Multi is ERC1155 {
     }
 }
 
-// Pays out like the real LaunchLocker: ETH pushed with a 50,000 gas cap, credited on failure.
-contract LockerDouble {
+// Factory and locker in one. Pays out like the real locker: ETH pushed with a 50,000 gas
+// cap and credited on failure, ERC20s transferred.
+contract LaunchDouble {
     mapping(address => uint256) public tokenIdOf;
     mapping(address => mapping(address => uint256)) public claimable;
     address private _recipient;
     Coin private _token;
+    address private _quote;
 
-    function register(Coin token, uint256 tokenId, address recipient) external {
+    function locker() external view returns (address) {
+        return address(this);
+    }
+
+    function register(Coin token, uint256 tokenId, address quote, address recipient) external {
         tokenIdOf[address(token)] = tokenId;
-        _recipient = recipient;
         _token = token;
+        _quote = quote;
+        _recipient = recipient;
+    }
+
+    function infoOf(address token)
+        external
+        view
+        returns (uint256 tokenId, address, address quote, int24, uint24)
+    {
+        return (tokenIdOf[token], address(0), _quote, 0, 0);
     }
 
     function fund(uint256 tokens) external payable {
@@ -79,10 +94,15 @@ contract LockerDouble {
     }
 
     function collect(uint256) external returns (uint256 quoteOut, uint256 tokenOut) {
-        quoteOut = address(this).balance;
-        (bool paid,) = _recipient.call{value: quoteOut, gas: 50_000}("");
-        if (!paid) {
-            claimable[_recipient][address(0)] += quoteOut;
+        if (_quote == address(0)) {
+            quoteOut = address(this).balance;
+            (bool paid,) = _recipient.call{value: quoteOut, gas: 50_000}("");
+            if (!paid) {
+                claimable[_recipient][address(0)] += quoteOut;
+            }
+        } else {
+            quoteOut = Coin(_quote).balanceOf(address(this));
+            SafeTransferLib.safeTransfer(_quote, _recipient, quoteOut);
         }
         tokenOut = _token.balanceOf(address(this));
         SafeTransferLib.safeTransfer(address(_token), _recipient, tokenOut);
@@ -107,43 +127,54 @@ contract Reenterer {
 }
 
 contract MewsForwarderTest is Test {
-    event Flushed(address indexed caller, uint256 burned, uint256 forwarded, uint256 reward);
+    event Flushed(address indexed caller, uint256 burned);
     event Forwarded(
-        address indexed caller, address indexed erc20, uint256 forwarded, uint256 reward
+        address indexed caller, address indexed currency, uint256 forwarded, uint256 reward
     );
 
     address internal constant DEAD = 0x000000000000000000000000000000000000dEaD;
     address internal constant ACCOUNT = address(0xACC);
     address internal constant KEEPER = address(0xBEEF);
     address internal constant ALICE = address(0xA11CE);
-    LockerDouble internal locker;
+    LaunchDouble internal launch;
+    Collectible internal mews;
     Coin internal token;
     MewsForwarder internal forwarder;
 
     function setUp() public {
-        locker = new LockerDouble();
+        launch = new LaunchDouble();
         token = new Coin();
-        forwarder = new MewsForwarder(ILaunchLocker(address(locker)), address(token), ACCOUNT);
+        mews = new Collectible();
+        forwarder = new MewsForwarder(
+            ILaunchFactory(address(launch)), address(token), address(mews), ACCOUNT
+        );
+        token.mint(KEEPER, 100_000 ether);
     }
 
-    function _launch() internal {
-        locker.register(token, 7, address(forwarder));
+    function _launch(address quote) internal {
+        launch.register(token, 7, quote, address(forwarder));
     }
 
     function testConstructorBindsAccountAsOwner() public view {
-        assertEq(address(forwarder.locker()), address(locker));
+        assertEq(address(forwarder.factory()), address(launch));
+        assertEq(address(forwarder.locker()), address(launch));
         assertEq(forwarder.token(), address(token));
+        assertEq(forwarder.nft(), address(mews));
         assertEq(forwarder.account(), ACCOUNT);
         assertEq(forwarder.owner(), ACCOUNT);
         assertEq(forwarder.rewardBps(), 100);
+        assertEq(forwarder.minTokens(), 100_000 ether);
+        assertEq(forwarder.minNfts(), 3);
     }
 
-    function testFlushCollectsBurnsAndForwards() public {
-        _launch();
-        locker.fund{value: 1 ether}(1000 ether);
+    function testFlushCollectsBurnsAndForwardsNativeQuote() public {
+        _launch(address(0));
+        launch.fund{value: 1 ether}(1000 ether);
 
         vm.expectEmit(address(forwarder));
-        emit Flushed(KEEPER, 1000 ether, 0.99 ether, 0.01 ether);
+        emit Flushed(KEEPER, 1000 ether);
+        vm.expectEmit(address(forwarder));
+        emit Forwarded(KEEPER, address(0), 0.99 ether, 0.01 ether);
         vm.prank(KEEPER);
         forwarder.flush();
 
@@ -152,7 +183,25 @@ contract MewsForwarderTest is Test {
         assertEq(ACCOUNT.balance, 0.99 ether);
         assertEq(KEEPER.balance, 0.01 ether);
         assertEq(address(forwarder).balance, 0);
-        assertEq(locker.claimable(address(forwarder), address(0)), 0);
+        assertEq(launch.claimable(address(forwarder), address(0)), 0);
+    }
+
+    function testFlushForwardsErc20QuoteAndEth() public {
+        Coin quote = new Coin();
+        _launch(address(quote));
+        quote.mint(address(launch), 200 ether);
+        launch.fund(1000 ether);
+        vm.deal(address(forwarder), 1 ether);
+
+        vm.prank(KEEPER);
+        forwarder.flush();
+
+        assertEq(token.balanceOf(DEAD), 1000 ether);
+        assertEq(quote.balanceOf(ACCOUNT), 198 ether);
+        assertEq(quote.balanceOf(KEEPER), 2 ether);
+        assertEq(quote.balanceOf(address(forwarder)), 0);
+        assertEq(ACCOUNT.balance, 0.99 ether);
+        assertEq(KEEPER.balance, 0.01 ether);
     }
 
     function testFlushForwardsEthBeforeLaunch() public {
@@ -165,9 +214,10 @@ contract MewsForwarderTest is Test {
     }
 
     function testFlushPaysOneRewardToReenteringCaller() public {
-        _launch();
-        locker.fund{value: 1 ether}(0);
+        _launch(address(0));
+        launch.fund{value: 1 ether}(0);
         Reenterer reenterer = new Reenterer();
+        token.mint(address(reenterer), 100_000 ether);
 
         reenterer.run(forwarder);
 
@@ -177,7 +227,7 @@ contract MewsForwarderTest is Test {
     }
 
     function testFlushWithNothingIsANoOp() public {
-        _launch();
+        _launch(address(0));
         vm.prank(KEEPER);
         forwarder.flush();
 
@@ -213,6 +263,7 @@ contract MewsForwarderTest is Test {
 
     function testForwardRejectsLaunchToken() public {
         token.mint(address(forwarder), 1 ether);
+        vm.prank(KEEPER);
         vm.expectRevert(MewsForwarder.BurnedToken.selector);
         forwarder.forward(address(token));
     }
@@ -254,6 +305,53 @@ contract MewsForwarderTest is Test {
         assertEq(multi.balanceOf(ACCOUNT, 1), 10);
         assertEq(multi.balanceOf(ACCOUNT, 2), 20);
         assertEq(multi.balanceOf(address(forwarder), 1), 0);
+    }
+
+    function testOnlyHoldersFlushAndForward() public {
+        vm.deal(address(forwarder), 1 ether);
+        Coin other = new Coin();
+        other.mint(address(forwarder), 1 ether);
+
+        vm.startPrank(ALICE);
+        vm.expectRevert(MewsForwarder.NotHolder.selector);
+        forwarder.flush();
+        vm.expectRevert(MewsForwarder.NotHolder.selector);
+        forwarder.forward(address(other));
+        vm.stopPrank();
+
+        token.mint(ALICE, 99_999 ether);
+        vm.prank(ALICE);
+        vm.expectRevert(MewsForwarder.NotHolder.selector);
+        forwarder.flush();
+
+        mews.mint(ALICE, 1);
+        mews.mint(ALICE, 2);
+        mews.mint(ALICE, 3);
+        vm.startPrank(ALICE);
+        forwarder.flush();
+        forwarder.forward(address(other));
+        vm.stopPrank();
+        assertEq(ALICE.balance, 0.01 ether);
+        assertEq(other.balanceOf(ALICE), 0.01 ether);
+    }
+
+    function testSetAccessIsOwnerOnly() public {
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        forwarder.setAccess(1, 1);
+
+        vm.prank(ACCOUNT);
+        forwarder.setAccess(500_000 ether, 1);
+        assertEq(forwarder.minTokens(), 500_000 ether);
+        assertEq(forwarder.minNfts(), 1);
+
+        vm.deal(address(forwarder), 1 ether);
+        vm.prank(KEEPER);
+        vm.expectRevert(MewsForwarder.NotHolder.selector);
+        forwarder.flush();
+        mews.mint(KEEPER, 1);
+        vm.prank(KEEPER);
+        forwarder.flush();
+        assertEq(KEEPER.balance, 0.01 ether);
     }
 
     function testSetRewardIsBoundedAndOwnerOnly() public {

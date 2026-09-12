@@ -52,7 +52,9 @@ contract MewsForwarderForkTest is Test {
     address internal constant ACCOUNT = 0x8948da17f04ae9c83dD1fc78976D02cA4e9C7a8e;
     address internal constant DEAD = 0x000000000000000000000000000000000000dEaD;
     address internal constant BUYER = address(0xB0B);
-    address internal constant KEEPER = address(0xBEEF);
+    // The deployer holds 15 Mews, which passes the NFT gate.
+    address internal constant KEEPER = 0x6C22d03544609Db5128736706d90D66fC7f45388;
+    address internal constant STRANGER = address(0xCAFE);
     uint24 internal constant LP_FEE = 10_000;
     bytes internal constant V4_SWAP = hex"10";
     bytes internal constant SWAP_SETTLE_TAKE = hex"060c0f";
@@ -83,6 +85,8 @@ contract MewsForwarderForkTest is Test {
 
     function testDeploymentRoutesFeesToForwarder() public view {
         assertEq(forwarder.token(), address(token));
+        assertEq(address(forwarder.factory()), address(FACTORY));
+        assertEq(address(forwarder.factory()), address(FACTORY));
         assertEq(address(forwarder.locker()), address(LOCKER));
         assertEq(forwarder.account(), ACCOUNT);
         assertEq(forwarder.owner(), ACCOUNT);
@@ -105,6 +109,10 @@ contract MewsForwarderForkTest is Test {
         // The locker sweeps stray ETH to the next collect, so expect the swap fee plus that.
         uint256 stray =
             address(LOCKER).balance - ILockerReserves(address(LOCKER)).reserved(address(0));
+        vm.prank(STRANGER);
+        vm.expectRevert(MewsForwarder.NotHolder.selector);
+        forwarder.flush();
+
         uint256 accountBefore = ACCOUNT.balance;
         uint256 keeperBefore = KEEPER.balance;
         vm.prank(KEEPER);

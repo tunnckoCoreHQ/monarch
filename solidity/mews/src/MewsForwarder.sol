@@ -3,7 +3,7 @@ pragma solidity ^0.8.30;
 
 import {Ownable} from "solady/auth/Ownable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {ILaunchLocker} from "./openlaunch/OpenLaunchInterfaces.sol";
+import {ILaunchFactory, ILaunchLocker} from "./openlaunch/OpenLaunchInterfaces.sol";
 
 interface IERC721Transfer {
     function transferFrom(address from, address to, uint256 id) external;
@@ -33,25 +33,34 @@ contract MewsForwarder is Ownable {
 
     error BurnedToken();
     error InvalidReward();
+    error NotHolder();
 
-    event Flushed(address indexed caller, uint256 burned, uint256 forwarded, uint256 reward);
+    event Flushed(address indexed caller, uint256 burned);
     event Forwarded(
-        address indexed caller, address indexed erc20, uint256 forwarded, uint256 reward
+        address indexed caller, address indexed currency, uint256 forwarded, uint256 reward
     );
     event RewardUpdated(uint256 bps);
+    event AccessUpdated(uint256 minTokens, uint256 minNfts);
 
     uint256 public constant MIN_REWARD_BPS = 100;
     uint256 public constant MAX_REWARD_BPS = 1000;
+    address public constant NATIVE = address(0);
     address public constant DEAD = 0x000000000000000000000000000000000000dEaD;
 
+    ILaunchFactory public immutable factory;
     ILaunchLocker public immutable locker;
     address public immutable token;
+    address public immutable nft;
     address public immutable account;
     uint256 public rewardBps = MIN_REWARD_BPS;
+    uint256 public minTokens = 100_000 ether;
+    uint256 public minNfts = 3;
 
-    constructor(ILaunchLocker locker_, address token_, address account_) {
-        locker = locker_;
+    constructor(ILaunchFactory factory_, address token_, address nft_, address account_) {
+        factory = factory_;
+        locker = factory_.locker();
         token = token_;
+        nft = nft_;
         account = account_;
         _initializeOwner(account_);
     }
@@ -59,8 +68,17 @@ contract MewsForwarder is Ownable {
     // The locker pushes ETH with a 50,000 gas cap, so receiving must stay cheap.
     receive() external payable {}
 
-    function flush() external {
-        uint256 tokenId = locker.tokenIdOf(token);
+    modifier onlyHolder() {
+        if (token.balanceOf(msg.sender) < minTokens && nft.balanceOf(msg.sender) < minNfts) {
+            revert NotHolder();
+        }
+        _;
+    }
+
+    // Holders of enough of the token or enough Mews collect the fees, burn the token, and settle
+    // ETH plus the launch's quote currency.
+    function flush() external onlyHolder {
+        (uint256 tokenId,, address quote,,) = factory.infoOf(token);
         if (tokenId != 0) {
             locker.collect(tokenId);
         }
@@ -69,35 +87,19 @@ contract MewsForwarder is Ownable {
         if (burned != 0) {
             token.safeTransfer(DEAD, burned);
         }
+        emit Flushed(msg.sender, burned);
 
-        // The account is paid before the caller, so reentering from the reward finds nothing left.
-        uint256 balance = address(this).balance;
-        uint256 forwarded = balance - _reward(balance);
-        if (forwarded != 0) {
-            account.safeTransferETH(forwarded);
+        _settle(NATIVE);
+        if (quote != NATIVE) {
+            _settle(quote);
         }
-        uint256 reward = address(this).balance;
-        if (reward != 0) {
-            msg.sender.safeTransferETH(reward);
-        }
-        emit Flushed(msg.sender, burned, forwarded, reward);
     }
 
-    function forward(address erc20) external {
+    function forward(address erc20) external onlyHolder {
         if (erc20 == token) {
             revert BurnedToken();
         }
-
-        uint256 balance = erc20.balanceOf(address(this));
-        uint256 forwarded = balance - _reward(balance);
-        if (forwarded != 0) {
-            erc20.safeTransfer(account, forwarded);
-        }
-        uint256 reward = erc20.balanceOf(address(this));
-        if (reward != 0) {
-            erc20.safeTransfer(msg.sender, reward);
-        }
-        emit Forwarded(msg.sender, erc20, forwarded, reward);
+        _settle(erc20);
     }
 
     function forwardNFT(address collection, uint256 id) external {
@@ -139,7 +141,38 @@ contract MewsForwarder is Ownable {
         emit RewardUpdated(bps);
     }
 
-    function _reward(uint256 amount) private view returns (uint256) {
-        return amount * rewardBps / 10_000;
+    function setAccess(uint256 minTokens_, uint256 minNfts_) external onlyOwner {
+        minTokens = minTokens_;
+        minNfts = minNfts_;
+        emit AccessUpdated(minTokens_, minNfts_);
+    }
+
+    // The account is paid before the caller, so reentering from the reward finds nothing left.
+    function _settle(address currency) private {
+        uint256 balance = _balance(currency);
+        uint256 forwarded = balance - balance * rewardBps / 10_000;
+        if (forwarded != 0) {
+            _pay(currency, account, forwarded);
+        }
+        uint256 reward = _balance(currency);
+        if (reward != 0) {
+            _pay(currency, msg.sender, reward);
+        }
+        emit Forwarded(msg.sender, currency, forwarded, reward);
+    }
+
+    function _balance(address currency) private view returns (uint256) {
+        if (currency == NATIVE) {
+            return address(this).balance;
+        }
+        return currency.balanceOf(address(this));
+    }
+
+    function _pay(address currency, address to, uint256 amount) private {
+        if (currency == NATIVE) {
+            to.safeTransferETH(amount);
+            return;
+        }
+        currency.safeTransfer(to, amount);
     }
 }
