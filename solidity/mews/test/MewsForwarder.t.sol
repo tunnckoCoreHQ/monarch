@@ -89,6 +89,23 @@ contract LockerDouble {
     }
 }
 
+// Calls flush again from inside the reward transfer.
+contract Reenterer {
+    MewsForwarder private _forwarder;
+    uint256 public rewards;
+
+    function run(MewsForwarder forwarder) external {
+        _forwarder = forwarder;
+        forwarder.flush();
+    }
+
+    receive() external payable {
+        if (rewards++ < 3) {
+            _forwarder.flush();
+        }
+    }
+}
+
 contract MewsForwarderTest is Test {
     event Flushed(address indexed caller, uint256 burned, uint256 forwarded, uint256 reward);
     event Forwarded(
@@ -145,6 +162,18 @@ contract MewsForwarderTest is Test {
 
         assertEq(ACCOUNT.balance, 1.98 ether);
         assertEq(KEEPER.balance, 0.02 ether);
+    }
+
+    function testFlushPaysOneRewardToReenteringCaller() public {
+        _launch();
+        locker.fund{value: 1 ether}(0);
+        Reenterer reenterer = new Reenterer();
+
+        reenterer.run(forwarder);
+
+        assertEq(reenterer.rewards(), 1);
+        assertEq(address(reenterer).balance, 0.01 ether);
+        assertEq(ACCOUNT.balance, 0.99 ether);
     }
 
     function testFlushWithNothingIsANoOp() public {

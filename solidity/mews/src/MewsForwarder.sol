@@ -70,13 +70,15 @@ contract MewsForwarder is Ownable {
             token.safeTransfer(DEAD, burned);
         }
 
-        uint256 reward = _reward(address(this).balance);
-        if (reward != 0) {
-            msg.sender.safeTransferETH(reward);
-        }
-        uint256 forwarded = address(this).balance;
+        // The account is paid before the caller, so reentering from the reward finds nothing left.
+        uint256 balance = address(this).balance;
+        uint256 forwarded = balance - _reward(balance);
         if (forwarded != 0) {
             account.safeTransferETH(forwarded);
+        }
+        uint256 reward = address(this).balance;
+        if (reward != 0) {
+            msg.sender.safeTransferETH(reward);
         }
         emit Flushed(msg.sender, burned, forwarded, reward);
     }
@@ -86,14 +88,14 @@ contract MewsForwarder is Ownable {
             revert BurnedToken();
         }
 
-        // Forward what remains after the reward, so a fee-on-transfer token cannot get stuck.
-        uint256 reward = _reward(erc20.balanceOf(address(this)));
-        if (reward != 0) {
-            erc20.safeTransfer(msg.sender, reward);
-        }
-        uint256 forwarded = erc20.balanceOf(address(this));
+        uint256 balance = erc20.balanceOf(address(this));
+        uint256 forwarded = balance - _reward(balance);
         if (forwarded != 0) {
             erc20.safeTransfer(account, forwarded);
+        }
+        uint256 reward = erc20.balanceOf(address(this));
+        if (reward != 0) {
+            erc20.safeTransfer(msg.sender, reward);
         }
         emit Forwarded(msg.sender, erc20, forwarded, reward);
     }
