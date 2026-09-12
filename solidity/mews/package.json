@@ -17,6 +17,7 @@
     "deploy:forwarder": "forge script script/DeployForwarder.s.sol:DeployForwarder",
     "fmt": "forge fmt",
     "gas": "forge snapshot --no-match-test testFuzz",
+    "launch": "bash script/deploy-forwarder.sh",
     "lint": "forge lint --deny warnings --out out/lint --cache-path cache/lint",
     "preview": "forge script script/Preview.s.sol:Preview --gas-limit 2000000000",
     "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi",
