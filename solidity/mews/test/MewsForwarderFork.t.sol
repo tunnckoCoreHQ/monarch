@@ -3,7 +3,8 @@ pragma solidity ^0.8.30;
 
 import {Test} from "forge-std/Test.sol";
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
-import {DeployForwarder} from "../script/DeployForwarder.s.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {DeployForwarder, IPriceFeed} from "../script/DeployForwarder.s.sol";
 import {MewsForwarder} from "../src/MewsForwarder.sol";
 import {ILaunchFactory, ILaunchLocker, PoolKey} from "../src/openlaunch/OpenLaunchInterfaces.sol";
 
@@ -65,7 +66,7 @@ contract MewsForwarderForkTest is Test {
 
     function setUp() public {
         DeployForwarder deploy = new DeployForwarderSimulation();
-        (MewsForwarder deployed, address launched) = deploy.run("Mews", "MEWS", "", 191_200, LP_FEE);
+        (MewsForwarder deployed, address launched) = deploy.run("Mews On Base", "MEWS", "");
         forwarder = deployed;
         token = IERC20(launched);
         key = FACTORY.poolKeyOf(launched);
@@ -95,6 +96,18 @@ contract MewsForwarderForkTest is Test {
         assertEq(key.currency0, address(0));
         assertEq(key.currency1, address(token));
         assertEq(key.fee, LP_FEE);
+    }
+
+    function testOpeningCapIsOneHundredThousandUsd() public view {
+        (,,, int24 startTick,) = FACTORY.infoOf(address(token));
+        assertEq(startTick % 200, 0);
+        (, int256 ethUsd,,,) =
+            IPriceFeed(0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70).latestRoundData();
+        int256 tokensPerEth =
+            FixedPointMathLib.expWad(int256(startTick) * FixedPointMathLib.lnWad(1.0001e18));
+        uint256 capUsd = SafeCastLib.toUint256(1e9 * 1e18 * ethUsd / tokensPerEth) / 1e8;
+        assertGe(capUsd, 100_000);
+        assertLt(capUsd, 102_100);
     }
 
     function testFlushBurnsTokenFeesAndPaysEthFees() public {
