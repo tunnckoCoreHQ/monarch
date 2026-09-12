@@ -24,6 +24,15 @@ contract Coin is ERC20 {
     }
 }
 
+// Burns 1% of every transfer, like a fee-on-transfer token.
+contract TaxedCoin is Coin {
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        uint256 tax = amount / 100;
+        _burn(msg.sender, tax);
+        return super.transfer(to, amount - tax);
+    }
+}
+
 contract Collectible is ERC721 {
     function name() public pure override returns (string memory) {
         return "Collectible";
@@ -159,6 +168,18 @@ contract MewsForwarderTest is Test {
 
         assertEq(other.balanceOf(ACCOUNT), 495 ether);
         assertEq(other.balanceOf(KEEPER), 5 ether);
+    }
+
+    function testForwardHandlesFeeOnTransferTokens() public {
+        TaxedCoin taxed = new TaxedCoin();
+        taxed.mint(address(forwarder), 1000 ether);
+
+        vm.prank(KEEPER);
+        forwarder.forward(address(taxed));
+
+        assertEq(taxed.balanceOf(KEEPER), 9.9 ether);
+        assertEq(taxed.balanceOf(ACCOUNT), 980.1 ether);
+        assertEq(taxed.balanceOf(address(forwarder)), 0);
     }
 
     function testForwardRejectsLaunchToken() public {
