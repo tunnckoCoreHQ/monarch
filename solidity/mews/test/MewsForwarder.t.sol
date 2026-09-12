@@ -364,15 +364,15 @@ contract MewsForwarderTest is Test {
         vm.expectRevert(MewsForwarder.InvalidReward.selector);
         forwarder.setReward(99);
         vm.expectRevert(MewsForwarder.InvalidReward.selector);
-        forwarder.setReward(1001);
-        forwarder.setReward(1000);
+        forwarder.setReward(5001);
+        forwarder.setReward(5000);
         vm.stopPrank();
-        assertEq(forwarder.rewardBps(), 1000);
+        assertEq(forwarder.rewardBps(), 5000);
 
         vm.deal(address(forwarder), 1 ether);
         vm.prank(KEEPER);
         forwarder.flush();
-        assertEq(AUTOMATION.balance, 0.9 ether);
-        assertEq(KEEPER.balance, 0.1 ether);
+        assertEq(AUTOMATION.balance, 0.5 ether);
+        assertEq(KEEPER.balance, 0.5 ether);
     }
 }

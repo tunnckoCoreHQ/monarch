@@ -44,7 +44,7 @@ contract MewsForwarder is Ownable {
     event MinNftsUpdated(uint256 minNfts);
 
     uint256 public constant MIN_REWARD_BPS = 100;
-    uint256 public constant MAX_REWARD_BPS = 1000;
+    uint256 public constant MAX_REWARD_BPS = 5000;
     address public constant NATIVE = address(0);
     address public constant DEAD = 0x000000000000000000000000000000000000dEaD;
 
