@@ -11,13 +11,14 @@ interface IPriceFeed {
     function latestRoundData()
         external
         view
-        returns (uint80, int256 answer, uint256, uint256, uint80);
+        returns (uint80, int256 answer, uint256, uint256 updatedAt, uint80);
 }
 
 contract DeployForwarder is Script {
     error InvalidConfiguration();
     error InvalidDeployerKey();
     error InvalidPrice();
+    error StalePrice();
     error UnexpectedToken();
 
     ILaunchFactory internal constant FACTORY =
@@ -61,9 +62,13 @@ contract DeployForwarder is Script {
     // Tokens per ETH at the cap, as the pool tick: price = 1.0001^tick, snapped down to the
     // tick spacing so the cap rounds up slightly, like the OpenLaunch site does.
     function startTick() public view returns (int24) {
-        (, int256 ethUsd,,,) = ETH_USD.latestRoundData();
+        (, int256 ethUsd,, uint256 updatedAt,) = ETH_USD.latestRoundData();
         if (ethUsd <= 0) {
             revert InvalidPrice();
+        }
+        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp - updatedAt > 1 hours) {
+            revert StalePrice();
         }
         int256 tokensPerEth = SUPPLY * ethUsd * 1e18 / (CAP_USD * 1e8);
         int256 tick = FixedPointMathLib.lnWad(tokensPerEth) / FixedPointMathLib.lnWad(1.0001e18);
