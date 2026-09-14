@@ -14,12 +14,19 @@
     "build": "forge build",
     "check": "vp run fmt && vp run lint && vp run test && vp run build",
     "deploy": "forge script script/Deploy.s.sol:Deploy",
+    "deploy:forwarder": "forge script script/DeployForwarder.s.sol:DeployForwarder",
     "fmt": "forge fmt",
     "gas": "forge snapshot --no-match-test testFuzz",
+    "launch": "vp run deploy:forwarder --rpc-url https://mainnet.base.org --sig \"run(string,string,string)\" \"Mews On Base\" MEWS https://openlaunch.lol/api/launch/meta/0x6c22d03544609db5128736706d90d66fc7f45388/0x88e1dc3a35da1600096d3406a2817ae79c2b65a50ee1f5866a7777e34687e130 --broadcast && vp run verify:forwarder",
     "lint": "forge lint --deny warnings --out out/lint --cache-path cache/lint",
     "preview": "forge script script/Preview.s.sol:Preview --gas-limit 2000000000",
     "snapshot": "if [ -f .gas-snapshot ]; then exec forge snapshot --check --no-match-test testFuzz; else exec vp run gas; fi",
-    "test": "forge test"
+    "test": "forge test",
+    "test:fork": "FOUNDRY_PROFILE=fork forge test --match-contract ForkTest$ --fork-url https://mainnet.base.org",
+    "verify:basescan": "forge verify-contract $(jq -r .transactions[0].contractAddress broadcast/DeployForwarder.s.sol/8453/run-latest.json) src/MewsForwarder.sol:MewsForwarder --chain 8453 --rpc-url https://mainnet.base.org --guess-constructor-args --watch --verifier etherscan",
+    "verify:blockscout": "forge verify-contract $(jq -r .transactions[0].contractAddress broadcast/DeployForwarder.s.sol/8453/run-latest.json) src/MewsForwarder.sol:MewsForwarder --chain 8453 --rpc-url https://mainnet.base.org --guess-constructor-args --watch --verifier blockscout --verifier-url https://base.blockscout.com/api/",
+    "verify:forwarder": "vp run verify:basescan && vp run verify:sourcify && vp run verify:blockscout",
+    "verify:sourcify": "forge verify-contract $(jq -r .transactions[0].contractAddress broadcast/DeployForwarder.s.sol/8453/run-latest.json) src/MewsForwarder.sol:MewsForwarder --chain 8453 --rpc-url https://mainnet.base.org --guess-constructor-args --watch --verifier sourcify"
   },
   "dependencies": {
     "erc721a": "catalog:",

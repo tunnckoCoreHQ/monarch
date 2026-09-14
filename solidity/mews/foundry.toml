@@ -14,6 +14,8 @@ fs_permissions = [
 ]
 deny = "warnings"
 ignored_error_codes = [2394]
+# Fork tests run only through the fork profile: `vp run --filter mews test:fork`.
+no_match_contract = "ForkTest$"
 remappings = [
   "erc721a/=node_modules/erc721a/contracts/",
   "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
@@ -35,3 +37,6 @@ bracket_spacing = false
 int_types = "long"
 quote_style = "double"
 number_underscore = "thousands"
+
+[profile.fork]
+no_match_contract = "^$"
