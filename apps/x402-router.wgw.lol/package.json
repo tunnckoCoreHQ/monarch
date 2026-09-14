@@ -17,8 +17,8 @@
     "preview": "vp exec astro preview"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.1.2",
-    "@astrojs/starlight": "0.41.10",
+    "@astrojs/cloudflare": "^14.3.0",
+    "@astrojs/starlight": "0.42.0",
     "@tailwindcss/vite": "4.3.3",
     "@tunnckocore/x402-router": "workspace:^",
     "astro": "catalog:",
