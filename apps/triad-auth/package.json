@@ -17,7 +17,7 @@
     "promote": "git fetch origin && git push origin origin/master:release/triad-auth"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.1.2",
+    "@astrojs/cloudflare": "^14.3.0",
     "@better-auth/cimd": "catalog:better-auth",
     "@better-auth/oauth-provider": "catalog:better-auth",
     "@better-auth/passkey": "catalog:better-auth",
