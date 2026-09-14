@@ -36,7 +36,7 @@ catalogs:
     solady: 0.1.26
     erc721a: 4.3.0
     viem: 2.56.0
-    jose: ^6.2.10
+    jose: ^6.2.12
     "@oxlint/plugins": 1.80.0
     oxlint: 1.80.0
   types:
