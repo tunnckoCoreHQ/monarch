@@ -82,15 +82,17 @@ contract PreviewDeploy is PreviewBase {
 /// @notice Reads every revealed tokenURI from a deployed NekoSeaDrop and writes the decoded
 ///         SVGs to `preview/<tokenId>.svg`.
 ///
-///         Run (no broadcast; needs a large gas limit for the full sweep):
+///         Run (no broadcast; needs a large gas limit). One call keeps the whole sweep in
+///         memory, so export in ranges with PREVIEW_START and PREVIEW_END:
 ///           NEKO=<address> forge script script/Preview.s.sol:PreviewExport \
 ///             --rpc-url http://127.0.0.1:8545 --gas-limit 18446744073709551615
 contract PreviewExport is PreviewBase {
     function run() external {
         vm.createDir("preview", true);
         NekoSeaDrop neko = NekoSeaDrop(vm.envAddress("NEKO"));
-        uint256 supply = neko.MAX_SUPPLY();
-        for (uint256 tokenId = 1; tokenId <= supply; ++tokenId) {
+        uint256 first = vm.envOr("PREVIEW_START", uint256(1));
+        uint256 last = vm.envOr("PREVIEW_END", neko.MAX_SUPPLY());
+        for (uint256 tokenId = first; tokenId <= last; ++tokenId) {
             vm.writeFile(_fileName(tokenId), _svgFromTokenURI(neko.tokenURI(tokenId)));
             if (tokenId % 500 == 0) {
                 console.log("exported", tokenId);
