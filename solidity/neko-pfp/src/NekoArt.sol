@@ -185,16 +185,17 @@ abstract contract NekoArt is ERC721A, ReentrancyGuard, NekoSeedSampler {
         return renderer.generate(traits);
     }
 
-    /// @dev A fixed purple cat on a mint sky stands in for every token until reveal.
+    /// @dev A fixed matrix cat, preview token 868, stands in for every token until reveal.
     function _placeholderTraits() private pure returns (NekoRenderer.Traits memory placeholder) {
-        placeholder.sky = 5;
-        placeholder.head = 12;
-        placeholder.face = 5;
-        placeholder.body = 12;
-        placeholder.tail = 12;
-        placeholder.legs = [12, 12, 12, 12];
-        placeholder.eyes = [5, 5];
-        placeholder.mouth = 5;
+        placeholder.head = 7;
+        placeholder.face = 10;
+        placeholder.body = 7;
+        placeholder.tail = 7;
+        placeholder.legs = [7, 7, 7, 7];
+        placeholder.eyes = [10, 10];
+        placeholder.mouth = 10;
+        placeholder.toy = 11;
+        placeholder.matrix = true;
     }
 
     function _unrevealedImage() internal view returns (string memory) {
