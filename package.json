@@ -6,7 +6,7 @@
   "scripts": {
     "changeset": "changeset",
     "packages:publish": "vp run build && changeset publish",
-    "packages:version": "changeset version && vp install --lockfile-only --ignore-scripts --no-frozen-lockfile && vp run check && vp run test",
+    "packages:version": "GITHUB_TOKEN=\"${GITHUB_TOKEN:-$(gh auth token)}\" changeset version && vp install --lockfile-only --ignore-scripts --no-frozen-lockfile && vp run check && vp run test",
     "prepare": "vp config --no-agent",
     "solidity:build": "vp run --filter './solidity/*' build",
     "solidity:fmt": "vp run --filter './solidity/*' fmt",
@@ -14,17 +14,18 @@
     "solidity:testing": "vp run --filter './solidity/*' test"
   },
   "devDependencies": {
-    "@changesets/cli": "3.0.2",
+    "@changesets/changelog-github": "1.0.1",
+    "@changesets/cli": "3.0.3",
     "@cloudflare/workers-types": "catalog:types",
     "@oxlint/plugins": "catalog:",
     "@types/bun": "catalog:types",
     "@types/node": "catalog:types",
     "@vitest/coverage-v8": "catalog:",
+    "cf": "catalog:",
     "oxlint": "catalog:",
     "typescript": "catalog:types",
     "vite": "catalog:",
-    "vite-plus": "catalog:",
-    "wrangler": "catalog:"
+    "vite-plus": "catalog:"
   },
   "packageManager": "pnpm@11.21.0"
 }

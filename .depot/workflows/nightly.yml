@@ -1,0 +1,75 @@
+# Depot CI. After ci succeeds for a master push, publishes nightly versions of the packages that
+# push changed. Only this workflow may write the nightly dist-tag: npm.wgw.lol reads the
+# workflow_ref claim of the Depot CI OIDC token and maps nightly.yml to nightly.
+#
+# SECURITY: the OIDC token here can publish nightly prereleases and nothing else. No repository
+# secrets; the read-only job token only lets the changelog writer read commits and pull requests.
+
+name: nightly
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [master]
+
+permissions: {}
+
+concurrency:
+  group: packages-nightly
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: read
+    runs-on: depot-ubuntu-24.04-4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        with:
+          sfw: true
+          cache: true
+          run-install: true
+          node-version: "lts"
+      # Nightly publishes only what this push changed. Pending changesets for other packages stay
+      # untouched for their stable release. Packages are built in dependency order first, then
+      # published in dependency order. pnpm exchanges the Depot CI OIDC token at npm.wgw.lol.
+      # master takes squash merges, so the pushed commit's parent is the previous master.
+      - name: Publish nightlies for the packages this push changed
+        env:
+          # @changesets/changelog-github reads commit and PR data through the GitHub API.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Changed workspace packages and their dependents, read before snapshot versioning edits manifests.
+          changed=$(vp pm ls --filter "...[HEAD~1]" --json -- --depth -1 | jq -r '.[].name')
+          if ! compgen -G '.changeset/*.md' > /dev/null; then
+            echo "Not published: no pending changesets" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          vp exec changeset version --snapshot nightly
+          filters=()
+          published=()
+          for manifest in $(git diff --name-only -- 'packages/*/package.json'); do
+            name=$(jq -r .name "$manifest")
+            grep -qxF "$name" <<< "$changed" || continue
+            filters+=(--filter "$name")
+            published+=("$name@$(jq -r .version "$manifest")")
+          done
+          if [ "${#published[@]}" -eq 0 ]; then
+            echo "Not published: this push changed no package with a pending changeset" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          vp run build
+          vp pm publish -r "${filters[@]}" --tag nightly --no-git-checks
+          printf 'Published %s with nightly\n' "${published[@]}" | tee -a "$GITHUB_STEP_SUMMARY"

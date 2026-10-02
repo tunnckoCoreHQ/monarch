@@ -1,18 +1,23 @@
 ---
 import "../styles.css";
 
-const routes = [
-    ["Ethereum Mainnet", "PrimeV", "1.2s settlement, sponsored gas"],
-    ["Base + CDP EVM", "CDP", "seller-generated CDP JWT"],
-    ["Solana + CDP SVM", "CDP", "same pass-through auth"],
-    ["Public test/dev networks", "x402.org", "public coverage"],
+const supported = [
+    ["Ethereum Mainnet", "PrimeV", "1.2s settlement"],
+    ["Base + other EVMs", "CDP", "pass-through JWT"],
+    ["Solana", "CDP", "same x402 flow"],
+    ["Test/dev networks", "x402.org", "live discovery"],
 ];
 
 const pageTitle = "WGW x402 Router";
 const pageDescription =
-    "Use one standard x402 facilitator endpoint and route payments to PrimeV, x402.org, or CDP without storing seller secrets on the hosted router.";
+    "A hosted and self-hostable x402 v2 facilitator router for PrimeV, x402.org, and CDP-backed payment networks.";
 const routerOrigin = Astro.url.origin;
 const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages/x402-router`;
+const commit = import.meta.env.COMMIT_SHA;
+const commitHref =
+    commit === "local"
+        ? "https://github.com/tunnckoCoreHQ/monarch"
+        : `https://github.com/tunnckoCoreHQ/monarch/commit/${commit}`;
 ---
 
 <html lang="en">
@@ -50,11 +55,11 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                         <div class="flex items-center gap-5">
                             <a
                                 class="text-secondary hover:text-accent hover:underline hover:underline-offset-4"
-                                href="/docs/integration/">Integration</a
+                                href="/docs/">Docs</a
                             >
                             <a
                                 class="text-secondary hover:text-accent hover:underline hover:underline-offset-4"
-                                href="/docs/self-hosting/">Self-host</a
+                                href="/docs/self-hosting/">Self-hosting</a
                             >
                             <a
                                 class="inline-flex items-center gap-1.5 text-secondary hover:text-accent hover:underline hover:underline-offset-4"
@@ -79,57 +84,72 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                     <div class="grid grid-cols-1 gap-10 md:grid-cols-2">
                         <div class="flex flex-col justify-center">
                             <div class="max-w-2xl">
+                                <div class="mb-5 flex flex-wrap gap-2 text-sm">
+                                    <span
+                                        class="rounded-full border border-line bg-panel px-3 py-1 text-accent"
+                                    >
+                                        Open Source
+                                    </span>
+                                    <span
+                                        class="rounded-full border border-line bg-panel px-3 py-1 text-secondary"
+                                    >
+                                        stateless router
+                                    </span>
+                                    <span
+                                        class="rounded-full border border-line bg-panel px-3 py-1 text-secondary"
+                                    >
+                                        hosted or self-hosted
+                                    </span>
+                                </div>
                                 <h1
                                     class="text-4xl font-semibold leading-none text-primary md:text-5xl lg:text-6xl"
                                 >
-                                    One x402 facilitator URL. Routed to the
-                                    right provider.
+                                    One x402 endpoint. Many facilitators.
                                 </h1>
                                 <p
                                     class="mt-6 max-w-2xl text-lg leading-8 text-muted"
                                 >
-                                    For sellers adding x402 payments, point your
-                                    standard facilitator client at WGW. The
-                                    router receives normal x402 requests, reads
-                                    the network and version, then sends the work
-                                    to PrimeV, x402.org, or CDP.
-                                </p>
-                                <p
-                                    class="mt-4 max-w-2xl text-base leading-7 text-secondary"
-                                >
-                                    CDP credentials stay on your server. When a
-                                    request needs CDP, your app adds a
-                                    short-lived forwarded header. The hosted
-                                    router stores no seller secrets.
+                                    Keep your existing x402 middleware and
+                                    payment requirements. The router receives
+                                    normal facilitator requests, checks the
+                                    payment network and available auth, then
+                                    forwards them to PrimeV, x402.org, or CDP.
                                 </p>
                                 <div class="mt-8 flex flex-wrap gap-3">
                                     <a
                                         href="/docs/getting-started/"
                                         class="inline-flex h-11 items-center justify-center rounded-md border border-accent bg-panel px-5 text-sm font-semibold text-accent hover:bg-accent hover:text-page"
                                     >
-                                        Use the hosted endpoint
+                                        Read the docs
                                     </a>
-                                </div>
-                                <div
-                                    class="mt-6 max-w-xl border border-line bg-code px-4 py-3 font-mono text-sm text-code-text"
-                                >
-                                    {routerOrigin}
+                                    <a
+                                        href={sourceUrl}
+                                        rel="noreferrer external"
+                                        target="_blank"
+                                        class="inline-flex h-11 items-center justify-center rounded-md border border-edge px-5 text-sm font-semibold text-primary hover:border-accent"
+                                    >
+                                        View package
+                                    </a>
                                 </div>
                             </div>
                         </div>
 
                         <div class="flex items-center">
                             <div
-                                class="w-full overflow-hidden rounded-lg border border-line bg-frame"
+                                class="w-full overflow-hidden rounded-lg border border-line bg-frame shadow-2xl shadow-black/40"
                             >
                                 <div
                                     class="flex items-center justify-between border-b border-line bg-panel px-3 py-2 text-xs text-secondary"
                                 >
-                                    <span>hosted WGW router</span>
+                                    <span>router status</span>
                                     <span
                                         id="router-health"
-                                        class="text-secondary"
+                                        class="inline-flex items-center gap-2 text-secondary"
                                     >
+                                        <span
+                                            id="router-health-dot"
+                                            class="h-2 w-2 rounded-full bg-secondary"
+                                        ></span>
                                         <span id="router-health-label"
                                             >checking</span
                                         >
@@ -148,23 +168,26 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
     &#125;),
 &#125;);</code></pre>
                                     <div
-                                        class="mt-3 divide-y divide-line border-y border-line"
+                                        class="mt-3 grid gap-2 sm:grid-cols-2 sm:gap-3"
                                     >
                                         {
-                                            routes.map(
+                                            supported.map(
                                                 ([
                                                     network,
                                                     upstream,
                                                     detail,
                                                 ]) => (
-                                                    <div class="grid gap-2 py-3 text-sm sm:grid-cols-[1fr_5rem_1.2fr] sm:items-center">
-                                                        <div class="font-medium text-primary">
-                                                            {network}
+                                                    <div class="rounded-md border border-soft bg-panel p-2.5 sm:p-3">
+                                                        <div class="flex items-center justify-between gap-3">
+                                                            <div class="text-sm font-medium text-primary">
+                                                                {network}
+                                                            </div>
+                                                            <div class="flex shrink-0 items-center gap-2 text-xs text-info">
+                                                                <span class="h-2 w-2 rounded-full bg-info" />
+                                                                {upstream}
+                                                            </div>
                                                         </div>
-                                                        <div class="text-info">
-                                                            {upstream}
-                                                        </div>
-                                                        <div class="text-secondary">
+                                                        <div class="mt-1 text-xs text-secondary">
                                                             {detail}
                                                         </div>
                                                     </div>
@@ -182,11 +205,9 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                             class="flex flex-wrap items-center justify-between gap-3"
                         >
                             <div class="flex flex-wrap items-center gap-3">
-                                <span class="text-secondary"
-                                    >/supported, /verify, /settle</span
-                                >
+                                <span class="text-secondary">x402 request</span>
                                 <span class="text-edge">-></span>
-                                <span class="text-accent">WGW router</span>
+                                <span class="text-accent">router</span>
                                 <span class="text-edge">-></span>
                                 <span class="text-primary">PrimeV</span>
                                 <span class="text-edge">/</span>
@@ -195,7 +216,7 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                                 <span class="text-primary">CDP</span>
                             </div>
                             <span class="text-secondary">
-                                x402 v2, CDP header forwarded only when needed
+                                x402 v2 only, no seller keys stored
                             </span>
                         </div>
                     </div>
@@ -209,13 +230,13 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                     <div class="grid gap-8 md:grid-cols-[0.9fr_1.1fr]">
                         <div>
                             <p class="text-sm font-semibold text-accent">
-                                What changes
+                                Why it exists
                             </p>
                             <h2
                                 class="mt-3 text-3xl font-semibold text-primary md:text-4xl"
                             >
-                                Change the facilitator URL, not the payment
-                                flow.
+                                Keep one x402 integration while facilitators
+                                keep changing.
                             </h2>
                         </div>
                         <div class="divide-y divide-line border-y border-line">
@@ -223,40 +244,36 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                                 class="grid gap-3 py-5 md:grid-cols-[11rem_1fr]"
                             >
                                 <h3 class="font-semibold text-primary">
-                                    Standard x402 surface
+                                    Same server flow
                                 </h3>
                                 <p class="leading-7 text-secondary">
-                                    Your middleware still calls
-                                    <code>/supported</code>, <code>/verify</code
-                                    >, and <code>/settle</code>. WGW behaves
-                                    like the facilitator endpoint your x402
-                                    stack already expects.
+                                    Your middleware still talks to a
+                                    facilitator. The router only decides where
+                                    each verify or settle request should go.
                                 </p>
                             </div>
                             <div
                                 class="grid gap-3 py-5 md:grid-cols-[11rem_1fr]"
                             >
                                 <h3 class="font-semibold text-primary">
-                                    Explicit upstream choice
-                                </h3>
-                                <p class="leading-7 text-secondary">
-                                    Ethereum Mainnet goes to PrimeV.
-                                    CDP-supported EVM and SVM networks go to CDP.
-                                    Public test and dev networks come from
-                                    x402.org.
-                                </p>
-                            </div>
-                            <div
-                                class="grid gap-3 py-5 md:grid-cols-[11rem_1fr]"
-                            >
-                                <h3 class="font-semibold text-primary">
-                                    Seller-owned CDP auth
+                                    Seller-owned auth
                                 </h3>
                                 <p class="leading-7 text-secondary">
                                     CDP credentials stay on your server and
-                                    create a short-lived JWT. The hosted router
-                                    forwards that header to CDP when needed and
-                                    keeps no seller-side key storage.
+                                    become short-lived headers. The hosted
+                                    router does not store seller keys.
+                                </p>
+                            </div>
+                            <div
+                                class="grid gap-3 py-5 md:grid-cols-[11rem_1fr]"
+                            >
+                                <h3 class="font-semibold text-primary">
+                                    Live support list
+                                </h3>
+                                <p class="leading-7 text-secondary">
+                                    Supported networks are discovered from
+                                    upstream facilitators and filtered to x402
+                                    v2 before clients see them.
                                 </p>
                             </div>
                         </div>
@@ -267,30 +284,28 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
             <section class="bg-page px-5 py-14 md:px-8 lg:px-10">
                 <div class="mx-auto max-w-7xl lg:px-10">
                     <div
-                        class="grid gap-6 border-y border-line py-8 md:grid-cols-[1fr_auto] md:items-center"
+                        class="flex flex-col gap-6 rounded-lg border border-line bg-panel p-5 md:flex-row md:items-center md:justify-between md:p-6"
                     >
                         <div>
+                            <p class="text-sm font-semibold text-accent">
+                                Self-hosting
+                            </p>
                             <h2
-                                class="text-2xl font-semibold text-primary"
+                                class="mt-2 text-2xl font-semibold text-primary"
                             >
-                                Start hosted. Self-host when policy needs it.
+                                Hosted by default. Yours when you need it.
                             </h2>
                             <p class="mt-2 max-w-2xl text-secondary">
-                                Use the WGW endpoint first and keep the
-                                integration small. If you need private
-                                infrastructure or custom upstream policy, run the
-                                same Worker from the <a
-                                    class="font-semibold text-accent underline decoration-accent/40 underline-offset-4 hover:text-accent-high"
-                                    href="/docs/self-hosting/"
-                                    >self-hosting notes</a
-                                >.
+                                The hosted router is ready to use. Self-host the
+                                same Worker when you want private
+                                infrastructure or custom policy.
                             </p>
                         </div>
                         <a
-                            href="/docs/getting-started/"
-                            class="inline-flex h-11 shrink-0 items-center justify-center rounded-md border border-accent bg-panel px-5 text-sm font-semibold text-accent hover:bg-accent hover:text-page"
+                            href="/docs/self-hosting/"
+                            class="inline-flex h-11 shrink-0 items-center justify-center rounded-md border border-edge px-5 text-sm font-semibold text-primary hover:border-accent"
                         >
-                            Use the hosted endpoint
+                            Self-hosting notes
                         </a>
                     </div>
                 </div>
@@ -304,19 +319,19 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                     <div>
                         License <a
                             class="font-semibold text-accent underline decoration-accent/40 underline-offset-4 hover:text-accent-high"
-                            href="https://fsf.software"
+                            href="https://www.apache.org/licenses/LICENSE-2.0"
                             rel="noreferrer external"
-                            target="_blank">FSL-1.1-ALv2</a
+                            target="_blank">Apache-2.0</a
                         >
                     </div>
                     <nav class="flex flex-wrap gap-x-5 gap-y-2">
                         <a
                             class="text-secondary hover:text-accent hover:underline hover:underline-offset-4"
-                            href="/docs/integration/">Integration</a
+                            href="/docs/">Docs</a
                         >
                         <a
                             class="text-secondary hover:text-accent hover:underline hover:underline-offset-4"
-                            href="/docs/self-hosting/">Self-host</a
+                            href="/docs/self-hosting/">Self-hosting</a
                         >
                         <a
                             class="inline-flex items-center gap-1.5 text-secondary hover:text-accent hover:underline hover:underline-offset-4"
@@ -335,12 +350,20 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                                 ></path>
                             </svg></a
                         >
+                        <a
+                            class="text-secondary hover:text-accent hover:underline hover:underline-offset-4"
+                            href={commitHref}
+                            rel="noreferrer external"
+                            target="_blank"
+                            title={commit}>Build {commit.slice(0, 7)}</a
+                        >
                     </nav>
                 </div>
             </div>
         </footer>
         <script is:inline>
             const health = document.querySelector("#router-health");
+            const dot = document.querySelector("#router-health-dot");
             const label = document.querySelector("#router-health-label");
 
             fetch("/health", {
@@ -357,8 +380,16 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                         "text-accent",
                         "text-danger",
                     );
+                    dot?.classList.remove(
+                        "bg-secondary",
+                        "bg-accent",
+                        "bg-danger",
+                        "animate-pulse",
+                    );
 
                     health?.classList.add(ok ? "text-accent" : "text-danger");
+                    dot?.classList.add(ok ? "bg-accent" : "bg-danger");
+                    dot?.classList.toggle("animate-pulse", ok);
                     if (label) {
                         label.textContent = ok ? "online" : "offline";
                     }
@@ -366,6 +397,12 @@ const sourceUrl = `https://github.com/tunnckoCoreHQ/monarch/tree/master/packages
                 .catch(() => {
                     health?.classList.remove("text-secondary", "text-accent");
                     health?.classList.add("text-danger");
+                    dot?.classList.remove(
+                        "bg-secondary",
+                        "bg-accent",
+                        "animate-pulse",
+                    );
+                    dot?.classList.add("bg-danger");
                     if (label) {
                         label.textContent = "offline";
                     }

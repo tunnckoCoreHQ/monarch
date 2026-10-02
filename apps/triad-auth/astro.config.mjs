@@ -2,8 +2,8 @@ import cloudflare from "@astrojs/cloudflare";
 import { defineConfig, sessionDrivers } from "astro/config";
 
 export default defineConfig({
-  // WRANGLER_CONFIG selects the Worker config the build targets; unset means wrangler.jsonc.
-  adapter: cloudflare({ configPath: process.env.WRANGLER_CONFIG, imageService: "passthrough" }),
+  // The adapter reads cloudflare.config.ts; `--mode nightly` selects the nightly Worker.
+  adapter: cloudflare({ imageService: "passthrough" }),
   output: "server",
   // Triad owns browser sessions in D1; this prevents an unused KV binding.
   session: { driver: sessionDrivers.lruCache() },

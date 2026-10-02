@@ -33,7 +33,6 @@
     "forge-std": "github:foundry-rs/forge-std#v1.16.1",
     "typescript": "catalog:types",
     "vite": "catalog:",
-    "vite-plus": "catalog:",
-    "wrangler": "catalog:"
+    "vite-plus": "catalog:"
   }
 }

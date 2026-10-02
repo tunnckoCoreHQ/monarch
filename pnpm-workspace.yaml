@@ -15,33 +15,38 @@ minimumReleaseAgeExclude:
   - "@changesets/cli@3.0.2"
   - "@changesets/git@4.0.1"
   - "@changesets/read@1.0.1"
+  - "@astrojs/cloudflare@15.0.0-beta.0"
+  - astro@7.4.0-beta.0
+  - cf@1.0.0-beta.10
 
 catalogMode: prefer
 
 catalogs:
   default:
-    "@coinbase/cdp-sdk": ^1.51.2
+    "@coinbase/cdp-sdk": ^1.56.0
     "@hono/node-server": ^2.0.6
-    "@x402/core": ^2.17.0
-    "@x402/evm": ^2.17.0
-    "@x402/hono": ^2.17.0
-    "@x402/svm": ^2.17.0
+    "@x402/core": ^2.26.0
+    "@x402/evm": ^2.26.0
+    "@x402/hono": ^2.26.0
+    "@x402/svm": ^2.26.0
     hono: ^4.12.27
     vite: npm:@voidzero-dev/vite-plus-core@0.2.8
     vite-plus: 0.2.8
     "@vitest/coverage-v8": 4.1.10
-    astro: ^7.2.0
-    wrangler: 4.128.0
+    astro: 7.4.0-beta.0
+    "@astrojs/cloudflare": 15.0.0-beta.0
+    cf: 1.0.0-beta.10
+    "@cloudflare/vite-plugin": 2.0.0-beta.sha-238e489d5
     "@openzeppelin/contracts": 5.6.1
     solady: 0.1.26
     erc721a: 4.3.0
-    viem: 2.56.0
-    jose: ^6.2.10
-    "@oxlint/plugins": 1.80.0
-    oxlint: 1.80.0
+    viem: 2.56.8
+    jose: ^6.2.12
+    "@oxlint/plugins": 1.83.0
+    oxlint: 1.83.0
   types:
-    "@cloudflare/workers-types": 5.20260831.1
-    "@types/bun": ^1.3.14
+    "@cloudflare/workers-types": 5.20260921.1
+    "@types/bun": ^1.4.2
     "@types/node": ^24
     typescript: 7.0.2
   crypto:

@@ -24,7 +24,7 @@ npm install @tunnckocore/x402-router
 - **Stateless CDP pass-through.** Sellers generate short-lived CDP JWTs locally; the router stores nothing.
 - **PrimeV mainnet rail.** Ethereum payments use [PrimeV x402 facilitator](https://github.com/primev/mainnet-x402-facilitator) for 1.2s settlement and sponsored gas.
 - **Self-hostable Fetch handler.** Run the same code on Cloudflare Workers, Node, Bun, Deno, or any Fetch API runtime.
-- **Sustainable Open Source.** Fair source under FSL-1.1-ALv2, with automatic Apache-2.0 conversion after 2 years.
+- **Open source.** Apache-2.0.
 
 It exposes the normal facilitator surface:
 
@@ -135,4 +135,4 @@ The CDP secrets stay on the seller's server. They are passed to the CDP SDK to g
 
 ## License
 
-Released under FSL-1.1-ALv2. Private use, non-commercial use, and self-hosting are free. The restriction is the do-not-compete clause for the first 2 years. After that, the source code license automatically converts to Apache-2.0. Read `LICENSE` for the exact terms.
+Released under Apache-2.0. Read `LICENSE` for the exact terms.

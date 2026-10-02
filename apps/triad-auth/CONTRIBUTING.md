@@ -4,14 +4,14 @@ Triad is a Better Auth OAuth/OIDC server on Cloudflare Workers, D1, and Astro. T
 
 ## Environments
 
-| Branch               | Worker               | Config                   | D1                   | Origin                               |
-| -------------------- | -------------------- | ------------------------ | -------------------- | ------------------------------------ |
-| `master`             | `triad-auth-nightly` | `wrangler.nightly.jsonc` | `triad-auth-nightly` | `https://triad-auth-nightly.wgw.lol` |
-| `release/triad-auth` | `triad-auth`         | `wrangler.jsonc`         | `triad-auth`         | `https://triad-auth.wgw.lol`         |
+| Branch               | Worker               | Mode         | D1                   | Origin                               |
+| -------------------- | -------------------- | ------------ | -------------------- | ------------------------------------ |
+| `master`             | `triad-auth-nightly` | `nightly`    | `triad-auth-nightly` | `https://triad-auth-nightly.wgw.lol` |
+| `release/triad-auth` | `triad-auth`         | `production` | `triad-auth`         | `https://triad-auth.wgw.lol`         |
 
 `master` is the default branch. Every pull request targets it. Cloudflare Workers Builds deploys `master` to nightly on each push. `release/triad-auth` is the production pointer. Builds deploys it to production when it moves. No other branch deploys.
 
-The two Workers share nothing. Each has its own D1 database, its own secrets, and its own `AUTH_ORIGIN`.
+Both Workers are described by one `cloudflare.config.ts`. The file exports a function of the build mode: `--mode nightly` returns the nightly Worker, every other mode returns production. The two Workers share nothing. Each has its own D1 database, its own secrets, and its own `AUTH_ORIGIN`.
 
 ## Local development
 
@@ -22,7 +22,7 @@ vp run db:migrate:local
 vp run dev
 ```
 
-Fill `.dev.vars` with local values. `vp run dev` uses `wrangler.jsonc` bindings against local D1 storage.
+Fill `.dev.vars` with local values. `vp run dev` runs `cf dev`, which starts Astro with the production bindings from `cloudflare.config.ts` against local D1 storage in `.cloudflare/state/`. `db:migrate:local` applies the migrations to that same local storage.
 
 ## Making a change
 
@@ -36,8 +36,8 @@ Fill `.dev.vars` with local values. `vp run dev` uses `wrangler.jsonc` bindings 
    vp run --filter triad-auth build
    ```
 
-4. Open a pull request into `master`. The `ci` GitHub Actions workflow runs `vp run check` and `vp run test`; the `solidity` workflow runs when Solidity or shared dependency files change. Nothing deploys from a pull request. Enable auto-merge with `gh pr merge --auto --squash`; GitHub merges once the required checks pass, one approval is in, and review threads are resolved.
-5. Squash-merge. Builds deploys the merge commit to nightly. The build command targets the nightly config, and the deploy command applies pending migrations first, then uploads the Worker.
+4. Open a pull request into `master`. The Depot CI `ci` workflow runs `vp run check` and `vp run test`; its `solidity` workflow runs when Solidity or shared dependency files change. Nothing deploys from a pull request. Enable auto-merge with `gh pr merge --auto --squash`; GitHub merges once the required checks pass, one approval is in, and review threads are resolved.
+5. Squash-merge. Builds deploys the merge commit to nightly. The build command targets the nightly mode, and the deploy command applies pending migrations first, then uploads the Worker.
 
 ## Releasing to production
 
@@ -53,15 +53,15 @@ Every page footer shows a `BUILD <sha>` link with the commit the running Worker 
 
 ## Build and deploy scripts
 
-| Script                  | What it does                                                                                 |
-| ----------------------- | -------------------------------------------------------------------------------------------- |
-| `vp run build`          | Astro build against `wrangler.jsonc`                                                         |
-| `vp run build:nightly`  | Astro build against `wrangler.nightly.jsonc`                                                 |
-| `vp run deploy`         | `wrangler d1 migrations apply DB --remote -c wrangler.jsonc`, then `wrangler deploy`         |
-| `vp run deploy:nightly` | `wrangler d1 migrations apply DB --remote -c wrangler.nightly.jsonc`, then `wrangler deploy` |
-| `vp run promote`        | `git fetch origin && git push origin origin/master:release/triad-auth`                       |
+| Script                  | What it does                                                                               |
+| ----------------------- | ------------------------------------------------------------------------------------------ |
+| `vp run build`          | `cf build`: Astro build for the production Worker                                          |
+| `vp run build:nightly`  | `cf build --mode nightly`: Astro build for the nightly Worker                              |
+| `vp run deploy`         | `cf d1 migrations apply <production D1 id>`, then `cf deploy --prebuilt --mode production` |
+| `vp run deploy:nightly` | `cf d1 migrations apply <nightly D1 id>`, then `cf deploy --prebuilt --mode nightly`       |
+| `vp run promote`        | `git fetch origin && git push origin origin/master:release/triad-auth`                     |
 
-The Astro Cloudflare adapter reads the selected Wrangler config at build time and writes the final Worker config to `dist/server/wrangler.json`. `wrangler deploy` follows the redirect in `.wrangler/deploy/config.json` to that file, so it takes no `-c` flag. The `WRANGLER_CONFIG` variable in `astro.config.mjs` picks the source config. Always run the matching build before a deploy.
+`cf build` runs `astro build` and writes Build Output to `.cloudflare/output/v0/`. The `deploy` scripts pass `--prebuilt`, so they upload that output instead of building again, and the mode has to match the build. Always run the matching build before a deploy.
 
 Builds runs the build and deploy scripts. Do not run them by hand except during first-time setup.
 
@@ -72,12 +72,12 @@ Done once per Cloudflare account. Skip this if both Workers already exist.
 ### Databases and Workers
 
 ```sh
-vp exec wrangler login
-vp exec wrangler d1 create triad-auth-nightly
-vp exec wrangler d1 create triad-auth
+vp exec cf auth login
+vp exec cf d1 create --name triad-auth-nightly
+vp exec cf d1 create --name triad-auth
 ```
 
-Copy each `database_id` into the matching config. Then build and deploy each Worker once so it exists:
+Copy each database `id` into `cloudflare.config.ts` and the matching `deploy` script. Then build and deploy each Worker once so it exists:
 
 ```sh
 vp run build:nightly && vp run deploy:nightly
@@ -88,11 +88,12 @@ Create two proxied DNS records in the `wgw.lol` zone, `triad-auth-nightly` and `
 
 ### Secrets
 
-Each Worker needs the same ten secret names with its own values. Set them per config:
+Each Worker needs the same ten secret names with its own values. `cf` cannot set a single secret yet, so set them with Wrangler by Worker name, or upload a file with a new version:
 
 ```sh
-vp exec wrangler secret put <NAME> -c wrangler.nightly.jsonc
-vp exec wrangler secret put <NAME> -c wrangler.jsonc
+npx wrangler secret put <NAME> --name triad-auth-nightly
+npx wrangler secret put <NAME> --name triad-auth
+vp exec cf deploy --prebuilt --mode nightly --secrets-file <path>
 ```
 
 | Name                                         | Value                                                                       |
@@ -120,6 +121,6 @@ In the Cloudflare dashboard, connect the GitHub repository to both Workers:
 | Deploy command                     | `pnpm run deploy:nightly` | `pnpm run deploy`    |
 | Builds for non-production branches | Off                       | Off                  |
 
-The auto-generated Builds API token lacks D1 permission. Under My Profile, API Tokens, add D1 Edit to it. Migrations fail without it.
+`cf` needs Node.js 22.18 or later; the Builds image ships Node.js 24 by default. The auto-generated Builds API token lacks D1 permission. Under My Profile, API Tokens, add D1 Edit to it. Migrations fail without it.
 
-No secrets live in GitHub. GitHub Actions only runs checks.
+No secrets live in GitHub. Depot CI runs the checks; GitHub Actions only automates Dependabot merges and Socket Optimize.

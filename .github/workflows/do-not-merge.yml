@@ -1,0 +1,23 @@
+# Holds a pull request while it carries the do-not-merge label. The master ruleset requires this
+# check, so auto-merge waits until the owner removes the label and the check reruns green.
+# synchronize is listed so every new head commit gets the check; required checks must exist on it.
+
+name: do-not-merge
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions: {}
+
+jobs:
+  do-not-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail while the label is present
+        if: contains(github.event.pull_request.labels.*.name, 'do-not-merge')
+        run: |
+          echo "Held by the do-not-merge label" | tee -a "$GITHUB_STEP_SUMMARY"
+          exit 1
+      - name: Pass without the label
+        run: echo "No hold"

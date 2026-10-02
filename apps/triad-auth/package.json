@@ -6,18 +6,18 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "build": "vp exec astro build",
-    "build:nightly": "WRANGLER_CONFIG=wrangler.nightly.jsonc vp exec astro build",
+    "build": "vp exec cf build",
+    "build:nightly": "vp exec cf build --mode nightly",
     "db:generate": "vp exec auth generate --config src/better-auth/schema.ts --output .ignore/auth-schema.sql --yes",
-    "db:migrate:local": "vp exec wrangler d1 migrations apply DB --local",
-    "deploy": "vp exec wrangler d1 migrations apply DB --remote -c wrangler.jsonc && vp exec wrangler deploy",
-    "deploy:nightly": "vp exec wrangler d1 migrations apply DB --remote -c wrangler.nightly.jsonc && vp exec wrangler deploy",
-    "dev": "vp exec astro dev",
+    "db:migrate:local": "vp exec cf d1 migrations apply 40220009-d502-4afd-ab7b-54495016720f --local --persist-to .cloudflare/state",
+    "deploy": "vp exec cf d1 migrations apply 40220009-d502-4afd-ab7b-54495016720f && vp exec cf deploy --prebuilt --mode production",
+    "deploy:nightly": "vp exec cf d1 migrations apply c4c8e874-a463-4c22-8389-8911627c055d && vp exec cf deploy --prebuilt --mode nightly",
+    "dev": "vp exec cf dev",
     "preview": "vp run build && vp exec astro preview",
     "promote": "git fetch origin && git push origin origin/master:release/triad-auth"
   },
   "dependencies": {
-    "@astrojs/cloudflare": "^14.1.2",
+    "@astrojs/cloudflare": "catalog:",
     "@better-auth/cimd": "catalog:better-auth",
     "@better-auth/oauth-provider": "catalog:better-auth",
     "@better-auth/passkey": "catalog:better-auth",
@@ -29,8 +29,8 @@
     "@scure/base": "catalog:crypto",
     "@scure/bip32": "catalog:crypto",
     "@scure/btc-signer": "catalog:crypto",
-    "@simplewebauthn/browser": "^13.3.0",
-    "@simplewebauthn/server": "^13.3.1",
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.1",
     "astro": "catalog:",
     "auth": "catalog:better-auth",
     "better-auth": "catalog:better-auth",
@@ -42,10 +42,10 @@
     "@types/bun": "catalog:types",
     "@types/node": "catalog:types",
     "@vitest/coverage-v8": "catalog:",
+    "cf": "catalog:",
     "typescript": "catalog:types",
     "vite": "catalog:",
-    "vite-plus": "catalog:",
-    "wrangler": "catalog:"
+    "vite-plus": "catalog:"
   },
   "packageManager": "pnpm@11.21.0"
 }

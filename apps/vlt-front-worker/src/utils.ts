@@ -1,25 +1,38 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
-const githubKeys = createRemoteJWKSet(
-  new URL("https://token.actions.githubusercontent.com/.well-known/jwks"),
-);
+const depotKeys = createRemoteJWKSet(new URL("https://identity.depot.dev/keys"));
 const repository = "tunnckoCoreHQ/monarch";
 const repositoryId = "1299813376";
 const repositoryOwnerId = "51462759";
+const depotOrgId = "pcnr2v598s";
+const subjectPrefix = `spiffe://identity.depot.dev/org/${depotOrgId}/ci/github/${repository}/ref/refs/heads/master/sandbox/`;
 
-// Package managers request the GitHub OIDC token with audience `npm:<registry host>` and
+// Package managers request the Depot CI OIDC token with audience `npm:<registry host>` and
 // exchange it at the registry; see the exchange route in index.ts.
 export const publishAudience = "npm:npm.wgw.lol";
 
 export type PublishTag = "nightly" | "latest";
 
-// The GitHub environment declared on the publishing job decides which dist-tag it may write.
+// Depot CI tokens have no environment claim, so the workflow file decides the dist-tag:
+// nightly.yml may write nightly and publish.yml may write latest. GitHub formats workflow_ref as
+// owner/repo/.github/workflows/file.yml@ref; Depot's documented example omits the directory, so
+// both forms are accepted.
+const workflowTags: Record<string, PublishTag> = { nightly: "nightly", publish: "latest" };
+const workflowRef = new RegExp(
+  `^${repository}/(?:\\.depot/workflows/)?(nightly|publish)\\.yml@refs/heads/master$`,
+);
+
+const versionPatterns: Record<PublishTag, RegExp> = {
+  nightly: /^\d+\.\d+\.\d+-nightly\.[\da-z.-]+$/,
+  latest: /^\d+\.\d+\.\d+$/,
+};
+
 export async function verifyPublishToken(token: string): Promise<PublishTag> {
-  const { payload } = await jwtVerify(token, githubKeys, {
-    issuer: "https://token.actions.githubusercontent.com",
+  const { payload } = await jwtVerify(token, depotKeys, {
+    issuer: "https://identity.depot.dev",
     audience: publishAudience,
-    algorithms: ["RS256"],
-    requiredClaims: ["exp", "iat", "nbf", "sub", "environment"],
+    algorithms: ["ES256", "ES384", "RS256"],
+    requiredClaims: ["exp", "iat", "sub", "workflow_ref"],
     maxTokenAge: "10m",
   });
 
@@ -27,16 +40,20 @@ export async function verifyPublishToken(token: string): Promise<PublishTag> {
     payload.repository !== repository ||
     payload.repository_id !== repositoryId ||
     payload.repository_owner_id !== repositoryOwnerId ||
-    payload.ref !== "refs/heads/master"
+    payload.ref !== "refs/heads/master" ||
+    payload.org_id !== depotOrgId ||
+    typeof payload.sub !== "string" ||
+    !payload.sub.startsWith(subjectPrefix)
   ) {
-    throw new Error("Untrusted publishing repository or ref");
+    throw new Error("Untrusted publishing organization, repository, or ref");
   }
 
-  if (payload.environment === "nightly" || payload.environment === "latest") {
-    return payload.environment;
+  const workflow =
+    typeof payload.workflow_ref === "string" ? workflowRef.exec(payload.workflow_ref)?.[1] : null;
+  if (!workflow) {
+    throw new Error("Untrusted publishing workflow");
   }
-
-  throw new Error("Untrusted publishing environment");
+  return workflowTags[workflow];
 }
 
 export async function validatePublishRequest(
@@ -48,8 +65,7 @@ export async function validatePublishRequest(
     return false;
   }
 
-  const versionPattern =
-    tag === "nightly" ? /^\d+\.\d+\.\d+-nightly\.[\da-z.-]+$/ : /^\d+\.\d+\.\d+$/;
+  const versionPattern = versionPatterns[tag];
   const body: unknown = await request.clone().json();
   if (path.startsWith("/-/package/")) {
     return (

@@ -1,4 +1,5 @@
 import { Context, Effect, Layer, Schema } from "effect";
+import type { Env } from "./env";
 
 const GitHubProfile = Schema.Struct({ login: Schema.String });
 

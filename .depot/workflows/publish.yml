@@ -1,0 +1,63 @@
+# Depot CI. Publishes stable versions with latest, package tags, and GitHub Releases. Runs after ci
+# succeeds for the merged release PR commit, or manually on master to publish whatever a failed
+# release left missing. Only this workflow may write the latest dist-tag: npm.wgw.lol reads the
+# workflow_ref claim of the Depot CI OIDC token and maps publish.yml to latest.
+#
+# SECURITY: the only job with a latest-capable OIDC token, and it runs only after a human merged the
+# release PR or started it by hand on master. The PAT is a Depot CI secret for changesets/action, which pushes
+# the package tags and creates the GitHub Releases.
+
+name: publish
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [master]
+
+permissions: {}
+
+concurrency:
+  group: packages-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_commit.message, 'chore: release packages'))
+    permissions:
+      contents: read
+      id-token: write
+    runs-on: depot-ubuntu-24.04-4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The commit ci tested, not whatever master points at by now.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+        with:
+          mode: firewall-free
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
+        with:
+          sfw: true
+          cache: true
+          run-install: true
+          node-version: "lts"
+      # The action does not use a shell for publish-script, so it must be one command;
+      # packages:publish chains the build and the publish.
+      - uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        # @changesets/changelog-github reads commit and PR data through the GitHub API.
+        env:
+          GITHUB_TOKEN: ${{ secrets.OLSTENLARCK_HQ_PAT }}
+        with:
+          github-token: ${{ secrets.OLSTENLARCK_HQ_PAT }}
+          version-script: vp run packages:version
+          publish-script: vp run packages:publish
+          commit-message: "chore: release packages"
+          pr-title: "chore: release packages"

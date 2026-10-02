@@ -1,0 +1,53 @@
+---
+// Copy and check icons for a [data-copy] button. The button sets data-copied after a copy.
+---
+
+<svg
+  class="copy-icon h-4 w-4"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  <rect x="9" y="9" width="12" height="12" rx="1"></rect>
+  <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path>
+</svg>
+<svg
+  class="check-icon h-4 w-4 text-accent"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2.5"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  <path d="M5 12.5l4.5 4.5L19 7.5"></path>
+</svg>
+
+<style>
+  .check-icon,
+  :global([data-copied]) .copy-icon {
+    display: none;
+  }
+  :global([data-copied]) .check-icon {
+    display: block;
+  }
+  :global([data-copy-failed]) .copy-icon {
+    color: var(--color-danger);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    :global([data-copied]) .check-icon {
+      animation: copy-check 180ms cubic-bezier(0.23, 1, 0.32, 1);
+    }
+  }
+  @keyframes copy-check {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+  }
+</style>

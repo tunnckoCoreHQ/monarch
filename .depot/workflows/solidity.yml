@@ -1,4 +1,4 @@
-# Formats, lints, tests, and builds Solidity projects when the listed paths change.
+# Depot CI. Formats, lints, tests, and builds Solidity projects when the listed paths change.
 #
 # SECURITY: dependency installation and test tooling execute code from the PR. Keep the token
 # read-only and do not pass secrets or grant OIDC permission; PR code could use those credentials.
@@ -15,7 +15,7 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "vite.config.ts"
-      - ".github/workflows/solidity.yml"
+      - ".depot/workflows/solidity.yml"
   pull_request:
     branches: [master]
     paths:
@@ -23,7 +23,7 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "vite.config.ts"
-      - ".github/workflows/solidity.yml"
+      - ".depot/workflows/solidity.yml"
 
 permissions: {}
 
@@ -37,13 +37,13 @@ jobs:
       contents: read
     # Pushes to master and same-repository pull requests, Dependabot included.
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: depot-ubuntu-24.04-4
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
-      - uses: voidzero-dev/setup-vp@1b32467adbe183473499fd9d5d372c3ed9641754 # v1.18.0
+      - uses: voidzero-dev/setup-vp@3754dd7dbdb32bd8f6d28b6043de13ad3a75f21f # v1.21.1
         with:
           sfw: true
           cache: true

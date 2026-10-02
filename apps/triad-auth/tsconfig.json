@@ -1,4 +1,4 @@
 {
   "extends": "../../tsconfig.json",
-  "include": [".astro/types.d.ts", "src", "test", "scripts"]
+  "include": [".astro/types.d.ts", "src", "test", "scripts", "cloudflare.config.ts"]
 }

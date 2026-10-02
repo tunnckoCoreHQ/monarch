@@ -4,6 +4,7 @@ import { dirname, extname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vite-plus/test";
 
+import cloudflareConfig from "../../cloudflare.config";
 import { authSchemaDatabase } from "../../scripts/auth-schema-database";
 
 function readSource(path: string): string {
@@ -84,35 +85,21 @@ const packageJson = JSON.parse(readFileSync(resolve(repositoryRoot, "package.jso
   devDependencies: Record<string, string>;
   scripts: Record<string, string>;
 };
-const wranglerSource = readSource("wrangler.jsonc");
+const cloudflareConfigSource = readSource("cloudflare.config.ts");
 const schemaSource = readSource("src/better-auth/schema.ts");
 const schemaDatabaseSource = readSource("scripts/auth-schema-database.ts");
 const migrationFiles = readdirSync(resolve(repositoryRoot, "migrations"))
   .filter((path: string) => path.endsWith(".sql"))
   .sort();
 const initialMigration = readSource("migrations/0001-initial.sql");
-const nightlyWranglerSource = readSource("wrangler.nightly.jsonc");
 
-type WranglerConfig = {
-  name: string;
-  workers_dev: boolean;
-  preview_urls: boolean;
-  routes: { pattern: string; zone_name: string }[];
-  vars: Record<string, string>;
-  d1_databases: {
-    binding: string;
-    database_name: string;
-    database_id: string;
-    migrations_dir: string;
-  }[];
-  env?: unknown;
-};
-
-function parseJsonc(source: string): WranglerConfig {
-  return JSON.parse(
-    source.replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1"),
-  ) as WranglerConfig;
+// cloudflare.config.ts exports a function of the build mode; `cf build --mode nightly` selects nightly.
+function workerConfig(mode: string | undefined) {
+  return cloudflareConfig({ mode, isPreview: false }).worker;
 }
+
+const productionDatabaseId = "40220009-d502-4afd-ab7b-54495016720f";
+const nightlyDatabaseId = "c4c8e874-a463-4c22-8389-8911627c055d";
 
 describe("Better Auth schema tooling", () => {
   it("keeps one squashed initial migration", () => {
@@ -155,60 +142,77 @@ describe("Better Auth schema tooling", () => {
     expect(initialMigration).not.toContain("alter table");
   });
 
-  it("configures the production Worker and D1 database", () => {
-    const config = parseJsonc(wranglerSource);
+  it.each(["production", "development", undefined])(
+    "configures the production Worker and D1 database for mode %s",
+    (mode) => {
+      const worker = workerConfig(mode);
 
-    expect(config.name).toBe("triad-auth");
-    expect(config.workers_dev).toBe(false);
-    expect(config.preview_urls).toBe(false);
-    expect(config.routes).toEqual([{ pattern: "triad-auth.wgw.lol/*", zone_name: "wgw.lol" }]);
-    expect(config.vars.AUTH_ORIGIN).toBe("https://triad-auth.wgw.lol");
-    expect(config.d1_databases).toEqual([
-      {
-        binding: "DB",
-        database_name: "triad-auth",
-        database_id: "40220009-d502-4afd-ab7b-54495016720f",
-        migrations_dir: "migrations",
-      },
-    ]);
-    expect(config.env).toBeUndefined();
-  });
+      expect(worker.name).toBe("triad-auth");
+      expect(worker.entrypoint).toBe("src/index.ts");
+      expect(worker.workersDev).toBe(false);
+      expect(worker.previewUrls).toBe(false);
+      expect(worker.triggers).toEqual([
+        { type: "fetch", pattern: "triad-auth.wgw.lol/*", zone: "wgw.lol" },
+      ]);
+      expect(worker.env.AUTH_ORIGIN).toEqual({
+        type: "text",
+        value: "https://triad-auth.wgw.lol",
+      });
+      expect(worker.env.DB).toEqual({ type: "d1", name: "triad-auth", id: productionDatabaseId });
+      expect(worker.env.ASSETS).toEqual({ type: "assets" });
+    },
+  );
 
   it("configures the nightly Worker and D1 database", () => {
-    const config = parseJsonc(nightlyWranglerSource);
+    const worker = workerConfig("nightly");
 
-    expect(config.name).toBe("triad-auth-nightly");
-    expect(config.workers_dev).toBe(false);
-    expect(config.preview_urls).toBe(false);
-    expect(config.routes).toEqual([
-      { pattern: "triad-auth-nightly.wgw.lol/*", zone_name: "wgw.lol" },
+    expect(worker.name).toBe("triad-auth-nightly");
+    expect(worker.entrypoint).toBe("src/index.ts");
+    expect(worker.workersDev).toBe(false);
+    expect(worker.previewUrls).toBe(false);
+    expect(worker.triggers).toEqual([
+      { type: "fetch", pattern: "triad-auth-nightly.wgw.lol/*", zone: "wgw.lol" },
     ]);
-    expect(config.vars.AUTH_ORIGIN).toBe("https://triad-auth-nightly.wgw.lol");
-    expect(config.d1_databases).toEqual([
-      {
-        binding: "DB",
-        database_name: "triad-auth-nightly",
-        database_id: "c4c8e874-a463-4c22-8389-8911627c055d",
-        migrations_dir: "migrations",
-      },
-    ]);
-    expect(config.env).toBeUndefined();
+    expect(worker.env.AUTH_ORIGIN).toEqual({
+      type: "text",
+      value: "https://triad-auth-nightly.wgw.lol",
+    });
+    expect(worker.env.DB).toEqual({
+      type: "d1",
+      name: "triad-auth-nightly",
+      id: nightlyDatabaseId,
+    });
+    expect(worker.env.ASSETS).toEqual({ type: "assets" });
+  });
+
+  it("serves static assets with the same runtime behavior in both modes", () => {
+    for (const mode of [undefined, "nightly"]) {
+      expect(workerConfig(mode).assets).toEqual({
+        htmlHandling: "drop-trailing-slash",
+        notFoundHandling: "404-page",
+        runWorkerFirst: false,
+      });
+      expect(workerConfig(mode).compatibilityFlags).toEqual([
+        "nodejs_compat",
+        "global_fetch_strictly_public",
+      ]);
+    }
   });
 
   it("exposes generated schema, migration, and deployment commands", () => {
     expect(packageJson.scripts["db:generate"]).toBe(
       "vp exec auth generate --config src/better-auth/schema.ts --output .ignore/auth-schema.sql --yes",
     );
-    expect(packageJson.scripts["db:migrate:local"]).toContain("--local");
-    expect(packageJson.scripts.build).toBe("vp exec astro build");
-    expect(packageJson.scripts["build:nightly"]).toBe(
-      "WRANGLER_CONFIG=wrangler.nightly.jsonc vp exec astro build",
+    expect(packageJson.scripts["db:migrate:local"]).toBe(
+      `vp exec cf d1 migrations apply ${productionDatabaseId} --local --persist-to .cloudflare/state`,
     );
+    expect(packageJson.scripts.build).toBe("vp exec cf build");
+    expect(packageJson.scripts["build:nightly"]).toBe("vp exec cf build --mode nightly");
     expect(packageJson.scripts.deploy).toBe(
-      "vp exec wrangler d1 migrations apply DB --remote -c wrangler.jsonc && vp exec wrangler deploy",
+      `vp exec cf d1 migrations apply ${productionDatabaseId} && vp exec cf deploy --prebuilt --mode production`,
     );
     expect(packageJson.scripts["deploy:nightly"]).toBe(
-      "vp exec wrangler d1 migrations apply DB --remote -c wrangler.nightly.jsonc && vp exec wrangler deploy",
+      `vp exec cf d1 migrations apply ${nightlyDatabaseId} && vp exec cf deploy --prebuilt --mode nightly`,
     );
     expect(packageJson.scripts.promote).toBe(
       "git fetch origin && git push origin origin/master:release/triad-auth",
@@ -225,7 +229,7 @@ describe("Better Auth schema tooling", () => {
     const toolingSource = [
       dependencyNames,
       JSON.stringify(packageJson.scripts),
-      wranglerSource,
+      cloudflareConfigSource,
       schemaSource,
       schemaDatabaseSource,
     ].join("\n");
@@ -234,6 +238,7 @@ describe("Better Auth schema tooling", () => {
       /drizzle|miniflare|better-sqlite3|bun:sqlite|node:sqlite|sqlite3/i,
     );
     expect(toolingSource).not.toMatch(/triad-better-auth|triad-auth-broker/);
+    expect(dependencyNames).not.toMatch(/wrangler/);
   });
 
   it("builds the schema auth instance through the canonical configuration", () => {
