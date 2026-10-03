@@ -1,6 +1,6 @@
 {
   "name": "@tunnckocore/clamp",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Clamp a number between a lower and upper bound.",
   "files": [
     "index.js",
