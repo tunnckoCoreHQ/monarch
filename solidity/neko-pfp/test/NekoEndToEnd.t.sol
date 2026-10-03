@@ -4,9 +4,10 @@ pragma solidity ^0.8.30;
 import {Test} from "forge-std/Test.sol";
 import {IERC721A} from "erc721a/IERC721A.sol";
 
-import {INekoGenerator} from "../src/INekoGenerator.sol";
-import {NekoGenerator} from "../src/NekoGenerator.sol";
-import {NekoPFP} from "../src/NekoPFP.sol";
+import {NekoRenderer} from "../src/NekoRenderer.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
+import {NekoArt} from "../src/NekoArt.sol";
+import {ISeaDrop} from "../src/seadrop/SeaDropInterfaces.sol";
 
 /// @notice End-to-end tests using only the production generator and production NFT contract.
 contract NekoEndToEndTest is Test {
@@ -58,15 +59,13 @@ contract NekoEndToEndTest is Test {
         keccak256("NekoPFPSeaDrop.genesisSeedCommitment.v1");
     bytes32 private constant TOKEN_SEED_DOMAIN = keccak256("NekoPFPSeaDrop.tokenSeed.v1");
 
-    NekoGenerator private generator;
-    NekoPFP private neko;
+    NekoRenderer private generator;
+    NekoSeaDrop private neko;
 
     function setUp() public {
-        generator = new NekoGenerator();
-        address[] memory allowedSeaDrop = new address[](1);
-        allowedSeaDrop[0] = SEA_DROP;
+        generator = new NekoRenderer();
         bytes32 commitment = keccak256(abi.encode(GENESIS_SEED_COMMITMENT_DOMAIN, GENESIS_SEED));
-        neko = new NekoPFP("Neko", "NEKO", allowedSeaDrop, generator, commitment);
+        neko = new NekoSeaDrop(commitment, generator, ISeaDrop(SEA_DROP));
 
         vm.prank(SEA_DROP);
         neko.mintSeaDrop(ALICE, INTENDED_SUPPLY);
@@ -87,14 +86,31 @@ contract NekoEndToEndTest is Test {
         _assertCompleteVariantCoverage(coverage);
     }
 
+    function testSeedCorpusRemainsUnchanged() public view {
+        bytes32 digest;
+        for (uint256 tokenId = 1; tokenId <= INTENDED_SUPPLY; ++tokenId) {
+            digest = keccak256(abi.encode(digest, neko.deriveTokenSeed(GENESIS_SEED, tokenId)));
+        }
+        assertEq(digest, 0xce54511446019d560a5055cc6caa24164efd3fc839f04a5e11cd4293dc6fb2ef);
+    }
+
+    function testGenerateMethodsExposeThePureCoreThroughTheBridge() public view {
+        uint256 seed = neko.tokenSeed(1);
+        NekoRenderer.TokenData memory data = neko.tokenData(1);
+        assertEq(abi.encode(neko.generate(seed)), abi.encode(data));
+        assertEq(abi.encode(neko.generate(data.traits)), abi.encode(data));
+        assertEq(abi.encode(generator.generate(seed)), abi.encode(data));
+        assertEq(abi.encode(generator.generate(data.traits)), abi.encode(data));
+    }
+
     function scanActualRange(uint256 startTokenId, uint256 endTokenId)
         external
         view
         returns (VariantCoverage memory coverage)
     {
         for (uint256 tokenId = startTokenId; tokenId <= endTokenId; ++tokenId) {
-            uint256 seed = neko.seedOf(tokenId);
-            INekoGenerator.TokenData memory data = neko.tokenData(tokenId);
+            uint256 seed = neko.tokenSeed(tokenId);
+            NekoRenderer.TokenData memory data = neko.tokenData(tokenId);
             assertEq(data.fusionMass, 1, "unfused production token has wrong mass");
             _recordTraitCoverage(coverage, data.traits);
 
@@ -111,9 +127,9 @@ contract NekoEndToEndTest is Test {
 
     function testActualNftMatchesProductionGeneratorAcrossCollectionSamples() public view {
         for (uint256 tokenId = 1; tokenId <= INTENDED_SUPPLY; tokenId += 73) {
-            uint256 seed = neko.seedOf(tokenId);
-            INekoGenerator.RawTraits memory nftTraits = neko.tokenData(tokenId).traits;
-            INekoGenerator.RawTraits memory generatorTraits = generator.deriveRawTraits(seed);
+            uint256 seed = neko.tokenSeed(tokenId);
+            NekoRenderer.Traits memory nftTraits = neko.tokenData(tokenId).traits;
+            NekoRenderer.Traits memory generatorTraits = generator.traits(seed);
 
             assertEq(
                 keccak256(abi.encode(nftTraits)),
@@ -122,23 +138,23 @@ contract NekoEndToEndTest is Test {
             );
         }
 
-        uint256 lastSeed = neko.seedOf(INTENDED_SUPPLY);
+        uint256 lastSeed = neko.tokenSeed(INTENDED_SUPPLY);
         assertEq(
             keccak256(abi.encode(neko.tokenData(INTENDED_SUPPLY).traits)),
-            keccak256(abi.encode(generator.deriveRawTraits(lastSeed))),
+            keccak256(abi.encode(generator.traits(lastSeed))),
             "last NFT traits differ from production generator"
         );
     }
 
     function testActualBasicDuplicateCatsCanMerge() public {
         BasicPair memory duplicates = _findBasicDuplicatePair();
-        INekoGenerator.TokenData memory firstBefore = neko.tokenData(duplicates.first);
-        INekoGenerator.TokenData memory secondBefore = neko.tokenData(duplicates.second);
+        NekoRenderer.TokenData memory firstBefore = neko.tokenData(duplicates.first);
+        NekoRenderer.TokenData memory secondBefore = neko.tokenData(duplicates.second);
         bytes32 metadataBefore = keccak256(bytes(neko.tokenURI(duplicates.first)));
 
         assertEq(
-            generator.catSignature(firstBefore.traits),
-            generator.catSignature(secondBefore.traits),
+            generator.visualHash(firstBefore.traits),
+            generator.visualHash(secondBefore.traits),
             "discovered production cats are not duplicates"
         );
 
@@ -163,7 +179,7 @@ contract NekoEndToEndTest is Test {
             4665,
             uint16(duplicates.first + 1),
             uint16(duplicates.second + 1),
-            NekoPFP.FusionAction.DuplicateMerge,
+            NekoArt.FusionAction.DuplicateMerge,
             0
         );
         vm.expectRevert(IERC721A.OwnerQueryForNonexistentToken.selector);
@@ -172,12 +188,11 @@ contract NekoEndToEndTest is Test {
 
     function testActualPartialMutationPersistsProductionCombinedTraits() public {
         (uint256 survivorId, uint256 consumedId) = _findDifferentBasicPair();
-        INekoGenerator.TokenData memory survivorBefore = neko.tokenData(survivorId);
-        INekoGenerator.TokenData memory consumedBefore = neko.tokenData(consumedId);
+        NekoRenderer.TokenData memory survivorBefore = neko.tokenData(survivorId);
+        NekoRenderer.TokenData memory consumedBefore = neko.tokenData(consumedId);
         bytes32 metadataBefore = keccak256(bytes(neko.tokenURI(survivorId)));
-        INekoGenerator.RawTraits memory expected = generator.combineRawTraits(
-            survivorBefore.traits, consumedBefore.traits, PARTIAL_MUTATION_MASK
-        );
+        NekoRenderer.Traits memory expected =
+            generator.combine(consumedBefore.traits, survivorBefore.traits, PARTIAL_MUTATION_MASK);
         assertTrue(
             keccak256(abi.encode(expected)) != keccak256(abi.encode(survivorBefore.traits)),
             "selected production mutation has no effect"
@@ -186,7 +201,7 @@ contract NekoEndToEndTest is Test {
         vm.prank(ALICE);
         neko.mutate(survivorId, consumedId, PARTIAL_MUTATION_MASK);
 
-        INekoGenerator.TokenData memory survivorAfter = neko.tokenData(survivorId);
+        NekoRenderer.TokenData memory survivorAfter = neko.tokenData(survivorId);
         assertEq(
             keccak256(abi.encode(survivorAfter.traits)),
             keccak256(abi.encode(expected)),
@@ -201,10 +216,10 @@ contract NekoEndToEndTest is Test {
             4665,
             uint16(survivorId + 1),
             uint16(consumedId + 1),
-            NekoPFP.FusionAction.Mutation,
+            NekoArt.FusionAction.Mutation,
             PARTIAL_MUTATION_MASK
         );
-        string memory expectedMetadata = generator.generateTokenURI(survivorId, survivorAfter);
+        string memory expectedMetadata = generator.tokenURI(survivorId, survivorAfter);
         bytes32 metadataAfter = keccak256(bytes(neko.tokenURI(survivorId)));
         assertTrue(metadataAfter != metadataBefore, "actual mutation did not update metadata");
         assertEq(
@@ -224,10 +239,10 @@ contract NekoEndToEndTest is Test {
         vm.prank(ALICE);
         neko.mutate(secondSurvivor, duplicateDonors.second, ALL_PARTS_MASK);
 
-        INekoGenerator.TokenData memory firstMutated = neko.tokenData(firstSurvivor);
-        INekoGenerator.TokenData memory secondMutated = neko.tokenData(secondSurvivor);
-        bytes32 firstSignature = generator.catSignature(firstMutated.traits);
-        bytes32 secondSignature = generator.catSignature(secondMutated.traits);
+        NekoRenderer.TokenData memory firstMutated = neko.tokenData(firstSurvivor);
+        NekoRenderer.TokenData memory secondMutated = neko.tokenData(secondSurvivor);
+        bytes32 firstSignature = generator.visualHash(firstMutated.traits);
+        bytes32 secondSignature = generator.visualHash(secondMutated.traits);
         assertEq(firstSignature, secondSignature, "actual mutation trees did not become duplicates");
         assertEq(firstMutated.fusionMass, 2, "first actual mutation tree mass mismatch");
         assertEq(secondMutated.fusionMass, 2, "second actual mutation tree mass mismatch");
@@ -241,25 +256,25 @@ contract NekoEndToEndTest is Test {
         vm.prank(ALICE);
         neko.merge(firstSurvivor, secondSurvivor);
 
-        INekoGenerator.TokenData memory merged = neko.tokenData(firstSurvivor);
+        NekoRenderer.TokenData memory merged = neko.tokenData(firstSurvivor);
         _assertActualTokenState(firstSurvivor, merged.traits, 4, _expectedSlopTier(merged.traits));
         assertEq(neko.mutationCount(firstSurvivor), 2, "actual tree mutation count mismatch");
         assertEq(neko.duplicateMergeCount(firstSurvivor), 1, "actual tree merge count mismatch");
         assertEq(neko.currentRoot(firstSurvivor), 4667, "actual combined ancestry root mismatch");
         assertEq(neko.totalSupply(), INTENDED_SUPPLY - 3, "actual interaction burn count mismatch");
 
-        (uint16 parentA, uint16 parentB, NekoPFP.FusionAction action, uint16 mutationMask) =
+        (uint16 parentA, uint16 parentB, NekoArt.FusionAction action, uint16 mutationMask) =
             neko.ancestryNode(4667);
         assertEq(parentA, 4665, "actual combined tree first parent mismatch");
         assertEq(parentB, 4666, "actual combined tree second parent mismatch");
         assertEq(
             uint256(action),
-            uint256(NekoPFP.FusionAction.DuplicateMerge),
+            uint256(NekoArt.FusionAction.DuplicateMerge),
             "actual combined tree action mismatch"
         );
         assertEq(mutationMask, 0, "actual combined tree merge mask mismatch");
 
-        string memory expectedMetadata = generator.generateTokenURI(firstSurvivor, merged);
+        string memory expectedMetadata = generator.tokenURI(firstSurvivor, merged);
         assertEq(
             keccak256(bytes(neko.tokenURI(firstSurvivor))),
             keccak256(bytes(expectedMetadata)),
@@ -270,20 +285,20 @@ contract NekoEndToEndTest is Test {
     function testActualFusionProgressionChecksEveryIntermediateState() public {
         BasicPair memory duplicateDonors = _findBasicDuplicatePair();
         (uint256 survivorId,) = _findTwoDifferentBasicSurvivors(duplicateDonors);
-        INekoGenerator.RawTraits memory initialTraits = neko.tokenData(survivorId).traits;
-        INekoGenerator.TokenData memory duplicateDonorData = neko.tokenData(duplicateDonors.first);
+        NekoRenderer.Traits memory initialTraits = neko.tokenData(survivorId).traits;
+        NekoRenderer.TokenData memory duplicateDonorData = neko.tokenData(duplicateDonors.first);
         uint256 finalDonorId = _findEffectiveBasicMutationDonor(
             duplicateDonorData.traits, survivorId, duplicateDonors.first, duplicateDonors.second
         );
-        INekoGenerator.RawTraits memory finalDonorTraits = neko.tokenData(finalDonorId).traits;
+        NekoRenderer.Traits memory finalDonorTraits = neko.tokenData(finalDonorId).traits;
 
         bytes32 metadataHash = _assertActualTokenState(survivorId, initialTraits, 1, 0);
         assertEq(neko.mutationCount(survivorId), 0, "mass-one mutation count mismatch");
         assertEq(neko.duplicateMergeCount(survivorId), 0, "mass-one merge count mismatch");
         assertEq(neko.currentRoot(survivorId), survivorId + 1, "mass-one ancestry root mismatch");
 
-        INekoGenerator.RawTraits memory massTwoTraits =
-            generator.combineRawTraits(initialTraits, duplicateDonorData.traits, ALL_PARTS_MASK);
+        NekoRenderer.Traits memory massTwoTraits =
+            generator.combine(duplicateDonorData.traits, initialTraits, ALL_PARTS_MASK);
         vm.prank(ALICE);
         neko.mutate(survivorId, duplicateDonors.first, ALL_PARTS_MASK);
 
@@ -297,7 +312,7 @@ contract NekoEndToEndTest is Test {
             4665,
             uint16(survivorId + 1),
             uint16(duplicateDonors.first + 1),
-            NekoPFP.FusionAction.Mutation,
+            NekoArt.FusionAction.Mutation,
             ALL_PARTS_MASK
         );
 
@@ -311,11 +326,11 @@ contract NekoEndToEndTest is Test {
         assertEq(neko.currentRoot(survivorId), 4666, "mass-three ancestry root mismatch");
         assertEq(neko.totalSupply(), INTENDED_SUPPLY - 2, "mass-three supply mismatch");
         _assertAncestryNode(
-            4666, 4665, uint16(duplicateDonors.second + 1), NekoPFP.FusionAction.DuplicateMerge, 0
+            4666, 4665, uint16(duplicateDonors.second + 1), NekoArt.FusionAction.DuplicateMerge, 0
         );
 
-        INekoGenerator.RawTraits memory massFourTraits =
-            generator.combineRawTraits(massTwoTraits, finalDonorTraits, PARTIAL_MUTATION_MASK);
+        NekoRenderer.Traits memory massFourTraits =
+            generator.combine(finalDonorTraits, massTwoTraits, PARTIAL_MUTATION_MASK);
         uint8 massFourSlopTier = _expectedSlopTier(massFourTraits);
         assertTrue(massFourSlopTier > 0, "mass-four mutation did not produce slop");
         vm.prank(ALICE);
@@ -332,7 +347,7 @@ contract NekoEndToEndTest is Test {
             4667,
             4666,
             uint16(finalDonorId + 1),
-            NekoPFP.FusionAction.Mutation,
+            NekoArt.FusionAction.Mutation,
             PARTIAL_MUTATION_MASK
         );
     }
@@ -343,12 +358,12 @@ contract NekoEndToEndTest is Test {
         uint256 basicCount;
 
         for (uint256 tokenId = 1; tokenId <= INTENDED_SUPPLY; ++tokenId) {
-            INekoGenerator.RawTraits memory traits = neko.tokenData(tokenId).traits;
+            NekoRenderer.Traits memory traits = neko.tokenData(tokenId).traits;
             if (!_isBasic(traits)) {
                 continue;
             }
 
-            bytes32 signature = generator.catSignature(traits);
+            bytes32 signature = generator.visualHash(traits);
             for (uint256 i; i < basicCount; ++i) {
                 if (signatures[i] == signature) {
                     return BasicPair(tokenIds[i], tokenId, signature);
@@ -368,12 +383,12 @@ contract NekoEndToEndTest is Test {
     {
         bytes32 firstSignature;
         for (uint256 tokenId = 1; tokenId <= INTENDED_SUPPLY; ++tokenId) {
-            INekoGenerator.RawTraits memory traits = neko.tokenData(tokenId).traits;
+            NekoRenderer.Traits memory traits = neko.tokenData(tokenId).traits;
             if (!_isBasic(traits)) {
                 continue;
             }
 
-            bytes32 signature = generator.catSignature(traits);
+            bytes32 signature = generator.visualHash(traits);
             if (firstTokenId == 0) {
                 firstTokenId = tokenId;
                 firstSignature = signature;
@@ -393,8 +408,8 @@ contract NekoEndToEndTest is Test {
             if (tokenId == donors.first || tokenId == donors.second) {
                 continue;
             }
-            INekoGenerator.RawTraits memory traits = neko.tokenData(tokenId).traits;
-            if (!_isBasic(traits) || generator.catSignature(traits) == donors.signature) {
+            NekoRenderer.Traits memory traits = neko.tokenData(tokenId).traits;
+            if (!_isBasic(traits) || generator.visualHash(traits) == donors.signature) {
                 continue;
             }
             if (firstSurvivor == 0) {
@@ -407,12 +422,12 @@ contract NekoEndToEndTest is Test {
     }
 
     function _findEffectiveBasicMutationDonor(
-        INekoGenerator.RawTraits memory survivorTraits,
+        NekoRenderer.Traits memory survivorTraits,
         uint256 survivorId,
         uint256 firstDuplicateId,
         uint256 secondDuplicateId
     ) private view returns (uint256 donorId) {
-        bytes32 survivorSignature = generator.catSignature(survivorTraits);
+        bytes32 survivorSignature = generator.visualHash(survivorTraits);
         for (uint256 tokenId = 1; tokenId <= INTENDED_SUPPLY; ++tokenId) {
             if (
                 tokenId == survivorId || tokenId == firstDuplicateId || tokenId == secondDuplicateId
@@ -420,14 +435,13 @@ contract NekoEndToEndTest is Test {
                 continue;
             }
 
-            INekoGenerator.RawTraits memory donorTraits = neko.tokenData(tokenId).traits;
-            if (!_isBasic(donorTraits) || generator.catSignature(donorTraits) == survivorSignature)
-            {
+            NekoRenderer.Traits memory donorTraits = neko.tokenData(tokenId).traits;
+            if (!_isBasic(donorTraits) || generator.visualHash(donorTraits) == survivorSignature) {
                 continue;
             }
 
-            INekoGenerator.RawTraits memory combined =
-                generator.combineRawTraits(survivorTraits, donorTraits, PARTIAL_MUTATION_MASK);
+            NekoRenderer.Traits memory combined =
+                generator.combine(donorTraits, survivorTraits, PARTIAL_MUTATION_MASK);
             if (
                 keccak256(abi.encode(combined)) != keccak256(abi.encode(survivorTraits))
                     && _expectedSlopTier(combined) > 0
@@ -440,13 +454,12 @@ contract NekoEndToEndTest is Test {
 
     function _assertActualTokenState(
         uint256 tokenId,
-        INekoGenerator.RawTraits memory expectedTraits,
+        NekoRenderer.Traits memory expectedTraits,
         uint256 expectedMass,
         uint8 expectedSlopTier
     ) private view returns (bytes32 metadataHash) {
-        INekoGenerator.TokenData memory actual = neko.tokenData(tokenId);
-        INekoGenerator.TokenData memory canonical =
-            generator.resolveTokenData(expectedTraits, expectedMass);
+        NekoRenderer.TokenData memory actual = neko.tokenData(tokenId);
+        NekoRenderer.TokenData memory canonical = generator.generate(expectedTraits, expectedMass);
         assertEq(
             keccak256(abi.encode(actual.traits)),
             keccak256(abi.encode(expectedTraits)),
@@ -460,7 +473,7 @@ contract NekoEndToEndTest is Test {
             "actual token data differs from production resolver"
         );
 
-        string memory expectedMetadata = generator.generateTokenURI(tokenId, actual);
+        string memory expectedMetadata = generator.tokenURI(tokenId, actual);
         metadataHash = keccak256(bytes(neko.tokenURI(tokenId)));
         assertEq(
             metadataHash,
@@ -473,10 +486,10 @@ contract NekoEndToEndTest is Test {
         uint16 nodeId,
         uint16 expectedParentA,
         uint16 expectedParentB,
-        NekoPFP.FusionAction expectedAction,
+        NekoArt.FusionAction expectedAction,
         uint16 expectedMutationMask
     ) private view {
-        (uint16 parentA, uint16 parentB, NekoPFP.FusionAction action, uint16 mutationMask) =
+        (uint16 parentA, uint16 parentB, NekoArt.FusionAction action, uint16 mutationMask) =
             neko.ancestryNode(nodeId);
         assertEq(parentA, expectedParentA, "actual ancestry first parent mismatch");
         assertEq(parentB, expectedParentB, "actual ancestry second parent mismatch");
@@ -484,7 +497,7 @@ contract NekoEndToEndTest is Test {
         assertEq(mutationMask, expectedMutationMask, "actual ancestry mutation mask mismatch");
     }
 
-    function _expectedSlopTier(INekoGenerator.RawTraits memory traits)
+    function _expectedSlopTier(NekoRenderer.Traits memory traits)
         private
         pure
         returns (uint8 tier)
@@ -508,7 +521,7 @@ contract NekoEndToEndTest is Test {
 
     function _recordTraitCoverage(
         VariantCoverage memory coverage,
-        INekoGenerator.RawTraits memory traits
+        NekoRenderer.Traits memory traits
     ) private pure {
         coverage.bodyColors |= uint256(1) << traits.body;
         coverage.headColors |= uint256(1) << traits.head;
@@ -623,13 +636,13 @@ contract NekoEndToEndTest is Test {
         coverage.sawRetriedCandidate = coverage.sawRetriedCandidate || batch.sawRetriedCandidate;
     }
 
-    function _isBasic(INekoGenerator.RawTraits memory traits) private pure returns (bool) {
+    function _isBasic(NekoRenderer.Traits memory traits) private pure returns (bool) {
         return !traits.matrix && !traits.invisible && !traits.alternateHead
             && !traits.alternateMouth && !traits.alternateTail && traits.alternateEyeMask == 0
             && traits.alternateLegMask == 0;
     }
 
-    function _assertInvisibleBodyMatchesSky(INekoGenerator.RawTraits memory traits) private pure {
+    function _assertInvisibleBodyMatchesSky(NekoRenderer.Traits memory traits) private pure {
         assertEq(traits.head, traits.sky, "invisible head differs from sky");
         assertEq(traits.body, traits.sky, "invisible body differs from sky");
         assertEq(traits.tail, traits.sky, "invisible tail differs from sky");

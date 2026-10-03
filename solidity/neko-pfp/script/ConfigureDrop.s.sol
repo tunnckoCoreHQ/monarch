@@ -3,8 +3,12 @@ pragma solidity ^0.8.30;
 
 import {Script} from "forge-std/Script.sol";
 
-import {NekoPFP} from "../src/NekoPFP.sol";
-import {AllowListData, PublicDrop} from "../src/seadrop/SeaDropStructs.sol";
+import {NekoSeaDrop} from "../src/NekoSeaDrop.sol";
+import {
+    AllowListData,
+    PublicDrop,
+    MultiConfigureStruct
+} from "../src/seadrop/SeaDropInterfaces.sol";
 
 /// @notice Configures the two mint phases on SeaDrop. Run each entrypoint with --sig.
 ///
@@ -30,25 +34,29 @@ contract ConfigureDrop is Script {
     uint16 internal constant OPENSEA_FEE_BPS = 1000;
 
     function allowlist() external {
-        NekoPFP neko = NekoPFP(vm.envAddress("NEKO"));
+        NekoSeaDrop neko = NekoSeaDrop(vm.envAddress("NEKO"));
         address seaDrop = vm.envOr("SEADROP", CANONICAL_SEADROP);
 
-        AllowListData memory data = AllowListData({
+        MultiConfigureStruct memory config;
+        config.seaDropImpl = seaDrop;
+        config.allowListData = AllowListData({
             merkleRoot: vm.envBytes32("MERKLE_ROOT"),
             publicKeyURIs: new string[](0),
             allowListURI: vm.envString("ALLOWLIST_URI")
         });
 
         vm.startBroadcast();
-        neko.updateAllowList(seaDrop, data);
+        neko.multiConfigure(config);
         vm.stopBroadcast();
     }
 
     function publicDrop() external {
-        NekoPFP neko = NekoPFP(vm.envAddress("NEKO"));
+        NekoSeaDrop neko = NekoSeaDrop(vm.envAddress("NEKO"));
         address seaDrop = vm.envOr("SEADROP", CANONICAL_SEADROP);
 
-        PublicDrop memory drop = PublicDrop({
+        MultiConfigureStruct memory config;
+        config.seaDropImpl = seaDrop;
+        config.publicDrop = PublicDrop({
             mintPrice: uint80(vm.envUint("PUBLIC_PRICE_WEI")),
             startTime: uint48(vm.envUint("START_TIME")),
             endTime: uint48(vm.envUint("END_TIME")),
@@ -58,7 +66,7 @@ contract ConfigureDrop is Script {
         });
 
         vm.startBroadcast();
-        neko.updatePublicDrop(seaDrop, drop);
+        neko.multiConfigure(config);
         vm.stopBroadcast();
     }
 }
