@@ -211,11 +211,21 @@ export async function recordEvent(
   type: string,
   data: unknown,
 ): Promise<void> {
-  await env.DB.prepare(
-    "INSERT INTO events (id, repo_id, actor_id, type, data, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-  )
-    .bind(newId("evt"), repoId, actorId, type, JSON.stringify(data), now())
-    .run();
+  await eventStatement(env, newId("evt"), repoId, actorId, type, data).run();
+}
+
+/** An event insert that does nothing when the id exists, so a retried record is not doubled. */
+export function eventStatement(
+  env: Env,
+  id: string,
+  repoId: string,
+  actorId: string | null,
+  type: string,
+  data: unknown,
+): D1PreparedStatement {
+  return env.DB.prepare(
+    "INSERT INTO events (id, repo_id, actor_id, type, data, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (id) DO NOTHING",
+  ).bind(id, repoId, actorId, type, JSON.stringify(data), now());
 }
 
 export function requireFound<T>(value: T | null | undefined, what: string): T {

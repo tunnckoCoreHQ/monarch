@@ -1,10 +1,16 @@
 import type { Env } from "./env";
-import { base64url, fromBase64url, now } from "./util";
+import { base64url, fromBase64url, HttpError, now } from "./util";
 
 const encoder = new TextEncoder();
 
+// Wrapped repository keys are "v1". Secret values sealed with a repository key are "v2"; "v1"
+// values were sealed with the Worker-wide key that repository keys replaced, which no longer exists.
+const WRAP_VERSION = "v1";
+const SECRET_VERSION = "v2";
+
 async function seal(
   key: CryptoKey,
+  version: string,
   context: string,
   plain: Uint8Array<ArrayBuffer>,
 ): Promise<string> {
@@ -14,7 +20,7 @@ async function seal(
     key,
     plain,
   );
-  return `v1.${base64url(iv)}.${base64url(new Uint8Array(sealed))}`;
+  return `${version}.${base64url(iv)}.${base64url(new Uint8Array(sealed))}`;
 }
 
 async function open(
@@ -58,7 +64,7 @@ async function repoKey(env: Env, repoId: string): Promise<CryptoKey> {
   let row = await select.first<{ wrapped: string }>();
   if (row === null) {
     const fresh = crypto.getRandomValues(new Uint8Array(32));
-    const wrapped = await seal(await masterKey(env), `repo-key:${repoId}`, fresh);
+    const wrapped = await seal(await masterKey(env), WRAP_VERSION, `repo-key:${repoId}`, fresh);
     // Two first writes may race; the one that lands first wins and both read it back.
     await env.DB.prepare(
       "INSERT INTO repo_keys (repo_id, wrapped, created_at) VALUES (?, ?, ?) ON CONFLICT (repo_id) DO NOTHING",
@@ -82,7 +88,7 @@ export async function sealSecret(
   context: string,
   value: string,
 ): Promise<string> {
-  return seal(await repoKey(env, repoId), context, encoder.encode(value));
+  return seal(await repoKey(env, repoId), SECRET_VERSION, context, encoder.encode(value));
 }
 
 export async function openSecret(
@@ -91,5 +97,13 @@ export async function openSecret(
   context: string,
   sealed: string,
 ): Promise<string> {
+  if (!sealed.startsWith(`${SECRET_VERSION}.`)) {
+    const name = context.split(":").at(-1);
+    throw new HttpError(
+      409,
+      `${name} was sealed with a retired key and cannot be opened; set it again`,
+      "secret_retired",
+    );
+  }
   return new TextDecoder().decode(await open(await repoKey(env, repoId), context, sealed));
 }

@@ -10,7 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { concat, utf8 } from "../src/git/bytes";
 import { Mirror, type Remotes } from "../src/git/mirror";
-import { ZERO_SHA } from "../src/git/objects";
+import { parseCommit, ZERO_SHA } from "../src/git/objects";
 import { FLUSH } from "../src/git/pktline";
 import { isService } from "../src/git/protocol";
 import { fetchPack, lsRemote, sendPack } from "../src/git/remote";
@@ -555,5 +555,43 @@ describe("Mirror against real git", () => {
       .filter((logged) => logged.path === "/full.git/git-upload-pack");
     expect(asked.some((logged) => contains(logged.body, lost))).toBe(false);
     expect(fresh.storage.shallow.list()).toEqual([orphan]);
+  });
+
+  it("resumes a stopped fetch after the remote branch moved on", async () => {
+    const fresh = memoryRepo();
+    let rounds = 0;
+    const flaky = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/full.git/git-upload-pack") && ++rounds === 2) {
+        throw new TypeError("network connection lost");
+      }
+      return fetch(input, init);
+    }) as typeof fetch;
+    await expect(
+      new Mirror(fresh, fresh.storage, remotes, flaky, { fetchDepth: 2 }).refresh(),
+    ).rejects.toThrow();
+    expect(fresh.storage.shallow.list().length).toBeGreaterThan(0);
+
+    // Someone pushes before the next sync, so the stored part of the history is now one commit
+    // below the remote tip, and the recorded commits are not reachable until that commit arrives.
+    const tip = full.storage.refs.get(MAIN)!;
+    const { tree } = parseCommit(full.objects.read(tip)!.content);
+    const next = full.objects.write(
+      "commit",
+      utf8(
+        `tree ${tree}\nparent ${tip}\nauthor A <a@x> 2 +0000\ncommitter A <a@x> 2 +0000\n\nnext\n`,
+      ),
+    );
+    full.storage.refs.set(MAIN, next);
+    try {
+      await new Mirror(fresh, fresh.storage, remotes, undefined, { fetchDepth: 2 }).refresh();
+      expect(fresh.storage.shallow.list()).toEqual([]);
+      expect(fresh.storage.refs.get(MAIN)).toBe(next);
+      const tips = full.storage.refs.list().map((ref) => ref.sha);
+      expect(planPack(fresh.storage.objects, tips, []).objects.toSorted()).toEqual(
+        planPack(full.storage.objects, tips, []).objects.toSorted(),
+      );
+    } finally {
+      full.storage.refs.set(MAIN, tip);
+    }
   });
 });

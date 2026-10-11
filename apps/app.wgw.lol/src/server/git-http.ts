@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
-import { afterPush, repoStub, unwrap } from "./api";
+import { readCommands } from "../git/protocol";
+import { repoStub, unwrap } from "./api";
 import { type Access, access, type AppContext, type AppEnv } from "./auth";
 import { findRepo } from "./db";
 import { HttpError } from "./util";
@@ -61,6 +62,7 @@ async function forward(
   grant: Access,
   path: string,
   write: boolean,
+  body: ReadableStream<Uint8Array> | null = c.req.raw.body,
 ): Promise<Response> {
   const target = write || grant.view === "full" ? "full" : "public";
   const git = unwrap(
@@ -79,7 +81,7 @@ async function forward(
   const upstream = await fetch(`${git.remote}${path}`, {
     method: c.req.method,
     headers,
-    body: c.req.method === "POST" ? c.req.raw.body : undefined,
+    body: c.req.method === "POST" ? body : undefined,
   });
   const out = new Headers();
   for (const name of FORWARD_RESPONSE) {
@@ -89,6 +91,16 @@ async function forward(
     }
   }
   return new Response(upstream.body, { status: upstream.status, headers: out });
+}
+
+/** Keeps a known request length, so Artifacts sees the same request git sent. */
+function withLength(body: ReadableStream<Uint8Array>, length: number): ReadableStream<Uint8Array> {
+  if (!Number.isSafeInteger(length)) {
+    return body;
+  }
+  const fixed = new FixedLengthStream(length);
+  void body.pipeTo(fixed.writable).catch(() => undefined);
+  return fixed.readable;
 }
 
 /** Git smart HTTP. The Worker checks access; Artifacts speaks the protocol. */
@@ -125,17 +137,28 @@ gitHttp.post("/:owner/:repo/git-receive-pack", async (c) => {
   if (grant instanceof Response) {
     return grant;
   }
-  const response = await forward(c, grant, "/git-receive-pack", true);
+  const repo = grant.repo;
+  const stub = repoStub(c.env, repo.id);
+  let body = c.req.raw.body;
+  const actor = grant.principal?.user.id;
+  // git does not compress receive-pack bodies; one that is compressed is forwarded unread.
+  if (body !== null && actor !== undefined && c.req.header("content-encoding") === undefined) {
+    const read = await readCommands(body);
+    body = withLength(read.body, Number(c.req.header("content-length")));
+    // The mirror records the push from whichever sync sees it first, this one or the queue's.
+    // The claim tells it who pushed either way.
+    const claimed = await stub.claimPush(actor, read.commands);
+    if (!claimed.ok) {
+      console.error(`could not claim a push to ${repo.id}: ${claimed.error}`);
+    }
+  }
+  const response = await forward(c, grant, "/git-receive-pack", true, body);
   // The report is small. Read it all so the sync below runs after Artifacts applied the push.
   const report = await response.arrayBuffer();
-  const repo = grant.repo;
-  const actor = grant.principal?.user.id ?? null;
   c.executionCtx.waitUntil(
     (async () => {
-      const synced = await repoStub(c.env, repo.id).sync();
-      if (synced.ok) {
-        await afterPush(c.env, repo, actor, synced.value.updates);
-      } else {
+      const synced = await stub.sync();
+      if (!synced.ok) {
         console.error(`sync after push failed for ${repo.id}: ${synced.error}`);
       }
     })(),

@@ -14,6 +14,15 @@ export interface Remotes {
   public: Remote;
 }
 
+export interface MirrorOptions {
+  fetchDepth?: number;
+  /**
+   * Runs inside the transaction that moves the refs, once per refresh that moved any. Callers
+   * that share a refresh all get its updates, so this is the one place to record them.
+   */
+  onRefresh?: (updates: RefUpdate[]) => void;
+}
+
 /**
  * Keeps a local copy of the full remote and pushes its public projection to the public remote.
  * Reads run on the local copy; server-side writes apply locally first and then push.
@@ -25,15 +34,17 @@ export class Mirror {
   /** Refs with a pushLocal in flight, and how many. Sync and publish leave them to that push. */
   private readonly pushing = new Map<string, number>();
   private readonly depth: number;
+  private readonly onRefresh: ((updates: RefUpdate[]) => void) | undefined;
 
   constructor(
     readonly repo: GitRepo,
     readonly storage: Storage,
     readonly remotes: Remotes,
     private readonly fetcher?: typeof fetch,
-    options: { fetchDepth?: number } = {},
+    options: MirrorOptions = {},
   ) {
     this.depth = options.fetchDepth ?? FETCH_DEPTH;
+    this.onRefresh = options.onRefresh;
   }
 
   /** Refreshes from the full remote, then publishes the public projection. */
@@ -108,11 +119,13 @@ export class Mirror {
    * `storage.shallow` before their objects are saved, and sent back as `shallow` lines so the
    * remote skips the trees and blobs already here. Their missing parents are the next wants. A
    * fetch that stops between rounds leaves that record; `boundary` is the part of it the current
-   * tips reach, which this fetch resumes.
+   * tips reach, which this fetch resumes. When the remote moved on meanwhile, the new commits
+   * reach more of that record once they arrive, so the fetch checks `tips` again before it stops.
    */
   private async fetchObjects(
     wants: string[],
     haves: string[],
+    tips: string[],
     boundary: Set<string>,
   ): Promise<void> {
     const { objects, shallow } = this.storage;
@@ -188,6 +201,12 @@ export class Mirror {
         throw new GitError(`the full remote did not send ${unsent}`, 502);
       }
       pending = [...new Set([...missingParents(), ...extra])];
+      if (pending.length === 0) {
+        for (const sha of this.reachedBoundary(tips)) {
+          boundary.add(sha);
+        }
+        pending = missingParents();
+      }
       depth = this.depth;
     }
   }
@@ -214,7 +233,7 @@ export class Mirror {
         .list()
         .map((ref) => ref.sha)
         .filter((sha) => objects.has(sha));
-      await this.fetchObjects(wants, haves, boundary);
+      await this.fetchObjects(wants, haves, tips, boundary);
       if (this.reachedBoundary(tips).size > 0) {
         throw new GitError("the full remote history is still incomplete", 502);
       }
@@ -244,6 +263,9 @@ export class Mirror {
         if (branch !== undefined) {
           refs.setHead(branch.name);
         }
+      }
+      if (changed.length > 0) {
+        this.onRefresh?.(changed);
       }
       return changed;
     });

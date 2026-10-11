@@ -349,14 +349,12 @@ api.get("/repos/:owner/:name/refs", async (c) => {
 });
 
 // Re-reads the full Artifacts repo and republishes the public projection. Pushes through the
-// proxy do this on their own; this is for pushes made with a direct Artifacts token.
+// proxy and push events do this on their own; this is for when neither has run yet. The mirror
+// records the pushes it finds.
 api.post("/repos/:owner/:name/sync", async (c) => {
   const grant = await loadRepo(c);
   need(grant, "write");
   const { updates, publishError } = unwrap(await repoStub(c.env, grant.repo.id).sync());
-  if (updates.length > 0) {
-    await afterPush(c.env, grant.repo, grant.principal?.user.id ?? null, updates);
-  }
   return c.json({ updates, publish_error: publishError });
 });
 

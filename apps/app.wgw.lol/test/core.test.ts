@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { concat, utf8 } from "../src/git/bytes";
 import { serializeCommit, serializeTree, parseTree } from "../src/git/objects";
 import { applyDelta, MAX_OBJECT_SIZE } from "../src/git/pack";
+import { FLUSH, pkt } from "../src/git/pktline";
+import { readCommands } from "../src/git/protocol";
 import { PrivateRules } from "../src/git/rules";
 import { EMPTY_TREE } from "../src/git/store";
 import { mergeBase } from "../src/git/walk";
@@ -60,5 +63,33 @@ describe("mergeBase", () => {
     const side = commit([shared], "side");
     const head = commit([side, old], "head");
     expect(mergeBase(store, base, head)).toBe(shared);
+  });
+});
+
+describe("receive-pack commands", () => {
+  it("reads the commands across chunks and replays the whole body", async () => {
+    const [a, b, c] = ["a", "b", "c"].map((char) => char.repeat(40));
+    const body = concat([
+      pkt(`${a} ${b} refs/heads/main\0report-status side-band-64k\n`),
+      pkt(`${"0".repeat(40)} ${c} refs/tags/v1\n`),
+      FLUSH,
+      utf8("PACK and the rest of the pack"),
+    ]);
+    // Seven-byte chunks split the length prefixes and the commands.
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (let at = 0; at < body.length; at += 7) {
+          controller.enqueue(body.slice(at, at + 7));
+        }
+        controller.close();
+      },
+    });
+    const read = await readCommands(stream);
+    expect(read.commands).toEqual([
+      { old: a, new: b, ref: "refs/heads/main" },
+      { old: "0".repeat(40), new: c, ref: "refs/tags/v1" },
+    ]);
+    const replayed = new Uint8Array(await new Response(read.body).arrayBuffer());
+    expect(replayed).toEqual(body);
   });
 });

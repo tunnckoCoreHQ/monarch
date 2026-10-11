@@ -20,6 +20,8 @@ export default defineConfig({
       triggers.fetch({ pattern: "app.wgw.lol/*", zone: "wgw.lol" }),
       // Artifacts events: pushes to each full repository, and account-level repo changes.
       triggers.queue({ name: EVENTS_QUEUE, maxBatchSize: 20, maxBatchTimeout: 2, maxRetries: 3 }),
+      // Hourly upkeep: missing push subscriptions and expired sign-in rows.
+      triggers.scheduled({ schedule: "17 * * * *" }),
     ],
     workersDev: false,
     previewUrls: false,

@@ -135,6 +135,57 @@ export function parseReceiveRequest(body: Uint8Array): ReceiveRequest {
   return request;
 }
 
+// The ref commands come before the pack; commands that run past this are not read.
+const MAX_COMMANDS = 1 << 20;
+
+/**
+ * Reads the ref commands at the start of a receive-pack body, up to the flush before the pack,
+ * without buffering the pack. Returns them with a body that replays the bytes read and then
+ * streams the rest. Commands that do not end within MAX_COMMANDS come back empty.
+ */
+export async function readCommands(
+  body: ReadableStream<Uint8Array>,
+): Promise<{ commands: Command[]; body: ReadableStream<Uint8Array> }> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let commands: Command[] = [];
+  for (let size = 0; size < MAX_COMMANDS;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    chunks.push(value);
+    size += value.length;
+    const head = concat(chunks);
+    const lines = new PktReader(head);
+    let line;
+    do {
+      line = lines.next();
+    } while (line !== null && line !== undefined);
+    if (line === null) {
+      commands = parseReceiveRequest(head).commands;
+      break;
+    }
+  }
+  let replayed = 0;
+  const replay = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (replayed < chunks.length) {
+        controller.enqueue(chunks[replayed++]);
+        return;
+      }
+      const { done, value } = await reader.read();
+      if (done) {
+        controller.close();
+      } else {
+        controller.enqueue(value);
+      }
+    },
+    cancel: (reason) => reader.cancel(reason),
+  });
+  return { commands, body: replay };
+}
+
 export interface RefResult {
   ref: string;
   error?: string;

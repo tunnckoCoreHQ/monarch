@@ -1,4 +1,3 @@
-import { afterPush } from "./api";
 import { findRepoById } from "./db";
 import type { Env } from "./env";
 
@@ -100,11 +99,11 @@ async function handle(env: Env, event: ArtifactsEvent): Promise<void> {
     // Imports and forks still running belong to the RepoReady workflow.
     return;
   }
+  // The mirror records what moved, and retries that itself if D1 fails.
   const synced = await env.REPO.getByName(repo.id).sync();
   if (!synced.ok) {
     throw new Error(synced.error);
   }
-  await afterPush(env, repo, null, synced.value.updates);
 }
 
 /** The queue consumer: syncs the mirror on Artifacts pushes, and records deletions. */

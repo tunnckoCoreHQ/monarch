@@ -19,9 +19,11 @@ import { RULES_FILE } from "../git/rules";
 import type { RawObject } from "../git/store";
 import type { FileChange } from "../git/tree";
 import { deflate, inflate } from "../git/zlib";
+import { eventStatement, findRepoById } from "./db";
 import type { Env } from "./env";
 import { subscribePushes, unsubscribe } from "./events";
 import { guard, type Result } from "./result";
+import { now } from "./util";
 
 // SQLite rows and values are capped at 2 MB, so larger zlib streams go to R2.
 const MAX_INLINE = 1_000_000;
@@ -31,6 +33,28 @@ const TOKEN_TTL = 3600;
 const TOKEN_MARGIN_MS = 10 * 60 * 1000;
 // Reads sync from Artifacts first when the mirror is older than this, which catches direct pushes.
 const FRESH_MS = 15_000;
+// The proxy says who is pushing before it forwards a push; an unused claim expires after this.
+const CLAIM_MS = 60 * 60 * 1000;
+// Pushes that could not be recorded in D1 are tried again from an alarm after this.
+const RECORD_RETRY_MS = 30_000;
+// A failed push subscription is tried again after this.
+const SUBSCRIBE_RETRY_MS = 10 * 60 * 1000;
+const RECORD_BATCH = 100;
+
+export interface PushCommand {
+  ref: string;
+  new: string;
+}
+
+// A type, not an interface: SQL row types need an index signature.
+type PushRow = {
+  id: number;
+  run: number;
+  ref: string;
+  old: string;
+  new: string;
+  actor_id: string | null;
+};
 
 export type Target = "full" | "public";
 export type Scope = "read" | "write";
@@ -70,6 +94,8 @@ export class Repo extends DurableObject<Env> {
   private readonly minting = new Map<string, Promise<CachedToken>>();
   private mirror: Mirror | undefined;
   private writes: Promise<unknown> = Promise.resolve();
+  private recording: Promise<void> | undefined;
+  private subscribing: Promise<void> | undefined;
   private repoId = "";
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -82,6 +108,8 @@ export class Repo extends DurableObject<Env> {
       CREATE TABLE IF NOT EXISTS projected_commits (sha TEXT PRIMARY KEY, projected TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS projected_trees (key TEXT PRIMARY KEY, projected TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS shallow (sha TEXT PRIMARY KEY);
+      CREATE TABLE IF NOT EXISTS pushes (id INTEGER PRIMARY KEY AUTOINCREMENT, run INTEGER NOT NULL, ref TEXT NOT NULL, old TEXT NOT NULL, new TEXT NOT NULL, actor_id TEXT);
+      CREATE TABLE IF NOT EXISTS push_claims (ref TEXT NOT NULL, new TEXT NOT NULL, actor_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (ref, new));
     `);
     this.repoId = this.meta("repo_id") ?? "";
     this.repo = new GitRepo(this.storage());
@@ -334,10 +362,13 @@ export class Repo extends DurableObject<Env> {
         url: this.remoteUrl(target),
         token: async () => (await this.token(target, "write")).token,
       });
-      this.mirror = new Mirror(this.repo, this.repo.storage, {
-        full: remote("full"),
-        public: remote("public"),
-      });
+      this.mirror = new Mirror(
+        this.repo,
+        this.repo.storage,
+        { full: remote("full"), public: remote("public") },
+        undefined,
+        { onRefresh: (updates) => this.queuePushes(updates) },
+      );
     }
     return this.mirror;
   }
@@ -353,16 +384,167 @@ export class Repo extends DurableObject<Env> {
       setDefaultBranch: defaultBranch,
     });
     this.setMeta("remote_public", created.remote);
-    try {
-      this.setMeta(
-        "push_subscription",
-        await subscribePushes(this.env, this.artifactsName("full")),
-      );
-    } catch (error) {
-      // Without it, a direct push reaches the mirror on the next read instead, within 15 seconds.
-      console.error(`could not subscribe to pushes on ${repoId}`, error);
-    }
+    await this.ensureSubscribed();
     this.mirror = undefined;
+  }
+
+  /**
+   * Subscribes the events queue to pushes on the full repo, once. Until that works, a direct push
+   * reaches the mirror on the next read instead, within 15 seconds. A failure is tried again from
+   * the next sync or read after SUBSCRIBE_RETRY_MS, and from the hourly check.
+   */
+  private ensureSubscribed(): Promise<void> {
+    if (
+      this.meta("push_subscription") !== undefined ||
+      this.meta("remote_full") === undefined ||
+      Date.now() < Number(this.meta("subscribe_after") ?? 0)
+    ) {
+      return Promise.resolve();
+    }
+    this.subscribing ??= (async () => {
+      try {
+        this.setMeta(
+          "push_subscription",
+          await subscribePushes(this.env, this.artifactsName("full")),
+        );
+        this.sql.exec("DELETE FROM meta WHERE key = 'subscribe_after'");
+      } catch (error) {
+        console.error(`could not subscribe to pushes on ${this.repoId}`, error);
+        this.setMeta("subscribe_after", String(Date.now() + SUBSCRIBE_RETRY_MS));
+      }
+    })().finally(() => {
+      this.subscribing = undefined;
+    });
+    return this.subscribing;
+  }
+
+  /** The hourly check: subscribes repos that have no push subscription yet. */
+  checkSubscription(): Promise<Result<boolean>> {
+    return guard(async () => {
+      await this.ensureSubscribed();
+      return this.meta("push_subscription") !== undefined;
+    });
+  }
+
+  /**
+   * Says who is about to push which refs. The git proxy calls this before it forwards a push, so
+   * whichever sync records the push, from the proxy or from the queue, knows the pusher.
+   */
+  claimPush(actorId: string, commands: PushCommand[]): Promise<Result<null>> {
+    return guard(() => {
+      const at = Date.now();
+      this.sql.exec("DELETE FROM push_claims WHERE at < ?", at - CLAIM_MS);
+      for (const command of commands) {
+        this.sql.exec(
+          "INSERT INTO push_claims (ref, new, actor_id, at) VALUES (?, ?, ?, ?) ON CONFLICT (ref, new) DO UPDATE SET actor_id = excluded.actor_id, at = excluded.at",
+          command.ref,
+          command.new,
+          actorId,
+          at,
+        );
+      }
+      return null;
+    });
+  }
+
+  /** Runs in the refresh's ref transaction, so a moved ref always has its row here. */
+  private queuePushes(updates: RefUpdate[]): void {
+    const run = Number(this.meta("push_run") ?? 0) + 1;
+    this.setMeta("push_run", String(run));
+    for (const update of updates) {
+      const claim = this.sql
+        .exec<{ actor_id: string }>(
+          "DELETE FROM push_claims WHERE ref = ? AND new = ? RETURNING actor_id",
+          update.ref,
+          update.new,
+        )
+        .toArray()[0];
+      this.sql.exec(
+        "INSERT INTO pushes (run, ref, old, new, actor_id) VALUES (?, ?, ?, ?, ?)",
+        run,
+        update.ref,
+        update.old,
+        update.new,
+        claim?.actor_id ?? null,
+      );
+    }
+  }
+
+  /**
+   * Records queued pushes in D1: the push events, `pushed_at`, and the default branch. A row
+   * leaves the queue only after D1 has it. On a failure an alarm tries again, and each event's id
+   * comes from its refresh and pusher, so a retry never records a push twice. One run at a time; a run keeps
+   * going while rows remain, so rows queued during it are not left behind.
+   */
+  private recordPushes(): Promise<void> {
+    this.recording ??= this.runRecord().finally(() => {
+      this.recording = undefined;
+    });
+    return this.recording;
+  }
+
+  private async runRecord(): Promise<void> {
+    try {
+      for (;;) {
+        const rows = this.sql
+          .exec<PushRow>("SELECT * FROM pushes ORDER BY id LIMIT ?", RECORD_BATCH)
+          .toArray();
+        if (rows.length === 0) {
+          return;
+        }
+        const last = rows.at(-1)!.id;
+        const repo = await findRepoById(this.env, this.repoId);
+        if (repo !== null) {
+          // One event per refresh and pusher, keyed by its first row. A retry sees the same groups:
+          // rows queued later belong to later refreshes.
+          const groups: PushRow[][] = [];
+          for (const row of rows) {
+            const group = groups.at(-1);
+            if (
+              group !== undefined &&
+              group[0].run === row.run &&
+              group[0].actor_id === row.actor_id
+            ) {
+              group.push(row);
+            } else {
+              groups.push([row]);
+            }
+          }
+          const head = this.repo.storage.refs.head().replace(/^refs\/heads\//, "");
+          await this.env.DB.batch([
+            this.env.DB.prepare(
+              "UPDATE repos SET pushed_at = ?, default_branch = ? WHERE id = ?",
+            ).bind(now(), head, repo.id),
+            ...groups.map((group) =>
+              eventStatement(
+                this.env,
+                `evt_push_${repo.id}_${group[0].id}`,
+                repo.id,
+                group[0].actor_id,
+                "push",
+                { updates: group.map(({ ref, old, new: sha }) => ({ ref, old, new: sha })) },
+              ),
+            ),
+          ]);
+          for (const group of groups) {
+            this.env.METRICS.writeDataPoint({
+              blobs: ["push", `${repo.owner}/${repo.name}`],
+              doubles: [group.length],
+              indexes: [repo.id],
+            });
+          }
+        }
+        this.sql.exec("DELETE FROM pushes WHERE id <= ?", last);
+      }
+    } catch (error) {
+      console.error(`could not record pushes for ${this.repoId}`, error);
+      await this.ctx.storage.setAlarm(Date.now() + RECORD_RETRY_MS);
+    }
+  }
+
+  override async alarm(): Promise<void> {
+    await this.recordPushes();
+    await this.ensureSubscribed();
   }
 
   /** Creates the empty full repo and its public projection in Artifacts. */
@@ -456,6 +638,8 @@ export class Repo extends DurableObject<Env> {
     return guard(async () => {
       const updates = await this.getMirror().refresh();
       this.setMeta("synced_at", String(Date.now()));
+      await this.recordPushes();
+      await this.ensureSubscribed();
       return { updates, publishError: await this.publish() };
     });
   }
@@ -520,6 +704,8 @@ export class Repo extends DurableObject<Env> {
       guard(async () => {
         const mirror = this.getMirror();
         await mirror.refresh();
+        // Pushes the refresh found are someone else's; this write records its own update.
+        await this.recordPushes();
         const result = run();
         await mirror.pushLocal(result.update);
         // The write landed; a failed publish only delays the public view and is noted on the repo.
@@ -718,6 +904,7 @@ export class Repo extends DurableObject<Env> {
           break;
         }
       }
+      await this.ctx.storage.deleteAlarm();
       await this.ctx.storage.deleteAll();
       this.repoId = "";
       this.mirror = undefined;
