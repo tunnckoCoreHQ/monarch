@@ -65,19 +65,28 @@ export function parseTree(content: Uint8Array): TreeEntry[] {
   return entries;
 }
 
-// Git sorts tree entries by name, comparing a tree's name as if it ended in "/".
-function sortKey(entry: TreeEntry): string {
-  return isTree(entry.mode) ? `${entry.name}/` : entry.name;
+// Git sorts tree entries by the UTF-8 bytes of their names, comparing a tree's name as if it ended
+// in "/". JavaScript compares UTF-16 code units, which order some non-ASCII names differently.
+function sortKey(entry: TreeEntry): Uint8Array {
+  return utf8(isTree(entry.mode) ? `${entry.name}/` : entry.name);
+}
+
+function compareBytes(left: Uint8Array, right: Uint8Array): number {
+  const length = Math.min(left.length, right.length);
+  for (let i = 0; i < length; i++) {
+    if (left[i] !== right[i]) {
+      return left[i] - right[i];
+    }
+  }
+  return left.length - right.length;
 }
 
 export function serializeTree(entries: TreeEntry[]): Uint8Array {
-  const sorted = entries.toSorted((a, b) => {
-    const left = sortKey(a);
-    const right = sortKey(b);
-    return left < right ? -1 : left > right ? 1 : 0;
-  });
+  const sorted = entries
+    .map((entry) => ({ entry, key: sortKey(entry) }))
+    .toSorted((a, b) => compareBytes(a.key, b.key));
   const parts: Uint8Array[] = [];
-  for (const entry of sorted) {
+  for (const { entry } of sorted) {
     parts.push(utf8(`${entry.mode} ${entry.name}\0`), fromHex(entry.sha));
   }
   return concat(parts);

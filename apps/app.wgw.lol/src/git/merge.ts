@@ -54,6 +54,10 @@ function mergeEntry(
         merged.push({ ...child, name });
       }
     }
+    // Each side deleted other files of this directory. Git keeps no empty directories.
+    if (merged.length === 0 && path !== "") {
+      return undefined;
+    }
     return { mode: "40000", name: ours.name, sha: store.write("tree", serializeTree(merged)) };
   }
   conflicts.push(path === "" ? "/" : path);

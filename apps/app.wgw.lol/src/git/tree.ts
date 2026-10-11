@@ -1,5 +1,12 @@
 import { text } from "./bytes";
-import { isTree, parseCommit, parseTree, serializeTree, type TreeEntry } from "./objects";
+import {
+  FILE_MODE,
+  isTree,
+  parseCommit,
+  parseTree,
+  serializeTree,
+  type TreeEntry,
+} from "./objects";
 import type { ObjectStore } from "./store";
 
 export function readTree(store: ObjectStore, sha: string): TreeEntry[] {
@@ -68,10 +75,14 @@ export function readBlobText(store: ObjectStore, tree: string, path: string): st
   return blob === undefined ? undefined : text(blob.content);
 }
 
+/** A regular file, an executable, and a symlink, whose content is the link target. */
+export const FILE_MODES = new Set(["100644", "100755", "120000"]);
+
 export interface FileChange {
   path: string;
   /** New file content, or null to delete the path. */
   content: Uint8Array | null;
+  /** One of FILE_MODES. Without it, an updated file keeps its mode and a new file is 100644. */
   mode?: string;
 }
 
@@ -96,7 +107,9 @@ export function applyChanges(
         entries.delete(path);
       } else {
         const sha = store.write("blob", change.content);
-        entries.set(path, { mode: change.mode ?? "100644", name: path, sha });
+        const kept = entries.get(path)?.mode;
+        const mode = change.mode ?? (kept !== undefined && FILE_MODES.has(kept) ? kept : FILE_MODE);
+        entries.set(path, { mode, name: path, sha });
       }
       continue;
     }
