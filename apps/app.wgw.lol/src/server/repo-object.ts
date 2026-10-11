@@ -944,8 +944,9 @@ export class Repo extends DurableObject<Env> {
   }
 
   /**
-   * Deletes both Artifacts repos, then the mirror's R2 objects and the mirror. A failed Artifacts
-   * delete stops here with an error, so the D1 record stays and the delete can be retried.
+   * Deletes both Artifacts repos, then the mirror's R2 objects, the cached preview cards, and the
+   * mirror. A failed Artifacts delete stops here with an error, so the D1 record stays and the
+   * delete can be retried.
    */
   destroy(): Promise<Result<null>> {
     return guard(async () => {
@@ -964,15 +965,17 @@ export class Repo extends DurableObject<Env> {
           console.error(`could not delete push subscription ${subscription}`, error);
         }
       }
-      const prefix = `objects/${this.repoId}/`;
-      // Each listing returns one page. Deleting it moves the next keys to the front.
-      for (;;) {
-        const listed = await this.env.GIT.list({ prefix });
-        if (listed.objects.length > 0) {
-          await this.env.GIT.delete(listed.objects.map((object) => object.key));
-        }
-        if (!listed.truncated) {
-          break;
+      // og/ holds the preview cards og.ts draws, one per push.
+      for (const prefix of [`objects/${this.repoId}/`, `og/${this.repoId}/`]) {
+        // Each listing returns one page. Deleting it moves the next keys to the front.
+        for (;;) {
+          const listed = await this.env.GIT.list({ prefix });
+          if (listed.objects.length > 0) {
+            await this.env.GIT.delete(listed.objects.map((object) => object.key));
+          }
+          if (!listed.truncated) {
+            break;
+          }
         }
       }
       await this.ctx.storage.deleteAlarm();
