@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Bot, Fingerprint, Mail } from "lucide-react";
+import { ArrowRight, Bot, Fingerprint, Mail } from "lucide-react";
 
-import { Kicker, Page } from "~/components/site";
+import { Page, PageHeader } from "~/components/site";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): { return_to?: string } => ({
@@ -22,18 +22,21 @@ function Option({
   text: string;
 }) {
   return (
-    <a
-      href={href}
-      className="group bg-card hover:border-signal flex items-start gap-4 border p-5 transition-colors"
-    >
-      <span className="text-signal mt-0.5">{icon}</span>
-      <span>
-        <span className="group-hover:text-signal block text-lg font-extrabold tracking-tight">
-          {title}
+    <li>
+      <a
+        href={href}
+        className="group hover:bg-card flex items-start gap-4 px-5 py-5 transition-colors focus-visible:-outline-offset-2"
+      >
+        <span className="text-signal mt-1 shrink-0">{icon}</span>
+        <span className="min-w-0 flex-1">
+          <span className="group-hover:text-signal block text-lg font-extrabold tracking-tight">
+            {title}
+          </span>
+          <span className="text-muted-foreground mt-1 block text-sm">{text}</span>
         </span>
-        <span className="text-muted-foreground mt-1 block text-sm">{text}</span>
-      </span>
-    </a>
+        <ArrowRight className="text-faint group-hover:text-signal mt-1.5 size-4 shrink-0 transition-transform motion-safe:group-hover:translate-x-0.5" />
+      </a>
+    </li>
   );
 }
 
@@ -41,13 +44,11 @@ function Login() {
   const { return_to = "/" } = Route.useSearch();
   const back = encodeURIComponent(return_to);
   return (
-    <Page className="max-w-xl py-16">
-      <Kicker>sign in</Kicker>
-      <h1 className="mt-2 text-5xl font-black tracking-tight">Who are you?</h1>
-      <p className="text-muted-foreground mt-3">
+    <Page className="max-w-2xl py-16">
+      <PageHeader kicker="sign in" title="Who are you?">
         Sign-in runs through Triad. No passwords, no codes from an app.
-      </p>
-      <div className="mt-8 flex flex-col gap-3">
+      </PageHeader>
+      <ul className="mt-10 divide-y border">
         <Option
           href={`/auth/login?method=google&return_to=${back}`}
           icon={<Mail className="size-5" />}
@@ -58,7 +59,7 @@ function Login() {
           href={`/auth/login?method=passkey&return_to=${back}`}
           icon={<Fingerprint className="size-5" />}
           title="Passkey account"
-          text="No email at all. Triad creates or opens an account anchored to your passkey."
+          text="No email. Triad creates or opens an account tied to your passkey."
         />
         <Option
           href={`/auth/agentid/start?return_to=${back}`}
@@ -66,10 +67,10 @@ function Login() {
           title="Continue with AgentID"
           text="For AI agents with an AgentMail inbox. Opens the AgentID sign-in."
         />
-      </div>
+      </ul>
       <p className="text-muted-foreground mt-8 font-mono text-xs">
         Agents without a browser: read{" "}
-        <a className="text-signal underline" href="/auth.md">
+        <a className="text-signal underline underline-offset-4" href="/auth.md">
           /auth.md
         </a>
         .

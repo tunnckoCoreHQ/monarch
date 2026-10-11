@@ -1,32 +1,48 @@
-import { createFileRoute, Link, Outlet, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation, useRouter } from "@tanstack/react-router";
 import { Eye, GitFork, Lock } from "lucide-react";
 import { useEffect } from "react";
 
-import { CopyField, Page } from "~/components/site";
+import { CopyField, Count, Page, Pending, RouteError } from "~/components/site";
 import { Badge } from "~/components/ui/badge";
 import { api, type RepoDetail } from "~/lib/api";
+import { cn } from "~/lib/utils";
 
 export const Route = createFileRoute("/$owner/$repo")({
   loader: ({ params }) =>
     api<RepoDetail>(
       `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}`,
     ),
+  pendingComponent: () => <Pending label="Loading repository" />,
+  errorComponent: ({ error }) => (
+    <RouteError
+      error={error}
+      notFound={{
+        title: "No repository here.",
+        text: "It does not exist, or it is private and you are not a member.",
+      }}
+    />
+  ),
   component: RepoLayout,
 });
 
-function Tab({ to, label, exact }: { to: string; label: string; exact?: boolean }) {
-  const params = Route.useParams();
-  return (
-    <Link
-      to={to}
-      params={params}
-      activeOptions={{ exact: exact ?? false, includeSearch: false }}
-      className="text-muted-foreground hover:text-foreground [&.active]:border-signal [&.active]:text-foreground border-b-2 border-transparent px-1 pb-3 font-mono text-xs tracking-wider uppercase"
-    >
-      {label}
-    </Link>
-  );
+interface RepoTab {
+  label: string;
+  to:
+    | "/$owner/$repo"
+    | "/$owner/$repo/commits"
+    | "/$owner/$repo/pulls"
+    | "/$owner/$repo/settings";
+  /** The first path segment after `/:owner/:repo` of every page under this tab. */
+  sections: string[];
 }
+
+// Each tab stays active on the pages under it, so a pull request page keeps "Pull requests" lit.
+const TABS: RepoTab[] = [
+  { label: "Code", to: "/$owner/$repo", sections: ["", "blob"] },
+  { label: "Commits", to: "/$owner/$repo/commits", sections: ["commits", "commit"] },
+  { label: "Pull requests", to: "/$owner/$repo/pulls", sections: ["pulls", "pull"] },
+  { label: "Settings", to: "/$owner/$repo/settings", sections: ["settings"] },
+];
 
 const STATUS_TEXT: Record<"importing" | "forking" | "failed", string> = {
   importing:
@@ -48,100 +64,129 @@ function StatusBanner({ repo }: { repo: RepoDetail }) {
     }, 4000);
     return () => clearInterval(timer);
   }, [waiting, router]);
-  if (repo.status === "ready") {
-    return repo.status_detail === null ? null : (
-      <p className="border-violet text-violet mt-4 border px-4 py-3 font-mono text-sm">
-        {repo.status_detail}
-      </p>
-    );
+
+  if (repo.status === "ready" && repo.status_detail === null) {
+    return null;
   }
+  const failed = repo.status === "failed";
+  const text =
+    repo.status === "ready"
+      ? repo.status_detail
+      : `${STATUS_TEXT[repo.status]}${repo.status_detail === null ? "" : ` ${repo.status_detail}`}`;
   return (
-    <p
-      className={`mt-4 border px-4 py-3 font-mono text-sm ${repo.status === "failed" ? "border-destructive text-destructive" : "border-violet text-violet"}`}
+    <div
+      role="status"
+      className={cn(
+        "mt-6 flex items-start gap-3 border-l-2 px-4 py-3 font-mono text-sm",
+        failed
+          ? "border-destructive bg-destructive/10 text-destructive"
+          : "border-violet bg-violet/10 text-violet",
+      )}
     >
-      {STATUS_TEXT[repo.status]}
-      {repo.status_detail === null ? null : ` ${repo.status_detail}`}
-    </p>
+      {waiting ? (
+        <span aria-hidden className="bg-violet mt-1.5 size-2 shrink-0 motion-safe:animate-pulse" />
+      ) : null}
+      <p className="min-w-0 wrap-anywhere">{text}</p>
+    </div>
   );
 }
 
 function RepoLayout() {
   const repo = Route.useLoaderData();
+  const section = useLocation({ select: (location) => location.pathname.split("/")[3] ?? "" });
+  const tabs = TABS.filter((tab) => tab.label !== "Settings" || repo.role !== null);
+
   return (
     <>
       <div className="border-b">
         <Page className="pb-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="font-mono text-2xl">
-              <Link
-                to="/$owner"
-                params={{ owner: repo.owner }}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                {repo.owner}
-              </Link>
-              <span className="text-muted-foreground"> / </span>
-              <Link
-                to="/$owner/$repo"
-                params={{ owner: repo.owner, repo: repo.name }}
-                className="font-bold"
-              >
-                {repo.name}
-              </Link>
-            </h1>
-            <Badge variant="outline" className="font-mono">
-              {repo.visibility === "private" ? <Lock className="size-3" /> : null}
-              {repo.visibility}
-            </Badge>
-            {repo.view === "public" && repo.visibility === "public" ? (
-              <Badge variant="outline" className="border-violet text-violet font-mono">
-                <Eye className="size-3" />
-                public view
-              </Badge>
-            ) : null}
-            {repo.hides_paths ? (
-              <Badge
-                variant="outline"
-                className="border-signal text-signal font-mono"
-                title={repo.private_rules ?? ""}
-              >
-                <Lock className="size-3" />
-                has private paths
-              </Badge>
-            ) : null}
-            {repo.forked_from === null ? null : (
-              <span className="text-muted-foreground flex items-center gap-1 font-mono text-xs">
-                <GitFork className="size-3" /> fork of {repo.forked_from}
-              </span>
-            )}
-            {repo.source === null ? null : (
-              <span className="text-muted-foreground font-mono text-xs">
-                imported from {repo.source}
-              </span>
-            )}
-            <div className="ml-auto w-full max-w-md">
-              <CopyField
-                label={repo.role === null ? "git" : "member"}
-                value={
-                  repo.role === null
-                    ? repo.clone_url
-                    : `git -c http.proactiveAuth=basic clone ${repo.clone_url}`
-                }
-              />
+          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:items-end">
+            <div className="min-w-0">
+              <p className="text-muted-foreground font-mono text-sm wrap-anywhere">
+                <Link to="/$owner" params={{ owner: repo.owner }} className="hover:text-foreground">
+                  {repo.owner}
+                </Link>
+                <span className="text-faint"> /</span>
+              </p>
+              <h1 className="mt-1 text-4xl leading-none font-black tracking-[-0.03em] wrap-anywhere md:text-5xl">
+                <Link to="/$owner/$repo" params={{ owner: repo.owner, repo: repo.name }}>
+                  {repo.name}
+                </Link>
+              </h1>
+              {repo.description === "" ? null : (
+                <p className="text-muted-foreground mt-3 max-w-2xl text-pretty">
+                  {repo.description}
+                </p>
+              )}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Badge variant="outline">
+                  {repo.visibility === "private" ? <Lock /> : null}
+                  {repo.visibility}
+                </Badge>
+                {repo.view === "public" && repo.visibility === "public" ? (
+                  <Badge
+                    variant="violet"
+                    title="You see the public history. Members see every path."
+                  >
+                    <Eye />
+                    public view
+                  </Badge>
+                ) : null}
+                {repo.hides_paths ? (
+                  <Badge variant="signal" title={repo.private_rules ?? ""}>
+                    <Lock />
+                    private paths
+                  </Badge>
+                ) : null}
+                {repo.forked_from === null ? null : (
+                  <span className="text-muted-foreground flex min-w-0 items-center gap-1 font-mono text-xs wrap-anywhere">
+                    <GitFork className="size-3 shrink-0" /> fork of {repo.forked_from}
+                  </span>
+                )}
+                {repo.source === null ? null : (
+                  <span className="text-muted-foreground min-w-0 font-mono text-xs wrap-anywhere">
+                    imported from {repo.source}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-          {repo.description === "" ? null : (
-            <p className="text-muted-foreground mt-3">{repo.description}</p>
-          )}
-          <StatusBanner repo={repo} />
-          <nav className="mt-6 flex gap-6">
-            <Tab to="/$owner/$repo" label="Code" exact />
-            <Tab to="/$owner/$repo/commits" label="Commits" />
-            <Tab
-              to="/$owner/$repo/pulls"
-              label={`Pull requests${repo.open_pulls > 0 ? ` · ${repo.open_pulls}` : ""}`}
+            <CopyField
+              label={repo.role === null ? "git" : "member"}
+              value={
+                repo.role === null
+                  ? repo.clone_url
+                  : `git -c http.proactiveAuth=basic clone ${repo.clone_url}`
+              }
             />
-            {repo.role === null ? null : <Tab to="/$owner/$repo/settings" label="Settings" />}
+          </div>
+          <StatusBanner repo={repo} />
+          <nav
+            aria-label="Repository"
+            className="-mx-6 mt-8 flex [scrollbar-width:none] gap-6 overflow-x-auto px-6"
+          >
+            {tabs.map((tab) => {
+              const active = tab.sections.includes(section);
+              return (
+                <Link
+                  key={tab.label}
+                  to={tab.to}
+                  params={{ owner: repo.owner, repo: repo.name }}
+                  activeOptions={{ exact: true, includeSearch: false }}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex shrink-0 items-center gap-2 border-b-2 pt-1 pb-3 font-mono text-xs tracking-wider whitespace-nowrap uppercase focus-visible:-outline-offset-2",
+                    active
+                      ? "border-signal text-foreground"
+                      : "text-muted-foreground hover:text-foreground border-transparent",
+                  )}
+                >
+                  {tab.label}
+                  {tab.label === "Pull requests" && repo.open_pulls > 0 ? (
+                    <Count value={repo.open_pulls} />
+                  ) : null}
+                </Link>
+              );
+            })}
           </nav>
         </Page>
       </div>

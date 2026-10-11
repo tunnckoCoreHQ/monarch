@@ -1,12 +1,23 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
-import { useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 
 import { useRepo } from "~/components/repo";
-import { ErrorNote, messageOf, Page, Terminal } from "~/components/site";
+import {
+  Empty,
+  ErrorNote,
+  Field,
+  messageOf,
+  Page,
+  Pending,
+  RouteError,
+  Section,
+  Terminal,
+} from "~/components/site";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { NativeSelect } from "~/components/ui/native-select";
 import { api } from "~/lib/api";
 
 interface Variable {
@@ -27,6 +38,9 @@ interface Collaborator {
   kind?: string;
 }
 
+const ENVIRONMENT_KINDS = ["production", "staging", "preview", "development"];
+const ROLES = ["read", "write", "admin"];
+
 export const Route = createFileRoute("/$owner/$repo/settings")({
   loader: async ({ params }) => {
     const base = `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}`;
@@ -36,40 +50,54 @@ export const Route = createFileRoute("/$owner/$repo/settings")({
     ]);
     return { environments, collaborators };
   },
+  pendingComponent: () => <Pending label="Loading settings" />,
+  errorComponent: ({ error }) => <RouteError error={error} />,
   component: RepoSettings,
 });
+
+/** A bordered group with a header strip, for one scope of values or one form. */
+function Panel({ header, children }: { header: ReactNode; children: ReactNode }) {
+  return (
+    <div className="min-w-0 border">
+      <div className="bg-card flex flex-wrap items-center gap-2 border-b px-4 py-2 font-mono text-xs">
+        {header}
+      </div>
+      {children}
+    </div>
+  );
+}
 
 function VariableTable({
   variables,
   onDelete,
 }: {
   variables: Variable[];
-  onDelete: (name: string) => void;
+  onDelete: ((name: string) => void) | null;
 }) {
   if (variables.length === 0) {
-    return <p className="text-muted-foreground px-4 py-3 font-mono text-xs">none</p>;
+    return <p className="text-faint px-4 py-3 font-mono text-xs">No values yet.</p>;
   }
   return (
     <ul className="divide-y">
       {variables.map((variable) => (
-        <li key={variable.name} className="flex items-center gap-3 px-4 py-2 font-mono text-sm">
+        <li
+          key={variable.name}
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 font-mono text-sm"
+        >
           {variable.secret ? (
-            <Lock className="text-signal size-3.5" />
+            <Lock aria-label="secret" className="text-signal size-3.5 shrink-0" />
           ) : (
-            <span className="size-3.5" />
+            <span className="size-3.5 shrink-0" />
           )}
-          <span className="font-semibold">{variable.name}</span>
-          <span className="text-muted-foreground truncate">
+          <span className="font-semibold wrap-anywhere">{variable.name}</span>
+          <span className="text-muted-foreground min-w-0 flex-1 truncate">
             {variable.secret ? "••••••••" : variable.value}
           </span>
-          <Button
-            size="xs"
-            variant="ghost"
-            className="ml-auto"
-            onClick={() => onDelete(variable.name)}
-          >
-            delete
-          </Button>
+          {onDelete === null ? null : (
+            <Button size="xs" variant="ghost" onClick={() => onDelete(variable.name)}>
+              Delete
+            </Button>
+          )}
         </li>
       ))}
     </ul>
@@ -102,31 +130,51 @@ function RepoSettings() {
       .catch((caught: unknown) => setError(messageOf(caught)));
   };
 
+  // Forms submit through `act`, so Enter in a field does the same as the button.
+  const onSubmit = (run: () => Promise<unknown>) => (event: FormEvent) => {
+    event.preventDefault();
+    act(run);
+  };
+
   return (
-    <Page className="flex max-w-4xl flex-col gap-12">
+    <Page className="flex max-w-4xl flex-col gap-14">
+      {isAdmin ? null : (
+        <p className="text-muted-foreground border-l-2 px-4 py-2 font-mono text-xs">
+          Only admins can change these settings. You can read them.
+        </p>
+      )}
       <ErrorNote error={error} />
-      <section className="flex flex-col gap-3">
-        <h2 className="text-2xl font-black tracking-tight">General</h2>
-        <div className="flex gap-2">
-          <Input
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            placeholder="Description"
-            disabled={!isAdmin}
-          />
-          <Button
-            disabled={!isAdmin}
-            onClick={() => act(() => api(base, { method: "PATCH", json: { description } }))}
-          >
+
+      <Section title="General">
+        <form
+          onSubmit={onSubmit(() => api(base, { method: "PATCH", json: { description } }))}
+          className="flex flex-col gap-3 sm:flex-row sm:items-end"
+        >
+          <Field label="Description" htmlFor="description" className="flex-1">
+            <Input
+              id="description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="One line about the repository"
+              disabled={!isAdmin}
+            />
+          </Field>
+          <Button type="submit" disabled={!isAdmin || description === repo.description}>
             Save
           </Button>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-sm">
-            Visibility: <span className="text-signal">{repo.visibility}</span>
-          </span>
+        </form>
+        <div className="flex flex-wrap items-center justify-between gap-3 border px-4 py-3">
+          <div>
+            <p className="text-muted-foreground font-mono text-xs tracking-wider uppercase">
+              Visibility
+            </p>
+            <p className="mt-1 font-bold">
+              {repo.visibility === "public"
+                ? "Public. Anyone can read it."
+                : "Private. Only members can see it."}
+            </p>
+          </div>
           <Button
-            size="sm"
             variant="outline"
             disabled={!isAdmin}
             onClick={() =>
@@ -141,220 +189,273 @@ function RepoSettings() {
             Make {repo.visibility === "public" ? "private" : "public"}
           </Button>
         </div>
-      </section>
+      </Section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-2xl font-black tracking-tight">Private paths</h2>
-        <p className="text-muted-foreground text-sm">
-          List paths in a <code className="font-mono">.gitprivate</code> file at the root, gitignore
-          style. Members see everything. Everyone else, on the web and over git, sees a history
-          where those paths never existed. Each commit uses its own rules, so deleting a line
-          publishes the path from that commit on, and earlier public hashes never change. Commits
-          that only touch private paths are left out of the public history.
-        </p>
+      <Section
+        title="Private paths"
+        description={
+          <>
+            List paths in a <code className="text-foreground font-mono">.gitprivate</code> file at
+            the root, gitignore style. Members see everything. Everyone else, on the web and over
+            git, sees a history where those paths never existed. Each commit uses its own rules, so
+            deleting a line publishes the path from that commit on, and earlier public hashes never
+            change. Commits that only touch private paths are left out of the public history.
+          </>
+        }
+      >
         <Terminal title=".gitprivate at the default branch">
           {repo.private_rules === null || repo.private_rules === ""
             ? "# no rules yet, for example:\nsecurity/\n*.pem\ndocs/embargoed-*.md"
             : repo.private_rules}
         </Terminal>
-      </section>
+      </Section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-2xl font-black tracking-tight">Environments and secrets</h2>
-        <p className="text-muted-foreground text-sm">
-          Repository values apply to every environment; environment values override them. Agents
-          pull them with a key that has the secrets scope: `wgw env pull production`.
-        </p>
-        <div className="border">
-          <div className="bg-card flex items-center gap-2 border-b px-4 py-2 font-mono text-xs">
-            <span className="font-bold">repository</span>
-            <Badge variant="outline">all environments</Badge>
-          </div>
+      <Section
+        title="Environments and secrets"
+        description={
+          <>
+            Repository values apply to every environment. Environment values override them. Agents
+            pull them with a key that has the secrets scope:{" "}
+            <code className="text-foreground font-mono">wgw env pull production</code>.
+          </>
+        }
+      >
+        <Panel
+          header={
+            <>
+              <span className="font-bold">repository</span>
+              <Badge variant="outline">all environments</Badge>
+            </>
+          }
+        >
           <VariableTable
             variables={environments.repository}
-            onDelete={(name) => act(() => api(`${base}/variables/${name}`, { method: "DELETE" }))}
+            onDelete={
+              isAdmin
+                ? (name) => act(() => api(`${base}/variables/${name}`, { method: "DELETE" }))
+                : null
+            }
           />
-        </div>
+        </Panel>
         {environments.environments.map((env) => (
-          <div key={env.name} className="border">
-            <div className="bg-card flex items-center gap-2 border-b px-4 py-2 font-mono text-xs">
-              <span className="font-bold">{env.name}</span>
-              <Badge variant="outline" className="uppercase">
-                {env.kind}
-              </Badge>
-              <Button
-                size="xs"
-                variant="ghost"
-                className="ml-auto"
-                disabled={!isAdmin}
-                onClick={() =>
-                  act(() => api(`${base}/environments/${env.name}`, { method: "DELETE" }))
-                }
-              >
-                delete environment
-              </Button>
-            </div>
+          <Panel
+            key={env.name}
+            header={
+              <>
+                <span className="font-bold wrap-anywhere">{env.name}</span>
+                <Badge variant="outline">{env.kind}</Badge>
+                {isAdmin ? (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    className="ml-auto"
+                    onClick={() =>
+                      act(() => api(`${base}/environments/${env.name}`, { method: "DELETE" }))
+                    }
+                  >
+                    Delete environment
+                  </Button>
+                ) : null}
+              </>
+            }
+          >
             <VariableTable
               variables={env.variables}
-              onDelete={(name) =>
-                act(() =>
-                  api(`${base}/variables/${name}?environment=${encodeURIComponent(env.name)}`, {
-                    method: "DELETE",
-                  }),
-                )
+              onDelete={
+                isAdmin
+                  ? (name) =>
+                      act(() =>
+                        api(
+                          `${base}/variables/${name}?environment=${encodeURIComponent(env.name)}`,
+                          { method: "DELETE" },
+                        ),
+                      )
+                  : null
               }
             />
-          </div>
+          </Panel>
         ))}
         {isAdmin ? (
           <>
-            <div className="bg-card flex flex-wrap gap-2 border p-3">
-              <Input
-                value={envName}
-                onChange={(event) => setEnvName(event.target.value)}
-                placeholder="new environment, e.g. production"
-                className="max-w-xs font-mono"
-              />
-              <select
-                value={envKind}
-                onChange={(event) => setEnvKind(event.target.value)}
-                className="bg-background h-9 border px-2 font-mono text-sm"
+            <Panel header={<span className="text-muted-foreground">Add an environment</span>}>
+              <form
+                onSubmit={onSubmit(async () => {
+                  await api(`${base}/environments`, {
+                    method: "POST",
+                    json: { name: envName, kind: envKind },
+                  });
+                  setEnvName("");
+                })}
+                className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_12rem_auto] sm:items-end"
               >
-                {["production", "staging", "preview", "development"].map((kind) => (
-                  <option key={kind}>{kind}</option>
-                ))}
-              </select>
-              <Button
-                onClick={() =>
-                  act(async () => {
-                    await api(`${base}/environments`, {
-                      method: "POST",
-                      json: { name: envName, kind: envKind },
-                    });
-                    setEnvName("");
-                  })
-                }
+                <Field label="Name" htmlFor="env-name">
+                  <Input
+                    id="env-name"
+                    value={envName}
+                    onChange={(event) => setEnvName(event.target.value)}
+                    placeholder="production"
+                    className="font-mono"
+                  />
+                </Field>
+                <Field label="Kind" htmlFor="env-kind">
+                  <NativeSelect
+                    id="env-kind"
+                    value={envKind}
+                    onChange={(event) => setEnvKind(event.target.value)}
+                    className="w-full"
+                  >
+                    {ENVIRONMENT_KINDS.map((kind) => (
+                      <option key={kind}>{kind}</option>
+                    ))}
+                  </NativeSelect>
+                </Field>
+                <Button type="submit" disabled={envName.trim() === ""}>
+                  Add environment
+                </Button>
+              </form>
+            </Panel>
+            <Panel header={<span className="text-muted-foreground">Set a value</span>}>
+              <form
+                onSubmit={onSubmit(async () => {
+                  await api(`${base}/variables/${varName}`, {
+                    method: "PUT",
+                    json: { value: varValue, secret: varSecret, environment: varEnv },
+                  });
+                  setVarName("");
+                  setVarValue("");
+                })}
+                className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)_auto_auto] lg:items-end"
               >
-                Add environment
-              </Button>
-            </div>
-            <div className="bg-card flex flex-wrap gap-2 border p-3">
-              <select
-                value={varEnv}
-                onChange={(event) => setVarEnv(event.target.value)}
-                className="bg-background h-9 border px-2 font-mono text-sm"
-              >
-                <option value="">repository</option>
-                {environments.environments.map((env) => (
-                  <option key={env.name} value={env.name}>
-                    {env.name}
-                  </option>
-                ))}
-              </select>
-              <Input
-                value={varName}
-                onChange={(event) => setVarName(event.target.value)}
-                placeholder="NAME"
-                className="max-w-[12rem] font-mono"
-              />
-              <Input
-                value={varValue}
-                onChange={(event) => setVarValue(event.target.value)}
-                placeholder="value"
-                type={varSecret ? "password" : "text"}
-                className="max-w-xs font-mono"
-              />
-              <label className="flex items-center gap-1.5 font-mono text-xs">
-                <input
-                  type="checkbox"
-                  checked={varSecret}
-                  onChange={(event) => setVarSecret(event.target.checked)}
-                />{" "}
-                secret
-              </label>
-              <Button
-                onClick={() =>
-                  act(async () => {
-                    await api(`${base}/variables/${varName}`, {
-                      method: "PUT",
-                      json: { value: varValue, secret: varSecret, environment: varEnv },
-                    });
-                    setVarName("");
-                    setVarValue("");
-                  })
-                }
-              >
-                Save value
-              </Button>
-            </div>
+                <Field label="Scope" htmlFor="var-env">
+                  <NativeSelect
+                    id="var-env"
+                    value={varEnv}
+                    onChange={(event) => setVarEnv(event.target.value)}
+                    className="w-full"
+                  >
+                    <option value="">repository</option>
+                    {environments.environments.map((env) => (
+                      <option key={env.name} value={env.name}>
+                        {env.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </Field>
+                <Field label="Name" htmlFor="var-name">
+                  <Input
+                    id="var-name"
+                    value={varName}
+                    onChange={(event) => setVarName(event.target.value)}
+                    placeholder="API_URL"
+                    className="font-mono"
+                  />
+                </Field>
+                <Field label="Value" htmlFor="var-value">
+                  <Input
+                    id="var-value"
+                    value={varValue}
+                    onChange={(event) => setVarValue(event.target.value)}
+                    type={varSecret ? "password" : "text"}
+                    className="font-mono"
+                  />
+                </Field>
+                <label className="flex h-9 cursor-pointer items-center gap-2 font-mono text-xs tracking-wider uppercase">
+                  <input
+                    type="checkbox"
+                    checked={varSecret}
+                    onChange={(event) => setVarSecret(event.target.checked)}
+                    className="accent-signal size-4"
+                  />
+                  Secret
+                </label>
+                <Button type="submit" disabled={varName.trim() === ""}>
+                  Save value
+                </Button>
+              </form>
+            </Panel>
           </>
         ) : null}
-      </section>
+      </Section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-2xl font-black tracking-tight">Collaborators</h2>
-        <ul className="divide-y border">
-          {collaborators.map((item) => (
-            <li key={item.handle} className="flex items-center gap-3 px-4 py-2 font-mono text-sm">
-              <span>@{item.handle}</span>
-              {item.kind === "agent" ? <span className="text-violet">[agent]</span> : null}
-              <Badge variant="outline">{item.role}</Badge>
-              {item.role === "owner" || !isAdmin ? null : (
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  className="ml-auto"
-                  onClick={() =>
-                    act(() => api(`${base}/collaborators/${item.handle}`, { method: "DELETE" }))
-                  }
-                >
-                  remove
-                </Button>
-              )}
-            </li>
-          ))}
-        </ul>
+      <Section title="Collaborators">
+        {collaborators.length === 0 ? (
+          <Empty>No collaborators yet.</Empty>
+        ) : (
+          <ul className="divide-y border">
+            {collaborators.map((item) => (
+              <li
+                key={item.handle}
+                className="flex flex-wrap items-center gap-3 px-4 py-2.5 font-mono text-sm"
+              >
+                <span className="wrap-anywhere">@{item.handle}</span>
+                {item.kind === "agent" ? <Badge variant="violet">agent</Badge> : null}
+                <Badge variant="outline">{item.role}</Badge>
+                {item.role === "owner" || !isAdmin ? null : (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    className="ml-auto"
+                    onClick={() =>
+                      act(() => api(`${base}/collaborators/${item.handle}`, { method: "DELETE" }))
+                    }
+                  >
+                    Remove
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
         {isAdmin ? (
-          <div className="flex gap-2">
-            <Input
-              value={collaborator}
-              onChange={(event) => setCollaborator(event.target.value.replace(/^@/, ""))}
-              placeholder="handle of a person or an agent"
-              className="max-w-xs font-mono"
-            />
-            <select
-              value={role}
-              onChange={(event) => setRole(event.target.value)}
-              className="bg-card h-9 border px-2 font-mono text-sm"
-            >
-              {["read", "write", "admin"].map((value) => (
-                <option key={value}>{value}</option>
-              ))}
-            </select>
-            <Button
-              onClick={() =>
-                act(async () => {
-                  await api(`${base}/collaborators/${collaborator}`, {
-                    method: "PUT",
-                    json: { role },
-                  });
-                  setCollaborator("");
-                })
-              }
-            >
-              Add
+          <form
+            onSubmit={onSubmit(async () => {
+              await api(`${base}/collaborators/${collaborator}`, {
+                method: "PUT",
+                json: { role },
+              });
+              setCollaborator("");
+            })}
+            className="bg-card grid gap-3 border p-4 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-end"
+          >
+            <Field label="Handle" htmlFor="collaborator">
+              <Input
+                id="collaborator"
+                value={collaborator}
+                onChange={(event) => setCollaborator(event.target.value.replace(/^@/, ""))}
+                placeholder="a person or an agent"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Role" htmlFor="collaborator-role">
+              <NativeSelect
+                id="collaborator-role"
+                value={role}
+                onChange={(event) => setRole(event.target.value)}
+                className="w-full"
+              >
+                {ROLES.map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Button type="submit" disabled={collaborator.trim() === ""}>
+              Add collaborator
             </Button>
-          </div>
+          </form>
         ) : null}
-      </section>
+      </Section>
 
       {isAdmin ? (
-        <section className="border-destructive/60 flex flex-col gap-3 border p-4">
-          <h2 className="text-destructive text-2xl font-black tracking-tight">Delete repository</h2>
-          <p className="text-muted-foreground text-sm">
-            Deletes the Durable Object, its R2 objects, pull requests, and environments. There is no
-            undo.
-          </p>
+        <section className="border-destructive flex flex-col gap-4 border p-5">
+          <div>
+            <h2 className="text-destructive text-2xl font-black tracking-tight">
+              Delete repository
+            </h2>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Deletes both Artifacts repositories, the mirror, pull requests, environments, and
+              secrets. There is no undo.
+            </p>
+          </div>
           <Button
             variant="destructive"
             className="self-start"

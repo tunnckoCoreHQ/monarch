@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
-import { CommitRow, RefPicker, useRepo } from "~/components/repo";
-import { Empty, Page } from "~/components/site";
+import { CommitList, RefPicker, useRepo } from "~/components/repo";
+import { Empty, Page, Pending } from "~/components/site";
 import { api, type Commit } from "~/lib/api";
+
+const LIMIT = 100;
 
 export const Route = createFileRoute("/$owner/$repo/commits")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -12,42 +14,52 @@ export const Route = createFileRoute("/$owner/$repo/commits")({
   loader: async ({ params, deps }) => {
     try {
       return await api<Commit[]>(
-        `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}/commits?${new URLSearchParams({ ref: deps.ref ?? "", limit: "100" }).toString()}`,
+        `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}/commits?${new URLSearchParams({ ref: deps.ref ?? "", limit: String(LIMIT) }).toString()}`,
       );
     } catch {
       return [];
     }
   },
+  pendingComponent: () => <Pending label="Loading commits" />,
   component: Commits,
 });
+
+function countLabel(count: number): string {
+  if (count >= LIMIT) {
+    return `Latest ${LIMIT} commits`;
+  }
+  return count === 1 ? "1 commit" : `${count} commits`;
+}
 
 function Commits() {
   const repo = useRepo();
   const commits = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const ref = search.ref ?? repo.default_branch;
   return (
-    <Page className="flex flex-col gap-4">
-      <RefPicker
-        value={search.ref ?? repo.default_branch}
-        branches={repo.branches}
-        tags={repo.tags}
-        onChange={(ref) =>
-          navigate({
-            to: "/$owner/$repo/commits",
-            params: { owner: repo.owner, repo: repo.name },
-            search: { ref },
-          })
-        }
-      />
+    <Page className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <RefPicker
+          value={ref}
+          branches={repo.branches}
+          tags={repo.tags}
+          onChange={(next) =>
+            navigate({
+              to: "/$owner/$repo/commits",
+              params: { owner: repo.owner, repo: repo.name },
+              search: { ref: next },
+            })
+          }
+        />
+        {commits.length === 0 ? null : (
+          <p className="text-muted-foreground font-mono text-xs">{countLabel(commits.length)}</p>
+        )}
+      </div>
       {commits.length === 0 ? (
-        <Empty>No commits yet.</Empty>
+        <Empty>No commits on {ref} yet.</Empty>
       ) : (
-        <ul className="divide-y border">
-          {commits.map((commit) => (
-            <CommitRow key={commit.sha} commit={commit} owner={repo.owner} repo={repo.name} />
-          ))}
-        </ul>
+        <CommitList commits={commits} owner={repo.owner} repo={repo.name} />
       )}
     </Page>
   );

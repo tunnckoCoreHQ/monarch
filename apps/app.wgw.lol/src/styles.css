@@ -6,6 +6,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  color-scheme: dark;
   --radius: 0rem;
   --background: oklch(0.09 0 0);
   --foreground: oklch(0.96 0 0);
@@ -19,14 +20,21 @@
   --secondary-foreground: oklch(0.96 0 0);
   --muted: oklch(0.16 0.004 120);
   --muted-foreground: oklch(0.68 0.01 120);
+  --faint: oklch(0.59 0.008 120);
   --accent: oklch(0.2 0.01 120);
   --accent-foreground: oklch(0.96 0 0);
   --destructive: oklch(0.65 0.22 27);
   --border: oklch(0.27 0.006 120);
-  --input: oklch(0.27 0.006 120);
-  --ring: oklch(0.91 0.21 124);
+  --input: oklch(0.32 0.006 120);
+  --ring: oklch(0.72 0.15 250);
   --signal: oklch(0.91 0.21 124);
   --violet: oklch(0.7 0.17 300);
+  /* Opaque tints, so sticky line-number gutters can sit on top of scrolled code. */
+  --diff-add: color-mix(in oklab, var(--signal) 9%, var(--background));
+  --diff-add-gutter: color-mix(in oklab, var(--signal) 18%, var(--background));
+  --diff-del: color-mix(in oklab, var(--destructive) 13%, var(--background));
+  --diff-del-gutter: color-mix(in oklab, var(--destructive) 24%, var(--background));
+  --diff-hunk: color-mix(in oklab, var(--violet) 12%, var(--background));
 }
 
 @theme inline {
@@ -48,6 +56,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -56,11 +65,26 @@
   --color-ring: var(--ring);
   --color-signal: var(--signal);
   --color-violet: var(--violet);
+  --color-diff-add: var(--diff-add);
+  --color-diff-add-gutter: var(--diff-add-gutter);
+  --color-diff-del: var(--diff-del);
+  --color-diff-del-gutter: var(--diff-del-gutter);
+  --color-diff-hunk: var(--diff-hunk);
+  --animate-progress: progress 1.4s ease-in-out infinite;
+
+  @keyframes progress {
+    0% {
+      transform: translateX(-100%) scaleX(0.3);
+    }
+    100% {
+      transform: translateX(100%) scaleX(0.6);
+    }
+  }
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring;
   }
   body {
     @apply bg-background text-foreground antialiased;
@@ -70,10 +94,17 @@
     background: var(--signal);
     color: var(--primary-foreground);
   }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
 .prose-md {
-  @apply text-[15px] leading-7;
+  @apply text-[15px] leading-7 wrap-break-word;
+}
+.prose-md > :first-child {
+  @apply mt-0;
 }
 .prose-md h1 {
   @apply mt-2 mb-4 border-b pb-2 text-3xl font-black tracking-tight;
@@ -114,11 +145,14 @@
   @apply border-signal text-muted-foreground border-l-4 pl-4;
 }
 .prose-md table {
-  @apply w-full border-collapse text-sm;
+  @apply block max-w-full border-collapse overflow-x-auto text-sm;
 }
 .prose-md th,
 .prose-md td {
   @apply border px-3 py-1.5 text-left;
+}
+.prose-md hr {
+  @apply my-6;
 }
 .prose-md img {
   @apply inline-block max-w-full;

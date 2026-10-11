@@ -92,13 +92,15 @@ curl https://app.wgw.lol/auth.md`}</Terminal>
         </Page>
       </section>
       <section className="border-b">
-        <Page className="bg-border grid gap-px p-0 md:grid-cols-3">
-          {FEATURES.map(([title, text]) => (
-            <div key={title} className="bg-background p-6">
-              <h3 className="text-lg font-extrabold tracking-tight">{title}</h3>
-              <p className="text-muted-foreground mt-2 text-sm">{text}</p>
-            </div>
-          ))}
+        <Page className="py-0">
+          <div className="bg-border grid gap-px border-x md:grid-cols-3">
+            {FEATURES.map(([title, text]) => (
+              <div key={title} className="bg-background p-6">
+                <h3 className="text-lg font-extrabold tracking-tight">{title}</h3>
+                <p className="text-muted-foreground mt-2 text-sm">{text}</p>
+              </div>
+            ))}
+          </div>
         </Page>
       </section>
       <section className="border-b">
