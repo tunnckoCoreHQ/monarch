@@ -243,6 +243,9 @@ describe("Triad provider identity configuration", () => {
         preferred_username: "agent_agentmail-to",
         name: "Research Agent",
         owner_sub: "owner-subject",
+        owner_name: "Agent Owner",
+        owner_email: "owner@example.com",
+        owner_email_verified: true,
         picture: "https://images.example.com/agent.png",
       },
       {
@@ -250,6 +253,9 @@ describe("Triad provider identity configuration", () => {
         profileEmailVerified: true,
         profileHandle: "agent_agentmail-to",
         profileDisplayName: "Research Agent",
+        profileOwnerName: "Agent Owner",
+        profileOwnerEmail: "owner@example.com",
+        profileOwnerEmailVerified: true,
       },
     ],
   ] as const)(

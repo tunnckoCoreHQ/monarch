@@ -13,6 +13,7 @@ import {
 } from "./disclosures";
 import type { TriadEnv } from "./env";
 import {
+  agentidOwnerDataMissing,
   createAgentIdAuthentication,
   createIdentityConfiguration,
   createEthereumAuthentication,
@@ -98,6 +99,11 @@ export function createTriadConfiguration(env: TriadEnv) {
       selectAccount: {
         page: "/me",
         shouldRedirect: ({ headers, session }) => hasOtherDeviceSession(headers, session.token),
+      },
+      // An AgentID account without the owner data that the app asks for goes back
+      // to the account page, where an AgentID sign-in requests the owner scopes.
+      signup: {
+        shouldRedirect: ({ user, scopes }) => agentidOwnerDataMissing(env, user, scopes),
       },
       postLogin: {
         page: "/me",

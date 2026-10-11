@@ -93,6 +93,8 @@ describe("Triad protected-resource metadata routing", () => {
         "cred",
         "pubkey",
         "cosekey",
+        "owner_name",
+        "owner_email",
       ],
     ],
   ])(

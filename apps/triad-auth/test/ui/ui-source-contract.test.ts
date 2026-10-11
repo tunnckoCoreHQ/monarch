@@ -68,7 +68,7 @@ describe("preserved Better Auth UI wiring", () => {
 
   it("restores provider-aware optional request controls with every option off", () => {
     expect(demo).toContain('<select id="demo-provider"');
-    expect(demo.match(/<input type="checkbox" name="demo-scope"/g)).toHaveLength(10);
+    expect(demo.match(/<input type="checkbox" name="demo-scope"/g)).toHaveLength(12);
     expect(demo).toContain('value="email"');
     expect(demo).toContain('value="handle"');
     expect(demo).toContain('value="name"');
@@ -79,6 +79,8 @@ describe("preserved Better Auth UI wiring", () => {
     expect(demo).toContain('value="cred"');
     expect(demo).toContain('value="pubkey"');
     expect(demo).toContain('value="cosekey"');
+    expect(demo).toContain('value="owner_name"');
+    expect(demo).toContain('value="owner_email"');
     expect(demo).not.toMatch(/name="demo-scope"[^>]*checked/);
     expect(demo).toContain("canonicalScopeRequest");
     expect(demo).toContain("input.checked = false");

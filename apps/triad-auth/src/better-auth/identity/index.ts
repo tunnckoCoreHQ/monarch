@@ -1,4 +1,9 @@
-export { createAgentIdAuthentication, createIdentityConfiguration } from "./configuration";
+export {
+  agentidOwnerDataMissing,
+  agentidOwnerScopes,
+  createAgentIdAuthentication,
+  createIdentityConfiguration,
+} from "./configuration";
 export { openEncryptedData, sealEncryptedData, validateEncryptionSecrets } from "./encryption";
 export { createPasskeyAuthentication } from "./passkey";
 export {

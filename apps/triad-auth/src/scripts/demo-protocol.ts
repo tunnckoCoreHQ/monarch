@@ -38,7 +38,9 @@ export type ProfileScope =
   | "chain_id"
   | "cred"
   | "pubkey"
-  | "cosekey";
+  | "cosekey"
+  | "owner_name"
+  | "owner_email";
 type DisclosureScope = "openid" | ProfileScope;
 
 export interface ProviderCapability {
@@ -58,6 +60,9 @@ export interface VerifiedProfile {
   cred?: string;
   pubkey?: PublicJwk;
   cosekey?: string;
+  ownerName?: string;
+  ownerEmail?: string;
+  ownerEmailVerified?: boolean;
 }
 
 export interface DevicePollDecision {
@@ -101,6 +106,8 @@ const profileScopeOrder: readonly ProfileScope[] = [
   "cred",
   "pubkey",
   "cosekey",
+  "owner_name",
+  "owner_email",
 ];
 const disclosureScopeOrder: readonly DisclosureScope[] = ["openid", ...profileScopeOrder];
 
@@ -110,7 +117,7 @@ export const demoProviderCapabilities: readonly ProviderCapability[] = [
   { id: "google", scopes: ["email", "name", "avatar"] },
   { id: "github", scopes: ["email", "handle", "name", "avatar"] },
   { id: "twitter", scopes: ["handle", "name", "avatar"] },
-  { id: "agentid", scopes: ["email", "handle", "name"] },
+  { id: "agentid", scopes: ["email", "handle", "name", "owner_name", "owner_email"] },
   { id: "ethereum", scopes: ["wallet", "chains", "chain_id"] },
   { id: "passkey", scopes: ["handle", "cred", "pubkey", "cosekey"] },
 ];
@@ -238,6 +245,14 @@ function verifiedProfile(payload: Record<string, unknown>): VerifiedProfile {
   if (emailVerified !== undefined && (email === undefined || typeof emailVerified !== "boolean")) {
     throw new Error("The verified token has invalid profile claims.");
   }
+  const ownerEmail = optionalString(payload, "owner_email");
+  const ownerEmailVerified = payload.owner_email_verified;
+  if (
+    ownerEmailVerified !== undefined &&
+    (ownerEmail === undefined || typeof ownerEmailVerified !== "boolean")
+  ) {
+    throw new Error("The verified token has invalid profile claims.");
+  }
 
   return {
     ...(email === undefined ? {} : { email }),
@@ -251,6 +266,9 @@ function verifiedProfile(payload: Record<string, unknown>): VerifiedProfile {
     ...optionalValue("cred", optionalString(payload, "cred")),
     ...optionalValue("pubkey", optionalPublicJwk(payload)),
     ...optionalValue("cosekey", optionalString(payload, "cosekey")),
+    ...optionalValue("ownerName", optionalString(payload, "owner_name")),
+    ...optionalValue("ownerEmail", ownerEmail),
+    ...(ownerEmailVerified === undefined ? {} : { ownerEmailVerified }),
   };
 }
 

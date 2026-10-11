@@ -7,9 +7,12 @@ import { createTriadConfiguration } from "../../src/better-auth/configuration";
 import type { TriadEnv } from "../../src/better-auth/env";
 import {
   accountSubject,
+  agentidOwnerDataMissing,
+  agentidOwnerScopes,
   createAgentIdAuthentication,
   openProfileEncryptedData,
   providerSubject,
+  sealProfileEncryptedData,
 } from "../../src/better-auth/identity";
 
 const ORIGIN = "https://auth.example.com";
@@ -85,17 +88,29 @@ function agentIdServer(userinfo: () => Response) {
   });
 }
 
-// Starts an AgentID sign-in on a fresh Triad, then returns to its callback with a code.
-async function signInThroughAgentId(
-  userinfo: () => Response = () => Response.json(AGENT_PROFILE),
-  iss = "https://auth.agentid.com",
-) {
+const APP_CALLBACK = "https://app.example.com/callback";
+
+function createTriad() {
   const memory: Record<string, Array<Record<string, unknown>>> = {
     user: [],
     account: [],
     session: [],
     verification: [],
     oauthResource: [],
+    oauthClient: [
+      {
+        id: "agent-app",
+        clientId: "agent-app",
+        redirectUris: [APP_CALLBACK],
+        scopes: ["openid", "owner_name", "owner_email"],
+        skipConsent: true,
+        tokenEndpointAuthMethod: "none",
+        grantTypes: ["authorization_code"],
+        responseTypes: ["code"],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ],
   };
   const env = createEnv();
   const auth = betterAuth({
@@ -104,11 +119,45 @@ async function signInThroughAgentId(
     rateLimit: { enabled: false },
   });
 
-  const start = await auth.handler(
+  return { auth, env, memory };
+}
+
+// Asks Triad to authorize the app without a session and returns the signed
+// query that Triad hands to its account page.
+async function signedOAuthQuery(triad: ReturnType<typeof createTriad>, scope: string) {
+  const query = new URLSearchParams({
+    response_type: "code",
+    client_id: "agent-app",
+    redirect_uri: APP_CALLBACK,
+    scope,
+    state: "app-state",
+    code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+    code_challenge_method: "S256",
+  });
+  const response = await triad.auth.handler(
+    new Request(`${ORIGIN}/api/auth/oauth2/authorize?${query}`, { redirect: "manual" }),
+  );
+
+  return new URL(response.headers.get("location") ?? "", ORIGIN).search.slice(1);
+}
+
+// Starts an AgentID sign-in, then returns to Triad's callback with a code.
+async function signInThroughAgentId(
+  triad = createTriad(),
+  {
+    userinfo = () => Response.json(AGENT_PROFILE),
+    iss = "https://auth.agentid.com",
+    oauthQuery,
+  }: { userinfo?: () => Response; iss?: string; oauthQuery?: string } = {},
+) {
+  const start = await triad.auth.handler(
     new Request(`${ORIGIN}/api/auth/sign-in/social`, {
       method: "POST",
       headers: { "content-type": "application/json", origin: ORIGIN },
-      body: JSON.stringify({ provider: "agentid", callbackURL: `${ORIGIN}/me` }),
+      body: JSON.stringify({
+        provider: "agentid",
+        ...(oauthQuery ? { oauth_query: oauthQuery } : { callbackURL: `${ORIGIN}/me` }),
+      }),
     }),
   );
   const { url } = await start.json<{ url: string }>();
@@ -117,14 +166,15 @@ async function signInThroughAgentId(
   const server = agentIdServer(userinfo);
   vi.stubGlobal("fetch", server);
   const state = authorization.searchParams.get("state") ?? "";
-  const callback = await auth.handler(
+  const callback = await triad.auth.handler(
     new Request(
       `${ORIGIN}/api/auth/callback/agentid?code=agentid-code&state=${encodeURIComponent(state)}&iss=${encodeURIComponent(iss)}`,
       { headers: { cookie: cookieHeader(start) } },
     ),
   );
+  vi.unstubAllGlobals();
 
-  return { authorization, callback, env, memory, server, start };
+  return { authorization, callback, env: triad.env, memory: triad.memory, server, start };
 }
 
 afterEach(() => {
@@ -154,9 +204,7 @@ describe("AgentID Identity Source", () => {
   });
 
   it("signs an agent in to a Triad Account through the AgentID code flow", async () => {
-    const { authorization, callback, env, memory, server, start } = await signInThroughAgentId(() =>
-      Response.json(AGENT_PROFILE),
-    );
+    const { authorization, callback, env, memory, server, start } = await signInThroughAgentId();
 
     expect(start.status).toBe(200);
     expect(`${authorization.origin}${authorization.pathname}`).toBe(
@@ -225,7 +273,7 @@ describe("AgentID Identity Source", () => {
       },
     ],
   ])("fails the sign-in cleanly when AgentID userinfo %s", async (_case, userinfo) => {
-    const { callback, memory } = await signInThroughAgentId(userinfo);
+    const { callback, memory } = await signInThroughAgentId(undefined, { userinfo });
 
     expect(callback.status).toBe(302);
     expect(callback.headers.get("location")).toContain("error=unable_to_get_user_info");
@@ -234,15 +282,102 @@ describe("AgentID Identity Source", () => {
   });
 
   it("rejects a callback whose iss is not AgentID before redeeming the code", async () => {
-    const { callback, memory, server } = await signInThroughAgentId(
-      undefined,
-      "https://attacker.example",
-    );
+    const { callback, memory, server } = await signInThroughAgentId(undefined, {
+      iss: "https://attacker.example",
+    });
 
     expect(callback.status).toBe(302);
     expect(callback.headers.get("location")).toContain("error=issuer_mismatch");
     expect(server).not.toHaveBeenCalled();
     expect(memory.user).toEqual([]);
     expect(memory.account).toEqual([]);
+  });
+
+  it("maps the Triad owner scopes to the AgentID owner scopes", () => {
+    expect(agentidOwnerScopes(["openid", "email", "owner_email", "owner_name"])).toEqual([
+      "owner_profile",
+      "owner_email",
+    ]);
+    expect(agentidOwnerScopes(["openid", "email", "handle"])).toEqual([]);
+  });
+
+  it("asks AgentID for owner scopes only when the app asks Triad for owner claims", async () => {
+    const triad = createTriad();
+    const withOwner = await signInThroughAgentId(triad, {
+      oauthQuery: await signedOAuthQuery(triad, "openid owner_email"),
+    });
+    const withoutOwner = await signInThroughAgentId();
+
+    expect(withOwner.start.status).toBe(200);
+    expect(withOwner.authorization.searchParams.get("scope")?.split(" ").toSorted()).toEqual([
+      "email",
+      "openid",
+      "owner_email",
+      "profile",
+    ]);
+    expect(withoutOwner.authorization.searchParams.get("scope")).toBe("openid email profile");
+  });
+
+  it("adds owner data from a later sign-in to the existing encrypted profile", async () => {
+    const triad = createTriad();
+    await signInThroughAgentId(triad);
+    const { callback } = await signInThroughAgentId(triad, {
+      userinfo: () =>
+        Response.json({
+          ...AGENT_PROFILE,
+          owner_name: "Agent Owner",
+          owner_email: "owner@example.com",
+          owner_email_verified: true,
+        }),
+    });
+    const accountSub = await accountSubject(IDENTIFIER_SECRET, "agentid", AGENT_SUB);
+
+    expect(callback.status).toBe(302);
+    expect(triad.memory.user).toHaveLength(1);
+    expect(JSON.stringify(triad.memory.user)).not.toContain("owner@example.com");
+    await expect(
+      openProfileEncryptedData(
+        triad.env.ENCRYPTION_SECRETS,
+        accountSub,
+        String(triad.memory.user[0]?.encryptedData),
+      ),
+    ).resolves.toEqual({
+      profileEmail: "agent@agentmail.to",
+      profileEmailVerified: true,
+      profileHandle: "agent_agentmail-to",
+      profileDisplayName: "Research Agent",
+      profileOwnerName: "Agent Owner",
+      profileOwnerEmail: "owner@example.com",
+      profileOwnerEmailVerified: true,
+    });
+  });
+
+  it("sends an AgentID account back to sign in only when requested owner data is missing", async () => {
+    const env = createEnv();
+    const id = `acc_${"a".repeat(64)}`;
+    const withoutOwner = await sealProfileEncryptedData(env.ENCRYPTION_SECRETS, id, {
+      profileEmail: "agent@agentmail.to",
+    });
+    const withOwnerEmail = await sealProfileEncryptedData(env.ENCRYPTION_SECRETS, id, {
+      profileOwnerEmail: "owner@example.com",
+    });
+    const missing = (user: Record<string, unknown>, scopes: string[]) =>
+      agentidOwnerDataMissing(env, { id, provider: "agentid", ...user }, scopes);
+
+    await expect(missing({ encryptedData: withoutOwner }, ["openid", "owner_email"])).resolves.toBe(
+      true,
+    );
+    await expect(
+      missing({ encryptedData: withOwnerEmail }, ["openid", "owner_email"]),
+    ).resolves.toBe(false);
+    await expect(
+      missing({ encryptedData: withOwnerEmail }, ["openid", "owner_name"]),
+    ).resolves.toBe(true);
+    await expect(missing({ encryptedData: withoutOwner }, ["openid", "email"])).resolves.toBe(
+      false,
+    );
+    await expect(
+      missing({ provider: "google", encryptedData: withoutOwner }, ["openid", "owner_email"]),
+    ).resolves.toBe(false);
   });
 });

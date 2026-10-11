@@ -4,6 +4,6 @@ AgentID, from AgentMail, is an OpenID Connect issuer whose subjects are AI agent
 
 No client needs agent sign-in yet. We add it because the cost is one provider block and the subject derivation is shared. AgentID is young, and we bet that agent identity providers in this shape stay. If the bet fails, we remove one provider.
 
-Triad keys the account on the AgentID `sub` and reads the profile from AgentID's userinfo endpoint. It requests `openid`, `email`, and `profile`, and it does not request the owner scopes. Making Triad an AgentID issuer itself is a larger build and stays out of scope.
+Triad keys the account on the AgentID `sub` and reads the profile from AgentID's userinfo endpoint. It requests `openid`, `email`, and `profile`. When a Client Application asks Triad for `owner_name` or `owner_email`, Triad also requests AgentID's `owner_profile` or `owner_email` scope. Owner values are stored only in the encrypted profile, like every other provider's profile data. Making Triad an AgentID issuer itself is a larger build and stays out of scope.
 
 Decided in [#161](https://github.com/tunnckoCoreHQ/monarch/issues/161).

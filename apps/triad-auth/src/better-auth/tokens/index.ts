@@ -39,6 +39,9 @@ export interface TokenProfileClaims {
   cred?: string;
   pubkey?: PublicJwk;
   cosekey?: string;
+  owner_name?: string;
+  owner_email?: string;
+  owner_email_verified?: boolean;
 }
 
 export interface TokenSessionClaimResolver {
@@ -117,11 +120,11 @@ function assignProfileClaim(
 
     return;
   }
-  if (claim === "email_verified") {
+  if (claim === "email_verified" || claim === "owner_email_verified") {
     if (typeof value !== "boolean") {
       throw new Error(`Token profile resolver returned an invalid ${claim} claim`);
     }
-    claims.email_verified = value;
+    claims[claim] = value;
 
     return;
   }
@@ -294,6 +297,9 @@ export function createTokenComposition({
       "cred",
       "pubkey",
       "cosekey",
+      "owner_name",
+      "owner_email",
+      "owner_email_verified",
     ],
   } satisfies NonNullable<OAuthOptions<Scope[]>["advertisedMetadata"]> & {
     subject_types_supported: readonly ["pairwise"];

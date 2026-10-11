@@ -19,6 +19,9 @@ export interface CapturedProfile {
   profileHandle?: string;
   profileDisplayName?: string;
   profileAvatar?: string;
+  profileOwnerName?: string;
+  profileOwnerEmail?: string;
+  profileOwnerEmailVerified?: boolean;
 }
 
 interface StoredProfileData {
@@ -27,6 +30,9 @@ interface StoredProfileData {
   handle?: string;
   name?: string;
   avatar_url?: string;
+  owner_name?: string;
+  owner_email?: string;
+  owner_email_verified?: boolean;
 }
 
 export interface ProfileIdentityUser {
@@ -44,6 +50,9 @@ export interface ProfileClaims {
   cred?: string;
   pubkey?: PublicJwk;
   cosekey?: string;
+  owner_name?: string;
+  owner_email?: string;
+  owner_email_verified?: boolean;
 }
 
 function nonEmptyString(value: unknown): string | undefined {
@@ -110,6 +119,15 @@ function storedProfileFromCaptured(profile: CapturedProfile): StoredProfileData 
   if (profile.profileAvatar !== undefined) {
     data.avatar_url = profile.profileAvatar;
   }
+  if (profile.profileOwnerName !== undefined) {
+    data.owner_name = profile.profileOwnerName;
+  }
+  if (profile.profileOwnerEmail !== undefined) {
+    data.owner_email = profile.profileOwnerEmail;
+  }
+  if (profile.profileOwnerEmailVerified !== undefined) {
+    data.owner_email_verified = profile.profileOwnerEmailVerified;
+  }
 
   return data;
 }
@@ -119,7 +137,16 @@ function capturedFromProfileData(value: unknown): CapturedProfile {
     throw new Error("Invalid profile data payload");
   }
 
-  const allowedFields = new Set(["email", "email_verified", "handle", "name", "avatar_url"]);
+  const allowedFields = new Set([
+    "email",
+    "email_verified",
+    "handle",
+    "name",
+    "avatar_url",
+    "owner_name",
+    "owner_email",
+    "owner_email_verified",
+  ]);
   if (Object.keys(value).some((field) => !allowedFields.has(field))) {
     throw new Error("Invalid profile data payload");
   }
@@ -154,6 +181,24 @@ function capturedFromProfileData(value: unknown): CapturedProfile {
       throw new Error("Invalid profile avatar payload");
     }
     profile.profileAvatar = value.avatar_url;
+  }
+  if (value.owner_name !== undefined) {
+    if (typeof value.owner_name !== "string") {
+      throw new Error("Invalid profile owner name payload");
+    }
+    profile.profileOwnerName = value.owner_name;
+  }
+  if (value.owner_email !== undefined) {
+    if (typeof value.owner_email !== "string") {
+      throw new Error("Invalid profile owner email payload");
+    }
+    profile.profileOwnerEmail = value.owner_email;
+  }
+  if (value.owner_email_verified !== undefined) {
+    if (typeof value.owner_email_verified !== "boolean") {
+      throw new Error("Invalid profile owner email verification payload");
+    }
+    profile.profileOwnerEmailVerified = value.owner_email_verified;
   }
 
   return profile;
@@ -288,6 +333,19 @@ function agentidProfile(profile: unknown): CapturedProfile {
     captured.profileDisplayName = displayName;
   }
 
+  const ownerName = nonEmptyString(profile.owner_name);
+  if (ownerName) {
+    captured.profileOwnerName = ownerName;
+  }
+
+  const ownerEmail = emailAddress(profile.owner_email);
+  if (ownerEmail) {
+    captured.profileOwnerEmail = ownerEmail;
+    if (typeof profile.owner_email_verified === "boolean") {
+      captured.profileOwnerEmailVerified = profile.owner_email_verified;
+    }
+  }
+
   return captured;
 }
 
@@ -342,6 +400,23 @@ async function resolveProfileClaims(
     const avatar = webUrl(user.profileAvatar);
     if (avatar) {
       claims.picture = avatar;
+    }
+  }
+
+  if (scopes.includes("owner_name")) {
+    const ownerName = nonEmptyString(user.profileOwnerName);
+    if (ownerName) {
+      claims.owner_name = ownerName;
+    }
+  }
+
+  if (scopes.includes("owner_email")) {
+    const ownerEmail = emailAddress(user.profileOwnerEmail);
+    if (ownerEmail) {
+      claims.owner_email = ownerEmail;
+      if (typeof user.profileOwnerEmailVerified === "boolean") {
+        claims.owner_email_verified = user.profileOwnerEmailVerified;
+      }
     }
   }
 
