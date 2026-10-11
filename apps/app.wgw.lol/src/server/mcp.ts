@@ -286,6 +286,12 @@ function writeTools(server: McpServer, api: Api): void {
                 .optional()
                 .describe("Encoding of content, default utf-8"),
               delete: z.boolean().optional().describe("True to delete the file"),
+              mode: z
+                .enum(["100644", "100755", "120000"])
+                .optional()
+                .describe(
+                  "File mode: 100644 regular, 100755 executable, 120000 symlink; defaults to the existing mode or 100644",
+                ),
             }),
           )
           .min(1),

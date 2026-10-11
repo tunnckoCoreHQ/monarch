@@ -3,7 +3,9 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { utf8 } from "../src/git/bytes";
+import type { Person } from "../src/git/objects";
 import type { GitRepo, View } from "../src/git/repo";
+import type { FileChange } from "../src/git/tree";
 import { app } from "../src/server/app";
 import { mintToken } from "../src/server/auth";
 import type { Env } from "../src/server/env";
@@ -38,11 +40,20 @@ const WRITE_TOOLS = [
   "pull_env",
 ];
 
-/** The Repo Durable Object reads the tests reach, over an in-memory git repository. */
+/** The Repo Durable Object calls the tests reach, over an in-memory git repository. */
 function fakeStub(repo: GitRepo) {
   return {
+    refs: (view: View) => guard(() => ({ refs: repo.refs(view), head: repo.storage.refs.head() })),
     tree: (view: View, rev: string, path: string) => guard(() => repo.tree(view, rev, path)),
     blob: (view: View, rev: string, path: string) => guard(() => repo.blob(view, rev, path)),
+    commitFiles: (
+      branch: string,
+      expected: string | undefined,
+      message: string,
+      who: Person,
+      files: FileChange[],
+      from?: string,
+    ) => guard(() => repo.commitFiles(branch, expected, message, who, files, from)),
   };
 }
 
@@ -96,6 +107,8 @@ beforeEach(async () => {
     COMMIT_SHA: "test",
     DB: db,
     REPO: { getByName: () => fakeStub(git) },
+    METRICS: { writeDataPoint: () => undefined },
+    EVENTS: { send: async () => undefined },
   } as unknown as Env;
   await db
     .prepare(
@@ -190,5 +203,23 @@ describe("mcp", () => {
     const owner = await connect(aliceKey);
     const file = await call(owner, "read_file", { ...repo, path: "secret/plan.md" });
     expect(JSON.parse(file.text)).toMatchObject({ path: "secret/plan.md", text: "launch plan\n" });
+  });
+
+  it("commits an executable file through commit_files", async () => {
+    const repo = { owner: "alice", name: "pub" };
+    const client = await connect(aliceKey);
+    const committed = await call(client, "commit_files", {
+      ...repo,
+      message: "add a script",
+      files: [{ path: "bin/run.sh", content: "#!/bin/sh\necho hi\n", mode: "100755" }],
+    });
+    expect(committed.failed).toBe(false);
+    expect(JSON.parse(committed.text)).toMatchObject({ branch: "main" });
+
+    const listed = await call(client, "list_tree", { ...repo, path: "bin" });
+    const items: Array<{ name: string; mode: string }> = JSON.parse(listed.text).items;
+    expect(items.map(({ name, mode }) => ({ name, mode }))).toEqual([
+      { name: "run.sh", mode: "100755" },
+    ]);
   });
 });
