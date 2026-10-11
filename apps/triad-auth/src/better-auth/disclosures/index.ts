@@ -14,7 +14,13 @@ export const DISCLOSURE_SCOPES = ["openid", ...OPTIONAL_DISCLOSURE_SCOPES] as co
 
 export type DisclosureScope = (typeof DISCLOSURE_SCOPES)[number];
 export type OptionalDisclosureScope = (typeof OPTIONAL_DISCLOSURE_SCOPES)[number];
-export type DisclosureProvider = "google" | "github" | "twitter" | "ethereum" | "passkey";
+export type DisclosureProvider =
+  | "google"
+  | "github"
+  | "twitter"
+  | "agentid"
+  | "ethereum"
+  | "passkey";
 
 export const DISCLOSURE_CLAIMS = {
   openid: ["pairwise_sub", "account_sub", "provider_sub"],
@@ -36,6 +42,7 @@ export const PROVIDER_DISCLOSURE_SCOPES = {
   google: ["email", "name", "avatar"],
   github: ["email", "handle", "name", "avatar"],
   twitter: ["handle", "name", "avatar"],
+  agentid: ["email", "handle", "name"],
   ethereum: ["wallet", "chains", "chain_id"],
   passkey: ["handle", "cred", "pubkey", "cosekey"],
 } as const satisfies Record<DisclosureProvider, readonly OptionalDisclosureScope[]>;
@@ -72,6 +79,19 @@ export const PROVIDER_UPSTREAM_SCOPE_MAP = {
     email: [],
     handle: [],
     name: [],
+    avatar: [],
+    wallet: [],
+    chains: [],
+    chain_id: [],
+    cred: [],
+    pubkey: [],
+    cosekey: [],
+  },
+  agentid: {
+    openid: ["openid"],
+    email: ["email"],
+    handle: ["profile"],
+    name: ["profile"],
     avatar: [],
     wallet: [],
     chains: [],

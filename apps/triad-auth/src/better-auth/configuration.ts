@@ -13,6 +13,7 @@ import {
 } from "./disclosures";
 import type { TriadEnv } from "./env";
 import {
+  createAgentIdAuthentication,
   createIdentityConfiguration,
   createEthereumAuthentication,
   createPasskeyAuthentication,
@@ -85,6 +86,7 @@ export function createTriadConfiguration(env: TriadEnv) {
     ...resourceFragment.betterAuthPlugins,
     createTriadDeviceAuthorization(env),
     createEthereumAuthentication(env),
+    createAgentIdAuthentication(env),
     createPasskeyAuthentication(env),
     walletBrokerPlugin,
     multiSession(),

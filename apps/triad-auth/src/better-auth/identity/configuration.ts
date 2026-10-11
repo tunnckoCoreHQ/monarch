@@ -1,4 +1,5 @@
 import type { Account, BetterAuthOptions } from "better-auth";
+import { genericOAuth, type GenericOAuthUserInfo } from "better-auth/plugins";
 
 import { isRecord } from "../../utils";
 import type { TriadEnv } from "../env";
@@ -13,13 +14,15 @@ import {
 } from "./subjects";
 
 const ACCOUNT_SUB_PATTERN = /^acc_[0-9a-f]{64}$/;
-const GOOGLE_SUB_PATTERN = /^[\x21-\x7e]{1,255}$/;
+const OIDC_SUB_PATTERN = /^[\x21-\x7e]{1,255}$/;
 const DECIMAL_ID_PATTERN = /^[1-9][0-9]*$/;
 const SIWE_CHAIN_ID_FIELD = "Chain ID: ";
+const AGENTID_ISSUER = "https://auth.agentid.com";
 const IDENTITY_PROVIDERS: AuthenticationProvider[] = [
   "google",
   "github",
   "twitter",
+  "agentid",
   "ethereum",
   "passkey",
 ];
@@ -36,7 +39,7 @@ function invalidUpstreamId(provider: SocialProvider): Error {
 
 function googleUpstreamId(profile: unknown): string {
   const upstreamId = isRecord(profile) ? profile.sub : undefined;
-  if (typeof upstreamId !== "string" || !GOOGLE_SUB_PATTERN.test(upstreamId)) {
+  if (typeof upstreamId !== "string" || !OIDC_SUB_PATTERN.test(upstreamId)) {
     throw invalidUpstreamId("google");
   }
 
@@ -63,6 +66,39 @@ function twitterUpstreamId(profile: unknown): string {
   }
 
   return upstreamId;
+}
+
+function agentidUpstreamId(profile: unknown): string {
+  const upstreamId = isRecord(profile) ? profile.sub : undefined;
+  if (typeof upstreamId !== "string" || !OIDC_SUB_PATTERN.test(upstreamId)) {
+    throw invalidUpstreamId("agentid");
+  }
+
+  return upstreamId;
+}
+
+// The access token comes from Triad's own code exchange, so the userinfo
+// response is the profile. Triad does not read the ID token.
+async function agentidUserInfo(accessToken: string | undefined) {
+  if (!accessToken) {
+    return null;
+  }
+
+  const response = await fetch(`${AGENTID_ISSUER}/v0/userinfo`, {
+    headers: { accept: "application/json", authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    return null;
+  }
+
+  const profile: unknown = await response.json();
+
+  return isRecord(profile)
+    ? ({
+        ...profile,
+        emailVerified: profile.email_verified === true,
+      } satisfies GenericOAuthUserInfo)
+    : null;
 }
 
 async function mapIdentity(
@@ -361,4 +397,42 @@ export function createIdentityConfiguration(env: TriadEnv) {
       },
     },
   } satisfies BetterAuthOptions;
+}
+
+// AgentID is not a built-in Better Auth provider. Generic OAuth registers it
+// as a social provider, so it uses `/sign-in/social` and `/callback/agentid`.
+// The endpoints are fixed because Triad builds Better Auth on every request,
+// and discovery would fetch the AgentID metadata each time.
+export function createAgentIdAuthentication(env: TriadEnv) {
+  const clientId = env.AGENTID_CLIENT_ID?.trim();
+  const clientSecret = env.AGENTID_CLIENT_SECRET?.trim();
+
+  return genericOAuth({
+    config:
+      clientId && clientSecret
+        ? [
+            {
+              providerId: "agentid",
+              name: "AgentID",
+              clientId,
+              clientSecret,
+              authentication: "basic",
+              authorizationUrl: `${AGENTID_ISSUER}/v0/authorize`,
+              tokenUrl: `${AGENTID_ISSUER}/v0/token`,
+              accountIssuer: AGENTID_ISSUER,
+              scopes: ["openid", "email", "profile"],
+              getUserInfo: (tokens) => agentidUserInfo(tokens.accessToken),
+              accountSubject: ({ profile }) => agentidUpstreamId(profile),
+              mapProfileToUser: (profile) =>
+                mapIdentity(
+                  env.IDENTIFIER_SECRET,
+                  "agentid",
+                  agentidUpstreamId(profile),
+                  captureProviderProfile("agentid", profile),
+                  env.ENCRYPTION_SECRETS,
+                ),
+            },
+          ]
+        : [],
+  });
 }

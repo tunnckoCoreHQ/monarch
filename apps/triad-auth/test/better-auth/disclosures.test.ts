@@ -83,6 +83,7 @@ describe("downstream disclosure scope policy", () => {
       google: ["email", "name", "avatar"],
       github: ["email", "handle", "name", "avatar"],
       twitter: ["handle", "name", "avatar"],
+      agentid: ["email", "handle", "name"],
       ethereum: ["wallet", "chains", "chain_id"],
       passkey: ["handle", "cred", "pubkey", "cosekey"],
     });
@@ -148,6 +149,19 @@ describe("downstream disclosure scope policy", () => {
         pubkey: [],
         cosekey: [],
       },
+      agentid: {
+        openid: ["openid"],
+        email: ["email"],
+        handle: ["profile"],
+        name: ["profile"],
+        avatar: [],
+        wallet: [],
+        chains: [],
+        chain_id: [],
+        cred: [],
+        pubkey: [],
+        cosekey: [],
+      },
       ethereum: {
         openid: [],
         email: [],
@@ -186,6 +200,10 @@ describe("downstream disclosure scope policy", () => {
     expect(upstreamScopesForProvider("twitter", ["openid", "avatar"])).toEqual([
       "tweet.read",
       "users.read",
+    ]);
+    expect(upstreamScopesForProvider("agentid", ["openid", "handle", "name"])).toEqual([
+      "openid",
+      "profile",
     ]);
   });
 });

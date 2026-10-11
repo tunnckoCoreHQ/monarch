@@ -1,6 +1,6 @@
 import { toHex } from "viem";
 
-export const SOCIAL_PROVIDERS = ["google", "github", "twitter"] as const;
+export const SOCIAL_PROVIDERS = ["google", "github", "twitter", "agentid"] as const;
 
 export type SocialProvider = (typeof SOCIAL_PROVIDERS)[number];
 export type AuthenticationProvider = SocialProvider | "ethereum" | "passkey";

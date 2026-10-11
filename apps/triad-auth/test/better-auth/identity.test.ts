@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { TriadEnv } from "../../src/better-auth/env";
 import {
   accountSubject,
+  createAgentIdAuthentication,
   createIdentityConfiguration,
   openProfileEncryptedData,
   type SocialProvider,
@@ -28,6 +29,8 @@ function createEnv(): TriadEnv {
     GITHUB_CLIENT_SECRET: "github-client-secret",
     TWITTER_CLIENT_ID: "twitter-client-id",
     TWITTER_CLIENT_SECRET: "twitter-client-secret",
+    AGENTID_CLIENT_ID: "agentid-client-id",
+    AGENTID_CLIENT_SECRET: "agentid-client-secret",
   };
 }
 
@@ -51,7 +54,10 @@ function profileMapper(
   configuration: ReturnType<typeof createIdentityConfiguration>,
   provider: SocialProvider,
 ) {
-  const configuredProvider = configuration.socialProviders[provider];
+  const configuredProvider =
+    provider === "agentid"
+      ? createAgentIdAuthentication(createEnv()).options.config[0]
+      : configuration.socialProviders[provider];
   if (!configuredProvider || typeof configuredProvider === "function") {
     throw new Error(`Expected ${provider} to be configured`);
   }
@@ -147,6 +153,11 @@ describe("Triad provider identity configuration", () => {
       "987654",
       { data: { id: "987654", name: "Twitter User", username: "twitter-user" } },
     ],
+    [
+      "agentid",
+      "agentid-subject",
+      { sub: "agentid-subject", email: "same@example.com", email_verified: true },
+    ],
   ] as const)(
     "maps %s profiles to opaque IDs and synthetic email",
     async (provider, upstreamId, profile) => {
@@ -223,6 +234,24 @@ describe("Triad provider identity configuration", () => {
         profileAvatar: "https://images.example.com/twitter.png",
       },
     ],
+    [
+      "agentid",
+      {
+        sub: "agentid-subject",
+        email: "agent@agentmail.to",
+        email_verified: true,
+        preferred_username: "agent_agentmail-to",
+        name: "Research Agent",
+        owner_sub: "owner-subject",
+        picture: "https://images.example.com/agent.png",
+      },
+      {
+        profileEmail: "agent@agentmail.to",
+        profileEmailVerified: true,
+        profileHandle: "agent_agentmail-to",
+        profileDisplayName: "Research Agent",
+      },
+    ],
   ] as const)(
     "captures supported %s profile fields separately",
     async (provider, profile, expected) => {
@@ -276,6 +305,9 @@ describe("Triad provider identity configuration", () => {
     ["twitter", { data: {} }],
     ["twitter", { data: { id: "01" } }],
     ["twitter", { data: { id: 123456 } }],
+    ["agentid", {}],
+    ["agentid", { sub: "" }],
+    ["agentid", { sub: 123456 }],
   ] as const)("rejects a malformed %s immutable upstream ID", (provider, profile) => {
     const configuration = createIdentityConfiguration(createEnv());
     const mapProfile = profileMapper(configuration, provider);

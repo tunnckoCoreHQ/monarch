@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
         AUTH_ORIGIN: bindings.text<string>(`https://${host}`),
         DB: bindings.d1(target.database),
         ASSETS: bindings.assets(),
-        // The ten secrets live on each Worker; `.env` holds local values.
+        // The twelve secrets live on each Worker; `.env` holds local values.
         BETTER_AUTH_SECRET: bindings.secret(),
         IDENTIFIER_SECRET: bindings.secret(),
         RATE_LIMIT_SECRET: bindings.secret(),
@@ -52,6 +52,8 @@ export default defineConfig(({ mode }) => {
         GITHUB_CLIENT_SECRET: bindings.secret(),
         TWITTER_CLIENT_ID: bindings.secret(),
         TWITTER_CLIENT_SECRET: bindings.secret(),
+        AGENTID_CLIENT_ID: bindings.secret(),
+        AGENTID_CLIENT_SECRET: bindings.secret(),
       },
     },
   };

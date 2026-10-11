@@ -264,6 +264,33 @@ function twitterProfile(profile: unknown): CapturedProfile {
   return captured;
 }
 
+function agentidProfile(profile: unknown): CapturedProfile {
+  if (!isRecord(profile)) {
+    return {};
+  }
+
+  const captured: CapturedProfile = {};
+  const email = emailAddress(profile.email);
+  if (email) {
+    captured.profileEmail = email;
+    if (typeof profile.email_verified === "boolean") {
+      captured.profileEmailVerified = profile.email_verified;
+    }
+  }
+
+  const handle = nonEmptyString(profile.preferred_username);
+  if (handle) {
+    captured.profileHandle = handle;
+  }
+
+  const displayName = nonEmptyString(profile.name);
+  if (displayName) {
+    captured.profileDisplayName = displayName;
+  }
+
+  return captured;
+}
+
 export function captureProviderProfile(
   provider: SocialProvider,
   profile: unknown,
@@ -273,6 +300,9 @@ export function captureProviderProfile(
   }
   if (provider === "github") {
     return githubProfile(profile);
+  }
+  if (provider === "agentid") {
+    return agentidProfile(profile);
   }
 
   return twitterProfile(profile);
