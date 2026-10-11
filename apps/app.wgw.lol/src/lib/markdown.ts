@@ -1,8 +1,6 @@
 import { Marked } from "marked";
 
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
-}
+import { escapeHtml } from "./utils";
 
 function safeUrl(href: string): string | null {
   const value = href.trim();

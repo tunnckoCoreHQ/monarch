@@ -49,8 +49,11 @@ export default defineConfig({
       }),
       // Accounts, tokens, repository metadata, pull requests, environments, and activity.
       DB: bindings.d1({ name: "app-wgw-lol", id: "083f7b02-3ae2-49bd-b7f2-184d2927fec2" }),
-      // Mirror objects over 1 MB, which do not fit in a Durable Object SQLite row.
+      // Mirror objects over 1 MB, which do not fit in a Durable Object SQLite row, and the
+      // rendered repository preview cards.
       GIT: bindings.r2({ name: "app-wgw-lol-git" }),
+      // Browser Rendering: draws a public repository's preview card, once per push.
+      BROWSER: bindings.browser(),
       // Short-lived sign-in state and passkey challenges.
       CACHE: bindings.kv({ id: "62b8e0bae315469ab347a692df78bf79" }),
       // Pull request summaries and code search embeddings.

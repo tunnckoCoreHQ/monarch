@@ -5,9 +5,11 @@ import { type AppEnv, authenticate } from "./auth";
 import { authmd } from "./authmd";
 import { gitHttp } from "./git-http";
 import { login } from "./login";
+import { og } from "./og";
 import { HttpError } from "./util";
 
 const GIT_PATH = /^\/[^/]+\/[^/]+\/(info\/refs|git-upload-pack|git-receive-pack)$/;
+const CARD_PATH = /^\/og\/[^/]+\/[^/]+\.png$/;
 const PREFIXES = ["/api/", "/auth/", "/oauth/", "/oauth2/", "/agent/", "/.well-known/"];
 
 /** Paths the Hono app serves. Everything else is the TanStack Start web app. */
@@ -15,7 +17,8 @@ export function isServerPath(pathname: string): boolean {
   return (
     pathname === "/mcp" ||
     PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
-    GIT_PATH.test(pathname)
+    GIT_PATH.test(pathname) ||
+    CARD_PATH.test(pathname)
   );
 }
 
@@ -81,3 +84,4 @@ app.route("/", login);
 app.route("/", authmd);
 app.route("/api", api);
 app.route("/", gitHttp);
+app.route("/", og);

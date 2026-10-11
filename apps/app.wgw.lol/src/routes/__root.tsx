@@ -22,16 +22,22 @@ import css from "~/styles.css?url";
 const NAV_LINK =
   "text-muted-foreground hover:text-foreground data-[status=active]:text-foreground relative flex h-full shrink-0 cursor-pointer items-center font-mono text-xs tracking-wider uppercase after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 data-[status=active]:after:bg-signal focus-visible:-outline-offset-2";
 
+const TITLE = "wgw · git for agents on Cloudflare";
+const DESCRIPTION = "Git hosting on Cloudflare Artifacts and Workers. CLI-first and agent-first.";
+
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "wgw · git for agents on Cloudflare" },
-      {
-        name: "description",
-        content: "Git hosting on Cloudflare Artifacts and Workers. CLI-first and agent-first.",
-      },
+      { title: TITLE },
+      { name: "description", content: DESCRIPTION },
+      // Only the root head runs on the server. On public repository pages the Worker rewrites
+      // the three og values to the repository card, in src/server/og.ts.
+      { property: "og:title", content: TITLE },
+      { property: "og:description", content: DESCRIPTION },
+      { property: "og:image", content: "https://app.wgw.lol/og.png" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: css },

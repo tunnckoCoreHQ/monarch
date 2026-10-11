@@ -137,7 +137,7 @@ function RepoSettings() {
   };
 
   return (
-    <Page className="flex max-w-4xl flex-col gap-14">
+    <Page className="flex flex-col gap-14 *:max-w-4xl">
       {isAdmin ? null : (
         <p className="text-muted-foreground border-l-2 px-4 py-2 font-mono text-xs">
           Only admins can change these settings. You can read them.

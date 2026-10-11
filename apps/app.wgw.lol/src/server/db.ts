@@ -198,6 +198,8 @@ export const RESERVED = new Set([
   "admin",
   "assets",
   "static",
+  "og",
+  "og.png",
   "skill.md",
   "auth.md",
   "llms.txt",
