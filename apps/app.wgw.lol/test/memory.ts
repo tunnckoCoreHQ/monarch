@@ -10,6 +10,7 @@ export function memoryRepo(): GitRepo {
   const refs = new Map<string, string>();
   const commits = new Map<string, string>();
   const trees = new Map<string, string>();
+  const shallow = new Set<string>();
   let head = "refs/heads/main";
   const storage: Storage = {
     objects: {
@@ -64,6 +65,15 @@ export function memoryRepo(): GitRepo {
           zdata: object.zdata,
         });
       }
+    },
+    shallow: {
+      list: () => [...shallow],
+      add: (sha) => {
+        shallow.add(sha);
+      },
+      delete: (sha) => {
+        shallow.delete(sha);
+      },
     },
     transaction: (run) => run(),
   };

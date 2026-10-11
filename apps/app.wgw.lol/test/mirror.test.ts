@@ -328,6 +328,8 @@ describe("Mirror against real git", () => {
     ]);
     requests.length = 0;
     await mirror.pushLocal(update);
+    // pushLocal leaves publishing to the caller.
+    await mirror.publish();
     expect(full.storage.refs.get(MAIN)).toBe(sha);
     // The commit, the root tree, api/, and the blob.
     expect(packCount(lastRequest("/full.git/git-receive-pack")?.body)).toBe(4);
@@ -395,6 +397,7 @@ describe("Mirror against real git", () => {
       time: person.time + 60,
     });
     await mirror.pushLocal(merged.update);
+    await mirror.publish();
     expect(full.storage.refs.get(MAIN)).toBe(merged.sha);
 
     await git(src, "fetch", "-q", `${base}/full.git`, "main");
@@ -442,6 +445,8 @@ describe("Mirror against real git", () => {
     gate.resolve(undefined);
     await pushed;
     expect(full.storage.refs.get(MAIN)).toBe(write.sha);
+    // The caller publishes after the push, as the Repo Durable Object does.
+    await racer.publish();
     expect(pub.storage.refs.get(MAIN)).toBe(
       local.refs("public").find((ref) => ref.name === MAIN)?.sha,
     );
@@ -497,6 +502,32 @@ describe("Mirror against real git", () => {
       full.log("full", tip, 1000).map((commit) => commit.sha),
     );
     // Every object reachable from the tips arrived.
+    const tips = full.storage.refs.list().map((ref) => ref.sha);
+    expect(planPack(fresh.storage.objects, tips, []).objects.toSorted()).toEqual(
+      planPack(full.storage.objects, tips, []).objects.toSorted(),
+    );
+  });
+
+  it("resumes a fetch that stopped between rounds before it moves any ref", async () => {
+    const fresh = memoryRepo();
+    let rounds = 0;
+    // The second fetch round fails, as a dropped connection would.
+    const flaky = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).endsWith("/full.git/git-upload-pack") && ++rounds === 2) {
+        throw new TypeError("network connection lost");
+      }
+      return fetch(input, init);
+    }) as typeof fetch;
+    const broken = new Mirror(fresh, fresh.storage, remotes, flaky, { fetchDepth: 2 });
+    await expect(broken.refresh()).rejects.toThrow();
+    // The tip arrived, but its history did not, so no ref points at it yet.
+    expect(fresh.storage.refs.list()).toEqual([]);
+    expect(fresh.storage.shallow.list().length).toBeGreaterThan(0);
+
+    const resumed = new Mirror(fresh, fresh.storage, remotes, undefined, { fetchDepth: 2 });
+    await resumed.refresh();
+    expect(fresh.storage.shallow.list()).toEqual([]);
+    expect(fresh.storage.refs.list()).toEqual(full.storage.refs.list());
     const tips = full.storage.refs.list().map((ref) => ref.sha);
     expect(planPack(fresh.storage.objects, tips, []).objects.toSorted()).toEqual(
       planPack(full.storage.objects, tips, []).objects.toSorted(),

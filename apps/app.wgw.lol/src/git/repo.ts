@@ -41,10 +41,21 @@ export interface RefStore {
   setHead(name: string): void;
 }
 
+export interface ShallowStore {
+  list(): string[];
+  add(sha: string): void;
+  delete(sha: string): void;
+}
+
 export interface Storage {
   objects: ObjectStore;
   refs: RefStore;
   memo: ProjectionMemo;
+  /**
+   * Commits a mirror fetched without their parents yet. A fetch that stops between rounds leaves
+   * them here, and the next fetch resumes from them before it moves any ref.
+   */
+  shallow: ShallowStore;
   /** Loads the zlib stream of an object kept outside the store. */
   loadExternal(sha: string): Promise<Uint8Array>;
   /** Saves objects from a push or import; may move large blobs out of the store. */

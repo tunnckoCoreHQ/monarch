@@ -80,6 +80,7 @@ export class Repo extends DurableObject<Env> {
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS projected_commits (sha TEXT PRIMARY KEY, projected TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS projected_trees (key TEXT PRIMARY KEY, projected TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS shallow (sha TEXT PRIMARY KEY);
     `);
     this.repoId = this.meta("repo_id") ?? "";
     this.repo = new GitRepo(this.storage());
@@ -244,6 +245,19 @@ export class Repo extends DurableObject<Env> {
             );
           }
         });
+      },
+      shallow: {
+        list: () =>
+          sql
+            .exec<{ sha: string }>("SELECT sha FROM shallow")
+            .toArray()
+            .map((row) => row.sha),
+        add: (sha) => {
+          sql.exec("INSERT OR IGNORE INTO shallow (sha) VALUES (?)", sha);
+        },
+        delete: (sha) => {
+          sql.exec("DELETE FROM shallow WHERE sha = ?", sha);
+        },
       },
       transaction: (run) => this.ctx.storage.transactionSync(run),
     };
@@ -430,17 +444,42 @@ export class Repo extends DurableObject<Env> {
    */
   sync(): Promise<Result<SyncResult>> {
     return guard(async () => {
-      const mirror = this.getMirror();
-      const updates = await mirror.refresh();
+      const updates = await this.getMirror().refresh();
       this.setMeta("synced_at", String(Date.now()));
-      try {
-        await mirror.publish();
-        return { updates, publishError: null };
-      } catch (error) {
-        console.error(`publish failed for ${this.repoId}`, error);
-        return { updates, publishError: error instanceof Error ? error.message : String(error) };
-      }
+      return { updates, publishError: await this.publish() };
     });
+  }
+
+  /**
+   * Publishes the public projection and keeps the repo's note in D1 in step with the result: a
+   * failure shows "public view not published" on the repo page, and the next success clears it.
+   * Returns the failure, or null.
+   */
+  private async publish(): Promise<string | null> {
+    let failure: string | null = null;
+    try {
+      await this.getMirror().publish();
+    } catch (error) {
+      console.error(`publish failed for ${this.repoId}`, error);
+      failure = error instanceof Error ? error.message : String(error);
+    }
+    if (failure !== (this.meta("publish_error") ?? null)) {
+      if (failure === null) {
+        this.sql.exec("DELETE FROM meta WHERE key = 'publish_error'");
+      } else {
+        this.setMeta("publish_error", failure);
+      }
+      // Only a ready repo shows the note; the RepoReady workflow writes it for the others.
+      await this.env.DB.prepare(
+        "UPDATE repos SET status_detail = ? WHERE id = ? AND status = 'ready'",
+      )
+        .bind(
+          failure === null ? null : `public view not published: ${failure}`.slice(0, 500),
+          this.repoId,
+        )
+        .run();
+    }
+    return failure;
   }
 
   /** Syncs before a read when the mirror may be stale. A failed sync keeps the last mirror. */
@@ -467,6 +506,8 @@ export class Repo extends DurableObject<Env> {
         await mirror.refresh();
         const result = run();
         await mirror.pushLocal(result.update);
+        // The write landed; a failed publish only delays the public view and is noted on the repo.
+        await this.publish();
         this.setMeta("synced_at", String(Date.now()));
         return result;
       }),

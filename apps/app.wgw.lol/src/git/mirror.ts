@@ -70,15 +70,36 @@ export class Mirror {
 
   /**
    * Fetches the objects for `wants` in rounds of at most FETCH_DEPTH commits, so a long history
-   * never has to fit in one pack. After each round, the commits whose parents are still missing
-   * are the next wants, and they are sent back as `shallow` lines so the remote skips the trees
-   * and blobs this run already has.
+   * never has to fit in one pack. Commits that arrive without their parents are recorded in
+   * `storage.shallow` before their objects are saved, and sent back as `shallow` lines so the
+   * remote skips the trees and blobs already here. Their missing parents are the next wants. A
+   * fetch that stops between rounds leaves that record, and the next one resumes from it.
    */
   private async fetchObjects(wants: string[], haves: string[]): Promise<void> {
-    const { objects } = this.storage;
+    const { objects, shallow } = this.storage;
+    const missingParents = (): string[] => {
+      const owed = new Set<string>();
+      for (const sha of shallow.list()) {
+        const commit = objects.read(sha);
+        if (commit === undefined) {
+          // Recorded, but its objects never got saved; its descendant is refetched instead.
+          shallow.delete(sha);
+          continue;
+        }
+        const parents = parseCommit(commit.content).parents.filter(
+          (parent) => !objects.has(parent),
+        );
+        if (parents.length === 0) {
+          shallow.delete(sha);
+        }
+        for (const parent of parents) {
+          owed.add(parent);
+        }
+      }
+      return [...owed];
+    };
     const fetched: string[] = [];
-    const boundary = new Set<string>();
-    let pending = wants;
+    let pending = [...new Set([...wants, ...missingParents()])];
     let depth = this.depth;
     while (pending.length > 0) {
       let parsed;
@@ -86,12 +107,9 @@ export class Mirror {
         const pack = await fetchPack(
           this.remotes.full,
           pending,
-          [...haves, ...fetched],
+          [...haves, ...shallow.list(), ...fetched],
           this.fetcher,
-          {
-            depth,
-            shallow: [...boundary],
-          },
+          { depth, shallow: shallow.list() },
         );
         parsed = pack.length > 0 ? parsePack(pack, (sha) => objects.read(sha)) : [];
       } catch (error) {
@@ -110,39 +128,28 @@ export class Mirror {
         }
         throw error;
       }
-      await this.storage.saveObjects(parsed);
-      const next = new Set<string>();
+      const arrived = new Set(parsed.map((object) => object.sha));
+      const extra: string[] = [];
       for (const object of parsed) {
         if (object.type === "tag") {
           const target = parseTag(object.content).object;
-          if (!objects.has(target)) {
-            next.add(target);
+          if (!objects.has(target) && !arrived.has(target)) {
+            extra.push(target);
           }
         } else if (object.type === "commit") {
           fetched.push(object.sha);
-          const missing = parseCommit(object.content).parents.filter(
-            (parent) => !objects.has(parent),
-          );
-          if (missing.length > 0) {
-            boundary.add(object.sha);
-            for (const parent of missing) {
-              next.add(parent);
-            }
+          const parents = parseCommit(object.content).parents;
+          if (parents.some((parent) => !objects.has(parent) && !arrived.has(parent))) {
+            shallow.add(object.sha);
           }
         }
       }
-      for (const sha of boundary) {
-        if (
-          parseCommit(objects.read(sha)!.content).parents.every((parent) => objects.has(parent))
-        ) {
-          boundary.delete(sha);
-        }
-      }
+      await this.storage.saveObjects(parsed);
       const unsent = pending.find((sha) => !objects.has(sha));
       if (unsent !== undefined) {
         throw new GitError(`the full remote did not send ${unsent}`, 502);
       }
-      pending = [...next];
+      pending = [...new Set([...missingParents(), ...extra])];
       depth = this.depth;
     }
   }
@@ -159,13 +166,17 @@ export class Mirror {
       }
     }
     const wants = [...new Set(target.values())].filter((sha) => !objects.has(sha));
-    if (wants.length > 0) {
+    // A fetch that stopped between rounds left commits without parents; finish it first.
+    if (wants.length > 0 || this.storage.shallow.list().length > 0) {
       // Local refs always have their whole history here, so their tips are safe haves.
       const haves = refs
         .list()
         .map((ref) => ref.sha)
         .filter((sha) => objects.has(sha));
       await this.fetchObjects(wants, haves);
+      if (this.storage.shallow.list().length > 0) {
+        throw new GitError("the full remote history is still incomplete", 502);
+      }
     }
     const updates = this.storage.transaction(() => {
       const changed: RefUpdate[] = [];
@@ -254,7 +265,7 @@ export class Mirror {
    * (reachable from update.new, not from update.old or the remote's other tips). It reads the
    * remote's refs first and fails with GitError 409 when update.ref is no longer at update.old. On
    * failure, restores the local ref to update.old (when it still points at update.new) and
-   * rethrows. On success, calls publish(), whose errors propagate with the local ref kept.
+   * rethrows. It does not publish; the caller publishes after a successful push.
    */
   async pushLocal(update: RefUpdate): Promise<void> {
     this.pushing.set(update.ref, (this.pushing.get(update.ref) ?? 0) + 1);
@@ -284,13 +295,6 @@ export class Mirror {
       } else {
         this.pushing.set(update.ref, left);
       }
-    }
-    // The write landed in the full repo. A failed publish only delays the public view: the next
-    // sync publishes again, so it must not turn a successful write into an error.
-    try {
-      await this.publish();
-    } catch (error) {
-      console.error(`publish after ${update.ref} failed`, error);
     }
   }
 
