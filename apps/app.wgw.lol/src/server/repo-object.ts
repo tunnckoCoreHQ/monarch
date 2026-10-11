@@ -109,7 +109,8 @@ export class Repo extends DurableObject<Env> {
       CREATE TABLE IF NOT EXISTS projected_trees (key TEXT PRIMARY KEY, projected TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS shallow (sha TEXT PRIMARY KEY);
       CREATE TABLE IF NOT EXISTS pushes (id INTEGER PRIMARY KEY AUTOINCREMENT, run INTEGER NOT NULL, ref TEXT NOT NULL, old TEXT NOT NULL, new TEXT NOT NULL, actor_id TEXT);
-      CREATE TABLE IF NOT EXISTS push_claims (ref TEXT NOT NULL, new TEXT NOT NULL, actor_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (ref, new));
+      DROP TABLE IF EXISTS push_claims;
+      CREATE TABLE IF NOT EXISTS claims (id TEXT NOT NULL, ref TEXT NOT NULL, new TEXT NOT NULL, actor_id TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (id, ref));
     `);
     this.repoId = this.meta("repo_id") ?? "";
     this.repo = new GitRepo(this.storage());
@@ -428,40 +429,36 @@ export class Repo extends DurableObject<Env> {
 
   /**
    * Says who is about to push which refs. The git proxy calls this before it forwards a push, so
-   * whichever sync records the push, from the proxy or from the queue, knows the pusher.
+   * whichever sync records the push, from the proxy or from the queue, knows the pusher. Returns
+   * the claim's id; each push request has its own.
    */
-  claimPush(actorId: string, commands: PushCommand[]): Promise<Result<null>> {
+  claimPush(actorId: string, commands: PushCommand[]): Promise<Result<string>> {
     return guard(() => {
+      const id = crypto.randomUUID();
       const at = Date.now();
-      this.sql.exec("DELETE FROM push_claims WHERE at < ?", at - CLAIM_MS);
+      this.sql.exec("DELETE FROM claims WHERE at < ?", at - CLAIM_MS);
       for (const command of commands) {
         this.sql.exec(
-          "INSERT INTO push_claims (ref, new, actor_id, at) VALUES (?, ?, ?, ?) ON CONFLICT (ref, new) DO UPDATE SET actor_id = excluded.actor_id, at = excluded.at",
+          "INSERT INTO claims (id, ref, new, actor_id, at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (id, ref) DO NOTHING",
+          id,
           command.ref,
           command.new,
           actorId,
           at,
         );
       }
-      return null;
+      return id;
     });
   }
 
   /**
-   * Drops the claims a push left behind. The proxy calls this after its own sync, which has seen
-   * every update of that push that Artifacts accepted, so what remains belongs to updates
-   * Artifacts refused. A later direct push of the same ref and commit then has no pusher.
+   * Drops what is left of one push request's claim. The proxy calls this after its own sync, which
+   * has seen every update of that push that Artifacts accepted, so what remains belongs to updates
+   * Artifacts refused. Claims of other requests, a retry of the same push among them, stay.
    */
-  releaseClaims(actorId: string, commands: PushCommand[]): Promise<Result<null>> {
+  releaseClaims(id: string): Promise<Result<null>> {
     return guard(() => {
-      for (const command of commands) {
-        this.sql.exec(
-          "DELETE FROM push_claims WHERE ref = ? AND new = ? AND actor_id = ?",
-          command.ref,
-          command.new,
-          actorId,
-        );
-      }
+      this.sql.exec("DELETE FROM claims WHERE id = ?", id);
       return null;
     });
   }
@@ -471,9 +468,10 @@ export class Repo extends DurableObject<Env> {
     const run = Number(this.meta("push_run") ?? 0) + 1;
     this.setMeta("push_run", String(run));
     for (const update of updates) {
+      // The oldest fresh claim: when a push is retried, the first request is the one that landed.
       const claim = this.sql
         .exec<{ actor_id: string }>(
-          "DELETE FROM push_claims WHERE ref = ? AND new = ? AND at >= ? RETURNING actor_id",
+          "DELETE FROM claims WHERE rowid = (SELECT rowid FROM claims WHERE ref = ? AND new = ? AND at >= ? ORDER BY at LIMIT 1) RETURNING actor_id",
           update.ref,
           update.new,
           Date.now() - CLAIM_MS,
