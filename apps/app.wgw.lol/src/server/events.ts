@@ -1,6 +1,6 @@
 import { findRepoById } from "./db";
 import type { Env } from "./env";
-import { indexRepo, isIndexMessage } from "./search";
+import { isIndexMessage } from "./search";
 
 const API = "https://api.cloudflare.com/client/v4";
 
@@ -115,7 +115,11 @@ export async function handleEvents(batch: MessageBatch, env: Env): Promise<void>
   for (const message of batch.messages) {
     if (isIndexMessage(message.body)) {
       try {
-        await indexRepo(env, message.body.repoId);
+        // Through the repository's Durable Object, which runs one index at a time.
+        const indexed = await env.REPO.getByName(message.body.repoId).index();
+        if (!indexed.ok) {
+          throw new Error(indexed.error);
+        }
         message.ack();
       } catch (error) {
         console.error(`search index of ${message.body.repoId} failed`, error);

@@ -4,7 +4,7 @@ import type { Access } from "./auth";
 import { findRepoById, type RepoRow } from "./db";
 import type { Env } from "./env";
 import type { Result } from "./result";
-import { sha256 } from "./util";
+import { now, sha256 } from "./util";
 
 const MODEL = "@cf/baai/bge-base-en-v1.5";
 /** Chunks hold whole lines, about this many characters each. */
@@ -259,9 +259,11 @@ export interface IndexResult {
 
 /**
  * Brings the search index up to the default branch tip. Only files whose blob or visibility
- * changed are embedded again, and files that left the tip lose their vectors.
+ * changed are embedded again, and files that left the tip lose their vectors. Runs only through
+ * the repository's Durable Object, one run at a time, so two runs never interleave their writes.
  */
 export async function indexRepo(env: Env, repoId: string): Promise<IndexResult> {
+  const startedAt = now();
   const repo = await findRepoById(env, repoId);
   if (repo === null || repo.status !== "ready") {
     return { embedded: 0, removed: 0, more: false };
@@ -348,6 +350,13 @@ export async function indexRepo(env: Env, repoId: string): Promise<IndexResult> 
   const more = next < pending.length;
   if (more) {
     await enqueueIndex(env, repoId);
+  } else {
+    // Caught up with everything pushed before this run started.
+    await env.DB.prepare(
+      "INSERT INTO search_index (repo_id, indexed_at, visibility) VALUES (?, ?, ?) ON CONFLICT (repo_id) DO UPDATE SET indexed_at = excluded.indexed_at, visibility = excluded.visibility",
+    )
+      .bind(repoId, startedAt, repo.visibility)
+      .run();
   }
   return { embedded, removed: gone.length, more };
 }

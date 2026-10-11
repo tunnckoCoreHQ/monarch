@@ -23,7 +23,7 @@ import { eventStatement, findRepoById } from "./db";
 import type { Env } from "./env";
 import { subscribePushes, unsubscribe } from "./events";
 import { guard, type Result } from "./result";
-import { enqueueIndex } from "./search";
+import { enqueueIndex, type IndexResult, indexRepo } from "./search";
 import { now } from "./util";
 
 // SQLite rows and values are capped at 2 MB, so larger zlib streams go to R2.
@@ -96,6 +96,8 @@ export class Repo extends DurableObject<Env> {
   private mirror: Mirror | undefined;
   private writes: Promise<unknown> = Promise.resolve();
   private recording: Promise<void> | undefined;
+  private indexing: Promise<Result<IndexResult>> | undefined;
+  private indexQueued: Promise<Result<IndexResult>> | undefined;
   private subscribing: Promise<void> | undefined;
   private repoId = "";
 
@@ -567,6 +569,24 @@ export class Repo extends DurableObject<Env> {
       console.error(`could not record pushes for ${this.repoId}`, error);
       await this.ctx.storage.setAlarm(Date.now() + RECORD_RETRY_MS);
     }
+  }
+
+  /**
+   * Runs the search indexer for this repository. Runs never overlap. A call during a run waits for
+   * one more run after it, which sees what the call was made for; calls meanwhile share that run.
+   */
+  index(): Promise<Result<IndexResult>> {
+    if (this.indexing === undefined) {
+      this.indexing = guard(() => indexRepo(this.env, this.repoId)).finally(() => {
+        this.indexing = undefined;
+      });
+      return this.indexing;
+    }
+    this.indexQueued ??= this.indexing.then(() => {
+      this.indexQueued = undefined;
+      return this.index();
+    });
+    return this.indexQueued;
   }
 
   override async alarm(): Promise<void> {

@@ -78,8 +78,12 @@ export class RepoReady extends WorkflowEntrypoint<Env, ReadyParams> {
         .run();
       await recordEvent(this.env, repoId, actorId, kind, { source, refs: synced.refs });
     });
+    // Search is optional: a failed enqueue must not fail a ready repository. The hourly cron
+    // trigger queues the index later.
     await step.do("index for search", async () => {
-      await enqueueIndex(this.env, repoId);
+      await enqueueIndex(this.env, repoId).catch((error: unknown) => {
+        console.error(`could not enqueue a search index for ${repoId}`, error);
+      });
     });
     return { ready: true, refs: synced.refs };
   }
