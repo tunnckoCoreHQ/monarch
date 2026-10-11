@@ -192,6 +192,7 @@ export const RESERVED = new Set([
   "device",
   "claim",
   "explore",
+  "mcp",
   "docs",
   "about",
   "admin",

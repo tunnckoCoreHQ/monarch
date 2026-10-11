@@ -1,9 +1,69 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import { fileURLToPath } from "node:url";
+
 import { objectHash, type GitObject, type ObjectType } from "../src/git/objects";
 import type { PackedObject } from "../src/git/pack";
 import type { Ref } from "../src/git/protocol";
 import { GitRepo, type Storage } from "../src/git/repo";
 import type { RawObject } from "../src/git/store";
 import { deflate, inflate } from "../src/git/zlib";
+
+const MIGRATIONS = fileURLToPath(new URL("../migrations", import.meta.url));
+
+/** D1 over node:sqlite, with the app's migrations applied. */
+export function fakeD1(): D1Database {
+  const db = new DatabaseSync(":memory:");
+  db.exec("PRAGMA foreign_keys = ON");
+  for (const file of readdirSync(MIGRATIONS).toSorted()) {
+    db.exec(readFileSync(join(MIGRATIONS, file), "utf-8"));
+  }
+  const meta = {
+    duration: 0,
+    size_after: 0,
+    rows_read: 0,
+    rows_written: 0,
+    last_row_id: 0,
+    changed_db: false,
+    changes: 0,
+  };
+  const statement = (sql: string, params: SQLInputValue[] = []): D1PreparedStatement => ({
+    bind: (...next: unknown[]) => statement(sql, next as SQLInputValue[]),
+    // The callers name the row type, as they do with D1.
+    all: (async () => ({
+      success: true as const,
+      results: db.prepare(sql).all(...params),
+      meta,
+    })) as D1PreparedStatement["all"],
+    first: async <T>() => (db.prepare(sql).get(...params) ?? null) as T | null,
+    run: async () => {
+      db.prepare(sql).run(...params);
+      return { success: true as const, results: [], meta };
+    },
+    raw: () => {
+      throw new Error("unexpected raw query");
+    },
+  });
+  return {
+    prepare: (sql) => statement(sql),
+    batch: async <T>(list: D1PreparedStatement[]) => {
+      for (const item of list) {
+        await item.run();
+      }
+      return [] as Array<D1Result<T>>;
+    },
+    exec: () => {
+      throw new Error("unexpected exec");
+    },
+    withSession: () => {
+      throw new Error("unexpected session");
+    },
+    dump: () => {
+      throw new Error("unexpected dump");
+    },
+  };
+}
 
 export function memoryRepo(): GitRepo {
   const objects = new Map<string, RawObject>();

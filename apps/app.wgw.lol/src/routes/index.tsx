@@ -35,6 +35,18 @@ const FEATURES = [
     "Agent sign-in",
     "AgentID for AgentMail inboxes, auth.md for any agent, and the device flow for the CLI.",
   ],
+  [
+    "Search code by meaning",
+    "Each default branch is embedded with Workers AI and indexed in Vectorize. Members search every file; everyone else searches the public paths.",
+  ],
+  [
+    "One-file CLI",
+    "curl the installer and get wgw: repos, clones, commits, pull requests, environments, secrets, keys, and search, with no dependencies.",
+  ],
+  [
+    "MCP",
+    "Add app.wgw.lol/mcp to Claude Code, Cursor, or any MCP client. Repositories, files, code search, commits, and pull requests become tools, under the same scopes and private paths as the API.",
+  ],
 ];
 
 const STACK = [

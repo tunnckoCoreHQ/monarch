@@ -39,7 +39,20 @@ wgw login            # or: wgw login --token "$WGW_TOKEN"
 
 The CLI is one file with no dependencies. It needs Node 20+ or Bun. `WGW_TOKEN` overrides the stored key. Every command takes `-R owner/repo`; inside a clone it reads the git remote.
 
-## 3. Git
+## 3. MCP
+
+The remote MCP server at `https://app.wgw.lol/mcp` uses Streamable HTTP and keeps no session. Claude Code, Cursor, and other MCP clients get the API as tools.
+
+```sh
+claude mcp add --transport http wgw https://app.wgw.lol/mcp --header "Authorization: Bearer $WGW_TOKEN"
+```
+
+Other clients take the same URL and header. The token is a wgw API key or an auth.md access token. Each tool calls the API with it, so the key's scopes, its repository limit, and `.gitprivate` apply as they do over the API. Without a token you get only the read tools, and they see public repositories and public paths. An invalid or expired token gets 401 with a `WWW-Authenticate` header that points at `/.well-known/oauth-protected-resource`.
+
+- For everyone: `whoami`, `list_repos`, `get_repo`, `list_tree`, `read_file`, `search_code`, `list_commits`, `get_commit`, `compare`, `list_pulls`, `get_pull` (with the unified diff), and `get_git_token`.
+- With a token: `create_repo`, `create_branch`, `commit_files`, `open_pull`, `comment_pull`, `merge_pull`, and `pull_env`. The `pull_env` tool opens secrets, so it needs write access and a key with the `secrets` scope.
+
+## 4. Git
 
 ```sh
 wgw repo create demo                 # public; add --private for a private repository
@@ -59,7 +72,7 @@ Use `http.proactiveAuth=basic`. Public repositories answer anonymous requests, s
 
 Supported: clone, fetch, pull, push, force push, shallow clones and deeper fetches (`--depth`, `--unshallow`), tags, branch deletes, atomic pushes. Partial clones (`--filter`) are not. When the branch moved after your fetch, the push fails with `fetch first`.
 
-## 4. Direct Artifacts access
+## 5. Direct Artifacts access
 
 You do not need this for normal work. A direct token lets a tool clone or push the Artifacts repository without going through app.wgw.lol.
 
@@ -96,7 +109,7 @@ curl -s https://app.wgw.lol/api/repos/OWNER/REPO/git-token \
 - The endpoint answers 409 until the repository is `ready`.
 - A direct push reaches the web view, the API, and the public projection within a few seconds: Artifacts sends a push event to a Cloudflare Queue, and the app syncs its mirror.
 
-## 5. Commit without a clone
+## 6. Commit without a clone
 
 ```sh
 curl -s https://app.wgw.lol/api/repos/OWNER/REPO/commits \
@@ -117,7 +130,7 @@ The branch is created when it does not exist. With `expected_sha`, the commit fa
 
 CLI: `wgw commit --branch agent/fix -m "docs: fix" README.md=./README.md`.
 
-## 6. Pull requests
+## 7. Pull requests
 
 ```sh
 wgw pr create --head agent/fix-typo --title "Fix a typo" --body "One word."
@@ -130,7 +143,7 @@ wgw pr merge 3         # fast-forward when possible, else a merge commit
 
 Merges run on the server. The mirror makes the merge commit and pushes it to Artifacts. A path changed differently on both sides is a conflict; the merge fails with 409 and names the paths. Rebase locally and push again.
 
-## 7. Private paths in a public repository
+## 8. Private paths in a public repository
 
 Add `.gitprivate` at the repository root. The syntax is like `.gitignore`:
 
@@ -149,7 +162,7 @@ Members (the owner and collaborators) see everything, over git and over the API.
 
 Check what the public sees: `curl -s https://app.wgw.lol/api/repos/OWNER/REPO/tree` without a token.
 
-## 8. Environments and secrets
+## 9. Environments and secrets
 
 ```sh
 wgw env create production --kind production     # kinds: production, staging, preview, development
@@ -160,7 +173,7 @@ wgw env pull production > .env                   # needs a key with the secrets 
 
 Repository values apply to every environment and environment values override them. Secret values are sealed with AES-256-GCM under a key that belongs to the repository. That key is stored in D1 wrapped by a master key in Cloudflare Secrets Store, and it is deleted with the repository. Only `GET /api/repos/OWNER/REPO/env?environment=NAME` opens them, it needs write access plus the `secrets` scope, and every read is logged in the repository activity.
 
-## 9. Imports and forks
+## 10. Imports and forks
 
 ```sh
 wgw repo create lib --import https://github.com/owner/lib                    # the default branch
@@ -172,7 +185,7 @@ An import copies one branch: the remote's default branch, or `import_branch` whe
 
 `wgw repo fork owner/repo` forks in Artifacts. Members of the source fork the full repository, private paths included. Everyone else forks the public projection, so private paths never leave the source. The fork shows `forking` until it is ready. You can only fork a repository that is `ready`.
 
-## 10. Code search
+## 11. Code search
 
 ```sh
 wgw search "where tokens are checked"                 # the repository of this clone
@@ -198,7 +211,7 @@ curl -s "https://app.wgw.lol/api/repos/OWNER/REPO/search?q=where+tokens+are+chec
 - The index skips binary files, files over 256 KB, lockfiles, and minified files.
 - `limit` is 1 to 50. The default is 10.
 
-## 11. API reference
+## 12. API reference
 
 All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", "message": "<text>"}`.
 
@@ -234,7 +247,7 @@ Repository JSON has `status` (`ready`, `importing`, `forking`, or `failed`), `st
 
 Scopes: `read` (private repositories you can see; every key has it), `write` (push, pull requests, commits, write git tokens), `admin` (settings, collaborators, environments, keys), `secrets` (open secret values).
 
-## 12. Limits
+## 13. Limits
 
 - Artifacts stores up to 1 GB per repository and 32 MB per file.
 - Artifacts allows 2,000 git requests per 10 seconds per repository.

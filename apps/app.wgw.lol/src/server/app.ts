@@ -12,7 +12,11 @@ const PREFIXES = ["/api/", "/auth/", "/oauth/", "/oauth2/", "/agent/", "/.well-k
 
 /** Paths the Hono app serves. Everything else is the TanStack Start web app. */
 export function isServerPath(pathname: string): boolean {
-  return PREFIXES.some((prefix) => pathname.startsWith(prefix)) || GIT_PATH.test(pathname);
+  return (
+    pathname === "/mcp" ||
+    PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
+    GIT_PATH.test(pathname)
+  );
 }
 
 export const app = new Hono<AppEnv>();
@@ -68,6 +72,11 @@ app.use("*", async (c, next) => {
 });
 
 app.get("/api/health", (c) => c.json({ ok: true, commit: c.env.COMMIT_SHA }));
+app.all("/mcp", async (c) => {
+  // The MCP SDK, zod, and Ajv load on the first MCP request, not on every cold start.
+  const { handleMcp } = await import("./mcp");
+  return handleMcp(c, (request) => app.fetch(request, c.env, c.executionCtx));
+});
 app.route("/", login);
 app.route("/", authmd);
 app.route("/api", api);
