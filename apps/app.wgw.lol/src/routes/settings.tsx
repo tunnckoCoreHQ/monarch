@@ -36,6 +36,14 @@ interface Key {
   last_used_at: number | null;
 }
 
+interface Agent {
+  id: string;
+  type: "anonymous" | "service_auth";
+  created_at: number;
+  expires_at: number;
+  last_used_at: number | null;
+}
+
 interface AuthState {
   level: string;
   user?: { handle: string; provider: string };
@@ -44,11 +52,12 @@ interface AuthState {
 
 export const Route = createFileRoute("/settings")({
   loader: async () => {
-    const [keys, state] = await Promise.all([
+    const [keys, agents, state] = await Promise.all([
       api<Key[]>("/api/keys"),
+      api<Agent[]>("/api/agents"),
       api<AuthState>("/api/auth/state"),
     ]);
-    return { keys, state };
+    return { keys, agents, state };
   },
   head: () => ({ meta: [{ title: pageTitle("Settings") }] }),
   pendingComponent: () => <Pending label="Loading settings" />,
@@ -67,7 +76,7 @@ const PROVIDERS: Record<string, string> = {
 };
 
 function Settings() {
-  const { keys, state } = Route.useLoaderData();
+  const { keys, agents, state } = Route.useLoaderData();
   const router = useRouter();
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<string[]>(["read", "write"]);
@@ -105,13 +114,29 @@ function Settings() {
   };
 
   const revoke = async (key: Key) => {
-    if (!window.confirm(`Revoke ${key.name}? Anything that uses it stops working.`)) {
+    const question =
+      key.kind === "agent"
+        ? `Revoke ${key.name}? The agent loses access and cannot get new tokens.`
+        : `Revoke ${key.name}? Anything that uses it stops working.`;
+    if (!window.confirm(question)) {
       return;
     }
     try {
       await api(`/api/keys/${key.id}`, { method: "DELETE" });
       // A revoked key's plaintext must not stay on screen.
       setCreated((shown) => (shown?.id === key.id ? null : shown));
+      await router.invalidate();
+    } catch (caught) {
+      setError(messageOf(caught));
+    }
+  };
+
+  const revokeAgent = async (agent: Agent) => {
+    if (!window.confirm(`Revoke agent ${agent.id}? It loses access and cannot get new tokens.`)) {
+      return;
+    }
+    try {
+      await api(`/api/agents/${agent.id}`, { method: "DELETE" });
       await router.invalidate();
     } catch (caught) {
       setError(messageOf(caught));
@@ -262,6 +287,30 @@ function Settings() {
                   used {ago(key.last_used_at)}
                 </span>
                 <Button size="xs" variant="ghost" onClick={fire(() => revoke(key))}>
+                  Revoke
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
+      <Section
+        title="Agents"
+        description="auth.md agents you claimed. Each one acts as you with read and write access until you revoke it."
+      >
+        {agents.length === 0 ? (
+          <Empty>No claimed agents.</Empty>
+        ) : (
+          <ul className="divide-y border">
+            {agents.map((agent) => (
+              <li key={agent.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+                <code className="font-mono text-sm wrap-anywhere">{agent.id}</code>
+                <Badge variant="violet">{agent.type}</Badge>
+                <span className="text-faint ml-auto font-mono text-xs">
+                  used {ago(agent.last_used_at)}
+                </span>
+                <Button size="xs" variant="ghost" onClick={fire(() => revokeAgent(agent))}>
                   Revoke
                 </Button>
               </li>

@@ -38,8 +38,8 @@ export function fakeD1(): D1Database {
     })) as D1PreparedStatement["all"],
     first: async <T>() => (db.prepare(sql).get(...params) ?? null) as T | null,
     run: async () => {
-      db.prepare(sql).run(...params);
-      return { success: true as const, results: [], meta };
+      const { changes } = db.prepare(sql).run(...params);
+      return { success: true as const, results: [], meta: { ...meta, changes: Number(changes) } };
     },
     raw: () => {
       throw new Error("unexpected raw query");

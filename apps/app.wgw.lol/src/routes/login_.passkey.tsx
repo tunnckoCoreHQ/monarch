@@ -13,6 +13,7 @@ import {
 } from "~/components/site";
 import { Button } from "~/components/ui/button";
 import { api } from "~/lib/api";
+import { returnPath } from "~/lib/return-path";
 import { pageTitle } from "~/lib/utils";
 
 interface AuthState {
@@ -42,13 +43,13 @@ function PasskeyStep() {
 
   useEffect(() => {
     if (state.level === "full") {
-      window.location.assign(return_to.startsWith("/") ? return_to : "/");
+      window.location.assign(returnPath(return_to, window.location.origin));
     }
   }, [state.level, return_to]);
 
   const finish = async () => {
     await router.invalidate();
-    window.location.assign(return_to.startsWith("/") ? return_to : "/");
+    window.location.assign(returnPath(return_to, window.location.origin));
   };
 
   const run = async () => {

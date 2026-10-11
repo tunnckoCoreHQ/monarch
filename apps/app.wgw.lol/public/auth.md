@@ -240,3 +240,5 @@ token=wgw_at_...&token_type_hint=access_token
 ```
 
 The answer is always 200. Your identity assertion stays valid; run Step 5 for a new token.
+
+The person who claimed you can revoke you from their settings, or by revoking one of your access tokens there. After that, every grant answers `invalid_grant`.

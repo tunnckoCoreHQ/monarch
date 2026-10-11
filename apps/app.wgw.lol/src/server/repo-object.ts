@@ -842,6 +842,14 @@ export class Repo extends DurableObject<Env> {
     });
   }
 
+  /**
+   * The public view's hash of each commit, or null where the public view does not have it. Events
+   * and pull requests store full-repository hashes; non-members get these instead.
+   */
+  publicShas(shas: string[]) {
+    return guard(() => shas.map((sha) => this.repo.viewSha("public", sha) ?? null));
+  }
+
   merge(base: string, head: string, message: string, person: Person) {
     return this.write(() => this.repo.merge(base, head, message, person));
   }

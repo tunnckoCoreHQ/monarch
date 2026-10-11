@@ -124,7 +124,8 @@ export class GitRepo {
     return projectCommit(this.objects, this.storage.memo, sha) === sha;
   }
 
-  private viewSha(view: View, sha: string): string | undefined {
+  /** The hash a commit or tag of the full repository has in the view, or undefined if none. */
+  viewSha(view: View, sha: string): string | undefined {
     if (view === "full") {
       return sha;
     }

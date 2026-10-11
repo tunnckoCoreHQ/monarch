@@ -104,6 +104,21 @@ async function startClaim(c: AppContext, registrationId: string) {
   };
 }
 
+/**
+ * Revokes a registration that `userId` claimed, and every token it holds. Each grant refuses a
+ * revoked registration, so the agent cannot get new tokens with its claim token or assertion.
+ */
+export async function revokeRegistration(env: Env, id: string, userId: string): Promise<void> {
+  await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE agent_registrations SET status = 'revoked' WHERE id = ? AND user_id = ?",
+    ).bind(id, userId),
+    env.DB.prepare(
+      "UPDATE tokens SET revoked_at = ? WHERE registration_id = ? AND user_id = ? AND revoked_at IS NULL",
+    ).bind(now(), id, userId),
+  ]);
+}
+
 export const authmd = new Hono<AppEnv>();
 
 authmd.get("/.well-known/oauth-protected-resource", (c) =>
@@ -235,6 +250,9 @@ authmd.post("/agent/identity/claim", async (c) => {
   if (registration === null || registration.expires_at < now()) {
     return oauthError(c, "invalid_claim_token", "unknown or expired claim token");
   }
+  if (registration.status === "revoked") {
+    return oauthError(c, "invalid_claim_token", "the person who claimed this agent revoked it");
+  }
   if (registration.status === "claimed") {
     return oauthError(c, "claimed_or_in_flight", "this registration is already claimed");
   }
@@ -333,6 +351,9 @@ authmd.post("/oauth2/token", async (c) => {
     const registration = await registrationByClaim(c.env, String(form.claim_token ?? ""));
     if (registration === null || registration.expires_at < now()) {
       return oauthError(c, "invalid_grant", "unknown or expired claim token");
+    }
+    if (registration.status === "revoked") {
+      return oauthError(c, "invalid_grant", "the person who claimed this agent revoked it");
     }
     if (registration.polled_at !== null && registration.polled_at > now() - 4) {
       await c.env.DB.prepare("UPDATE agent_registrations SET polled_at = ? WHERE id = ?")

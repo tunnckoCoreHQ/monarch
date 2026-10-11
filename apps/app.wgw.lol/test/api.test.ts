@@ -1,0 +1,508 @@
+import { exportPKCS8, generateKeyPair } from "jose";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+
+import { utf8 } from "../src/git/bytes";
+import { type Person, ZERO_SHA } from "../src/git/objects";
+import type { GitRepo, View } from "../src/git/repo";
+import type { FileChange } from "../src/git/tree";
+import { returnPath } from "../src/lib/return-path";
+import { app } from "../src/server/app";
+import { mintToken } from "../src/server/auth";
+import type { Scope } from "../src/server/db";
+import type { Env } from "../src/server/env";
+import { guard } from "../src/server/result";
+import { sha256 } from "../src/server/util";
+import { fakeD1, memoryRepo } from "./memory";
+
+const ORIGIN = "https://app.wgw.lol";
+const person = { name: "Tester", email: "t@example.com", time: 1_760_000_000, tz: "+0000" };
+const ctx = { waitUntil: () => undefined, passThroughOnException: () => undefined, props: {} };
+
+/** The Repo Durable Object calls the tests reach, over an in-memory git repository. */
+function fakeStub(repo: GitRepo) {
+  return {
+    refs: (view: View) => guard(() => ({ refs: repo.refs(view), head: repo.storage.refs.head() })),
+    compare: (view: View, base: string, head: string) =>
+      guard(() => repo.compare(view, base, head)),
+    merge: (base: string, head: string, message: string, who: Person) =>
+      guard(() => repo.merge(base, head, message, who)),
+    commitFiles: (
+      branch: string,
+      expected: string | undefined,
+      message: string,
+      who: Person,
+      files: FileChange[],
+      from?: string,
+    ) => guard(() => repo.commitFiles(branch, expected, message, who, files, from)),
+    publicShas: (shas: string[]) =>
+      guard(() => shas.map((sha) => repo.viewSha("public", sha) ?? null)),
+  };
+}
+
+let env: Env;
+let git: GitRepo;
+let signingKey: string;
+let saved: Map<string, string>;
+
+interface Call {
+  token?: string;
+  session?: string;
+  json?: unknown;
+  form?: Record<string, string>;
+  headers?: Record<string, string>;
+}
+
+async function call(method: string, path: string, options: Call = {}): Promise<Response> {
+  const headers = new Headers(options.headers);
+  let body: string | undefined;
+  if (options.token !== undefined) {
+    headers.set("authorization", `Bearer ${options.token}`);
+  }
+  if (options.session !== undefined) {
+    headers.set("cookie", `wgw_session=${options.session}`);
+  }
+  if (options.json !== undefined) {
+    headers.set("content-type", "application/json");
+    body = JSON.stringify(options.json);
+  }
+  if (options.form !== undefined) {
+    headers.set("content-type", "application/x-www-form-urlencoded");
+    body = new URLSearchParams(options.form).toString();
+  }
+  return app.fetch(new Request(`${ORIGIN}${path}`, { method, headers, body }), env, ctx);
+}
+
+/** The JSON body; each test names the shape of the endpoint it calls. */
+async function json<T>(response: Response | Promise<Response>): Promise<T> {
+  return (await response).json<T>();
+}
+
+/** An API key; with no scopes given, a write key. */
+async function key(
+  userId: string,
+  options: { scopes?: Scope[]; repoId?: string; environment?: string },
+): Promise<string> {
+  const minted = await mintToken(env, userId, {
+    kind: "key",
+    name: "test",
+    scopes: options.scopes ?? ["write"],
+    repoId: options.repoId,
+    environment: options.environment,
+  });
+  return minted.token;
+}
+
+beforeAll(async () => {
+  const { privateKey } = await generateKeyPair("ES256", { extractable: true });
+  signingKey = await exportPKCS8(privateKey);
+});
+
+beforeEach(async () => {
+  const db = fakeD1();
+  git = memoryRepo();
+  saved = new Map();
+  // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- the fakes implement only the bindings the tests reach.
+  env = {
+    ORIGIN,
+    TRIAD_ISSUER: "https://triad.example",
+    DB: db,
+    REPO: { getByName: () => fakeStub(git) },
+    LIMITER: { limit: async () => ({ success: true }) },
+    CACHE: {
+      put: async (name: string, value: string) => {
+        saved.set(name, value);
+      },
+    },
+    METRICS: { writeDataPoint: () => undefined },
+    EVENTS: { send: async () => undefined },
+    SIGNING_KEY: { get: async () => signingKey },
+  } as unknown as Env;
+  await db
+    .prepare(
+      "INSERT INTO users (id, handle, name, email, kind, provider, subject, created_at) VALUES ('usr_alice', 'alice', 'Alice', 'alice@example.com', 'human', 'google', 'alice', 0), ('usr_bob', 'bob', 'Bob', 'bob@example.com', 'human', 'google', 'bob', 0)",
+    )
+    .run();
+  await db
+    .prepare(
+      "INSERT INTO repos (id, owner_id, name, visibility, default_branch, created_at) VALUES ('repo_pub', 'usr_alice', 'pub', 'public', 'main', 0), ('repo_priv', 'usr_alice', 'priv', 'private', 'main', 0), ('repo_bob', 'usr_bob', 'own', 'public', 'main', 0)",
+    )
+    .run();
+  await db
+    .prepare(
+      "INSERT INTO sessions (token_hash, user_id, level, created_at, expires_at) VALUES (?, 'usr_alice', 'full', 0, 4000000000)",
+    )
+    .bind(await sha256("alice-session"))
+    .run();
+});
+
+/** A public commit with a private path, so the public view rewrites it. */
+function seed(): string {
+  return git.commitFiles(
+    "main",
+    undefined,
+    "start",
+    person,
+    Object.entries({
+      ".gitprivate": "secret/\n",
+      "src/app.ts": "export const port = 8080;\n",
+      "secret/plan.md": "launch plan\n",
+    }).map(([path, content]) => ({ path, content: utf8(content) })),
+  ).sha;
+}
+
+describe("sign-in return address", () => {
+  const attacks = [
+    "//evil.example",
+    "/\\evil.example",
+    "/\t/evil.example",
+    "https://evil.example/",
+    "javascript:alert(1)",
+    "\\\\evil.example",
+  ];
+
+  it("keeps only addresses on this origin", () => {
+    for (const value of attacks) {
+      expect(returnPath(value, ORIGIN), value).toBe("/");
+    }
+    expect(returnPath(undefined, ORIGIN)).toBe("/");
+    expect(returnPath("/alice/pub?tab=code#readme", ORIGIN)).toBe("/alice/pub?tab=code#readme");
+    // An encoded backslash stays encoded, so the browser reads it as part of a path here.
+    expect(returnPath("/%5Cevil.example", ORIGIN)).toBe("/%5Cevil.example");
+  });
+
+  it("stores / for a sign-in that would leave the origin", async () => {
+    const queries = [
+      ...attacks.map((value) => encodeURIComponent(value)),
+      "/%09/evil.example",
+      "%2F%5Cevil.example",
+    ];
+    for (const query of queries) {
+      saved.clear();
+      const response = await call("GET", `/auth/login?return_to=${query}`);
+      expect(response.status).toBe(302);
+      const state = JSON.parse([...saved.values()][0]) as { returnTo: string };
+      expect(state.returnTo, query).toBe("/");
+    }
+  });
+});
+
+describe("auth.md agents", () => {
+  const CLAIM_GRANT = "urn:workos:agent-auth:grant-type:claim";
+  const JWT_GRANT = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+
+  /** Registers an anonymous agent and has alice claim it. */
+  async function claimed() {
+    const registered = await json<{ registration_id: string; claim_token: string }>(
+      call("POST", "/agent/identity", { json: { type: "anonymous" } }),
+    );
+    const started = await json<{
+      claim_attempt: { user_code: string; verification_uri: string };
+    }>(
+      call("POST", "/agent/identity/claim", {
+        json: { claim_token: registered.claim_token, email: "@alice" },
+      }),
+    );
+    const attempt = new URL(started.claim_attempt.verification_uri).searchParams.get("attempt");
+    const confirmed = await call("POST", `/api/claims/${attempt}`, {
+      session: "alice-session",
+      json: { user_code: started.claim_attempt.user_code },
+    });
+    expect(confirmed.status).toBe(200);
+    const tokens = await json<{ access_token: string; identity_assertion: string }>(
+      call("POST", "/oauth2/token", {
+        form: { grant_type: CLAIM_GRANT, claim_token: registered.claim_token },
+      }),
+    );
+    expect(tokens.access_token).toMatch(/^wgw_at_/);
+    return { ...registered, ...tokens };
+  }
+
+  async function refused(agent: Awaited<ReturnType<typeof claimed>>) {
+    const claim = await call("POST", "/oauth2/token", {
+      form: { grant_type: CLAIM_GRANT, claim_token: agent.claim_token },
+    });
+    expect(claim.status).toBe(400);
+    expect((await json<{ error: string }>(claim)).error).toBe("invalid_grant");
+    const assertion = await call("POST", "/oauth2/token", {
+      form: { grant_type: JWT_GRANT, assertion: agent.identity_assertion },
+    });
+    expect(assertion.status).toBe(400);
+    expect((await json<{ error: string }>(assertion)).error).toBe("invalid_grant");
+    const again = await call("POST", "/agent/identity/claim", {
+      json: { claim_token: agent.claim_token, email: "@alice" },
+    });
+    expect((await json<{ error: string }>(again)).error).toBe("invalid_claim_token");
+    expect((await call("GET", "/api/me", { token: agent.access_token })).status).toBe(401);
+  }
+
+  it("revokes the registration when the person revokes the agent's token", async () => {
+    const agent = await claimed();
+    const agents = await json<Array<{ id: string }>>(
+      call("GET", "/api/agents", { session: "alice-session" }),
+    );
+    expect(agents.map((item) => item.id)).toEqual([agent.registration_id]);
+    const keys = await json<Array<{ id: string; kind: string }>>(
+      call("GET", "/api/keys", { session: "alice-session" }),
+    );
+    const token = keys.find((item) => item.kind === "agent")!;
+    const revoke = () => call("DELETE", `/api/keys/${token.id}`, { session: "alice-session" });
+    expect((await revoke()).status).toBe(200);
+    expect((await revoke()).status).toBe(404);
+    await refused(agent);
+    expect(await json(call("GET", "/api/agents", { session: "alice-session" }))).toEqual([]);
+  });
+
+  it("revokes a claimed agent from the agents list", async () => {
+    const agent = await claimed();
+    expect((await call("GET", "/api/me", { token: agent.access_token })).status).toBe(200);
+    const path = `/api/agents/${agent.registration_id}`;
+    expect((await call("DELETE", path, { session: "alice-session" })).status).toBe(200);
+    await refused(agent);
+    expect((await call("DELETE", path, { session: "alice-session" })).status).toBe(404);
+  });
+});
+
+describe("repository activity", () => {
+  it("shows non-members only public events, with public hashes", async () => {
+    const start = seed();
+    const hidden = git.commitFiles("main", undefined, "private only", person, [
+      { path: "secret/plan.md", content: utf8("new plan\n") },
+    ]).sha;
+    const projected = git.viewSha("public", start)!;
+    expect(projected).not.toBe(start);
+    expect(git.viewSha("public", hidden)).toBe(projected);
+    const events: Array<[string, unknown]> = [
+      ["secrets_read", { environment: "production", names: ["DATABASE_URL"] }],
+      ["push", { updates: [{ ref: "refs/heads/main", old: ZERO_SHA, new: start }] }],
+      ["push", { updates: [{ ref: "refs/heads/main", old: start, new: hidden }] }],
+      ["pull_merged", { number: 1, sha: hidden }],
+    ];
+    for (const [i, [type, data]] of events.entries()) {
+      await env.DB.prepare(
+        "INSERT INTO events (id, repo_id, actor_id, type, data, created_at) VALUES (?, 'repo_pub', 'usr_alice', ?, ?, ?)",
+      )
+        .bind(`evt_${i}`, type, JSON.stringify(data), i)
+        .run();
+    }
+    const outside = await json<Array<{ type: string; data: unknown }>>(
+      call("GET", "/api/repos/alice/pub/events"),
+    );
+    expect(outside.map(({ type, data }) => ({ type, data }))).toEqual([
+      { type: "pull_merged", data: { number: 1, sha: projected } },
+      {
+        type: "push",
+        data: { updates: [{ ref: "refs/heads/main", old: ZERO_SHA, new: projected }] },
+      },
+    ]);
+    const inside = await json<Array<{ type: string }>>(
+      call("GET", "/api/repos/alice/pub/events", { session: "alice-session" }),
+    );
+    expect(inside.map((event) => event.type)).toEqual([
+      "pull_merged",
+      "push",
+      "push",
+      "secrets_read",
+    ]);
+  });
+});
+
+describe("environment-limited keys", () => {
+  beforeEach(async () => {
+    await env.DB.prepare(
+      "INSERT INTO environments (repo_id, name, kind, created_at) VALUES ('repo_pub', 'staging', 'staging', 0), ('repo_pub', 'production', 'production', 0)",
+    ).run();
+    await env.DB.prepare(
+      "INSERT INTO variables (repo_id, environment, name, secret, value, updated_by, updated_at) VALUES ('repo_pub', '', 'LOG_LEVEL', 0, 'info', 'usr_alice', 0), ('repo_pub', 'staging', 'API_URL', 0, 'https://staging.example', 'usr_alice', 0)",
+    ).run();
+  });
+
+  it("reads and writes only its own environment", async () => {
+    const staging = await key("usr_alice", {
+      scopes: ["write", "admin", "secrets"],
+      environment: "staging",
+    });
+    const put = (name: string, environment?: string) =>
+      call("PUT", `/api/repos/alice/pub/variables/${name}`, {
+        token: staging,
+        json: { value: "x", secret: false, environment },
+      });
+    expect((await put("API_URL", "staging")).status).toBe(200);
+    expect((await put("LOG_LEVEL")).status).toBe(403);
+    expect((await put("API_URL", "production")).status).toBe(403);
+    const remove = await call("DELETE", "/api/repos/alice/pub/variables/LOG_LEVEL", {
+      token: staging,
+    });
+    expect(remove.status).toBe(403);
+    expect(
+      await json(call("GET", "/api/repos/alice/pub/env?environment=staging", { token: staging })),
+    ).toEqual({ LOG_LEVEL: "info", API_URL: "x" });
+  });
+
+  it("cannot change collaborators or environments", async () => {
+    const staging = await key("usr_alice", { scopes: ["admin"], environment: "staging" });
+    const attempts = [
+      call("PUT", "/api/repos/alice/pub/collaborators/bob", {
+        token: staging,
+        json: { role: "admin" },
+      }),
+      call("DELETE", "/api/repos/alice/pub/collaborators/bob", { token: staging }),
+      call("POST", "/api/repos/alice/pub/environments", {
+        token: staging,
+        json: { name: "staging", kind: "staging" },
+      }),
+      call("DELETE", "/api/repos/alice/pub/environments/staging", { token: staging }),
+    ];
+    for (const response of await Promise.all(attempts)) {
+      expect(response.status).toBe(403);
+    }
+    const role = await env.DB.prepare(
+      "SELECT role FROM collaborators WHERE user_id = 'usr_bob'",
+    ).first();
+    expect(role).toBeNull();
+    const unlimited = await key("usr_alice", { scopes: ["admin"] });
+    const repositoryWide = await call("PUT", "/api/repos/alice/pub/variables/LOG_LEVEL", {
+      token: unlimited,
+      json: { value: "debug", secret: false },
+    });
+    expect(repositoryWide.status).toBe(200);
+  });
+});
+
+describe("API commits", () => {
+  it("keep file modes and accept a mode per file", async () => {
+    seed();
+    const alice = await key("usr_alice", {});
+    const commit = (files: unknown[]) =>
+      call("POST", "/api/repos/alice/pub/commits", {
+        token: alice,
+        json: { message: "change", files },
+      });
+    expect((await commit([{ path: "run.sh", content: "echo 1\n", mode: "100755" }])).status).toBe(
+      201,
+    );
+    expect((await commit([{ path: "run.sh", content: "echo 2\n" }])).status).toBe(201);
+    const script = git.tree("full", "main", "").items.find((item) => item.name === "run.sh");
+    expect(script?.mode).toBe("100755");
+    const wrong = await commit([{ path: "run.sh", content: "x", mode: "040000" }]);
+    expect(wrong.status).toBe(400);
+    expect((await json<{ message: string }>(wrong)).message).toMatch(/100644, 100755, or 120000/);
+  });
+});
+
+describe("merged pull requests", () => {
+  it("show non-members the public view's hashes and diff", async () => {
+    const start = seed();
+    git.updateRef("refs/heads/feature", ZERO_SHA, start);
+    git.commitFiles("feature", undefined, "feature", person, [
+      { path: "src/feature.ts", content: utf8("export const on = true;\n") },
+      { path: "secret/notes.md", content: utf8("notes\n") },
+    ]);
+    git.commitFiles("main", undefined, "main moves", person, [
+      { path: "README.md", content: utf8("# pub\n") },
+    ]);
+    const alice = await key("usr_alice", {});
+    const opened = await call("POST", "/api/repos/alice/pub/pulls", {
+      token: alice,
+      json: { title: "Feature", head: "feature" },
+    });
+    expect(opened.status).toBe(201);
+    expect(
+      (await call("POST", "/api/repos/alice/pub/pulls/1/merge", { token: alice })).status,
+    ).toBe(200);
+    interface Pull {
+      base_sha: string | null;
+      head_sha: string | null;
+      merge_sha: string | null;
+    }
+    const full = await json<Pull>(call("GET", "/api/repos/alice/pub/pulls/1", { token: alice }));
+    const outside = await json<
+      Pull & { compare: { error?: string; files?: Array<{ path: string }> } }
+    >(call("GET", "/api/repos/alice/pub/pulls/1"));
+    for (const field of ["base_sha", "head_sha", "merge_sha"] as const) {
+      expect(outside[field]).toBe(git.viewSha("public", full[field]!));
+      expect(outside[field]).not.toBe(full[field]);
+    }
+    expect(outside.compare.error).toBeUndefined();
+    expect(outside.compare.files?.map((file) => file.path)).toEqual(["src/feature.ts"]);
+    const listed = await json<Pull[]>(call("GET", "/api/repos/alice/pub/pulls?state=all"));
+    expect(listed.map((pull) => pull.head_sha)).toEqual([outside.head_sha]);
+  });
+});
+
+describe("repository limits and inputs", () => {
+  it("keeps a repository-limited key from commenting on another repository", async () => {
+    await env.DB.prepare(
+      "INSERT INTO pulls (id, repo_id, number, title, author_id, head, base, state, created_at, updated_at) VALUES ('pr_1', 'repo_pub', 1, 'Pull', 'usr_alice', 'feature', 'main', 'open', 0, 0)",
+    ).run();
+    const limited = await key("usr_bob", { repoId: "repo_bob" });
+    const unlimited = await key("usr_bob", {});
+    for (const [token, status] of [
+      [limited, 403],
+      [unlimited, 201],
+    ] as const) {
+      const response = await call("POST", "/api/repos/alice/pub/pulls/1/comments", {
+        token,
+        json: { body: "hi" },
+      });
+      expect(response.status).toBe(status);
+    }
+  });
+
+  it("ignores the session cookie on git paths", async () => {
+    const refs = await call("GET", "/alice/priv.git/info/refs?service=git-upload-pack", {
+      session: "alice-session",
+    });
+    expect(refs.status).toBe(401);
+    expect(refs.headers.get("www-authenticate")).toMatch(/^Basic/);
+    const push = await call("POST", "/alice/pub.git/git-receive-pack", {
+      session: "alice-session",
+      headers: { origin: "https://evil.wgw.lol" },
+    });
+    expect(push.status).toBe(401);
+  });
+
+  it("refuses import URLs with credentials", async () => {
+    const alice = await key("usr_alice", {});
+    for (const url of ["https://me:secret@github.com/a/b", "https://ghp_token@github.com/a/b"]) {
+      const response = await call("POST", "/api/repos", {
+        token: alice,
+        json: { name: "imported", import_url: url },
+      });
+      expect(response.status).toBe(400);
+      expect((await json<{ message: string }>(response)).message).toMatch(/username or password/);
+    }
+    expect(await env.DB.prepare("SELECT 1 FROM repos WHERE name = 'imported'").first()).toBeNull();
+  });
+
+  it("rejects unknown visibility, role, and scope values", async () => {
+    const alice = await key("usr_alice", { scopes: ["write", "admin"] });
+    const created = await call("POST", "/api/repos", {
+      token: alice,
+      json: { name: "typo", visibility: "Private" },
+    });
+    expect(created.status).toBe(400);
+    expect((await json<{ message: string }>(created)).message).toBe(
+      "visibility must be public or private",
+    );
+    expect(await env.DB.prepare("SELECT 1 FROM repos WHERE name = 'typo'").first()).toBeNull();
+    const updated = await call("PATCH", "/api/repos/alice/priv", {
+      token: alice,
+      json: { visibility: "Public" },
+    });
+    expect(updated.status).toBe(400);
+    const role = await call("PUT", "/api/repos/alice/pub/collaborators/bob", {
+      token: alice,
+      json: { role: "owner" },
+    });
+    expect(role.status).toBe(400);
+    const scope = await call("POST", "/api/repos/alice/pub/git-token", {
+      token: alice,
+      json: { scope: "admin" },
+    });
+    expect(scope.status).toBe(400);
+    const repo = await env.DB.prepare("SELECT visibility FROM repos WHERE id = 'repo_priv'").first<{
+      visibility: string;
+    }>();
+    expect(repo?.visibility).toBe("private");
+  });
+});

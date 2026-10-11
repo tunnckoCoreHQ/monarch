@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
+import { returnPath } from "../lib/return-path";
 import {
   type AppEnv,
   type AppContext,
@@ -19,10 +20,12 @@ import {
   requireUser,
   upgradeSession,
 } from "./auth";
+import { revokeRegistration } from "./authmd";
 import {
   findRepo,
   type Identity,
   publicUser,
+  requireFound,
   roleOf,
   type Scope,
   upsertUser,
@@ -53,10 +56,6 @@ interface LoginState {
 
 export function clientId(origin: string): string {
   return `${origin}/oauth/client.json`;
-}
-
-function safeReturn(value: string | undefined): string {
-  return value !== undefined && value.startsWith("/") && !value.startsWith("//") ? value : "/";
 }
 
 async function rateLimit(c: AppContext, bucket: string): Promise<void> {
@@ -160,7 +159,7 @@ login.get("/auth/login", async (c) => {
     flow,
     verifier: randomToken(32),
     nonce: randomToken(16),
-    returnTo: safeReturn(c.req.query("return_to")),
+    returnTo: returnPath(c.req.query("return_to"), c.env.ORIGIN),
   };
   const { key, challenge } = await saveState(c, state);
   const url = new URL(`${c.env.TRIAD_ISSUER}/oauth2/authorize`);
@@ -265,7 +264,7 @@ login.get("/auth/agentid/start", async (c) => {
     flow: "agentid",
     verifier: randomToken(32),
     nonce: randomToken(16),
-    returnTo: safeReturn(c.req.query("return_to")),
+    returnTo: returnPath(c.req.query("return_to"), c.env.ORIGIN),
   };
   const { key, challenge } = await saveState(c, state);
   const params = new URLSearchParams({
@@ -752,13 +751,49 @@ login.post("/api/keys", async (c) => {
 
 login.delete("/api/keys/:id", async (c) => {
   const principal = accountPrincipal(c);
+  const id = c.req.param("id");
   const result = await c.env.DB.prepare(
     "UPDATE tokens SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
   )
-    .bind(now(), c.req.param("id"), principal.user.id)
+    .bind(now(), id, principal.user.id)
     .run();
   if (result.meta.changes !== 1) {
     throw new HttpError(404, "key not found", "not_found");
   }
+  // An auth.md agent's token names its registration. Revoking the token revokes the registration
+  // too, so the agent cannot trade its claim token or identity assertion for new tokens.
+  const token = await c.env.DB.prepare("SELECT registration_id FROM tokens WHERE id = ?")
+    .bind(id)
+    .first<{ registration_id: string | null }>();
+  if (token !== null && token.registration_id !== null) {
+    await revokeRegistration(c.env, token.registration_id, principal.user.id);
+  }
+  return c.json({ ok: true });
+});
+
+// auth.md agents the person claimed. An agent's access tokens last an hour, so it is listed here
+// whether or not it holds one.
+login.get("/api/agents", async (c) => {
+  const principal = accountPrincipal(c);
+  const result = await c.env.DB.prepare(
+    "SELECT agent_registrations.id, agent_registrations.type, agent_registrations.created_at, agent_registrations.expires_at, MAX(tokens.last_used_at) AS last_used_at FROM agent_registrations LEFT JOIN tokens ON tokens.registration_id = agent_registrations.id WHERE agent_registrations.user_id = ? AND agent_registrations.status = 'claimed' AND agent_registrations.expires_at > ? GROUP BY agent_registrations.id ORDER BY agent_registrations.created_at DESC",
+  )
+    .bind(principal.user.id, now())
+    .all();
+  return c.json(result.results);
+});
+
+login.delete("/api/agents/:id", async (c) => {
+  const principal = accountPrincipal(c);
+  const id = c.req.param("id");
+  requireFound(
+    await c.env.DB.prepare(
+      "SELECT 1 FROM agent_registrations WHERE id = ? AND user_id = ? AND status = 'claimed'",
+    )
+      .bind(id, principal.user.id)
+      .first(),
+    "agent",
+  );
+  await revokeRegistration(c.env, id, principal.user.id);
   return c.json({ ok: true });
 });

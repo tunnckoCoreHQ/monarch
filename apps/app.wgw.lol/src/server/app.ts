@@ -51,7 +51,10 @@ app.notFound((c) =>
 );
 
 app.use("*", async (c, next) => {
-  await authenticate(c);
+  const isGit = GIT_PATH.test(c.req.path);
+  // Git clients send Basic or Bearer credentials, never cookies. A page on another wgw.lol
+  // subdomain is same-site, so a browser would add the Lax session cookie to its git requests.
+  await authenticate(c, { cookie: !isGit });
   const method = c.req.method;
   // Cookie sessions must come from this origin for anything that changes state.
   if (
@@ -61,7 +64,6 @@ app.use("*", async (c, next) => {
     method !== "OPTIONS"
   ) {
     const origin = c.req.header("origin");
-    const isGit = GIT_PATH.test(c.req.path);
     const isAgentProtocol =
       c.req.path.startsWith("/oauth2/") ||
       c.req.path.startsWith("/agent/") ||

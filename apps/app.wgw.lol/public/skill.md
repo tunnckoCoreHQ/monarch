@@ -23,7 +23,7 @@ The clone URL stays on app.wgw.lol. wgw checks who you are and forwards git to t
 
 Pick the first option that fits.
 
-1. **A person gives you a key.** They create one at `https://app.wgw.lol/settings`, or run `wgw key create my-agent --scopes read,write --repo owner/repo`. Keys can be limited to one repository and one environment. A limited key cannot create, list, or revoke keys.
+1. **A person gives you a key.** They create one at `https://app.wgw.lol/settings`, or run `wgw key create my-agent --scopes read,write --repo owner/repo`. Keys can be limited to one repository and one environment. A limited key cannot create, list, or revoke keys. A key limited to one environment reads repository values as part of that environment but cannot change them, the collaborators, or the environments.
 2. **The CLI device flow.** Run `wgw login`. It prints a URL and a code. A signed-in person (or an agent with an AgentID session) approves it. The CLI stores a 90-day key in `~/.config/wgw/config.json`.
 3. **AgentID.** If you own an AgentMail inbox, open `https://app.wgw.lol/auth/agentid/start?login_hint=<inbox>` in your browser. You get an agent account and a browser session; then approve a `wgw login` code with it.
 4. **auth.md.** Register yourself with no prior credentials. Follow `https://app.wgw.lol/auth.md`. Before a person claims you, you can read public repositories. After the claim, you act as that person with `read write` scopes for one hour per access token.
@@ -154,6 +154,8 @@ curl -s https://app.wgw.lol/api/repos/OWNER/REPO/commits \
 
 Without `branch`, the commit goes to the default branch. A branch that does not exist is created from the tip of the default branch, or from `from` (a branch, tag, or commit hash). The commit keeps that tree and changes only the files you send, so a pull request from the branch merges. `from` on a branch that already exists is a 409.
 
+Each file takes an optional `mode`: `100644` (a regular file), `100755` (an executable), or `120000` (a symlink, with the link target as its content). Without one, an updated file keeps its mode and a new file is `100644`.
+
 With `expected_sha`, the commit fails with 409 when someone else moved the branch first. Use it when several agents work on one branch.
 
 ```sh
@@ -193,6 +195,7 @@ Members (the owner and collaborators) see everything, over git and over the API.
 - A commit that only touches private paths is left out of the public history.
 - Deleting a line publishes that path from the next commit on. This is how a security advisory goes public after the fix ships.
 - Commit messages stay visible. Keep embargoed details out of them.
+- The repository activity and pull requests show everyone else the public hashes. The activity leaves out secret reads and pushes that touched only private paths.
 
 Check what the public sees: `curl -s https://app.wgw.lol/api/repos/OWNER/REPO/tree` without a token.
 
@@ -278,6 +281,7 @@ All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", 
 | `GET /repos/:owner/:repo/events` | Pushes, merges, secret reads |
 | `GET` · `POST /keys` · `DELETE /keys/:id` | API keys (`name`, `scopes`, `repo`, `environment`, `expires_in_days`); revoking an unknown key is a 404 |
 | `POST /device/code` · `POST /device/token` | CLI device flow |
+| `GET /agents` · `DELETE /agents/:id` | auth.md agents you claimed · revoke one and its tokens |
 
 Repository JSON has `status` (`ready`, `importing`, `forking`, or `failed`), `status_detail` (why it failed, or null), and `storage` (`artifacts`).
 

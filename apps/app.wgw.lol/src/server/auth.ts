@@ -105,8 +105,8 @@ interface TokenRow {
   last_used_at: number | null;
 }
 
-/** Resolves the caller from a session cookie or an API token. */
-export async function authenticate(c: AppContext): Promise<void> {
+/** Resolves the caller from an API token or, when `cookie` is true, a session cookie. */
+export async function authenticate(c: AppContext, { cookie }: { cookie: boolean }): Promise<void> {
   c.set("principal", null);
   c.set("pendingUser", null);
   const secret = credential(c.req.header("authorization"));
@@ -143,7 +143,7 @@ export async function authenticate(c: AppContext): Promise<void> {
     });
     return;
   }
-  const token = getCookie(c, SESSION_COOKIE);
+  const token = cookie ? getCookie(c, SESSION_COOKIE) : undefined;
   if (token === undefined) {
     return;
   }

@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 
 import type { FileDiff } from "../git/diff";
-import type { Person } from "../git/objects";
+import { type Person, ZERO_SHA } from "../git/objects";
+import type { RefUpdate } from "../git/repo";
+import { FILE_MODES } from "../git/tree";
 import {
   type Access,
   access,
@@ -141,6 +143,9 @@ api.post("/repos", async (c) => {
     );
   }
   const visibility = input.visibility === "private" ? "private" : "public";
+  if (input.visibility !== undefined && input.visibility !== visibility) {
+    throw new HttpError(400, "visibility must be public or private", "invalid_request");
+  }
   const branch = input.default_branch ?? "main";
   if (!/^[A-Za-z0-9._/-]{1,100}$/.test(branch)) {
     throw new HttpError(400, "invalid default branch", "invalid_request");
@@ -155,6 +160,14 @@ api.post("/repos", async (c) => {
     }
     if (url.protocol !== "https:") {
       throw new HttpError(400, "import from an https:// git remote", "invalid_request");
+    }
+    // The URL is stored and shown on the repository, and only public remotes can be imported.
+    if (url.username !== "" || url.password !== "") {
+      throw new HttpError(
+        400,
+        "import_url must not contain a username or password; only public remotes can be imported",
+        "invalid_request",
+      );
     }
     source = url.toString().replace(/\/+$/, "");
   }
@@ -256,6 +269,9 @@ api.patch("/repos/:owner/:name", async (c) => {
     input.visibility === "private" || input.visibility === "public"
       ? input.visibility
       : repo.visibility;
+  if (input.visibility !== undefined && input.visibility !== visibility) {
+    throw new HttpError(400, "visibility must be public or private", "invalid_request");
+  }
   await c.env.DB.prepare("UPDATE repos SET description = ?, visibility = ? WHERE id = ?")
     .bind((input.description ?? repo.description).slice(0, 400), visibility, repo.id)
     .run();
@@ -357,6 +373,9 @@ api.post("/repos/:owner/:name/git-token", async (c) => {
   }
   const input = await readJson<{ scope?: string }>(c, { scope: "string" });
   const scope = input.scope === "write" ? "write" : "read";
+  if (input.scope !== undefined && input.scope !== scope) {
+    throw new HttpError(400, "scope must be read or write", "invalid_request");
+  }
   if (scope === "write") {
     need(grant, "write");
   }
@@ -497,6 +516,7 @@ interface FileInput {
   content?: string;
   encoding?: "utf-8" | "base64";
   delete?: boolean;
+  mode?: string;
 }
 
 function decodeBase64(value: string, label: string): Uint8Array {
@@ -529,7 +549,7 @@ api.post("/repos/:owner/:name/commits", async (c) => {
     const label = `files[${index}]`;
     const file = fields<FileInput>(
       item,
-      { path: "string", content: "string", encoding: "string", delete: "boolean" },
+      { path: "string", content: "string", encoding: "string", delete: "boolean", mode: "string" },
       label,
     );
     const path = (file.path ?? "").replace(/^\/+/, "");
@@ -546,11 +566,18 @@ api.post("/repos/:owner/:name/commits", async (c) => {
     if (file.delete === true) {
       return { path, content: null };
     }
+    if (file.mode !== undefined && !FILE_MODES.has(file.mode)) {
+      throw new HttpError(
+        400,
+        `mode of ${path} must be 100644, 100755, or 120000`,
+        "invalid_request",
+      );
+    }
     const content =
       file.encoding === "base64"
         ? decodeBase64(file.content ?? "", `${label}.content`)
         : new TextEncoder().encode(file.content ?? "");
-    return { path, content };
+    return { path, content, mode: file.mode };
   });
   if (files.length === 0 || (input.message ?? "").trim() === "") {
     throw new HttpError(400, "send a message and at least one file", "invalid_request");
@@ -596,6 +623,76 @@ api.get("/repos/:owner/:name/search", async (c) => {
   return c.json(await searchRepo(c.env, grant, query, limit));
 });
 
+/**
+ * The public view's hash of each full-repository commit, or null where the public view does not
+ * have it. The zero hash of a created or deleted ref stays as it is.
+ */
+async function publicShas(env: Env, repoId: string, shas: string[]) {
+  const wanted = [...new Set(shas)].filter((sha) => sha !== ZERO_SHA);
+  const mapped = wanted.length === 0 ? [] : unwrap(await repoStub(env, repoId).publicShas(wanted));
+  const out = new Map<string, string | null>([[ZERO_SHA, ZERO_SHA]]);
+  for (const [i, sha] of wanted.entries()) {
+    out.set(sha, mapped[i]);
+  }
+  return out;
+}
+
+interface RepoEvent {
+  id: string;
+  type: string;
+  actor: string | null;
+  /** Pushes carry `updates`; a merge carries the merge commit's `sha`. */
+  data: { updates?: RefUpdate[]; sha?: string | null };
+  created_at: number;
+}
+
+// What everyone may see of a repository's activity. Secret reads stay with the members.
+const PUBLIC_EVENTS = new Set([
+  "create",
+  "import",
+  "fork",
+  "push",
+  "pull_opened",
+  "pull_closed",
+  "pull_reopened",
+  "pull_merged",
+]);
+
+/**
+ * The activity a non-member may see. Pushes and merges show the public view's hashes, and a push
+ * update the public view does not show, such as one that touched only private paths, is left out.
+ */
+async function publicEvents(env: Env, repoId: string, events: RepoEvent[]): Promise<RepoEvent[]> {
+  const shown = events.filter((event) => PUBLIC_EVENTS.has(event.type));
+  const shas = await publicShas(
+    env,
+    repoId,
+    shown.flatMap(({ data }) => [
+      ...(data.updates ?? []).flatMap((update) => [update.old, update.new]),
+      ...(typeof data.sha === "string" ? [data.sha] : []),
+    ]),
+  );
+  const out: RepoEvent[] = [];
+  for (const event of shown) {
+    const { updates, sha } = event.data;
+    if (updates !== undefined) {
+      const kept = updates.flatMap((update) => {
+        const old = shas.get(update.old) ?? null;
+        const next = shas.get(update.new) ?? null;
+        return old === null || next === null || old === next ? [] : [{ ...update, old, new: next }];
+      });
+      if (kept.length > 0) {
+        out.push({ ...event, data: { updates: kept } });
+      }
+    } else if (typeof sha === "string") {
+      out.push({ ...event, data: { ...event.data, sha: shas.get(sha) ?? null } });
+    } else {
+      out.push(event);
+    }
+  }
+  return out;
+}
+
 api.get("/repos/:owner/:name/events", async (c) => {
   const grant = await loadRepo(c);
   const rows = await c.env.DB.prepare(
@@ -603,14 +700,15 @@ api.get("/repos/:owner/:name/events", async (c) => {
   )
     .bind(grant.repo.id)
     .all<{ id: string; type: string; data: string; created_at: number; actor: string | null }>();
+  const events = rows.results.map((row): RepoEvent => ({
+    id: row.id,
+    type: row.type,
+    actor: row.actor,
+    data: JSON.parse(row.data),
+    created_at: row.created_at,
+  }));
   return c.json(
-    rows.results.map((row) => ({
-      id: row.id,
-      type: row.type,
-      actor: row.actor,
-      data: JSON.parse(row.data),
-      created_at: row.created_at,
-    })),
+    grant.view === "public" ? await publicEvents(c.env, grant.repo.id, events) : events,
   );
 });
 
@@ -678,6 +776,30 @@ function pullJson(pull: PullRow, repo: RepoRow, origin: string) {
   return { ...rest, web_url: `${origin}/${repo.owner}/${repo.name}/pull/${pull.number}` };
 }
 
+/**
+ * Pull requests store full-repository hashes. A non-member gets the public view's hashes
+ * instead, or null where the public view does not have the commit.
+ */
+async function viewPulls(env: Env, grant: Access, pulls: PullRow[]): Promise<PullRow[]> {
+  if (grant.view === "full") {
+    return pulls;
+  }
+  const shas = await publicShas(
+    env,
+    grant.repo.id,
+    pulls
+      .flatMap((pull) => [pull.merge_sha, pull.base_sha, pull.head_sha])
+      .filter((sha) => sha !== null),
+  );
+  const view = (sha: string | null) => (sha === null ? null : (shas.get(sha) ?? null));
+  return pulls.map((pull) => ({
+    ...pull,
+    merge_sha: view(pull.merge_sha),
+    base_sha: view(pull.base_sha),
+    head_sha: view(pull.head_sha),
+  }));
+}
+
 api.get("/repos/:owner/:name/pulls", async (c) => {
   const grant = await loadRepo(c);
   const state = c.req.query("state") ?? "open";
@@ -689,8 +811,8 @@ api.get("/repos/:owner/:name/pulls", async (c) => {
       : c.env.DB.prepare(
           `${PULL_SELECT} WHERE pulls.repo_id = ? AND pulls.state = ? ORDER BY pulls.number DESC LIMIT 100`,
         ).bind(grant.repo.id, state);
-  const rows = await query.all<PullRow>();
-  return c.json(rows.results.map((row) => pullJson(row, grant.repo, c.env.ORIGIN)));
+  const rows = await viewPulls(c.env, grant, (await query.all<PullRow>()).results);
+  return c.json(rows.map((row) => pullJson(row, grant.repo, c.env.ORIGIN)));
 });
 
 api.post("/repos/:owner/:name/pulls", async (c) => {
@@ -743,7 +865,7 @@ api.post("/repos/:owner/:name/pulls", async (c) => {
 
 api.get("/repos/:owner/:name/pulls/:number", async (c) => {
   const grant = await loadRepo(c);
-  const pull = await loadPull(c, grant);
+  const [pull] = await viewPulls(c.env, grant, [await loadPull(c, grant)]);
   const stub = repoStub(c.env, grant.repo.id);
   let compare: unknown = null;
   if (pull.state === "open") {
@@ -852,6 +974,11 @@ api.post("/repos/:owner/:name/pulls/:number/comments", async (c) => {
   if (grant.role === null && grant.repo.visibility === "private") {
     throw new HttpError(404, "repository not found", "not_found");
   }
+  // Anyone signed in may comment on a public repository, but a key limited to one repository
+  // writes only there.
+  if (principal.repoId !== null && principal.repoId !== grant.repo.id) {
+    throw new HttpError(403, "the token is limited to another repository", "forbidden");
+  }
   const pull = await loadPull(c, grant);
   const input = await readJson<{ body?: string }>(c, { body: "string" });
   if ((input.body ?? "").trim() === "") {
@@ -905,6 +1032,28 @@ api.post("/repos/:owner/:name/pulls/:number/summary", async (c) => {
 
 // Collaborators.
 
+// Who has access and which environments exist are settings of the whole repository, so a key
+// limited to one environment cannot change them.
+api.on(
+  ["PUT", "POST", "DELETE"],
+  [
+    "/repos/:owner/:name/collaborators/*",
+    "/repos/:owner/:name/environments",
+    "/repos/:owner/:name/environments/*",
+  ],
+  async (c, next) => {
+    const environment = c.get("principal")?.environment ?? null;
+    if (environment !== null) {
+      throw new HttpError(
+        403,
+        `the token is limited to the ${environment} environment`,
+        "forbidden",
+      );
+    }
+    return next();
+  },
+);
+
 api.get("/repos/:owner/:name/collaborators", async (c) => {
   const grant = await loadRepo(c);
   need(grant, "read");
@@ -921,6 +1070,9 @@ api.put("/repos/:owner/:name/collaborators/:handle", async (c) => {
   need(grant, "admin");
   const input = await readJson<{ role?: Role }>(c, { role: "string" });
   const role = input.role === "write" || input.role === "admin" ? input.role : "read";
+  if (input.role !== undefined && input.role !== role) {
+    throw new HttpError(400, "role must be read, write, or admin", "invalid_request");
+  }
   const user = requireFound(await userByHandle(c.env, c.req.param("handle")), "user");
   if (user.id === grant.repo.owner_id) {
     throw new HttpError(400, "the owner already has admin access", "invalid_request");
@@ -945,12 +1097,13 @@ api.delete("/repos/:owner/:name/collaborators/:handle", async (c) => {
 
 // Environments, variables, and secrets.
 
+/**
+ * A key limited to one environment works in that environment only. Repository values, environment
+ * "", apply to every environment, so writing them needs a key without that limit. The key still
+ * reads them, as part of its environment's values.
+ */
 function checkEnvironmentScope(principal: Principal, environment: string): void {
-  if (
-    principal.environment !== null &&
-    principal.environment !== environment &&
-    environment !== ""
-  ) {
+  if (principal.environment !== null && principal.environment !== environment) {
     throw new HttpError(
       403,
       `the token is limited to the ${principal.environment} environment`,
