@@ -26,6 +26,7 @@ const DECIMAL_ID_PATTERN = /^[1-9][0-9]*$/;
 const SIWE_CHAIN_ID_FIELD = "Chain ID: ";
 const AGENTID_ISSUER = "https://auth.agentid.com";
 const AGENTID_OWNER_SCOPES = ["owner_name", "owner_email"] as const;
+const OWNER_MERGE_ATTEMPTS = 3;
 const IDENTITY_PROVIDERS: AuthenticationProvider[] = [
   "google",
   "github",
@@ -563,23 +564,47 @@ export function createAgentIdAuthentication(env: TriadEnv) {
               return;
             }
 
-            const user = await context.context.adapter.findOne<{ encryptedData?: unknown }>({
-              model: "user",
-              where: [{ field: "id", value: userId }],
-            });
-            const stored =
-              typeof user?.encryptedData === "string"
-                ? await openProfileEncryptedData(env.ENCRYPTION_SECRETS, userId, user.encryptedData)
-                : {};
-            const encryptedData = await sealProfileEncryptedData(env.ENCRYPTION_SECRETS, userId, {
-              ...stored,
-              ...owner,
-            });
-            await context.context.adapter.update({
-              model: "user",
-              where: [{ field: "id", value: userId }],
-              update: { encryptedData },
-            });
+            // The update only applies while the stored envelope is the one this
+            // sign-in read, so two concurrent sign-ins cannot drop each other's
+            // owner fields. On a conflict, Triad reads the profile again.
+            for (let attempt = 0; attempt < OWNER_MERGE_ATTEMPTS; attempt++) {
+              const user = await context.context.adapter.findOne<{ encryptedData?: unknown }>({
+                model: "user",
+                where: [{ field: "id", value: userId }],
+              });
+              const envelope = typeof user?.encryptedData === "string" ? user.encryptedData : null;
+              const merged: CapturedProfile = {
+                ...(envelope
+                  ? await openProfileEncryptedData(env.ENCRYPTION_SECRETS, userId, envelope)
+                  : {}),
+                ...owner,
+              };
+              // A new owner email never keeps the verification status of the old one.
+              if (
+                owner.profileOwnerEmail !== undefined &&
+                owner.profileOwnerEmailVerified === undefined
+              ) {
+                delete merged.profileOwnerEmailVerified;
+              }
+              const encryptedData = await sealProfileEncryptedData(
+                env.ENCRYPTION_SECRETS,
+                userId,
+                merged,
+              );
+              const updated = await context.context.adapter.updateMany({
+                model: "user",
+                where: [
+                  { field: "id", value: userId },
+                  ...(envelope ? [{ field: "encryptedData", value: envelope }] : []),
+                ],
+                update: { encryptedData },
+              });
+              if (updated > 0) {
+                return;
+              }
+            }
+
+            throw new Error("AgentID owner data could not be saved");
           }),
         },
       ],

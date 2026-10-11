@@ -352,6 +352,26 @@ describe("AgentID Identity Source", () => {
     });
   });
 
+  it("drops the old owner email verification when a new owner email arrives without one", async () => {
+    const triad = createTriad();
+    const signIn = (owner: Record<string, unknown>) =>
+      signInThroughAgentId(triad, {
+        userinfo: () => Response.json({ ...AGENT_PROFILE, ...owner }),
+      });
+    await signIn({});
+    await signIn({ owner_email: "old-owner@example.com", owner_email_verified: true });
+    await signIn({ owner_email: "new-owner@example.com" });
+    const accountSub = await accountSubject(IDENTIFIER_SECRET, "agentid", AGENT_SUB);
+    const profile = await openProfileEncryptedData(
+      triad.env.ENCRYPTION_SECRETS,
+      accountSub,
+      String(triad.memory.user[0]?.encryptedData),
+    );
+
+    expect(profile.profileOwnerEmail).toBe("new-owner@example.com");
+    expect(profile).not.toHaveProperty("profileOwnerEmailVerified");
+  });
+
   it("sends an AgentID account back to sign in only when requested owner data is missing", async () => {
     const env = createEnv();
     const id = `acc_${"a".repeat(64)}`;
