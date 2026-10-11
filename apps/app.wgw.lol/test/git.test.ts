@@ -242,4 +242,40 @@ describe("smart HTTP against real git", () => {
     await git(out, "fsck", "--strict");
     expect(readFileSync(join(out, "docs", "feature.md"), "utf-8")).toBe("f\n");
   });
+
+  it("starts a new branch from the default branch, so its pull request merges", async () => {
+    const main = repo.resolve("full", "main")!;
+    const agent = repo.commitFiles("agent/new", undefined, "on a new branch", person, [
+      { path: "agent.txt", content: new TextEncoder().encode("a\n") },
+    ]);
+    expect(repo.readCommit(agent.sha).parents).toEqual([main]);
+    // The new branch keeps main's tree, so the pull request shows only the new file.
+    const compare = repo.compare("full", "main", "agent/new");
+    expect(compare.commits.map((commit) => commit.sha)).toEqual([agent.sha]);
+    expect(compare.files.map((file) => file.path)).toEqual(["agent.txt"]);
+    expect(compare.files[0].patch).toContain("@@ -0,0 +1,1 @@\n+a\n");
+    expect(compare.mergeable).toBe(true);
+    expect(repo.merge("main", "agent/new", "Merge agent/new", person).sha).toBe(agent.sha);
+    expect(repo.resolve("full", "main")).toBe(agent.sha);
+
+    const feature = repo.resolve("full", "feature")!;
+    const from = repo.commitFiles(
+      "agent/from",
+      undefined,
+      "from feature",
+      person,
+      [{ path: "from.txt", content: new TextEncoder().encode("f\n") }],
+      "feature",
+    );
+    expect(repo.readCommit(from.sha).parents).toEqual([feature]);
+    const again = () => repo.commitFiles("agent/from", undefined, "again", person, [], "main");
+    expect(again).toThrow(/agent\/from already exists/);
+    const unknown = () => repo.commitFiles("agent/x", undefined, "x", person, [], "nosuch");
+    expect(unknown).toThrow(/unknown revision nosuch/);
+
+    const out = join(dir, "after-new-branch");
+    await git(dir, "clone", "-q", `${base}/r.git`, out);
+    await git(out, "fsck", "--strict");
+    expect(readFileSync(join(out, "agent.txt"), "utf-8")).toBe("a\n");
+  });
 });

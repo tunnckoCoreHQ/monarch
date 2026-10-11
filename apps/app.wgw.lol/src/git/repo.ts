@@ -653,26 +653,42 @@ export class GitRepo {
     return { sha, head: headSha, update: this.updateRef(ref, baseSha, sha) };
   }
 
-  /** Commits file changes on top of a branch, for agents and the API that work without a clone. */
+  /**
+   * Commits file changes on top of a branch, for agents and the API that work without a clone. A
+   * new branch starts from `from` (a ref or commit hash), else from the default branch tip. Only
+   * the first commit of an empty repository has no parent.
+   */
   commitFiles(
     branch: string,
     expected: string | undefined,
     message: string,
     person: Person,
     files: FileChange[],
+    from?: string,
   ): { sha: string; update: RefUpdate } {
     const ref = `refs/heads/${branch}`;
     const current = this.storage.refs.get(ref);
     if (expected !== undefined && expected !== (current ?? ZERO_SHA)) {
       throw new GitError(`${branch} moved to ${current ?? "nothing"}; fetch first`, 409);
     }
-    const parentTree = current === undefined ? null : this.readCommit(current).tree;
+    if (current !== undefined && from !== undefined) {
+      throw new GitError(`${branch} already exists; from only starts a new branch`, 409);
+    }
+    const parent =
+      current ??
+      (from === undefined
+        ? this.storage.refs.get(this.storage.refs.head())
+        : this.resolve("full", from));
+    if (from !== undefined && parent === undefined) {
+      throw new GitError(`unknown revision ${from}`, 404);
+    }
+    const parentTree = parent === undefined ? null : this.readCommit(parent).tree;
     const tree = applyChanges(this.objects, parentTree, files);
     const sha = this.objects.write(
       "commit",
       serializeCommit({
         tree,
-        parents: current === undefined ? [] : [current],
+        parents: parent === undefined ? [] : [parent],
         author: person,
         committer: person,
         message,

@@ -97,7 +97,7 @@ function SearchPage() {
         </p>
       </form>
       {q.trim() === "" ? null : hits.length === 0 ? (
-        <Empty>{`No matches for "${q}". The index updates a few seconds after a push.`}</Empty>
+        <Empty>{`No matches for "${q}". A push shows up in search within about two minutes.`}</Empty>
       ) : (
         <ul className="flex flex-col gap-4">
           {hits.map((hit) => (

@@ -111,7 +111,10 @@ export function fileDiff(store: ObjectStore, change: Change): FileDiff {
   let additions = 0;
   let deletions = 0;
   for (const hunk of result.hunks) {
-    lines.push(`@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@`);
+    // Like git, an empty side names the line before the hunk, so a new file is -0,0.
+    const oldStart = hunk.oldLines === 0 ? hunk.oldStart - 1 : hunk.oldStart;
+    const newStart = hunk.newLines === 0 ? hunk.newStart - 1 : hunk.newStart;
+    lines.push(`@@ -${oldStart},${hunk.oldLines} +${newStart},${hunk.newLines} @@`);
     for (const line of hunk.lines) {
       if (line.startsWith("+")) {
         additions++;

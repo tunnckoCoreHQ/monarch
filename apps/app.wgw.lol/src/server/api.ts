@@ -28,7 +28,7 @@ import {
 import type { Env } from "./env";
 import type { Result } from "./result";
 import { deleteRepoIndex, enqueueIndex, searchPublic, searchRepo } from "./search";
-import { HttpError, isName, newId, now } from "./util";
+import { fields, HttpError, isName, NAME_RULE, newId, now, readJson } from "./util";
 
 export function repoStub(env: Env, repoId: string) {
   return env.REPO.getByName(repoId);
@@ -62,10 +62,17 @@ async function loadRepo(c: AppContext): Promise<Access> {
   return access(c, repo);
 }
 
-function body<T>(c: AppContext): Promise<T> {
-  return c.req.json<T>().catch(() => {
-    throw new HttpError(400, "the body must be JSON", "invalid_request");
-  });
+/** The limit query parameter: a whole number from 1 to `max`, or `fallback` when it is missing. */
+function limitOf(c: AppContext, fallback: number, max: number): number {
+  const raw = c.req.query("limit");
+  if (raw === undefined || raw === "") {
+    return fallback;
+  }
+  const limit = Number(raw);
+  if (!Number.isInteger(limit) || limit < 1 || limit > max) {
+    throw new HttpError(400, `limit must be a whole number from 1 to ${max}`, "invalid_request");
+  }
+  return limit;
 }
 
 const ENV_KINDS = new Set(["production", "staging", "preview", "development"]);
@@ -108,20 +115,23 @@ api.post("/repos", async (c) => {
   if (principal.repoId !== null) {
     throw new HttpError(403, "a repository-scoped token cannot create repositories", "forbidden");
   }
-  const input = await body<{
+  const input = await readJson<{
     name?: string;
     description?: string;
     visibility?: string;
     default_branch?: string;
     import_url?: string;
     import_branch?: string;
-  }>(c);
+  }>(c, {
+    name: "string",
+    description: "string",
+    visibility: "string",
+    default_branch: "string",
+    import_url: "string",
+    import_branch: "string",
+  });
   if (!isName(input.name)) {
-    throw new HttpError(
-      400,
-      "name must be 1-100 letters, digits, dots, dashes, or underscores",
-      "invalid_request",
-    );
+    throw new HttpError(400, `name must be ${NAME_RULE}`, "invalid_request");
   }
   if (principal.user.provider === "authmd") {
     throw new HttpError(
@@ -232,9 +242,11 @@ api.get("/repos/:owner/:name", async (c) => {
 api.patch("/repos/:owner/:name", async (c) => {
   const grant = await loadRepo(c);
   need(grant, "admin");
-  const input = await body<{ description?: string; visibility?: string; default_branch?: string }>(
-    c,
-  );
+  const input = await readJson<{
+    description?: string;
+    visibility?: string;
+    default_branch?: string;
+  }>(c, { description: "string", visibility: "string", default_branch: "string" });
   const repo = grant.repo;
   if (input.default_branch !== undefined && input.default_branch !== repo.default_branch) {
     // Artifacts fixes HEAD when the repository is created.
@@ -278,10 +290,10 @@ api.post("/repos/:owner/:name/fork", async (c) => {
   if (grant.repo.status !== "ready") {
     throw new HttpError(409, `the repository is ${grant.repo.status}`, "conflict");
   }
-  const input = await body<{ name?: string }>(c).catch(() => ({ name: undefined }));
+  const input = await readJson<{ name?: string }>(c, { name: "string" });
   const name = input.name ?? grant.repo.name;
   if (!isName(name)) {
-    throw new HttpError(400, "invalid repository name", "invalid_request");
+    throw new HttpError(400, `name must be ${NAME_RULE}`, "invalid_request");
   }
   const id = newId("repo");
   try {
@@ -343,7 +355,7 @@ api.post("/repos/:owner/:name/git-token", async (c) => {
   if (grant.repo.status !== "ready") {
     throw new HttpError(409, `the repository is ${grant.repo.status}`, "conflict");
   }
-  const input = await body<{ scope?: string }>(c).catch(() => ({ scope: undefined }));
+  const input = await readJson<{ scope?: string }>(c, { scope: "string" });
   const scope = input.scope === "write" ? "write" : "read";
   if (scope === "write") {
     need(grant, "write");
@@ -371,7 +383,10 @@ api.post("/repos/:owner/:name/sync", async (c) => {
 api.post("/repos/:owner/:name/branches", async (c) => {
   const grant = await loadRepo(c);
   const principal = need(grant, "write");
-  const input = await body<{ name?: string; from?: string }>(c);
+  const input = await readJson<{ name?: string; from?: string }>(c, {
+    name: "string",
+    from: "string",
+  });
   const { update } = unwrap(
     await repoStub(c.env, grant.repo.id).createBranch(
       input.name ?? "",
@@ -458,13 +473,12 @@ api.get("/repos/:owner/:name/raw", async (c) => {
 
 api.get("/repos/:owner/:name/commits", async (c) => {
   const grant = await loadRepo(c);
-  const limit = Math.min(Number(c.req.query("limit") ?? 30) || 30, 200);
   return c.json(
     unwrap(
       await repoStub(c.env, grant.repo.id).log(
         grant.view,
         refOf(c, grant),
-        limit,
+        limitOf(c, 30, 200),
         c.req.query("path"),
       ),
     ),
@@ -485,17 +499,39 @@ interface FileInput {
   delete?: boolean;
 }
 
-// Agents can commit without a clone: send the files, get a commit.
+function decodeBase64(value: string, label: string): Uint8Array {
+  try {
+    return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+  } catch {
+    throw new HttpError(400, `${label} is not base64`, "invalid_request");
+  }
+}
+
+// Agents can commit without a clone: send the files, get a commit. A new branch starts from
+// `from`, else from the default branch.
 api.post("/repos/:owner/:name/commits", async (c) => {
   const grant = await loadRepo(c);
   const principal = need(grant, "write");
-  const input = await body<{
+  const input = await readJson<{
     branch?: string;
     message?: string;
     expected_sha?: string;
-    files?: FileInput[];
-  }>(c);
-  const files = (input.files ?? []).map((file) => {
+    from?: string;
+    files?: unknown[];
+  }>(c, {
+    branch: "string",
+    message: "string",
+    expected_sha: "string",
+    from: "string",
+    files: "array",
+  });
+  const files = (input.files ?? []).map((item, index) => {
+    const label = `files[${index}]`;
+    const file = fields<FileInput>(
+      item,
+      { path: "string", content: "string", encoding: "string", delete: "boolean" },
+      label,
+    );
     const path = (file.path ?? "").replace(/^\/+/, "");
     if (
       path === "" ||
@@ -512,7 +548,7 @@ api.post("/repos/:owner/:name/commits", async (c) => {
     }
     const content =
       file.encoding === "base64"
-        ? Uint8Array.from(atob(file.content ?? ""), (char) => char.charCodeAt(0))
+        ? decodeBase64(file.content ?? "", `${label}.content`)
         : new TextEncoder().encode(file.content ?? "");
     return { path, content };
   });
@@ -527,6 +563,7 @@ api.post("/repos/:owner/:name/commits", async (c) => {
       input.message!,
       personOf(principal.user),
       files,
+      input.from,
     ),
   );
   await afterPush(c.env, grant.repo, principal.user.id, [result.update]);
@@ -549,7 +586,7 @@ function searchInput(c: AppContext): { query: string; limit: number } {
     throw new HttpError(400, "send a query in q", "invalid_request");
   }
   // Vectorize returns up to 50 matches with their metadata.
-  return { query, limit: Math.min(Math.max(Number(c.req.query("limit") ?? 10) || 10, 1), 50) };
+  return { query, limit: limitOf(c, 10, 50) };
 }
 
 // Semantic code search over the default branch tip. Non-members search the public paths only.
@@ -659,7 +696,12 @@ api.get("/repos/:owner/:name/pulls", async (c) => {
 api.post("/repos/:owner/:name/pulls", async (c) => {
   const grant = await loadRepo(c);
   const principal = need(grant, "write");
-  const input = await body<{ title?: string; body?: string; head?: string; base?: string }>(c);
+  const input = await readJson<{ title?: string; body?: string; head?: string; base?: string }>(c, {
+    title: "string",
+    body: "string",
+    head: "string",
+    base: "string",
+  });
   const base = input.base ?? grant.repo.default_branch;
   if ((input.title ?? "").trim() === "" || (input.head ?? "") === "") {
     throw new HttpError(400, "send a title and a head branch", "invalid_request");
@@ -730,7 +772,11 @@ api.patch("/repos/:owner/:name/pulls/:number", async (c) => {
   const grant = await loadRepo(c);
   const principal = need(grant, "write");
   const pull = await loadPull(c, grant);
-  const input = await body<{ title?: string; body?: string; state?: string }>(c);
+  const input = await readJson<{ title?: string; body?: string; state?: string }>(c, {
+    title: "string",
+    body: "string",
+    state: "string",
+  });
   if (pull.state === "merged" && input.state !== undefined) {
     throw new HttpError(400, "a merged pull request stays merged", "invalid_request");
   }
@@ -765,7 +811,7 @@ api.post("/repos/:owner/:name/pulls/:number/merge", async (c) => {
   if (pull.state !== "open") {
     throw new HttpError(400, `the pull request is ${pull.state}`, "invalid_request");
   }
-  const input = await body<{ message?: string }>(c).catch(() => ({ message: undefined }));
+  const input = await readJson<{ message?: string }>(c, { message: "string" });
   const message =
     input.message ?? `Merge pull request #${pull.number} from ${pull.head}\n\n${pull.title}\n`;
   const merged = unwrap(
@@ -807,7 +853,7 @@ api.post("/repos/:owner/:name/pulls/:number/comments", async (c) => {
     throw new HttpError(404, "repository not found", "not_found");
   }
   const pull = await loadPull(c, grant);
-  const input = await body<{ body?: string }>(c);
+  const input = await readJson<{ body?: string }>(c, { body: "string" });
   if ((input.body ?? "").trim() === "") {
     throw new HttpError(400, "the comment is empty", "invalid_request");
   }
@@ -873,7 +919,7 @@ api.get("/repos/:owner/:name/collaborators", async (c) => {
 api.put("/repos/:owner/:name/collaborators/:handle", async (c) => {
   const grant = await loadRepo(c);
   need(grant, "admin");
-  const input = await body<{ role?: Role }>(c);
+  const input = await readJson<{ role?: Role }>(c, { role: "string" });
   const role = input.role === "write" || input.role === "admin" ? input.role : "read";
   const user = requireFound(await userByHandle(c.env, c.req.param("handle")), "user");
   if (user.id === grant.repo.owner_id) {
@@ -909,6 +955,18 @@ function checkEnvironmentScope(principal: Principal, environment: string): void 
       403,
       `the token is limited to the ${principal.environment} environment`,
       "forbidden",
+    );
+  }
+}
+
+/** A 404 unless the repository has the environment. The repository level, "", always exists. */
+async function requireEnvironment(env: Env, repoId: string, name: string): Promise<void> {
+  if (name !== "") {
+    requireFound(
+      await env.DB.prepare("SELECT 1 FROM environments WHERE repo_id = ? AND name = ?")
+        .bind(repoId, name)
+        .first(),
+      "environment",
     );
   }
 }
@@ -953,18 +1011,30 @@ api.get("/repos/:owner/:name/environments", async (c) => {
 api.post("/repos/:owner/:name/environments", async (c) => {
   const grant = await loadRepo(c);
   const principal = need(grant, "admin");
-  const input = await body<{ name?: string; kind?: string }>(c);
+  const input = await readJson<{ name?: string; kind?: string }>(c, {
+    name: "string",
+    kind: "string",
+  });
   if (!isName(input.name)) {
-    throw new HttpError(400, "invalid environment name", "invalid_request");
+    throw new HttpError(400, `name must be ${NAME_RULE}`, "invalid_request");
+  }
+  if (input.kind !== undefined && !ENV_KINDS.has(input.kind)) {
+    throw new HttpError(400, `kind must be one of ${[...ENV_KINDS].join(", ")}`, "invalid_request");
   }
   checkEnvironmentScope(principal, input.name);
-  const kind = ENV_KINDS.has(input.kind ?? "") ? input.kind! : "development";
+  // An existing environment keeps its kind unless the request names one.
+  const existing = await c.env.DB.prepare(
+    "SELECT kind FROM environments WHERE repo_id = ? AND name = ?",
+  )
+    .bind(grant.repo.id, input.name)
+    .first<{ kind: string }>();
+  const kind = input.kind ?? existing?.kind ?? "development";
   await c.env.DB.prepare(
     "INSERT INTO environments (repo_id, name, kind, created_at) VALUES (?, ?, ?, ?) ON CONFLICT (repo_id, name) DO UPDATE SET kind = excluded.kind",
   )
     .bind(grant.repo.id, input.name, kind, now())
     .run();
-  return c.json({ name: input.name, kind }, 201);
+  return c.json({ name: input.name, kind }, existing === null ? 201 : 200);
 });
 
 api.delete("/repos/:owner/:name/environments/:env", async (c) => {
@@ -987,7 +1057,11 @@ api.delete("/repos/:owner/:name/environments/:env", async (c) => {
 api.put("/repos/:owner/:name/variables/:var", async (c) => {
   const grant = await loadRepo(c);
   const principal = need(grant, "admin");
-  const input = await body<{ value?: string; secret?: boolean; environment?: string }>(c);
+  const input = await readJson<{ value?: string; secret?: boolean; environment?: string }>(c, {
+    value: "string",
+    secret: "boolean",
+    environment: "string",
+  });
   const name = c.req.param("var");
   const environment = input.environment ?? "";
   checkEnvironmentScope(principal, environment);
@@ -998,14 +1072,7 @@ api.put("/repos/:owner/:name/variables/:var", async (c) => {
       "invalid_request",
     );
   }
-  if (environment !== "") {
-    requireFound(
-      await c.env.DB.prepare("SELECT 1 FROM environments WHERE repo_id = ? AND name = ?")
-        .bind(grant.repo.id, environment)
-        .first(),
-      "environment",
-    );
-  }
+  await requireEnvironment(c.env, grant.repo.id, environment);
   const secret = input.secret !== false;
   const value = secret
     ? await sealSecret(c.env, grant.repo.id, `${grant.repo.id}:${environment}:${name}`, input.value)
@@ -1039,6 +1106,7 @@ api.get("/repos/:owner/:name/env", async (c) => {
     principal,
     environment === "" ? (principal.environment ?? "") : environment,
   );
+  await requireEnvironment(c.env, grant.repo.id, environment);
   const rows = await c.env.DB.prepare(
     "SELECT environment, name, secret, value FROM variables WHERE repo_id = ? AND environment IN ('', ?) ORDER BY environment, name",
   )

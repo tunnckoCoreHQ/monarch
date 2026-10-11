@@ -852,6 +852,7 @@ export class Repo extends DurableObject<Env> {
     message: string,
     person: Person,
     files: FileChange[],
+    from?: string,
   ) {
     // Store large blobs the way a sync does, in R2, before the synchronous commit writes them.
     const large: PackedObject[] = [];
@@ -878,7 +879,7 @@ export class Repo extends DurableObject<Env> {
     if (large.length > 0) {
       await this.repo.storage.saveObjects(large);
     }
-    return this.write(() => this.repo.commitFiles(branch, expected, message, person, files));
+    return this.write(() => this.repo.commitFiles(branch, expected, message, person, files, from));
   }
 
   createBranch(name: string, from: string) {

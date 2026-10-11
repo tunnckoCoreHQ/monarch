@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { concat, utf8 } from "../src/git/bytes";
+import { fileDiff } from "../src/git/diff";
 import { serializeCommit, serializeTree, parseTree } from "../src/git/objects";
 import { applyDelta, MAX_OBJECT_SIZE } from "../src/git/pack";
 import { FLUSH, pkt } from "../src/git/pktline";
@@ -63,6 +64,19 @@ describe("mergeBase", () => {
     const side = commit([shared], "side");
     const head = commit([side, old], "head");
     expect(mergeBase(store, base, head)).toBe(shared);
+  });
+});
+
+describe("fileDiff", () => {
+  it("starts the empty side of a hunk at line 0, like git", () => {
+    const repo = memoryRepo();
+    const sha = repo.objects.write("blob", utf8("one\ntwo\n"));
+    expect(fileDiff(repo.objects, { path: "a.txt", status: "added", newSha: sha }).patch).toBe(
+      "diff --git a/a.txt b/a.txt\nnew file mode 100644\n--- /dev/null\n+++ b/a.txt\n@@ -0,0 +1,2 @@\n+one\n+two\n",
+    );
+    expect(
+      fileDiff(repo.objects, { path: "a.txt", status: "deleted", oldSha: sha }).patch,
+    ).toContain("\n@@ -1,2 +0,0 @@\n-one\n-two\n");
   });
 });
 

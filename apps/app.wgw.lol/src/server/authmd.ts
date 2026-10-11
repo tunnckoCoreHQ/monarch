@@ -12,7 +12,7 @@ import {
 import { type AppContext, type AppEnv, mintToken, requireUser } from "./auth";
 import { type Scope, upsertUser } from "./db";
 import type { Env } from "./env";
-import { HttpError, newId, now, randomToken, sha256 } from "./util";
+import { HttpError, newId, now, randomToken, readJson, sha256 } from "./util";
 
 // auth.md (https://workos.com/auth-md): an agent registers, a person claims the registration with
 // a six-digit code, and the agent trades the signed identity assertion for short-lived tokens.
@@ -180,7 +180,9 @@ authmd.post("/agent/identity", async (c) => {
     });
   }
   if (input.type === "service_auth") {
-    const hint = (input.login_hint ?? "").trim().toLowerCase();
+    const hint = (typeof input.login_hint === "string" ? input.login_hint : "")
+      .trim()
+      .toLowerCase();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(hint) && !/^@[a-z0-9-]{1,39}$/.test(hint)) {
       return oauthError(
         c,
@@ -236,6 +238,9 @@ authmd.post("/agent/identity/claim", async (c) => {
   if (registration.status === "claimed") {
     return oauthError(c, "claimed_or_in_flight", "this registration is already claimed");
   }
+  if (typeof (input.email ?? "") !== "string") {
+    return oauthError(c, "invalid_request", "email must be a string");
+  }
   const email = (input.email ?? registration.claim_email ?? "").trim().toLowerCase();
   if (email === "") {
     return oauthError(
@@ -283,7 +288,7 @@ authmd.post("/api/claims/:attempt", async (c) => {
   if (principal.via !== "session" || principal.user.kind !== "human") {
     throw new HttpError(403, "a person claims agents from a browser session", "forbidden");
   }
-  const input = await c.req.json<{ user_code?: string }>();
+  const input = await readJson<{ user_code?: string }>(c, { user_code: "string" });
   const row = await c.env.DB.prepare(
     "SELECT * FROM agent_registrations WHERE attempt_token_hash = ?",
   )

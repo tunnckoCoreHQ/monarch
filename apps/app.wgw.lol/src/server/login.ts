@@ -35,6 +35,7 @@ import {
   now,
   pkceChallenge,
   randomToken,
+  readJson,
   sha256,
 } from "./util";
 
@@ -558,9 +559,7 @@ function userCode(): string {
 
 login.post("/api/device/code", async (c) => {
   await rateLimit(c, "device");
-  const body = await c.req
-    .json<{ client_name?: string }>()
-    .catch(() => ({ client_name: undefined }));
+  const body = await readJson<{ client_name?: string }>(c, { client_name: "string" });
   const deviceCode = randomToken(32);
   const code = userCode();
   await c.env.DB.prepare(
@@ -696,13 +695,19 @@ login.get("/api/keys", async (c) => {
 
 login.post("/api/keys", async (c) => {
   const principal = accountPrincipal(c);
-  const body = await c.req.json<{
+  const body = await readJson<{
     name?: string;
     scopes?: string[];
     repo?: string;
     environment?: string;
     expires_in_days?: number;
-  }>();
+  }>(c, {
+    name: "string",
+    scopes: "array",
+    repo: "string",
+    environment: "string",
+    expires_in_days: "number",
+  });
   const scopes = [...parseScopes((body.scopes ?? ["read", "write"]).join(" "))].filter((scope) =>
     principal.scopes.has(scope),
   );
@@ -739,8 +744,13 @@ login.post("/api/keys", async (c) => {
 
 login.delete("/api/keys/:id", async (c) => {
   const principal = accountPrincipal(c);
-  await c.env.DB.prepare("UPDATE tokens SET revoked_at = ? WHERE id = ? AND user_id = ?")
+  const result = await c.env.DB.prepare(
+    "UPDATE tokens SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
+  )
     .bind(now(), c.req.param("id"), principal.user.id)
     .run();
+  if (result.meta.changes !== 1) {
+    throw new HttpError(404, "key not found", "not_found");
+  }
   return c.json({ ok: true });
 });

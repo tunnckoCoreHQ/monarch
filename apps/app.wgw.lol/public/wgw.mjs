@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
+const VERSION = "0.1.0";
 const HOST = (process.env.WGW_HOST ?? "https://app.wgw.lol").replace(/\/+$/, "");
 const CONFIG = join(
   process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"),
@@ -24,7 +25,7 @@ Repositories
   wgw repo create <name> [--private] [--description <text>]
                   [--import <https url> [--import-branch <name>]]   imports one branch
   wgw repo list [owner]          wgw repo view [owner/name] [--json]   shows status
-  wgw repo fork <owner/name> [--name <new>]
+  wgw repo fork [owner/name] [--name <new>]
   wgw repo delete <owner/name> --yes
   wgw clone <owner/name> [dir]   members get the private paths too
 
@@ -33,17 +34,22 @@ Direct Artifacts access
   eval "$(wgw repo token)"       sets WGW_GIT_REMOTE and WGW_GIT_TOKEN in this shell
 
 Files without a clone
-  wgw ls [path] [--ref <ref>]    wgw cat <path> [--ref <ref>]    wgw log [--ref <ref>]
-  wgw commit --branch <b> -m <message> <repo/path=local/file>... [--delete <path>]
+  wgw ls [path] [--ref <ref>]    wgw cat <path> [--ref <ref>]
+  wgw log [--ref <ref>] [--limit <n>]   newest first; 20 by default, up to 200
+  wgw commit [--branch <b>] -m <message> <repo/path=local/file>... [--delete <path>]
+             [--expected-sha <sha>] [--from <ref>]
+      --branch defaults to the default branch. A new branch starts from the default branch,
+      or from --from. --expected-sha fails the commit when the branch moved.
 
 Search
-  wgw search "<query>" [-R owner/name] [--json]   code by meaning; outside a clone, all public repositories
+  wgw search "<query>" [-R owner/name] [--limit <n>] [--json]   code by meaning; 10 results by
+      default, up to 50. Outside a clone and without -R, all public repositories.
 
 Pull requests
   wgw pr create --head <branch> [--base <branch>] --title <text> [--body <text>]
   wgw pr list [--state open|merged|closed|all]
   wgw pr view <n> | diff <n> | merge <n> | close <n> | reopen <n> | summary <n>
-  wgw pr comment <n> --body <text>
+  wgw pr comment <n> [--body <text>]   reads stdin without --body
 
 Environments and secrets
   wgw env list | env create <name> [--kind production|staging|preview|development] | env delete <name>
@@ -58,12 +64,23 @@ Access
 
 Other
   wgw api <METHOD> <path> [json]   raw API call, prints the response
-  -R owner/name                    pick the repository; defaults to the git remote that points at ${new URL(HOST).host}
+  wgw version | wgw --version
+  -R owner/name                    pick the repository. A positional owner/name wins, then -R,
+                                   then the git remote of this clone that points at ${new URL(HOST).host}
+  --flag value or --flag=value     a value may start with a dash: --body "- item"
 `;
 
 function fail(message) {
   console.error(`wgw: ${message}`);
   process.exit(1);
+}
+
+/** Fails with the usage line unless the value is a non-empty string. */
+function required(value, usage) {
+  if (typeof value !== "string" || value === "") {
+    fail(`usage: ${usage}`);
+  }
+  return value;
 }
 
 function readConfig() {
@@ -83,35 +100,76 @@ function token() {
   return process.env.WGW_TOKEN ?? readConfig().token;
 }
 
-const BOOLEAN_FLAGS = new Set(["private", "yes", "plain", "json", "write"]);
+const SHORT_FLAGS = new Map([
+  ["-R", "repo"],
+  ["-m", "message"],
+  ["-h", "help"],
+]);
+const BOOLEAN_FLAGS = new Set(["private", "yes", "plain", "json", "write", "help", "version"]);
+const VALUE_FLAGS = new Set([
+  "repo",
+  "message",
+  "token",
+  "description",
+  "import",
+  "import-branch",
+  "name",
+  "ref",
+  "limit",
+  "branch",
+  "delete",
+  "expected-sha",
+  "from",
+  "head",
+  "base",
+  "title",
+  "body",
+  "state",
+  "kind",
+  "env",
+  "scopes",
+  "days",
+  "role",
+]);
 
+/** A value flag takes the next argument as it is, so `--body "- item"` keeps its text. */
 function parseArgs(argv) {
   const positional = [];
   const flags = {};
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "-R" || arg === "-m") {
-      flags[arg === "-R" ? "repo" : "message"] = argv[++i];
-    } else if (arg.startsWith("--")) {
-      const [name, inline] = arg.slice(2).split("=", 2);
-      const next = argv[i + 1];
-      if (inline !== undefined) {
-        flags[name] = inline;
-      } else if (!BOOLEAN_FLAGS.has(name) && next !== undefined && !next.startsWith("-")) {
-        flags[name] = next;
-        i++;
-      } else {
-        flags[name] = true;
-      }
-    } else {
+    let name = SHORT_FLAGS.get(arg);
+    let inline;
+    if (name === undefined && arg.startsWith("--") && arg.length > 2) {
+      const at = arg.indexOf("=");
+      name = arg.slice(2, at === -1 ? undefined : at);
+      inline = at === -1 ? undefined : arg.slice(at + 1);
+    }
+    if (name === undefined) {
       positional.push(arg);
+    } else if (BOOLEAN_FLAGS.has(name)) {
+      if (inline !== undefined) {
+        fail(`--${name} takes no value`);
+      }
+      flags[name] = true;
+    } else if (VALUE_FLAGS.has(name)) {
+      const value = inline ?? argv[++i];
+      if (value === undefined) {
+        fail(`${arg} needs a value`);
+      }
+      flags[name] = value;
+    } else {
+      fail(`unknown flag ${arg}; run wgw help`);
     }
   }
   return { positional, flags };
 }
 
-/** `raw: true` returns the body as text; `raw: "bytes"` returns it as a Buffer. */
-async function call(method, path, body, { raw = false, auth = true } = {}) {
+/**
+ * `raw: true` returns the body as text; `raw: "bytes"` returns it as a Buffer. `hint` maps a
+ * failed status and message to a hint, or to undefined for none.
+ */
+async function call(method, path, body, { raw = false, auth = true, hint } = {}) {
   const headers = { accept: "application/json" };
   const key = token();
   if (auth && key) {
@@ -134,7 +192,14 @@ async function call(method, path, body, { raw = false, auth = true } = {}) {
     } catch {
       // The body is not JSON; show it as it is.
     }
-    fail(`${res.status} ${message}${res.status === 401 ? " (run `wgw login`)" : ""}`);
+    let note = hint?.(res.status, message);
+    if (note === undefined && res.status === 401) {
+      note =
+        process.env.WGW_TOKEN === undefined
+          ? "run `wgw login`"
+          : "WGW_TOKEN is set; it overrides the stored key";
+    }
+    fail(`${res.status} ${message}${note === undefined ? "" : ` (${note})`}`);
   }
   if (raw) {
     return text;
@@ -163,13 +228,22 @@ function detectRepo(flags) {
   return undefined;
 }
 
-function currentRepo(flags) {
-  return detectRepo(flags) ?? fail("no repository: pass -R owner/name or run inside a clone");
+function ownerName(repo) {
+  if (!/^[^/\s]+\/[^/\s]+$/.test(repo)) {
+    fail(`expected owner/name, got ${repo}`);
+  }
+  return repo;
 }
 
-function base(flags) {
-  const repo = currentRepo(flags);
-  const [owner, name] = repo.split("/");
+/** A positional owner/name, else -R, else the git remote of this clone. */
+function pickRepo(flags, target) {
+  return ownerName(
+    target ?? detectRepo(flags) ?? fail("no repository: pass -R owner/name or run inside a clone"),
+  );
+}
+
+function base(flags, target) {
+  const [owner, name] = pickRepo(flags, target).split("/");
   return `/api/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
 }
 
@@ -190,24 +264,35 @@ function ago(seconds) {
 
 function setupGit() {
   const host = new URL(HOST).origin;
-  const self = process.argv[1];
-  const runtime = process.execPath;
+  // The runtime goes by name, not by path, so the helper still runs after a Node upgrade.
+  const runtime = process.versions.bun === undefined ? "node" : "bun";
   git([
     "config",
     "--global",
     `credential.${host}.helper`,
-    `!"${runtime}" "${self}" git-credential`,
+    `!${runtime} "${process.argv[1]}" git-credential`,
   ]);
   // Public repositories answer anonymous requests, so git must send the key up front for members
   // to receive private paths.
   git(["config", "--global", `http.${host}.proactiveAuth`, "basic"]);
 }
 
+/** Runs git. Its stderr is shown after it exits; on a failure, its first error line. */
 function git(args) {
-  const result = spawnSync("git", args, { stdio: "inherit" });
+  const result = spawnSync("git", args, {
+    encoding: "utf-8",
+    stdio: ["inherit", "inherit", "pipe"],
+  });
+  const command = args[0] === "-c" ? args[2] : args[0];
   if (result.status !== 0) {
-    fail(`git ${args[0]} failed`);
+    const lines = (result.stderr ?? "").trim().split("\n");
+    const reason =
+      result.error?.message ??
+      lines.find((line) => line.startsWith("fatal:") || line.startsWith("error:")) ??
+      lines.at(-1);
+    fail(`git ${command} failed${reason ? `: ${reason}` : ""}`);
   }
+  process.stderr.write(result.stderr);
 }
 
 async function readStdin() {
@@ -259,16 +344,17 @@ async function login(flags) {
 }
 
 async function main() {
-  const [command, sub, ...rest] = process.argv.slice(2);
-  const { positional, flags } = parseArgs(sub === undefined ? [] : [sub, ...rest]);
+  const { positional, flags } = parseArgs(process.argv.slice(2));
+  const [command, ...args] = positional;
+  if (flags.version || command === "version") {
+    console.log(VERSION);
+    return;
+  }
+  if (flags.help || command === undefined || command === "help") {
+    console.log(HELP);
+    return;
+  }
   switch (command) {
-    case undefined:
-    case "help":
-    case "--help":
-    case "-h": {
-      console.log(HELP);
-      return;
-    }
     case "login": {
       return login(flags);
     }
@@ -286,27 +372,25 @@ async function main() {
       return;
     }
     case "git-credential": {
-      if (positional[0] === "get" && token()) {
+      if (args[0] === "get" && token()) {
         process.stdout.write(`username=x\npassword=${token()}\n`);
       }
       return;
     }
     case "clone": {
-      const [repo, dir] = positional;
-      if (repo === undefined) {
-        fail("usage: wgw clone owner/name [dir]");
-      }
-      const args = ["-c", "http.proactiveAuth=basic", "clone", `${HOST}/${repo}.git`];
+      const [target, dir] = args;
+      const repo = ownerName(required(target, "wgw clone <owner/name> [dir]"));
+      const cloneArgs = ["-c", "http.proactiveAuth=basic", "clone", `${HOST}/${repo}.git`];
       if (dir !== undefined) {
-        args.push(dir);
+        cloneArgs.push(dir);
       }
-      return git(args);
+      return git(cloneArgs);
     }
     case "repo": {
-      return repo(positional, flags);
+      return repo(args, flags);
     }
     case "ls": {
-      const query = new URLSearchParams({ path: positional[0] ?? "", ref: flags.ref ?? "" });
+      const query = new URLSearchParams({ path: args[0] ?? "", ref: flags.ref ?? "" });
       const tree = await call("GET", `${base(flags)}/tree?${query}`);
       for (const item of tree.items) {
         console.log(
@@ -316,7 +400,8 @@ async function main() {
       return;
     }
     case "cat": {
-      const query = new URLSearchParams({ path: positional[0] ?? "", ref: flags.ref ?? "" });
+      const path = required(args[0], "wgw cat <path> [--ref <ref>]");
+      const query = new URLSearchParams({ path, ref: flags.ref ?? "" });
       process.stdout.write(
         await call("GET", `${base(flags)}/raw?${query}`, undefined, { raw: "bytes" }),
       );
@@ -332,44 +417,33 @@ async function main() {
       return;
     }
     case "commit": {
-      const files = positional.map((spec) => {
-        const [path, local] = spec.split("=");
-        if (local === undefined) {
-          fail(`expected repo/path=local/file, got ${spec}`);
-        }
-        return { path, content: readFileSync(local).toString("base64"), encoding: "base64" };
-      });
-      if (typeof flags.delete === "string") {
-        files.push({ path: flags.delete, delete: true });
-      }
-      const result = await call("POST", `${base(flags)}/commits`, {
-        branch: flags.branch,
-        message: flags.message,
-        files,
-      });
-      console.log(`${result.sha}  ${result.branch}`);
-      return;
+      return commit(args, flags);
     }
     case "search": {
-      return search(positional[0], flags);
+      return search(args[0], flags);
     }
     case "pr": {
-      return pr(positional, flags);
+      return pr(args, flags);
     }
     case "env": {
-      return env(positional, flags);
+      return env(args, flags);
     }
     case "secret": {
-      return secret(positional, flags);
+      return secret(args, flags);
     }
     case "key": {
-      return key(positional, flags);
+      return key(args, flags);
     }
     case "collab": {
-      return collab(positional, flags);
+      return collab(args, flags);
     }
     case "api": {
-      const [method, path, json] = positional;
+      const usage = "wgw api <METHOD> <path> [json]";
+      const [method, path, json] = args;
+      required(method, usage);
+      if (!required(path, usage).startsWith("/")) {
+        fail(`the path starts with /, like /api/me; got ${path}`);
+      }
       return print(
         await call(method.toUpperCase(), path, json === undefined ? undefined : JSON.parse(json), {
           raw: true,
@@ -431,8 +505,7 @@ function shellQuote(value) {
 
 async function gitToken(target, flags) {
   const scope = flags.write ? "write" : "read";
-  const root = base(target === undefined ? flags : { repo: target });
-  const grant = await call("POST", `${root}/git-token`, { scope });
+  const grant = await call("POST", `${base(flags, target)}/git-token`, { scope });
   if (flags.json) {
     return print(grant);
   }
@@ -451,15 +524,16 @@ async function gitToken(target, flags) {
 
 async function repo([action, target], flags) {
   if (action === "create") {
+    const name = required(
+      target,
+      "wgw repo create <name> [--private] [--description <text>] [--import <https url>]",
+    );
     const branch = flags["import-branch"];
-    if (branch === true) {
-      fail("--import-branch needs a branch name");
-    }
     if (branch !== undefined && !flags.import) {
       fail("--import-branch needs --import <https url>");
     }
     const created = await call("POST", "/api/repos", {
-      name: target,
+      name,
       description: flags.description,
       visibility: flags.private ? "private" : "public",
       import_url: flags.import,
@@ -489,14 +563,24 @@ async function repo([action, target], flags) {
     return;
   }
   if (action === "view") {
-    const item = await call("GET", base(target === undefined ? flags : { repo: target }));
+    const item = await call("GET", base(flags, target));
     return flags.json ? print(item) : showRepo(item);
   }
   if (action === "token") {
     return gitToken(target, flags);
   }
   if (action === "fork") {
-    const forked = await call("POST", `${base({ repo: target })}/fork`, { name: flags.name });
+    const forked = await call(
+      "POST",
+      `${base(flags, target)}/fork`,
+      { name: flags.name },
+      {
+        hint: (status, message) =>
+          status === 409 && message.endsWith("already exists") && flags.name === undefined
+            ? "pass --name <new> to fork under another name"
+            : undefined,
+      },
+    );
     console.log(forked.clone_url);
     if (forked.status === "forking") {
       console.log(`Forking. Run \`wgw repo view ${forked.full_name}\` until the status is ready.`);
@@ -504,24 +588,60 @@ async function repo([action, target], flags) {
     return;
   }
   if (action === "delete") {
+    // Deleting never falls back to the git remote: the repository must be named.
+    const name = ownerName(required(target ?? flags.repo, "wgw repo delete <owner/name> --yes"));
     if (!flags.yes) {
-      fail("pass --yes to delete");
+      fail(`pass --yes to delete ${name}`);
     }
-    await call("DELETE", base({ repo: target }));
-    console.log(`Deleted ${target}`);
+    await call("DELETE", base(flags, name));
+    console.log(`Deleted ${name}`);
     return;
   }
   fail("usage: wgw repo create|list|view|token|fork|delete");
 }
 
+async function commit(specs, flags) {
+  const usage =
+    "wgw commit [--branch <b>] -m <message> <repo/path=local/file>... [--delete <path>] [--expected-sha <sha>] [--from <ref>]";
+  required(flags.message, usage);
+  const files = specs.map((spec) => {
+    const at = spec.indexOf("=");
+    if (at < 1 || at === spec.length - 1) {
+      fail(`expected repo/path=local/file, got ${spec}`);
+    }
+    const local = spec.slice(at + 1);
+    let content;
+    try {
+      content = readFileSync(local);
+    } catch (error) {
+      fail(`cannot read ${local}: ${error.code === "ENOENT" ? "no such file" : error.message}`);
+    }
+    return { path: spec.slice(0, at), content: content.toString("base64"), encoding: "base64" };
+  });
+  if (flags.delete !== undefined) {
+    files.push({ path: flags.delete, delete: true });
+  }
+  if (files.length === 0) {
+    fail(`usage: ${usage}`);
+  }
+  const result = await call("POST", `${base(flags)}/commits`, {
+    branch: flags.branch,
+    message: flags.message,
+    expected_sha: flags["expected-sha"],
+    from: flags.from,
+    files,
+  });
+  console.log(`${result.sha}  ${result.branch}`);
+}
+
 /** Searches one repository, or every public repository when there is none to pick. */
 async function search(query, flags) {
   if (query === undefined || query.trim() === "") {
-    fail('usage: wgw search "<query>" [-R owner/name] [--json]');
+    fail('usage: wgw search "<query>" [-R owner/name] [--limit <n>] [--json]');
   }
   const repo = detectRepo(flags);
   const params = new URLSearchParams({ q: query, limit: flags.limit ?? "10" });
-  const path = repo === undefined ? "/api/search" : `${base({ repo })}/search`;
+  const path = repo === undefined ? "/api/search" : `${base(flags, repo)}/search`;
   const hits = await call("GET", `${path}?${params}`);
   if (flags.json) {
     return print(hits);
@@ -539,7 +659,28 @@ async function search(query, flags) {
   }
 }
 
+const NUMBERED_PR_ACTIONS = new Set([
+  "view",
+  "diff",
+  "merge",
+  "close",
+  "reopen",
+  "comment",
+  "summary",
+]);
+
 async function pr([action, number], flags) {
+  if (NUMBERED_PR_ACTIONS.has(action)) {
+    if (!/^\d+$/.test(number ?? "")) {
+      fail(`usage: wgw pr ${action} <number>${action === "comment" ? " [--body <text>]" : ""}`);
+    }
+  } else if (action === "create") {
+    if (flags.head === undefined || flags.title === undefined) {
+      fail("usage: wgw pr create --head <branch> [--base <branch>] --title <text> [--body <text>]");
+    }
+  } else if (action !== "list") {
+    fail("usage: wgw pr create|list|view|diff|merge|close|reopen|comment|summary");
+  }
   const root = `${base(flags)}/pulls`;
   switch (action) {
     case "create": {
@@ -590,12 +731,9 @@ async function pr([action, number], flags) {
       console.log("Commented.");
       return;
     }
-    case "summary": {
-      console.log((await call("POST", `${root}/${number}/summary`)).summary);
-      return;
-    }
     default: {
-      fail("usage: wgw pr create|list|view|diff|merge|close|reopen|comment|summary");
+      // Only summary is left; the checks at the top allow no other action.
+      console.log((await call("POST", `${root}/${number}/summary`)).summary);
     }
   }
 }
@@ -608,6 +746,13 @@ function showVariables(label, variables) {
 }
 
 async function env([action, name], flags) {
+  if (action === "create") {
+    required(name, "wgw env create <name> [--kind production|staging|preview|development]");
+  } else if (action === "delete") {
+    required(name, "wgw env delete <name>");
+  } else if (action !== "list" && action !== "pull") {
+    fail("usage: wgw env list|create|delete|pull");
+  }
   const root = base(flags);
   if (action === "list") {
     const data = await call("GET", `${root}/environments`);
@@ -625,18 +770,21 @@ async function env([action, name], flags) {
     console.log(`Deleted ${name}`);
     return;
   }
-  if (action === "pull") {
-    const query = new URLSearchParams({
-      environment: name ?? "",
-      format: flags.json ? "json" : "dotenv",
-    });
-    process.stdout.write(await call("GET", `${root}/env?${query}`, undefined, { raw: true }));
-    return;
-  }
-  fail("usage: wgw env list|create|delete|pull");
+  const query = new URLSearchParams({
+    environment: name ?? "",
+    format: flags.json ? "json" : "dotenv",
+  });
+  process.stdout.write(await call("GET", `${root}/env?${query}`, undefined, { raw: true }));
 }
 
 async function secret([action, name, value], flags) {
+  if (action === "set") {
+    required(name, "wgw secret set <NAME> [--env <name>] [--plain] [<value>]");
+  } else if (action === "delete") {
+    required(name, "wgw secret delete <NAME> [--env <name>]");
+  } else {
+    fail("usage: wgw secret set|delete");
+  }
   const root = base(flags);
   if (action === "set") {
     const resolved = value ?? (await readStdin());
@@ -648,22 +796,22 @@ async function secret([action, name, value], flags) {
     console.log(`Set ${name}${flags.env ? ` in ${flags.env}` : " for the repository"}`);
     return;
   }
-  if (action === "delete") {
-    await call(
-      "DELETE",
-      `${root}/variables/${encodeURIComponent(name)}?environment=${encodeURIComponent(flags.env ?? "")}`,
-    );
-    console.log(`Deleted ${name}`);
-    return;
-  }
-  fail("usage: wgw secret set|delete");
+  await call(
+    "DELETE",
+    `${root}/variables/${encodeURIComponent(name)}?environment=${encodeURIComponent(flags.env ?? "")}`,
+  );
+  console.log(`Deleted ${name}`);
 }
 
 async function key([action, name], flags) {
   if (action === "create") {
+    required(
+      name,
+      "wgw key create <name> [--scopes read,write,admin,secrets] [--repo owner/name] [--env <name>] [--days 90]",
+    );
     const created = await call("POST", "/api/keys", {
       name,
-      scopes: typeof flags.scopes === "string" ? flags.scopes.split(",") : undefined,
+      scopes: flags.scopes?.split(","),
       repo: flags.repo,
       environment: flags.env,
       expires_in_days: flags.days === undefined ? undefined : Number(flags.days),
@@ -673,13 +821,19 @@ async function key([action, name], flags) {
   }
   if (action === "list") {
     for (const item of await call("GET", "/api/keys")) {
-      console.log(
-        `${item.id}  ${item.prefix}…  ${item.name}  [${item.scopes.join(",")}]${item.environment ? ` env:${item.environment}` : ""}`,
-      );
+      const limits = [
+        item.repo_id === null ? "" : ` repo:${item.repo ?? "(deleted)"}`,
+        item.environment ? ` env:${item.environment}` : "",
+        item.expires_at === null
+          ? " no expiry"
+          : ` expires ${new Date(item.expires_at * 1000).toISOString().slice(0, 10)}`,
+      ].join("");
+      console.log(`${item.id}  ${item.prefix}…  ${item.name}  [${item.scopes.join(",")}]${limits}`);
     }
     return;
   }
   if (action === "revoke") {
+    required(name, "wgw key revoke <id>");
     await call("DELETE", `/api/keys/${encodeURIComponent(name)}`);
     console.log(`Revoked ${name}`);
     return;
@@ -688,6 +842,13 @@ async function key([action, name], flags) {
 }
 
 async function collab([action, handle], flags) {
+  if (action === "add") {
+    required(handle, "wgw collab add <handle> [--role read|write|admin]");
+  } else if (action === "remove") {
+    required(handle, "wgw collab remove <handle>");
+  } else if (action !== "list") {
+    fail("usage: wgw collab list|add|remove");
+  }
   const root = `${base(flags)}/collaborators`;
   if (action === "list") {
     for (const item of await call("GET", root)) {
@@ -700,12 +861,14 @@ async function collab([action, handle], flags) {
       await call("PUT", `${root}/${encodeURIComponent(handle)}`, { role: flags.role ?? "write" }),
     );
   }
-  if (action === "remove") {
-    await call("DELETE", `${root}/${encodeURIComponent(handle)}`);
-    console.log(`Removed @${handle}`);
-    return;
-  }
-  fail("usage: wgw collab list|add|remove");
+  await call("DELETE", `${root}/${encodeURIComponent(handle)}`);
+  console.log(`Removed @${handle}`);
 }
 
-await main();
+// Any error left, like a network failure or bad JSON, prints one line instead of a stack trace.
+try {
+  await main();
+} catch (error) {
+  const cause = error?.cause instanceof Error ? `: ${error.cause.message}` : "";
+  fail(`${error instanceof Error ? error.message : String(error)}${cause}`);
+}

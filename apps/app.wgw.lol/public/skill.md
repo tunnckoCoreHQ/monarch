@@ -37,7 +37,31 @@ curl -fsSL https://app.wgw.lol/install.sh | sh
 wgw login            # or: wgw login --token "$WGW_TOKEN"
 ```
 
-The CLI is one file with no dependencies. It needs Node 20+ or Bun. `WGW_TOKEN` overrides the stored key. Every command takes `-R owner/repo`; inside a clone it reads the git remote.
+The CLI is one file with no dependencies. It needs Node 20+ or Bun. `WGW_TOKEN` overrides the stored key.
+
+A command picks its repository in this order: the `owner/repo` argument of `repo view`, `repo token`, `repo fork`, and `repo delete`, then `-R owner/repo`, then the git remote of the clone you run it in. `wgw repo delete` never reads the git remote, so name the repository. Flags take `--flag value` or `--flag=value`, and a value may start with a dash, as in `--body "- item"`. A missing argument prints a usage line and exits 1.
+
+```sh
+wgw help                             # every command and flag
+wgw whoami                           # the account behind the key
+wgw logout                           # forget the stored key
+wgw version
+wgw repo list [owner]
+wgw repo view owner/repo             # status, branches, clone URL
+wgw repo delete owner/repo --yes
+wgw ls [path] [--ref main]           # list a directory
+wgw cat README.md [--ref main]       # print a file
+wgw log [--ref main] [--limit 20]    # newest first, up to 200
+wgw env list
+wgw env delete preview               # deletes its values too
+wgw secret delete NAME [--env production]
+wgw key list                         # each key's scopes, repository, environment, and expiry
+wgw key revoke tok_…
+wgw collab list
+wgw collab add alice --role write    # read, write, or admin
+wgw collab remove alice
+wgw api GET /api/me                  # any API call; prints the response
+```
 
 ## 3. MCP
 
@@ -94,7 +118,7 @@ curl -s https://app.wgw.lol/api/repos/OWNER/REPO/git-token \
 
 ```json
 {
-  "remote": "https://<account>.artifacts.cloudflare.net/git/app-wgw-lol/<name>.git",
+  "remote": "https://<account>.artifacts.cloudflare.net/git/app-wgw-lol/repo_<id>.git",
   "token": "art_v…",
   "scope": "read",
   "expires_at": "2026-10-11T13:00:00.000Z",
@@ -102,6 +126,7 @@ curl -s https://app.wgw.lol/api/repos/OWNER/REPO/git-token \
 }
 ```
 
+- The Artifacts remote names the repository by its id, not by its name. The public projection is `repo_<id>.public.git`.
 - `scope` is `read` (the default) or `write`.
 - Members get the full repository (`"view": "full"`). Everyone else gets the public projection (`"view": "public"`), read only.
 - A write token needs write access to the repository and a key with the `write` scope.
@@ -118,6 +143,7 @@ curl -s https://app.wgw.lol/api/repos/OWNER/REPO/commits \
     "branch": "agent/fix-typo",
     "message": "docs: fix a typo",
     "expected_sha": "<current branch tip, or omit>",
+    "from": "<where a new branch starts, or omit>",
     "files": [
       { "path": "README.md", "content": "# Title\n" },
       { "path": "logo.png", "content": "<base64>", "encoding": "base64" },
@@ -126,19 +152,27 @@ curl -s https://app.wgw.lol/api/repos/OWNER/REPO/commits \
   }'
 ```
 
-The branch is created when it does not exist. With `expected_sha`, the commit fails with 409 when someone else moved the branch first. Use it when several agents work on one branch.
+Without `branch`, the commit goes to the default branch. A branch that does not exist is created from the tip of the default branch, or from `from` (a branch, tag, or commit hash). The commit keeps that tree and changes only the files you send, so a pull request from the branch merges. `from` on a branch that already exists is a 409.
 
-CLI: `wgw commit --branch agent/fix -m "docs: fix" README.md=./README.md`.
+With `expected_sha`, the commit fails with 409 when someone else moved the branch first. Use it when several agents work on one branch.
+
+```sh
+wgw commit --branch agent/fix -m "docs: fix" README.md=./README.md --delete old.txt
+wgw commit --branch agent/fix -m "docs: more" --expected-sha <tip> README.md=./README.md
+wgw commit --branch hotfix -m "fix: retry" --from v1.2.0 src/retry.ts=./src/retry.ts
+```
 
 ## 7. Pull requests
 
 ```sh
 wgw pr create --head agent/fix-typo --title "Fix a typo" --body "One word."
-wgw pr list
+wgw pr list            # --state open (default), merged, closed, or all
+wgw pr view 3          # title, body, commit and file counts, mergeable or not
 wgw pr diff 3          # unified diff, ready for review
 wgw pr summary 3       # Workers AI summary of the diff
 wgw pr comment 3 --body "Looks right."
 wgw pr merge 3         # fast-forward when possible, else a merge commit
+wgw pr close 3         # wgw pr reopen 3 opens it again
 ```
 
 Merges run on the server. The mirror makes the merge commit and pushes it to Artifacts. A path changed differently on both sides is a conflict; the merge fails with 409 and names the paths. Rebase locally and push again.
@@ -171,6 +205,8 @@ wgw secret set LOG_LEVEL --plain info            # repository-wide, not secret
 wgw env pull production > .env                   # needs a key with the secrets scope
 ```
 
+Running `env create` on an environment that exists changes its kind only when you pass `--kind`. An unknown kind is a 400, and `env pull` of an unknown environment is a 404.
+
 Repository values apply to every environment and environment values override them. Secret values are sealed with AES-256-GCM under a key that belongs to the repository. That key is stored in D1 wrapped by a master key in Cloudflare Secrets Store, and it is deleted with the repository. Only `GET /api/repos/OWNER/REPO/env?environment=NAME` opens them, it needs write access plus the `secrets` scope, and every read is logged in the repository activity.
 
 ## 10. Imports and forks
@@ -183,7 +219,7 @@ wgw repo view you/lib                                                        # s
 
 An import copies one branch: the remote's default branch, or `import_branch` when you give one. Push other branches yourself after the import. Artifacts runs the import. The repository shows `"status": "importing"` until a Workflow sees the import finish and syncs the mirror. Then it shows `ready`. If the import fails, the status is `failed` and `status_detail` says why. Delete the repository and try again.
 
-`wgw repo fork owner/repo` forks in Artifacts. Members of the source fork the full repository, private paths included. Everyone else forks the public projection, so private paths never leave the source. The fork shows `forking` until it is ready. You can only fork a repository that is `ready`.
+`wgw repo fork owner/repo` forks in Artifacts. Members of the source fork the full repository, private paths included. Everyone else forks the public projection, so private paths never leave the source. The fork shows `forking` until it is ready. You can only fork a repository that is `ready`. The fork keeps the source's name; to fork your own repository, pass `--name <new>`.
 
 ## 11. Code search
 
@@ -205,15 +241,15 @@ curl -s "https://app.wgw.lol/api/repos/OWNER/REPO/search?q=where+tokens+are+chec
 ```
 
 - Search matches by meaning, not by exact text. Workers AI embeds each file in chunks of about 1,500 characters, and Vectorize stores the vectors.
-- The index follows the tip of the default branch. After a push, only the changed files are embedded again.
+- The index follows the tip of the default branch. After a push, only the changed files are embedded again. New pushes show up in search within about two minutes. Until then, a query can return the old results, a deleted file, or nothing.
 - Members search every file. Everyone else searches the public paths, the files the public projection shows.
 - `GET /api/search?q=` searches the public paths of every public repository. Each result also has `owner` and `name`.
 - The index skips binary files, files over 256 KB, lockfiles, and minified files.
-- `limit` is 1 to 50. The default is 10.
+- `limit` (`--limit` in the CLI) is 1 to 50. The default is 10. Any other value is a 400.
 
 ## 12. API reference
 
-All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", "message": "<text>"}`.
+All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", "message": "<text>"}`. A JSON field of the wrong type is a 400 that names the field.
 
 | Method and path | What it does |
 | --- | --- |
@@ -226,8 +262,8 @@ All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", 
 | `POST /repos/:owner/:repo/branches` · `DELETE …/branches/:name` | Create (`name`, `from`) or delete a branch |
 | `GET /repos/:owner/:repo/tree?ref=&path=` | Directory listing |
 | `GET /repos/:owner/:repo/blob?ref=&path=` · `GET …/raw?ref=&path=` | File as JSON (text) · raw bytes |
-| `GET /repos/:owner/:repo/commits?ref=&path=&limit=` | History, newest first |
-| `GET /repos/:owner/:repo/commits/:sha` · `POST …/commits` | One commit with its diff · commit files |
+| `GET /repos/:owner/:repo/commits?ref=&path=&limit=` | History, newest first; `limit` is 1 to 200, 30 by default |
+| `GET /repos/:owner/:repo/commits/:sha` · `POST …/commits` | One commit with its diff · commit files (`branch`, `message`, `files`, `expected_sha`, `from`) |
 | `GET /repos/:owner/:repo/compare?base=&head=` | Commits, file diffs, mergeability |
 | `GET /repos/:owner/:repo/search?q=&limit=` · `GET /search?q=&limit=` | Code search in one repository · in every public repository |
 | `GET` · `POST /repos/:owner/:repo/pulls` | List (`state=open,merged,closed,all`) · open (`title`, `head`, `base`, `body`) |
@@ -236,11 +272,11 @@ All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", 
 | `POST /repos/:owner/:repo/pulls/:n/merge` · `…/summary` | Merge · AI summary |
 | `GET` · `POST /repos/:owner/:repo/pulls/:n/comments` | Comments |
 | `GET` · `PUT` · `DELETE /repos/:owner/:repo/collaborators/:handle` | Collaborators (`role`: read, write, admin) |
-| `GET` · `POST /repos/:owner/:repo/environments` · `DELETE …/environments/:name` | Environments and their variable names |
+| `GET` · `POST /repos/:owner/:repo/environments` · `DELETE …/environments/:name` | Environments and their variable names; create (`name`, `kind`) |
 | `PUT` · `DELETE /repos/:owner/:repo/variables/:NAME` | Set (`value`, `secret`, `environment`) or delete |
-| `GET /repos/:owner/:repo/env?environment=&format=dotenv` | Opened values for one environment |
+| `GET /repos/:owner/:repo/env?environment=&format=dotenv` | Opened values for one environment; 404 for an unknown one |
 | `GET /repos/:owner/:repo/events` | Pushes, merges, secret reads |
-| `GET` · `POST /keys` · `DELETE /keys/:id` | API keys (`name`, `scopes`, `repo`, `environment`, `expires_in_days`) |
+| `GET` · `POST /keys` · `DELETE /keys/:id` | API keys (`name`, `scopes`, `repo`, `environment`, `expires_in_days`); revoking an unknown key is a 404 |
 | `POST /device/code` · `POST /device/token` | CLI device flow |
 
 Repository JSON has `status` (`ready`, `importing`, `forking`, or `failed`), `status_detail` (why it failed, or null), and `storage` (`artifacts`).
