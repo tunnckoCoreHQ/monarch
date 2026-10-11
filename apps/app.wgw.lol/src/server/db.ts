@@ -30,6 +30,8 @@ export interface RepoRow {
   pushed_at: number | null;
   created_at: number;
   owner: string;
+  status: "ready" | "importing" | "forking" | "failed";
+  status_detail: string | null;
 }
 
 export function publicUser(user: User) {
@@ -58,6 +60,9 @@ export function repoJson(repo: RepoRow, origin: string) {
     created_at: repo.created_at,
     clone_url: `${origin}/${repo.owner}/${repo.name}.git`,
     web_url: `${origin}/${repo.owner}/${repo.name}`,
+    status: repo.status,
+    status_detail: repo.status_detail,
+    storage: "artifacts",
   };
 }
 

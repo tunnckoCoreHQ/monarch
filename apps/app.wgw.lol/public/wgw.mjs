@@ -21,11 +21,16 @@ Sign-in
   wgw setup-git                  make plain git use the stored key for ${new URL(HOST).host}
 
 Repositories
-  wgw repo create <name> [--private] [--description <text>] [--import <https url>]
-  wgw repo list [owner]          wgw repo view [owner/name]
+  wgw repo create <name> [--private] [--description <text>]
+                  [--import <https url> [--import-branch <name>]]   imports one branch
+  wgw repo list [owner]          wgw repo view [owner/name] [--json]   shows status
   wgw repo fork <owner/name> [--name <new>]
   wgw repo delete <owner/name> --yes
   wgw clone <owner/name> [dir]   members get the private paths too
+
+Direct Artifacts access
+  wgw repo token [owner/name] [--write] [--json]   a 1-hour token for the Artifacts git remote
+  eval "$(wgw repo token)"       sets WGW_GIT_REMOTE and WGW_GIT_TOKEN in this shell
 
 Files without a clone
   wgw ls [path] [--ref <ref>]    wgw cat <path> [--ref <ref>]    wgw log [--ref <ref>]
@@ -75,7 +80,7 @@ function token() {
   return process.env.WGW_TOKEN ?? readConfig().token;
 }
 
-const BOOLEAN_FLAGS = new Set(["private", "yes", "plain", "json"]);
+const BOOLEAN_FLAGS = new Set(["private", "yes", "plain", "json", "write"]);
 
 function parseArgs(argv) {
   const positional = [];
@@ -366,15 +371,95 @@ async function main() {
   }
 }
 
+const STATUS_NOTES = {
+  importing: "Artifacts is importing the repository. Files and history appear when it is ready.",
+  forking: "Artifacts is forking the repository. Files and history appear when it is ready.",
+  failed: "The import or fork did not finish. Delete the repository and try again.",
+};
+
+function showRepo(item) {
+  const status = item.status ?? "ready";
+  let access;
+  if (item.role === null) {
+    access = "none, public view";
+  } else if (item.role !== undefined) {
+    access = `${item.role}, ${item.view} view`;
+  }
+  const rows = [
+    ["status", status],
+    ["detail", item.status_detail],
+    ["default branch", item.default_branch],
+    ["branches", item.branches?.join(", ")],
+    ["tags", item.tags?.join(", ")],
+    ["open pulls", item.open_pulls],
+    ["clone", item.clone_url],
+    ["web", item.web_url],
+    ["imported from", item.source],
+    ["forked from", item.forked_from],
+    ["your access", access],
+  ];
+  console.log(`${item.full_name}  ${item.visibility}`);
+  if (item.description) {
+    console.log(item.description);
+  }
+  console.log("");
+  for (const [label, value] of rows) {
+    if (value !== undefined && value !== null && value !== "") {
+      console.log(`${label.padEnd(15)} ${value}`);
+    }
+  }
+  if (STATUS_NOTES[status] !== undefined) {
+    console.log(`\n${STATUS_NOTES[status]}`);
+  }
+}
+
+/** Single-quotes a value for POSIX shells, so `eval "$(wgw repo token)"` is safe. */
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+async function gitToken(target, flags) {
+  const scope = flags.write ? "write" : "read";
+  const root = base(target === undefined ? flags : { repo: target });
+  const grant = await call("POST", `${root}/git-token`, { scope });
+  if (flags.json) {
+    return print(grant);
+  }
+  console.log(`export WGW_GIT_REMOTE=${shellQuote(grant.remote)}`);
+  console.log(`export WGW_GIT_TOKEN=${shellQuote(grant.token)}`);
+  // The hint goes to stderr, so eval only sees the two export lines.
+  const header = 'git -c http.extraHeader="Authorization: Bearer $WGW_GIT_TOKEN"';
+  console.error(
+    `# ${grant.scope} token for the ${grant.view} repository, expires ${grant.expires_at}`,
+  );
+  console.error(`# ${header} clone "$WGW_GIT_REMOTE"`);
+  if (grant.scope === "write") {
+    console.error(`# ${header} push "$WGW_GIT_REMOTE" HEAD`);
+  }
+}
+
 async function repo([action, target], flags) {
   if (action === "create") {
+    const branch = flags["import-branch"];
+    if (branch === true) {
+      fail("--import-branch needs a branch name");
+    }
+    if (branch !== undefined && !flags.import) {
+      fail("--import-branch needs --import <https url>");
+    }
     const created = await call("POST", "/api/repos", {
       name: target,
       description: flags.description,
       visibility: flags.private ? "private" : "public",
       import_url: flags.import,
+      import_branch: branch,
     });
     console.log(`${created.web_url}\n${created.clone_url}`);
+    if (created.status === "importing") {
+      console.log(
+        `Importing. Run \`wgw repo view ${created.full_name}\` until the status is ready.`,
+      );
+    }
     if (existsSync(".git") && !flags.import) {
       spawnSync("git", ["remote", "add", "wgw", created.clone_url], { stdio: "ignore" });
       console.log("Added git remote `wgw`. Push with: git push wgw HEAD");
@@ -384,16 +469,27 @@ async function repo([action, target], flags) {
   if (action === "list") {
     const query = target === undefined ? "" : `?owner=${encodeURIComponent(target)}`;
     for (const item of await call("GET", `/api/repos${query}`)) {
-      console.log(`${item.full_name.padEnd(40)} ${item.visibility.padEnd(8)} ${item.description}`);
+      const status =
+        item.status === undefined || item.status === "ready" ? "" : `[${item.status}] `;
+      console.log(
+        `${item.full_name.padEnd(40)} ${item.visibility.padEnd(8)} ${status}${item.description}`,
+      );
     }
     return;
   }
   if (action === "view") {
-    return print(await call("GET", base(target === undefined ? flags : { repo: target })));
+    const item = await call("GET", base(target === undefined ? flags : { repo: target }));
+    return flags.json ? print(item) : showRepo(item);
+  }
+  if (action === "token") {
+    return gitToken(target, flags);
   }
   if (action === "fork") {
     const forked = await call("POST", `${base({ repo: target })}/fork`, { name: flags.name });
     console.log(forked.clone_url);
+    if (forked.status === "forking") {
+      console.log(`Forking. Run \`wgw repo view ${forked.full_name}\` until the status is ready.`);
+    }
     return;
   }
   if (action === "delete") {
@@ -404,7 +500,7 @@ async function repo([action, target], flags) {
     console.log(`Deleted ${target}`);
     return;
   }
-  fail("usage: wgw repo create|list|view|fork|delete");
+  fail("usage: wgw repo create|list|view|token|fork|delete");
 }
 
 async function pr([action, number], flags) {

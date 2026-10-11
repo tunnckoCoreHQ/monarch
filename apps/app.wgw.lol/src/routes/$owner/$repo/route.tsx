@@ -1,5 +1,6 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouter } from "@tanstack/react-router";
 import { Eye, GitFork, Lock } from "lucide-react";
+import { useEffect } from "react";
 
 import { CopyField, Page } from "~/components/site";
 import { Badge } from "~/components/ui/badge";
@@ -24,6 +25,39 @@ function Tab({ to, label, exact }: { to: string; label: string; exact?: boolean 
     >
       {label}
     </Link>
+  );
+}
+
+const STATUS_TEXT: Record<"importing" | "forking" | "failed", string> = {
+  importing:
+    "Cloudflare Artifacts is importing this repository. This page refreshes until it is ready.",
+  forking:
+    "Cloudflare Artifacts is forking this repository. This page refreshes until it is ready.",
+  failed: "The import or fork failed.",
+};
+
+function StatusBanner({ repo }: { repo: RepoDetail }) {
+  const router = useRouter();
+  const waiting = repo.status === "importing" || repo.status === "forking";
+  useEffect(() => {
+    if (!waiting) {
+      return;
+    }
+    const timer = setInterval(() => {
+      router.invalidate().catch((error: unknown) => console.error(error));
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [waiting, router]);
+  if (repo.status === "ready") {
+    return null;
+  }
+  return (
+    <p
+      className={`mt-4 border px-4 py-3 font-mono text-sm ${repo.status === "failed" ? "border-destructive text-destructive" : "border-violet text-violet"}`}
+    >
+      {STATUS_TEXT[repo.status]}
+      {repo.status_detail === null ? null : ` ${repo.status_detail}`}
+    </p>
   );
 }
 
@@ -95,6 +129,7 @@ function RepoLayout() {
           {repo.description === "" ? null : (
             <p className="text-muted-foreground mt-3">{repo.description}</p>
           )}
+          <StatusBanner repo={repo} />
           <nav className="mt-6 flex gap-6">
             <Tab to="/$owner/$repo" label="Code" exact />
             <Tab to="/$owner/$repo/commits" label="Commits" />

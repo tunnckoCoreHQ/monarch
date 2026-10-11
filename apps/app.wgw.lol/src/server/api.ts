@@ -98,6 +98,7 @@ api.post("/repos", async (c) => {
     visibility?: string;
     default_branch?: string;
     import_url?: string;
+    import_branch?: string;
   }>(c);
   if (!isName(input.name)) {
     throw new HttpError(
@@ -120,16 +121,25 @@ api.post("/repos", async (c) => {
   }
   let source: string | null = null;
   if (input.import_url !== undefined && input.import_url !== "") {
-    const url = new URL(input.import_url);
+    let url: URL;
+    try {
+      url = new URL(input.import_url);
+    } catch {
+      throw new HttpError(400, "import_url is not a URL", "invalid_request");
+    }
     if (url.protocol !== "https:") {
       throw new HttpError(400, "import from an https:// git remote", "invalid_request");
     }
     source = url.toString().replace(/\/+$/, "");
   }
+  const importBranch = input.import_branch?.trim() || undefined;
+  if (importBranch !== undefined && !/^[A-Za-z0-9._/-]{1,100}$/.test(importBranch)) {
+    throw new HttpError(400, "invalid import_branch", "invalid_request");
+  }
   const id = newId("repo");
   try {
     await c.env.DB.prepare(
-      "INSERT INTO repos (id, owner_id, name, description, visibility, default_branch, source, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO repos (id, owner_id, name, description, visibility, default_branch, source, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
       .bind(
         id,
@@ -137,8 +147,9 @@ api.post("/repos", async (c) => {
         input.name,
         (input.description ?? "").slice(0, 400),
         visibility,
-        branch,
+        importBranch ?? branch,
         source,
+        source === null ? "ready" : "importing",
         now(),
       )
       .run();
@@ -146,28 +157,28 @@ api.post("/repos", async (c) => {
     throw new HttpError(409, `${principal.user.handle}/${input.name} already exists`, "conflict");
   }
   const stub = repoStub(c.env, id);
-  await stub.init(id, branch);
-  if (source !== null) {
-    const imported = await stub.importFrom(source);
-    if (!imported.ok) {
-      await stub.destroy();
-      await c.env.DB.prepare("DELETE FROM repos WHERE id = ?").bind(id).run();
-      throw new HttpError(
-        imported.status === 500 ? 502 : imported.status,
-        `import failed: ${imported.error}`,
-        "import_failed",
-      );
-    }
-    const head = unwrap(await stub.refs("full")).head.replace(/^refs\/heads\//, "");
-    await c.env.DB.prepare("UPDATE repos SET default_branch = ?, pushed_at = ? WHERE id = ?")
-      .bind(head, now(), id)
-      .run();
-    await recordEvent(c.env, id, principal.user.id, "import", {
-      source,
-      refs: imported.value.length,
-    });
-  } else {
+  const started =
+    source === null
+      ? await stub.create(id, branch, (input.description ?? "").slice(0, 400))
+      : await stub.importFrom(id, source, importBranch);
+  if (!started.ok) {
+    await stub.destroy();
+    await c.env.DB.prepare("DELETE FROM repos WHERE id = ?").bind(id).run();
+    throw new HttpError(
+      started.status === 500 ? 502 : started.status,
+      source === null
+        ? `could not create the repository: ${started.error}`
+        : `import failed: ${started.error}`,
+      source === null ? "git_error" : "import_failed",
+    );
+  }
+  if (source === null) {
     await recordEvent(c.env, id, principal.user.id, "create", {});
+  } else {
+    await c.env.READY.create({
+      id: `${id}-import`,
+      params: { repoId: id, actorId: principal.user.id, kind: "import", source },
+    });
   }
   return c.json(
     repoJson(requireFound(await findRepoById(c.env, id), "repository"), c.env.ORIGIN),
@@ -210,18 +221,16 @@ api.patch("/repos/:owner/:name", async (c) => {
     c,
   );
   const repo = grant.repo;
+  if (input.default_branch !== undefined && input.default_branch !== repo.default_branch) {
+    // Artifacts fixes HEAD when the repository is created.
+    throw new HttpError(400, "the default branch cannot change after creation", "invalid_request");
+  }
   const visibility =
     input.visibility === "private" || input.visibility === "public"
       ? input.visibility
       : repo.visibility;
-  const branch = input.default_branch ?? repo.default_branch;
-  if (branch !== repo.default_branch) {
-    unwrap(await repoStub(c.env, repo.id).setHead(branch));
-  }
-  await c.env.DB.prepare(
-    "UPDATE repos SET description = ?, visibility = ?, default_branch = ? WHERE id = ?",
-  )
-    .bind((input.description ?? repo.description).slice(0, 400), visibility, branch, repo.id)
+  await c.env.DB.prepare("UPDATE repos SET description = ?, visibility = ? WHERE id = ?")
+    .bind((input.description ?? repo.description).slice(0, 400), visibility, repo.id)
     .run();
   return c.json(
     repoJson(requireFound(await findRepoById(c.env, repo.id), "repository"), c.env.ORIGIN),
@@ -239,6 +248,12 @@ api.delete("/repos/:owner/:name", async (c) => {
 api.post("/repos/:owner/:name/fork", async (c) => {
   const grant = await loadRepo(c);
   const principal = requireUser(c, "write");
+  if (principal.repoId !== null) {
+    throw new HttpError(403, "a repository-scoped token cannot create repositories", "forbidden");
+  }
+  if (grant.repo.status !== "ready") {
+    throw new HttpError(409, `the repository is ${grant.repo.status}`, "conflict");
+  }
   const input = await body<{ name?: string }>(c).catch(() => ({ name: undefined }));
   const name = input.name ?? grant.repo.name;
   if (!isName(name)) {
@@ -247,7 +262,7 @@ api.post("/repos/:owner/:name/fork", async (c) => {
   const id = newId("repo");
   try {
     await c.env.DB.prepare(
-      "INSERT INTO repos (id, owner_id, name, description, visibility, default_branch, forked_from, created_at, pushed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO repos (id, owner_id, name, description, visibility, default_branch, forked_from, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'forking', ?)",
     )
       .bind(
         id,
@@ -258,16 +273,32 @@ api.post("/repos/:owner/:name/fork", async (c) => {
         grant.repo.default_branch,
         `${grant.repo.owner}/${grant.repo.name}`,
         now(),
-        now(),
       )
       .run();
   } catch {
     throw new HttpError(409, `${principal.user.handle}/${name} already exists`, "conflict");
   }
   const stub = repoStub(c.env, id);
-  await stub.init(id, grant.repo.default_branch);
   // An outsider's fork copies the public projection, so private paths never leave the repository.
-  unwrap(await stub.forkFrom(grant.repo.id, grant.view));
+  const started = await stub.forkFrom(id, grant.repo.id, grant.view, grant.repo.default_branch);
+  if (!started.ok) {
+    await stub.destroy();
+    await c.env.DB.prepare("DELETE FROM repos WHERE id = ?").bind(id).run();
+    throw new HttpError(
+      started.status === 500 ? 502 : started.status,
+      `fork failed: ${started.error}`,
+      "git_error",
+    );
+  }
+  await c.env.READY.create({
+    id: `${id}-fork`,
+    params: {
+      repoId: id,
+      actorId: principal.user.id,
+      kind: "fork",
+      source: `${grant.repo.owner}/${grant.repo.name}`,
+    },
+  });
   await recordEvent(c.env, grant.repo.id, principal.user.id, "fork", {
     to: `${principal.user.handle}/${name}`,
   });
@@ -277,16 +308,50 @@ api.post("/repos/:owner/:name/fork", async (c) => {
   );
 });
 
+// Direct Artifacts access for agents that want to skip the proxy. Members get the full repo;
+// everyone else gets the public projection, read only.
+api.post("/repos/:owner/:name/git-token", async (c) => {
+  const grant = await loadRepo(c);
+  const ip = c.req.header("cf-connecting-ip") ?? "local";
+  const { success } = await c.env.LIMITER.limit({ key: `git-token:${ip}` });
+  if (!success) {
+    throw new HttpError(429, "too many requests, slow down", "rate_limited");
+  }
+  if (grant.repo.status !== "ready") {
+    throw new HttpError(409, `the repository is ${grant.repo.status}`, "conflict");
+  }
+  const input = await body<{ scope?: string }>(c).catch(() => ({ scope: undefined }));
+  const scope = input.scope === "write" ? "write" : "read";
+  if (scope === "write") {
+    need(grant, "write");
+  }
+  const target = grant.view;
+  const git = unwrap(await repoStub(c.env, grant.repo.id).gitAccess(target, scope, true));
+  return c.json({ ...git, view: target }, 200, { "cache-control": "no-store" });
+});
+
 api.get("/repos/:owner/:name/refs", async (c) => {
   const grant = await loadRepo(c);
   return c.json(unwrap(await repoStub(c.env, grant.repo.id).refs(grant.view)));
+});
+
+// Re-reads the full Artifacts repo and republishes the public projection. Pushes through the
+// proxy do this on their own; this is for pushes made with a direct Artifacts token.
+api.post("/repos/:owner/:name/sync", async (c) => {
+  const grant = await loadRepo(c);
+  need(grant, "write");
+  const updates = unwrap(await repoStub(c.env, grant.repo.id).sync());
+  if (updates.length > 0) {
+    await afterPush(c.env, grant.repo, grant.principal?.user.id ?? null, updates);
+  }
+  return c.json({ updates });
 });
 
 api.post("/repos/:owner/:name/branches", async (c) => {
   const grant = await loadRepo(c);
   const principal = need(grant, "write");
   const input = await body<{ name?: string; from?: string }>(c);
-  const update = unwrap(
+  const { update } = unwrap(
     await repoStub(c.env, grant.repo.id).createBranch(
       input.name ?? "",
       input.from ?? grant.repo.default_branch,
@@ -303,7 +368,7 @@ api.delete("/repos/:owner/:name/branches/*", async (c) => {
   if (branch === grant.repo.default_branch) {
     throw new HttpError(400, "the default branch cannot be deleted", "invalid_request");
   }
-  const update = unwrap(await repoStub(c.env, grant.repo.id).deleteBranch(branch));
+  const { update } = unwrap(await repoStub(c.env, grant.repo.id).deleteBranch(branch));
   await recordEvent(c.env, grant.repo.id, principal.user.id, "push", { updates: [update] });
   return c.json(update);
 });

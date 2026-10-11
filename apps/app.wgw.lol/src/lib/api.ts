@@ -64,6 +64,9 @@ export interface Repo {
   created_at: number;
   clone_url: string;
   web_url: string;
+  status: "ready" | "importing" | "forking" | "failed";
+  status_detail: string | null;
+  storage: "artifacts";
 }
 
 export interface RepoDetail extends Repo {

@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 
-import { concat, readAll, sha1Hex, utf8 } from "../git/bytes";
+import { sha1Hex, utf8 } from "../git/bytes";
+import { Mirror } from "../git/mirror";
 import {
   type GitObject,
   objectHash,
@@ -11,9 +12,8 @@ import {
   ZERO_SHA,
 } from "../git/objects";
 import type { PackedObject } from "../git/pack";
-import { FLUSH, pkt, PktReader } from "../git/pktline";
 import { rulesOf } from "../git/projection";
-import { isService, parseAdvertisement, type Ref } from "../git/protocol";
+import type { Remote } from "../git/remote";
 import { GitError, GitRepo, type RefUpdate, type Storage, type View } from "../git/repo";
 import { RULES_FILE } from "../git/rules";
 import type { RawObject } from "../git/store";
@@ -24,62 +24,45 @@ import { guard, type Result } from "./result";
 
 // SQLite rows and values are capped at 2 MB, so larger zlib streams go to R2.
 const MAX_INLINE = 1_000_000;
-const MAX_IMPORT = 80 * 1024 * 1024;
 const CACHE_LIMIT = 4000;
+// The app's own Artifacts tokens; a fresh one is minted when less than 10 minutes remain.
+const TOKEN_TTL = 3600;
+const TOKEN_MARGIN_MS = 10 * 60 * 1000;
+// Reads sync from Artifacts first when the mirror is older than this, which catches direct pushes.
+const FRESH_MS = 15_000;
 
-/** Fetches every branch and tag of a public HTTPS git remote as one pack. */
-async function fetchRemote(
-  remote: string,
-): Promise<{ pack: Uint8Array; refs: Ref[]; head?: string }> {
-  const base = remote.replace(/\/+$/, "");
-  const headers = { "user-agent": "git/2.47.0 (wgw)" };
-  const adv = await fetch(`${base}/info/refs?service=git-upload-pack`, { headers });
-  if (!adv.ok) {
-    throw new GitError(`the remote answered ${adv.status}`, 400);
-  }
-  const { refs, head } = parseAdvertisement(new Uint8Array(await adv.arrayBuffer()));
-  const wanted = refs.filter(
-    (ref) => ref.name.startsWith("refs/heads/") || ref.name.startsWith("refs/tags/"),
-  );
-  if (wanted.length === 0) {
-    return { pack: new Uint8Array(), refs: [], head };
-  }
-  const wants = [...new Set(wanted.map((ref) => ref.sha))];
-  const lines = wants.map((sha, index) =>
-    pkt(index === 0 ? `want ${sha} no-progress agent=wgw/0.1\n` : `want ${sha}\n`),
-  );
-  const res = await fetch(`${base}/git-upload-pack`, {
-    method: "POST",
-    headers: {
-      ...headers,
-      "content-type": "application/x-git-upload-pack-request",
-      accept: "application/x-git-upload-pack-result",
-    },
-    body: concat([...lines, FLUSH, pkt("done\n")]),
-  });
-  if (!res.ok || res.body === null) {
-    throw new GitError(`the remote upload-pack answered ${res.status}`, 400);
-  }
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for await (const chunk of res.body) {
-    size += chunk.length;
-    if (size > MAX_IMPORT) {
-      throw new GitError("the repository is larger than the 80 MB import limit", 413);
-    }
-    chunks.push(chunk);
-  }
-  const body = concat(chunks);
-  // The response starts with NAK, then the raw pack.
-  const reader = new PktReader(body);
-  reader.nextLine();
-  return { pack: body.subarray(reader.pos), refs: wanted, head };
+export type Target = "full" | "public";
+export type Scope = "read" | "write";
+
+export interface GitAccess {
+  remote: string;
+  token: string;
+  scope: Scope;
+  expires_at: string;
+}
+
+interface CachedToken {
+  token: string;
+  expires: number;
+}
+
+function artifactsCode(error: unknown): string | undefined {
+  return typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+    ? error.code
+    : undefined;
 }
 
 export class Repo extends DurableObject<Env> {
   private readonly sql: SqlStorage;
   private readonly cache = new Map<string, GitObject>();
   private readonly repo: GitRepo;
+  private readonly tokens = new Map<string, CachedToken>();
+  private readonly minting = new Map<string, Promise<CachedToken>>();
+  private mirror: Mirror | undefined;
+  private writes: Promise<unknown> = Promise.resolve();
   private repoId = "";
 
   constructor(ctx: DurableObjectState, env: Env) {
@@ -260,180 +243,353 @@ export class Repo extends DurableObject<Env> {
     };
   }
 
-  /** Called once when the repository is created. */
-  async init(repoId: string, defaultBranch: string): Promise<void> {
+  /** The Artifacts repo name of the full repo or its public projection. */
+  private artifactsName(target: Target): string {
+    if (this.repoId === "") {
+      throw new GitError("the repository is not set up", 500);
+    }
+    return target === "full" ? this.repoId : `${this.repoId}.public`;
+  }
+
+  private remoteUrl(target: Target): string {
+    const remote = this.meta(`remote_${target}`);
+    if (remote === undefined) {
+      throw new GitError("the repository has no Artifacts remote yet", 409);
+    }
+    return remote;
+  }
+
+  /**
+   * Mints an Artifacts token. The handle is an RPC stub; dispose it when the runtime supports it.
+   * Artifacts sometimes answers a burst of token requests with an internal error, so retry twice.
+   */
+  private async mint(target: Target, scope: Scope, ttl: number) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const handle = await this.env.ARTIFACTS.get(this.artifactsName(target));
+        try {
+          return await handle.createToken(scope, ttl);
+        } finally {
+          const dispose: unknown = Reflect.get(handle, Symbol.dispose);
+          if (typeof dispose === "function") {
+            dispose.call(handle);
+          }
+        }
+      } catch (error) {
+        const code = artifactsCode(error);
+        const transient = code === undefined || code === "INTERNAL_ERROR";
+        if (!transient || attempt >= 2) {
+          throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+      }
+    }
+  }
+
+  /** A cached token for the app's own git traffic. Concurrent callers share one mint. */
+  private token(target: Target, scope: Scope): Promise<CachedToken> {
+    const key = `${target}:${scope}`;
+    const cached = this.tokens.get(key);
+    if (cached !== undefined && cached.expires - Date.now() > TOKEN_MARGIN_MS) {
+      return Promise.resolve(cached);
+    }
+    let pending = this.minting.get(key);
+    if (pending === undefined) {
+      pending = this.mint(target, scope, TOKEN_TTL)
+        .then((minted) => {
+          const fresh = { token: minted.plaintext, expires: Date.parse(minted.expiresAt) };
+          this.tokens.set(key, fresh);
+          return fresh;
+        })
+        .finally(() => this.minting.delete(key));
+      this.minting.set(key, pending);
+    }
+    return pending;
+  }
+
+  private getMirror(): Mirror {
+    if (this.mirror === undefined) {
+      const remote = (target: Target): Remote => ({
+        url: this.remoteUrl(target),
+        token: async () => (await this.token(target, "write")).token,
+      });
+      this.mirror = new Mirror(this.repo, this.repo.storage, {
+        full: remote("full"),
+        public: remote("public"),
+      });
+    }
+    return this.mirror;
+  }
+
+  /** Records the Artifacts remotes after the repos exist. */
+  private async setUp(repoId: string, full: string, defaultBranch: string): Promise<void> {
     this.repoId = repoId;
     this.setMeta("repo_id", repoId);
-    if (this.meta("head") === undefined) {
-      this.setMeta("head", `refs/heads/${defaultBranch}`);
-    }
+    this.setMeta("head", `refs/heads/${defaultBranch}`);
+    this.setMeta("remote_full", full);
+    const created = await this.env.ARTIFACTS.create(this.artifactsName("public"), {
+      description: "Public projection, written by app.wgw.lol",
+      setDefaultBranch: defaultBranch,
+    });
+    this.setMeta("remote_public", created.remote);
+    this.mirror = undefined;
   }
 
-  /** Smart HTTP. The Worker checks access and passes the view in a header. */
-  override async fetch(request: Request): Promise<Response> {
-    const url = new URL(request.url);
-    const view: View = request.headers.get("x-wgw-view") === "full" ? "full" : "public";
-    try {
-      if (url.pathname === "/info/refs") {
-        const service = url.searchParams.get("service");
-        if (!isService(service)) {
-          return new Response("dumb HTTP is not supported", { status: 403 });
-        }
-        return new Response(this.repo.advertise(service, view), {
-          headers: {
-            "content-type": `application/x-${service}-advertisement`,
-            "cache-control": "no-cache",
-          },
-        });
-      }
-      let body = request.body;
-      if (body !== null && request.headers.get("content-encoding") === "gzip") {
-        body = body.pipeThrough(new DecompressionStream("gzip"));
-      }
-      const bytes = await readAll(body);
-      if (url.pathname === "/git-upload-pack") {
-        return new Response(await this.repo.uploadPack(bytes, view), {
-          headers: {
-            "content-type": "application/x-git-upload-pack-result",
-            "cache-control": "no-cache",
-          },
-        });
-      }
-      if (url.pathname === "/git-receive-pack" && view === "full") {
-        const { response, updates } = await this.repo.receivePack(bytes);
-        if (updates.length > 0) {
-          const key = `packs/${this.repoId}/${new Date().toISOString()}.pack`;
-          this.ctx.waitUntil(this.env.GIT.put(key, bytes));
-        }
-        return new Response(response, {
-          headers: {
-            "content-type": "application/x-git-receive-pack-result",
-            "cache-control": "no-cache",
-            "x-wgw-updates": JSON.stringify(updates),
-          },
-        });
-      }
-      return new Response("not found", { status: 404 });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "git error";
-      return new Response(message, { status: error instanceof GitError ? error.status : 500 });
-    }
-  }
-
-  /** Imports every branch and tag of a public HTTPS git remote. */
-  importFrom(remote: string): Promise<Result<RefUpdate[]>> {
+  /** Creates the empty full repo and its public projection in Artifacts. */
+  create(repoId: string, defaultBranch: string, description: string): Promise<Result<null>> {
     return guard(async () => {
-      const { pack, refs, head } = await fetchRemote(remote);
-      return refs.length === 0 ? [] : this.repo.importPack(pack, refs, head);
+      this.repoId = repoId;
+      const created = await this.env.ARTIFACTS.create(repoId, {
+        description,
+        setDefaultBranch: defaultBranch,
+      });
+      await this.setUp(repoId, created.remote, defaultBranch);
+      this.setMeta("synced_at", String(Date.now()));
+      return null;
     });
   }
 
-  /** The pack and refs of a view, for forks. */
-  async exportAll(view: View): Promise<{ pack: Uint8Array; refs: Ref[]; head: string }> {
-    const refs = this.repo.refs(view);
-    return {
-      pack: await this.repo.pack(this.repo.reachable(refs.map((ref) => ref.sha))),
-      refs,
-      head: this.storage().refs.head(),
-    };
+  /** Starts an Artifacts import of one branch. The RepoReady workflow syncs once it finishes. */
+  importFrom(repoId: string, url: string, branch: string | undefined): Promise<Result<null>> {
+    return guard(async () => {
+      this.repoId = repoId;
+      let imported;
+      try {
+        imported = await this.env.ARTIFACTS.import({
+          source: { url, branch },
+          target: { name: repoId, opts: { description: `Imported from ${url}` } },
+        });
+      } catch (error) {
+        const code = artifactsCode(error);
+        const reasons: Record<string, string> = {
+          INVALID_URL: "that URL is not a git repository",
+          INVALID_INPUT: "import from an https:// git remote",
+          REMOTE_AUTH_REQUIRED:
+            "the remote needs authentication; only public remotes can be imported",
+          NOT_FOUND: "the remote repository does not exist",
+          UPSTREAM_UNAVAILABLE: "the remote did not answer",
+          MEMORY_LIMIT: "the repository is too large to import",
+        };
+        if (code !== undefined && code in reasons) {
+          throw new GitError(reasons[code], 400);
+        }
+        throw error;
+      }
+      await this.setUp(repoId, imported.remote, imported.defaultBranch);
+      return null;
+    });
   }
 
-  forkFrom(sourceId: string, view: View): Promise<Result<RefUpdate[]>> {
+  /** Forks another wgw repo in Artifacts. Outsiders fork its public projection. */
+  forkFrom(
+    repoId: string,
+    sourceId: string,
+    view: View,
+    defaultBranch: string,
+  ): Promise<Result<null>> {
     return guard(async () => {
-      const source = this.env.REPO.getByName(sourceId);
-      const { pack, refs, head } = await source.exportAll(view);
-      return refs.length === 0 ? [] : this.repo.importPack(pack, refs, head);
+      this.repoId = repoId;
+      const sourceName = view === "full" ? sourceId : `${sourceId}.public`;
+      const source = await this.env.ARTIFACTS.get(sourceName);
+      const forked = await source.fork(repoId, { defaultBranchOnly: false });
+      await this.setUp(repoId, forked.remote, forked.defaultBranch || defaultBranch);
+      return null;
+    });
+  }
+
+  /** True when the full Artifacts repo has finished importing or forking. */
+  isReady(): Promise<Result<boolean>> {
+    return guard(async () => {
+      try {
+        const handle = await this.env.ARTIFACTS.get(this.artifactsName("full"));
+        const dispose: unknown = Reflect.get(handle, Symbol.dispose);
+        if (typeof dispose === "function") {
+          dispose.call(handle);
+        }
+        return true;
+      } catch (error) {
+        const code = artifactsCode(error);
+        if (code === "IMPORT_IN_PROGRESS" || code === "FORK_IN_PROGRESS") {
+          return false;
+        }
+        throw error;
+      }
+    });
+  }
+
+  /** Fetches from the full Artifacts repo and publishes the public projection. */
+  sync(): Promise<Result<RefUpdate[]>> {
+    return guard(async () => {
+      const updates = await this.getMirror().sync();
+      this.setMeta("synced_at", String(Date.now()));
+      return updates;
+    });
+  }
+
+  /** Syncs before a read when the mirror may be stale. A failed sync keeps the last mirror. */
+  private async fresh(): Promise<void> {
+    const synced = Number(this.meta("synced_at") ?? 0);
+    if (Date.now() - synced < FRESH_MS || this.meta("remote_full") === undefined) {
+      return;
+    }
+    try {
+      await this.getMirror().sync();
+      this.setMeta("synced_at", String(Date.now()));
+    } catch (error) {
+      console.error("mirror sync failed", error);
+    }
+  }
+
+  /** Runs server-side writes one at a time: sync, apply locally, push to Artifacts. */
+  private write<T extends { update: RefUpdate }>(run: () => T): Promise<Result<T>> {
+    const next = this.writes.then(() =>
+      guard(async () => {
+        const mirror = this.getMirror();
+        await mirror.sync();
+        const result = run();
+        await mirror.pushLocal(result.update);
+        this.setMeta("synced_at", String(Date.now()));
+        return result;
+      }),
+    );
+    this.writes = next;
+    return next;
+  }
+
+  /** Remote and token for the proxy (cached) or for a caller who wants direct access (fresh). */
+  gitAccess(target: Target, scope: Scope, direct: boolean): Promise<Result<GitAccess>> {
+    return guard(async () => {
+      if (target === "public" && scope === "write") {
+        throw new GitError("the public projection is written only by the app", 403);
+      }
+      if (direct) {
+        const minted = await this.mint(target, scope, TOKEN_TTL);
+        return {
+          remote: this.remoteUrl(target),
+          token: minted.plaintext,
+          scope,
+          expires_at: minted.expiresAt,
+        };
+      }
+      const cached = await this.token(target, scope);
+      return {
+        remote: this.remoteUrl(target),
+        token: cached.token,
+        scope,
+        expires_at: new Date(cached.expires).toISOString(),
+      };
     });
   }
 
   refs(view: View) {
-    return guard(() => ({ refs: this.repo.refs(view), head: this.storage().refs.head() }));
-  }
-
-  setHead(branch: string) {
-    return guard(() => this.setMeta("head", `refs/heads/${branch}`));
+    return guard(async () => {
+      await this.fresh();
+      return { refs: this.repo.refs(view), head: this.repo.storage.refs.head() };
+    });
   }
 
   tree(view: View, rev: string, path: string) {
-    return guard(() => ({
-      ...this.repo.tree(view, rev, path),
-      readme: path === "" ? this.repo.readmeName(view, rev) : undefined,
-    }));
+    return guard(async () => {
+      await this.fresh();
+      return {
+        ...this.repo.tree(view, rev, path),
+        readme: path === "" ? this.repo.readmeName(view, rev) : undefined,
+      };
+    });
   }
 
   blob(view: View, rev: string, path: string) {
-    return guard(() => this.repo.blob(view, rev, path));
+    return guard(async () => {
+      await this.fresh();
+      return this.repo.blob(view, rev, path);
+    });
   }
 
   log(view: View, rev: string, limit: number, path?: string) {
-    return guard(() => this.repo.log(view, rev, limit, path));
+    return guard(async () => {
+      await this.fresh();
+      return this.repo.log(view, rev, limit, path);
+    });
   }
 
   showCommit(view: View, rev: string) {
-    return guard(() => this.repo.showCommit(view, rev));
+    return guard(async () => {
+      await this.fresh();
+      return this.repo.showCommit(view, rev);
+    });
   }
 
   compare(view: View, base: string, head: string) {
-    return guard(() => this.repo.compare(view, base, head));
+    return guard(async () => {
+      await this.fresh();
+      return this.repo.compare(view, base, head);
+    });
   }
 
   resolve(view: View, rev: string) {
-    return guard(() => this.repo.resolve(view, rev) ?? null);
+    return guard(async () => {
+      await this.fresh();
+      return this.repo.resolve(view, rev) ?? null;
+    });
   }
 
   merge(base: string, head: string, message: string, person: Person) {
-    return guard(() => this.repo.merge(base, head, message, person));
+    return this.write(() => this.repo.merge(base, head, message, person));
   }
 
-  commitFiles(
+  async commitFiles(
     branch: string,
     expected: string | undefined,
     message: string,
     person: Person,
     files: FileChange[],
   ) {
-    return guard(async () => {
-      // Store large blobs the way a push does, in R2, before the synchronous commit writes them.
-      const large: PackedObject[] = [];
-      for (const file of files) {
-        if (file.content === null) {
-          continue;
-        }
-        const zdata = deflate(file.content);
-        if (zdata.length > MAX_INLINE) {
-          // The rules reader reads only inline objects, as the push check in GitRepo requires.
-          if (file.path === RULES_FILE) {
+    // Store large blobs the way a sync does, in R2, before the synchronous commit writes them.
+    const large: PackedObject[] = [];
+    for (const file of files) {
+      if (file.content === null) {
+        continue;
+      }
+      const zdata = deflate(file.content);
+      if (zdata.length > MAX_INLINE) {
+        // The rules reader reads only inline objects.
+        if (file.path === RULES_FILE) {
+          return guard(() => {
             throw new GitError(`${RULES_FILE} is too large`, 413);
-          }
-          const sha = objectHash("blob", file.content);
-          large.push({ sha, type: "blob", content: file.content, zdata });
+          });
         }
+        large.push({
+          sha: objectHash("blob", file.content),
+          type: "blob",
+          content: file.content,
+          zdata,
+        });
       }
-      if (large.length > 0) {
-        await this.storage().saveObjects(large);
-      }
-      return this.repo.commitFiles(branch, expected, message, person, files);
-    });
+    }
+    if (large.length > 0) {
+      await this.repo.storage.saveObjects(large);
+    }
+    return this.write(() => this.repo.commitFiles(branch, expected, message, person, files));
   }
 
   createBranch(name: string, from: string) {
-    return guard(() => {
+    return this.write(() => {
       const sha = this.repo.resolve("full", from);
       if (sha === undefined) {
         throw new GitError(`unknown revision ${from}`, 404);
       }
-      return this.repo.updateRef(`refs/heads/${name}`, ZERO_SHA, sha);
+      return { update: this.repo.updateRef(`refs/heads/${name}`, ZERO_SHA, sha) };
     });
   }
 
   deleteBranch(name: string) {
-    return guard(() => {
+    return this.write(() => {
       const ref = `refs/heads/${name}`;
-      const sha = this.storage().refs.get(ref);
+      const sha = this.repo.storage.refs.get(ref);
       if (sha === undefined) {
         throw new GitError(`unknown branch ${name}`, 404);
       }
-      return this.repo.updateRef(ref, sha, ZERO_SHA);
+      return { update: this.repo.updateRef(ref, sha, ZERO_SHA) };
     });
   }
 
@@ -449,25 +605,31 @@ export class Repo extends DurableObject<Env> {
     });
   }
 
-  stats() {
-    return this.sql
-      .exec<{ objects: number; bytes: number }>(
-        "SELECT COUNT(*) AS objects, COALESCE(SUM(size), 0) AS bytes FROM objects",
-      )
-      .one();
+  /** The default branch the mirror saw in the full repo's advertisement. */
+  head() {
+    return guard(() => this.repo.storage.refs.head());
   }
 
+  /** Deletes both Artifacts repos, the mirror's R2 objects, and the mirror. */
   async destroy(): Promise<void> {
-    for (const prefix of [`objects/${this.repoId}/`, `packs/${this.repoId}/`]) {
-      // Each listing returns one page. Deleting it moves the next keys to the front.
-      for (;;) {
-        const listed = await this.env.GIT.list({ prefix });
-        if (listed.objects.length > 0) {
-          await this.env.GIT.delete(listed.objects.map((object) => object.key));
+    if (this.repoId !== "") {
+      for (const target of ["full", "public"] as const) {
+        try {
+          await this.env.ARTIFACTS.delete(this.artifactsName(target));
+        } catch (error) {
+          console.error(`could not delete the ${target} Artifacts repo`, error);
         }
-        if (!listed.truncated) {
-          break;
-        }
+      }
+    }
+    const prefix = `objects/${this.repoId}/`;
+    // Each listing returns one page. Deleting it moves the next keys to the front.
+    for (;;) {
+      const listed = await this.env.GIT.list({ prefix });
+      if (listed.objects.length > 0) {
+        await this.env.GIT.delete(listed.objects.map((object) => object.key));
+      }
+      if (!listed.truncated) {
+        break;
       }
     }
     await this.ctx.storage.deleteAll();

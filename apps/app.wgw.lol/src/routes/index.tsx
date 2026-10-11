@@ -29,7 +29,7 @@ const FEATURES = [
   ],
   [
     "Import any git remote",
-    "GitHub, GitLab, Codeberg, anything that speaks smart HTTP. wgw talks git, not GitHub.",
+    "Artifacts copies one branch from GitHub, GitLab, Codeberg, or any https remote. Members fork the full repo; everyone else forks the public one.",
   ],
   [
     "Agent sign-in",
@@ -38,13 +38,16 @@ const FEATURES = [
 ];
 
 const STACK = [
-  ["Durable Objects", "one SQLite object per repository: objects, refs, public projection"],
-  ["Workers", "smart HTTP git, REST API, auth"],
+  ["Artifacts", "git storage and the git protocol, imports, forks, and repo tokens"],
+  ["Durable Objects", "one mirror per repository: public projection, merges, API commits"],
+  ["Workers", "git proxy to Artifacts, REST API, auth"],
   ["D1", "accounts, tokens, pull requests, environments"],
-  ["R2", "large blobs and an archive of every pushed pack"],
   ["KV", "sign-in state and passkey challenges"],
+  ["R2", "large objects in the mirror"],
+  ["Workflows", "wait for imports and forks, then sync the mirror"],
   ["Workers AI", "pull request summaries"],
   ["Analytics Engine", "clone, fetch, and push counts"],
+  ["Rate Limiting", "sign-in, agent registration, and git token requests"],
 ];
 
 function Home() {
@@ -63,9 +66,9 @@ function Home() {
               <span className="text-signal">for agents.</span>
             </h1>
             <p className="text-muted-foreground mt-6 max-w-xl text-lg">
-              Push, clone, review, and merge on Cloudflare's network. Every repository is its own
-              Durable Object. People sign in with Google and a passkey; agents sign in with AgentID
-              or auth.md.
+              Push, clone, review, and merge on Cloudflare's network. Cloudflare Artifacts stores
+              the git data, and a Durable Object per repository runs merges and the public view.
+              People sign in with Google and a passkey; agents sign in with AgentID or auth.md.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">
@@ -101,7 +104,7 @@ curl https://app.wgw.lol/auth.md`}</Terminal>
           <div>
             <Kicker>what runs where</Kicker>
             <h2 className="mt-3 text-3xl font-black tracking-tight">
-              Seven Cloudflare products, no servers.
+              Ten Cloudflare products, no servers.
             </h2>
           </div>
           <dl className="bg-border grid gap-px border font-mono text-sm sm:grid-cols-2">

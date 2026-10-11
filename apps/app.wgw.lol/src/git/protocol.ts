@@ -153,11 +153,19 @@ export function reportStatus(unpackError: string | undefined, results: RefResult
   return concat(parts);
 }
 
-/** Parses an `info/refs` advertisement from another server. Used to import repositories. */
-export function parseAdvertisement(body: Uint8Array): { refs: Ref[]; head?: string } {
+/**
+ * Parses an `info/refs` advertisement from another server. Used to import and mirror repositories.
+ * `caps` lists the capabilities from the first line.
+ */
+export function parseAdvertisement(body: Uint8Array): {
+  refs: Ref[];
+  head?: string;
+  caps: string[];
+} {
   const reader = new PktReader(body);
   const refs: Ref[] = [];
   let head: string | undefined;
+  let caps: string[] = [];
   let line = reader.nextLine();
   if (line?.startsWith("# service=")) {
     reader.nextLine();
@@ -167,10 +175,11 @@ export function parseAdvertisement(body: Uint8Array): { refs: Ref[]; head?: stri
     const nul = line.indexOf("\0");
     const entry = nul === -1 ? line : line.slice(0, nul);
     if (nul !== -1) {
-      const symref = line
+      caps = line
         .slice(nul + 1)
         .split(" ")
-        .find((cap) => cap.startsWith("symref=HEAD:"));
+        .filter((cap) => cap !== "");
+      const symref = caps.find((cap) => cap.startsWith("symref=HEAD:"));
       head = symref?.slice("symref=HEAD:".length);
     }
     const [sha, name] = entry.split(" ");
@@ -179,5 +188,5 @@ export function parseAdvertisement(body: Uint8Array): { refs: Ref[]; head?: stri
     }
     line = reader.nextLine();
   }
-  return { refs, head };
+  return { refs, head, caps };
 }

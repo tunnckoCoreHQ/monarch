@@ -21,6 +21,7 @@ function NewRepo() {
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [importUrl, setImportUrl] = useState(search.import ?? "");
+  const [importBranch, setImportBranch] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +32,13 @@ function NewRepo() {
     try {
       const repo = await api<Repo>("/api/repos", {
         method: "POST",
-        json: { name, description, visibility, import_url: importUrl || undefined },
+        json: {
+          name,
+          description,
+          visibility,
+          import_url: importUrl || undefined,
+          import_branch: importBranch || undefined,
+        },
       });
       await navigate({ to: "/$owner/$repo", params: { owner: repo.owner, repo: repo.name } });
     } catch (caught) {
@@ -108,9 +115,18 @@ function NewRepo() {
             className="font-mono"
           />
           <p className="text-muted-foreground text-xs">
-            Any public HTTPS remote that speaks git smart HTTP. Up to 80 MB of packed history. Every
-            branch and tag comes along.
+            Any public HTTPS git remote. Cloudflare Artifacts copies one branch, the remote&apos;s
+            default unless you name another. The repository opens while the import runs.
           </p>
+          {importUrl === "" ? null : (
+            <Input
+              id="import-branch"
+              value={importBranch}
+              onChange={(event) => setImportBranch(event.target.value)}
+              placeholder="branch to import (optional)"
+              className="font-mono"
+            />
+          )}
         </div>
         <ErrorNote error={error} />
         <Button type="submit" size="lg" disabled={busy}>

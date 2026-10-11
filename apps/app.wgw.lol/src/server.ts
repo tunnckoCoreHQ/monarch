@@ -4,6 +4,7 @@ import { app, isServerPath } from "./server/app";
 import type { Env } from "./server/env";
 
 export { Repo } from "./server/repo-object";
+export { RepoReady } from "./server/workflow";
 
 export default {
   fetch(request: Request, env: Env, ctx: ExecutionContext) {
