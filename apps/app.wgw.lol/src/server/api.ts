@@ -1022,19 +1022,22 @@ api.post("/repos/:owner/:name/environments", async (c) => {
     throw new HttpError(400, `kind must be one of ${[...ENV_KINDS].join(", ")}`, "invalid_request");
   }
   checkEnvironmentScope(principal, input.name);
-  // An existing environment keeps its kind unless the request names one.
-  const existing = await c.env.DB.prepare(
+  // An existing environment keeps its kind unless the request names one. The reads and the write
+  // run in one batch, which D1 runs as a transaction, so no other request lands between them.
+  const select = c.env.DB.prepare(
     "SELECT kind FROM environments WHERE repo_id = ? AND name = ?",
-  )
-    .bind(grant.repo.id, input.name)
-    .first<{ kind: string }>();
-  const kind = input.kind ?? existing?.kind ?? "development";
-  await c.env.DB.prepare(
-    "INSERT INTO environments (repo_id, name, kind, created_at) VALUES (?, ?, ?, ?) ON CONFLICT (repo_id, name) DO UPDATE SET kind = excluded.kind",
-  )
-    .bind(grant.repo.id, input.name, kind, now())
-    .run();
-  return c.json({ name: input.name, kind }, existing === null ? 201 : 200);
+  ).bind(grant.repo.id, input.name);
+  const [before, , after] = await c.env.DB.batch<{ kind: string }>([
+    select,
+    c.env.DB.prepare(
+      input.kind === undefined
+        ? "INSERT INTO environments (repo_id, name, kind, created_at) VALUES (?, ?, ?, ?) ON CONFLICT (repo_id, name) DO NOTHING"
+        : "INSERT INTO environments (repo_id, name, kind, created_at) VALUES (?, ?, ?, ?) ON CONFLICT (repo_id, name) DO UPDATE SET kind = excluded.kind",
+    ).bind(grant.repo.id, input.name, input.kind ?? "development", now()),
+    select,
+  ]);
+  const kind = after.results[0]?.kind ?? input.kind ?? "development";
+  return c.json({ name: input.name, kind }, before.results.length === 0 ? 201 : 200);
 });
 
 api.delete("/repos/:owner/:name/environments/:env", async (c) => {
