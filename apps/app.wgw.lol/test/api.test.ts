@@ -368,6 +368,60 @@ describe("environment-limited keys", () => {
   });
 });
 
+/** Requests that make alice/<repo> private and delete it. */
+function changeSettings(token: string, repo: string): Array<Promise<Response>> {
+  return [
+    call("PATCH", `/api/repos/alice/${repo}`, {
+      token,
+      json: { visibility: "private", description: "changed" },
+    }),
+    call("DELETE", `/api/repos/alice/${repo}`, { token }),
+  ];
+}
+
+/** alice/pub is still there, public, with no description. */
+async function pubUnchanged(): Promise<void> {
+  const row = await env.DB.prepare(
+    "SELECT visibility, description FROM repos WHERE id = 'repo_pub'",
+  ).first<{ visibility: string; description: string }>();
+  expect(row).toEqual({ visibility: "public", description: "" });
+}
+
+describe("repository settings", () => {
+  it("stay closed to a key limited to one environment", async () => {
+    const staging = await key("usr_alice", { scopes: ["admin"], environment: "staging" });
+    for (const response of await Promise.all(changeSettings(staging, "pub"))) {
+      expect(response.status).toBe(403);
+      expect((await json<{ message: string }>(response)).message).toBe(
+        "the token is limited to the staging environment and cannot change repository settings",
+      );
+    }
+    await pubUnchanged();
+  });
+
+  it("stay closed to a key limited to another repository", async () => {
+    const other = await key("usr_alice", { scopes: ["admin"], repoId: "repo_priv" });
+    for (const response of await Promise.all(changeSettings(other, "pub"))) {
+      expect(response.status).toBe(403);
+      expect((await json<{ message: string }>(response)).message).toBe(
+        "the token is limited to another repository",
+      );
+    }
+    await pubUnchanged();
+    // A private repository outside the limit stays hidden.
+    const pub = await key("usr_alice", { scopes: ["admin"], repoId: "repo_pub" });
+    for (const response of await Promise.all(changeSettings(pub, "priv"))) {
+      expect(response.status).toBe(404);
+    }
+    const own = await call("PATCH", "/api/repos/alice/priv", {
+      token: other,
+      json: { description: "mine" },
+    });
+    expect(own.status).toBe(200);
+    expect((await json<{ description: string }>(own)).description).toBe("mine");
+  });
+});
+
 describe("API commits", () => {
   it("keep file modes and accept a mode per file", async () => {
     seed();

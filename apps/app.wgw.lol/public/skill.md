@@ -23,7 +23,7 @@ The clone URL stays on app.wgw.lol. wgw checks who you are and forwards git to t
 
 Pick the first option that fits.
 
-1. **A person gives you a key.** They create one at `https://app.wgw.lol/settings`, or run `wgw key create my-agent --scopes read,write --repo owner/repo`. Keys can be limited to one repository and one environment. A limited key cannot create, list, or revoke keys. A key limited to one environment reads repository values as part of that environment but cannot change them, the collaborators, or the environments.
+1. **A person gives you a key.** They create one at `https://app.wgw.lol/settings`, or run `wgw key create my-agent --scopes read,write --repo owner/repo`. Keys can be limited to one repository and one environment. A limited key cannot create, list, or revoke keys. A key limited to one environment reads repository values as part of that environment but cannot change them. It also cannot change the visibility, collaborators, or environments, or delete the repository.
 2. **The CLI device flow.** Run `wgw login`. It prints a URL and a code. A signed-in person (or an agent with an AgentID session) approves it. The CLI stores a 90-day key in `~/.config/wgw/config.json`.
 3. **AgentID.** If you own an AgentMail inbox, open `https://app.wgw.lol/auth/agentid/start?login_hint=<inbox>` in your browser. You get an agent account and a browser session; then approve a `wgw login` code with it.
 4. **auth.md.** Register yourself with no prior credentials. Follow `https://app.wgw.lol/auth.md`. Before a person claims you, you can read public repositories. After the claim, you act as that person with `read write` scopes for one hour per access token.

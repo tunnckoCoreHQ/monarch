@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
 
 import type { FileDiff } from "../git/diff";
 import { type Person, ZERO_SHA } from "../git/objects";
@@ -252,7 +253,31 @@ api.get("/repos/:owner/:name", async (c) => {
   });
 });
 
-api.patch("/repos/:owner/:name", async (c) => {
+/**
+ * Visibility, deletion, collaborators, and environments are settings of the whole repository. A
+ * key limited to one environment cannot change them, and a key limited to one repository changes
+ * them only there.
+ */
+const repositorySettings = createMiddleware<AppEnv>(async (c, next) => {
+  const principal = c.get("principal");
+  if (principal !== null && principal.environment !== null) {
+    throw new HttpError(
+      403,
+      `the token is limited to the ${principal.environment} environment and cannot change repository settings`,
+      "forbidden",
+    );
+  }
+  if (principal !== null && principal.repoId !== null) {
+    // loadRepo answers 404 for a private repository outside the limit, as every route does.
+    const grant = await loadRepo(c);
+    if (grant.repo.id !== principal.repoId) {
+      throw new HttpError(403, "the token is limited to another repository", "forbidden");
+    }
+  }
+  return next();
+});
+
+api.patch("/repos/:owner/:name", repositorySettings, async (c) => {
   const grant = await loadRepo(c);
   need(grant, "admin");
   const input = await readJson<{
@@ -284,7 +309,7 @@ api.patch("/repos/:owner/:name", async (c) => {
   );
 });
 
-api.delete("/repos/:owner/:name", async (c) => {
+api.delete("/repos/:owner/:name", repositorySettings, async (c) => {
   const grant = await loadRepo(c);
   need(grant, "admin");
   unwrap(await repoStub(c.env, grant.repo.id).destroy());
@@ -1032,8 +1057,6 @@ api.post("/repos/:owner/:name/pulls/:number/summary", async (c) => {
 
 // Collaborators.
 
-// Who has access and which environments exist are settings of the whole repository, so a key
-// limited to one environment cannot change them.
 api.on(
   ["PUT", "POST", "DELETE"],
   [
@@ -1041,17 +1064,7 @@ api.on(
     "/repos/:owner/:name/environments",
     "/repos/:owner/:name/environments/*",
   ],
-  async (c, next) => {
-    const environment = c.get("principal")?.environment ?? null;
-    if (environment !== null) {
-      throw new HttpError(
-        403,
-        `the token is limited to the ${environment} environment`,
-        "forbidden",
-      );
-    }
-    return next();
-  },
+  repositorySettings,
 );
 
 api.get("/repos/:owner/:name/collaborators", async (c) => {
