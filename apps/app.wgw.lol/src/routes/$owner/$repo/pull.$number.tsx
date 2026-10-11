@@ -152,11 +152,11 @@ function PullView() {
           {pull.title}
         </h2>
         <p className="text-muted-foreground mt-3 font-mono text-xs leading-6">
-          @{pull.author} wants to merge <Branch name={pull.head} /> into <Branch name={pull.base} />{" "}
-          · {ago(pull.created_at)}
+          {pull.state === "merged" ? "Merged " : `@${pull.author} wants to merge `}
+          <Branch name={pull.head} /> into <Branch name={pull.base} />
           {pull.merge_sha === null ? null : (
             <>
-              {" · merged as "}
+              {" as "}
               <Link
                 to="/$owner/$repo/commit/$sha"
                 params={{ owner: repo.owner, repo: repo.name, sha: pull.merge_sha }}
@@ -166,6 +166,7 @@ function PullView() {
               </Link>
             </>
           )}
+          {pull.state === "merged" ? ` · opened by @${pull.author}` : null} · {ago(pull.created_at)}
         </p>
       </header>
       <ErrorNote error={error} />

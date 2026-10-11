@@ -23,7 +23,11 @@ export const Route = createFileRoute("/$owner/$repo/")({
     path: typeof search.path === "string" ? search.path : undefined,
   }),
   loaderDeps: ({ search }) => search,
-  loader: async ({ params, deps }) => {
+  loader: async ({ params, deps, parentMatchPromise }) => {
+    // An empty repository has no tree yet; asking for one only answers 404.
+    if ((await parentMatchPromise).loaderData?.empty === true) {
+      return { tree: null, readme: null, readmeName: null, latest: null };
+    }
     const base = `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}`;
     const query = new URLSearchParams({ ref: deps.ref ?? "", path: deps.path ?? "" });
     try {

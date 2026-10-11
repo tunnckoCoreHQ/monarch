@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { DiffView } from "~/components/diff";
 import { useRepo } from "~/components/repo";
-import { ErrorNote, Field, Kicker, messageOf, Page, fire } from "~/components/site";
+import { ErrorNote, Field, Kicker, messageOf, Page, Pending, fire } from "~/components/site";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { NativeSelect } from "~/components/ui/native-select";
@@ -24,6 +24,17 @@ export const Route = createFileRoute("/$owner/$repo/pulls/new")({
     head: typeof search.head === "string" ? search.head : undefined,
     base: typeof search.base === "string" ? search.base : undefined,
   }),
+  // Its own branch list: the repository page data is reused across its tabs, so a branch pushed
+  // after it loaded would be missing.
+  loader: async ({ params }) => {
+    const { refs } = await api<{ refs: Array<{ name: string }> }>(
+      `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}/refs`,
+    );
+    return refs.flatMap((ref) =>
+      ref.name.startsWith("refs/heads/") ? [ref.name.slice("refs/heads/".length)] : [],
+    );
+  },
+  pendingComponent: () => <Pending label="Loading branches" />,
   component: NewPull,
 });
 
@@ -37,11 +48,12 @@ function compareText(compare: Compare): string {
 
 function NewPull() {
   const repo = useRepo();
+  const branches = Route.useLoaderData();
   const search = Route.useSearch();
   const navigate = useNavigate();
   const [base, setBase] = useState(search.base ?? repo.default_branch);
   const [head, setHead] = useState(
-    search.head ?? repo.branches.find((branch) => branch !== repo.default_branch) ?? "",
+    search.head ?? branches.find((branch) => branch !== repo.default_branch) ?? "",
   );
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -89,7 +101,7 @@ function NewPull() {
     }
   };
 
-  const branchOptions = repo.branches.map((branch) => <option key={branch}>{branch}</option>);
+  const branchOptions = branches.map((branch) => <option key={branch}>{branch}</option>);
   const sameBranch = head === "" || head === base;
 
   return (

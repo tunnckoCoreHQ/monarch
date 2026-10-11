@@ -676,6 +676,8 @@ interface KeyRow {
   prefix: string;
   scopes: string;
   repo_id: string | null;
+  /** owner/name of the repository the key is limited to; null when it has none or it is gone. */
+  repo: string | null;
   environment: string | null;
   created_at: number;
   expires_at: number | null;
@@ -685,7 +687,7 @@ interface KeyRow {
 login.get("/api/keys", async (c) => {
   const principal = accountPrincipal(c);
   const result = await c.env.DB.prepare(
-    "SELECT id, name, kind, prefix, scopes, repo_id, environment, created_at, expires_at, last_used_at FROM tokens WHERE user_id = ? AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC",
+    "SELECT tokens.id, tokens.name, tokens.kind, tokens.prefix, tokens.scopes, tokens.repo_id, owners.handle || '/' || repos.name AS repo, tokens.environment, tokens.created_at, tokens.expires_at, tokens.last_used_at FROM tokens LEFT JOIN repos ON repos.id = tokens.repo_id LEFT JOIN users AS owners ON owners.id = repos.owner_id WHERE tokens.user_id = ? AND tokens.revoked_at IS NULL AND (tokens.expires_at IS NULL OR tokens.expires_at > ?) ORDER BY tokens.created_at DESC",
   )
     .bind(principal.user.id, now())
     .all<KeyRow>();

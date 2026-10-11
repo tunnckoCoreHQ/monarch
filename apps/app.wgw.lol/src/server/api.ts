@@ -617,6 +617,8 @@ interface PullRow {
   base: string;
   state: "open" | "closed" | "merged";
   merge_sha: string | null;
+  base_sha: string | null;
+  head_sha: string | null;
   merged_by: string | null;
   summary: string | null;
   created_at: number;
@@ -705,9 +707,10 @@ api.get("/repos/:owner/:name/pulls/:number", async (c) => {
   if (pull.state === "open") {
     const result = await stub.compare(grant.view, pull.base, pull.head);
     compare = result.ok ? result.value : { error: result.error };
-  } else if (pull.merge_sha !== null) {
-    const result = await stub.showCommit(grant.view, pull.merge_sha);
-    compare = result.ok ? { commits: [], files: result.value.files, merged: true } : null;
+  } else if (pull.base_sha !== null && pull.head_sha !== null) {
+    // The tips at merge time, so the commits and files stay what was merged.
+    const result = await stub.compare(grant.view, pull.base_sha, pull.head_sha);
+    compare = result.ok ? { ...result.value, merged: true } : { error: result.error };
   }
   return c.json({ ...pullJson(pull, grant.repo, c.env.ORIGIN), compare });
 });
@@ -774,9 +777,9 @@ api.post("/repos/:owner/:name/pulls/:number/merge", async (c) => {
     ),
   );
   await c.env.DB.prepare(
-    "UPDATE pulls SET state = 'merged', merge_sha = ?, merged_by = ?, updated_at = ? WHERE id = ?",
+    "UPDATE pulls SET state = 'merged', merge_sha = ?, base_sha = ?, head_sha = ?, merged_by = ?, updated_at = ? WHERE id = ?",
   )
-    .bind(merged.sha, principal.user.id, now(), pull.id)
+    .bind(merged.sha, merged.update.old, merged.head, principal.user.id, now(), pull.id)
     .run();
   await afterPush(c.env, grant.repo, principal.user.id, [merged.update]);
   await recordEvent(c.env, grant.repo.id, principal.user.id, "pull_merged", {

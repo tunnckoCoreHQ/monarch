@@ -134,7 +134,7 @@ function RepoLayout() {
                     public view
                   </Badge>
                 ) : null}
-                {repo.hides_paths ? (
+                {repo.hides_paths && repo.visibility === "public" ? (
                   <Badge variant="signal" title={repo.private_rules ?? ""}>
                     <Lock />
                     private paths
@@ -157,14 +157,14 @@ function RepoLayout() {
               value={
                 repo.role === null
                   ? repo.clone_url
-                  : `git -c http.proactiveAuth=basic clone ${repo.clone_url}`
+                  : `git clone ${repo.clone_url} -c http.proactiveAuth=basic`
               }
             />
           </div>
           <StatusBanner repo={repo} />
           <nav
             aria-label="Repository"
-            className="-mx-6 mt-8 flex [scrollbar-width:none] gap-6 overflow-x-auto px-6"
+            className="-mx-6 mt-8 flex [scrollbar-width:none] gap-6 overflow-x-auto [mask-image:linear-gradient(to_right,black_85%,transparent)] px-6 md:[mask-image:none]"
           >
             {tabs.map((tab) => {
               const active = tab.sections.includes(section);

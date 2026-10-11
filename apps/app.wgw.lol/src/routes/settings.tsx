@@ -29,6 +29,7 @@ interface Key {
   prefix: string;
   scopes: string[];
   repo_id: string | null;
+  repo: string | null;
   environment: string | null;
   created_at: number;
   expires_at: number | null;
@@ -64,7 +65,7 @@ function Settings() {
   const [repo, setRepo] = useState("");
   const [environment, setEnvironment] = useState("");
   const [creating, setCreating] = useState(false);
-  const [created, setCreated] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ id: string; token: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const create = async (event: React.FormEvent) => {
@@ -72,7 +73,7 @@ function Settings() {
     setCreating(true);
     setError(null);
     try {
-      const result = await api<{ token: string }>("/api/keys", {
+      const result = await api<{ id: string; token: string }>("/api/keys", {
         method: "POST",
         json: {
           name: name || "api key",
@@ -81,8 +82,11 @@ function Settings() {
           environment: environment || undefined,
         },
       });
-      setCreated(result.token);
+      setCreated({ id: result.id, token: result.token });
       setName("");
+      setScopes(["read", "write"]);
+      setRepo("");
+      setEnvironment("");
       await router.invalidate();
     } catch (caught) {
       setError(messageOf(caught));
@@ -91,9 +95,14 @@ function Settings() {
     }
   };
 
-  const revoke = async (id: string) => {
+  const revoke = async (key: Key) => {
+    if (!window.confirm(`Revoke ${key.name}? Anything that uses it stops working.`)) {
+      return;
+    }
     try {
-      await api(`/api/keys/${id}`, { method: "DELETE" });
+      await api(`/api/keys/${key.id}`, { method: "DELETE" });
+      // A revoked key's plaintext must not stay on screen.
+      setCreated((shown) => (shown?.id === key.id ? null : shown));
       await router.invalidate();
     } catch (caught) {
       setError(messageOf(caught));
@@ -214,7 +223,7 @@ function Settings() {
             className="border-signal bg-signal/5 flex flex-col gap-3 border-l-2 p-4"
           >
             <p className="text-sm font-bold">Copy the key now. This page shows it once.</p>
-            <CopyField label="key" value={created} />
+            <CopyField label="key" value={created.token} />
           </div>
         )}
         {keys.length === 0 ? (
@@ -232,6 +241,9 @@ function Settings() {
                       {scope}
                     </Badge>
                   ))}
+                  {key.repo_id === null ? null : (
+                    <Badge variant="outline">repo:{key.repo ?? "deleted"}</Badge>
+                  )}
                   {key.environment === null ? null : (
                     <Badge variant="outline">env:{key.environment}</Badge>
                   )}
@@ -239,7 +251,7 @@ function Settings() {
                 <span className="text-faint ml-auto font-mono text-xs">
                   used {ago(key.last_used_at)}
                 </span>
-                <Button size="xs" variant="ghost" onClick={fire(() => revoke(key.id))}>
+                <Button size="xs" variant="ghost" onClick={fire(() => revoke(key))}>
                   Revoke
                 </Button>
               </li>

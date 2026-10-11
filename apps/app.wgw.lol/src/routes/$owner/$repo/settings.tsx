@@ -178,12 +178,18 @@ function RepoSettings() {
             variant="outline"
             disabled={!isAdmin}
             onClick={() =>
-              act(() =>
-                api(base, {
-                  method: "PATCH",
-                  json: { visibility: repo.visibility === "public" ? "private" : "public" },
-                }),
+              window.confirm(
+                repo.visibility === "public"
+                  ? `Make ${repo.full_name} private? Only members will see it.`
+                  : `Make ${repo.full_name} public? Everyone will see it, except paths in .gitprivate.`,
               )
+                ? act(() =>
+                    api(base, {
+                      method: "PATCH",
+                      json: { visibility: repo.visibility === "public" ? "private" : "public" },
+                    }),
+                  )
+                : undefined
             }
           >
             Make {repo.visibility === "public" ? "private" : "public"}
@@ -232,7 +238,10 @@ function RepoSettings() {
             variables={environments.repository}
             onDelete={
               isAdmin
-                ? (name) => act(() => api(`${base}/variables/${name}`, { method: "DELETE" }))
+                ? (name) =>
+                    window.confirm(`Delete ${name} from every environment's defaults?`)
+                      ? act(() => api(`${base}/variables/${name}`, { method: "DELETE" }))
+                      : undefined
                 : null
             }
           />
@@ -250,7 +259,9 @@ function RepoSettings() {
                     variant="ghost"
                     className="ml-auto"
                     onClick={() =>
-                      act(() => api(`${base}/environments/${env.name}`, { method: "DELETE" }))
+                      window.confirm(`Delete ${env.name} and all of its values?`)
+                        ? act(() => api(`${base}/environments/${env.name}`, { method: "DELETE" }))
+                        : undefined
                     }
                   >
                     Delete environment
@@ -264,12 +275,14 @@ function RepoSettings() {
               onDelete={
                 isAdmin
                   ? (name) =>
-                      act(() =>
-                        api(
-                          `${base}/variables/${name}?environment=${encodeURIComponent(env.name)}`,
-                          { method: "DELETE" },
-                        ),
-                      )
+                      window.confirm(`Delete ${name} from ${env.name}?`)
+                        ? act(() =>
+                            api(
+                              `${base}/variables/${name}?environment=${encodeURIComponent(env.name)}`,
+                              { method: "DELETE" },
+                            ),
+                          )
+                        : undefined
                   : null
               }
             />
@@ -323,6 +336,8 @@ function RepoSettings() {
                   });
                   setVarName("");
                   setVarValue("");
+                  // Back to the safe default, so the next value is not saved in plain text by accident.
+                  setVarSecret(true);
                 })}
                 className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)_auto_auto] lg:items-end"
               >
@@ -396,7 +411,11 @@ function RepoSettings() {
                     variant="ghost"
                     className="ml-auto"
                     onClick={() =>
-                      act(() => api(`${base}/collaborators/${item.handle}`, { method: "DELETE" }))
+                      window.confirm(`Remove @${item.handle} from ${repo.full_name}?`)
+                        ? act(() =>
+                            api(`${base}/collaborators/${item.handle}`, { method: "DELETE" }),
+                          )
+                        : undefined
                     }
                   >
                     Remove
@@ -461,8 +480,12 @@ function RepoSettings() {
             className="self-start"
             onClick={() =>
               act(async () => {
-                if (window.prompt(`Type ${repo.name} to delete it`) !== repo.name) {
+                const typed = window.prompt(`Type ${repo.name} to delete it`);
+                if (typed === null) {
                   return;
+                }
+                if (typed !== repo.name) {
+                  throw new Error(`That was not ${repo.name}. Nothing was deleted.`);
                 }
                 await api(base, { method: "DELETE" });
                 await navigate({ to: "/$owner", params: { owner: repo.owner } });

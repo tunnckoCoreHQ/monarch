@@ -614,7 +614,7 @@ export class GitRepo {
     head: string,
     message: string,
     person: Person,
-  ): { sha: string; update: RefUpdate } {
+  ): { sha: string; head: string; update: RefUpdate } {
     const ref = `refs/heads/${base}`;
     const baseSha = this.storage.refs.get(ref);
     const headSha = this.resolve("full", head);
@@ -625,7 +625,7 @@ export class GitRepo {
       throw new GitError("nothing to merge", 409);
     }
     if (isAncestor(this.objects, baseSha, headSha)) {
-      return { sha: headSha, update: this.updateRef(ref, baseSha, headSha) };
+      return { sha: headSha, head: headSha, update: this.updateRef(ref, baseSha, headSha) };
     }
     const mergeBaseSha = mergeBase(this.objects, baseSha, headSha);
     if (mergeBaseSha === undefined) {
@@ -650,7 +650,7 @@ export class GitRepo {
         message,
       }),
     );
-    return { sha, update: this.updateRef(ref, baseSha, sha) };
+    return { sha, head: headSha, update: this.updateRef(ref, baseSha, sha) };
   }
 
   /** Commits file changes on top of a branch, for agents and the API that work without a clone. */
