@@ -34,6 +34,12 @@ const FRESH_MS = 15_000;
 export type Target = "full" | "public";
 export type Scope = "read" | "write";
 
+export interface SyncResult {
+  updates: RefUpdate[];
+  /** Why the public projection could not be published, or null. */
+  publishError: string | null;
+}
+
 export interface GitAccess {
   remote: string;
   token: string;
@@ -417,12 +423,23 @@ export class Repo extends DurableObject<Env> {
     });
   }
 
-  /** Fetches from the full Artifacts repo and publishes the public projection. */
-  sync(): Promise<Result<RefUpdate[]>> {
+  /**
+   * Fetches from the full Artifacts repo, then publishes the public projection. A publish failure
+   * does not fail the call: the members' mirror is current, and the public repo keeps its last,
+   * still filtered, state until the next sync publishes again.
+   */
+  sync(): Promise<Result<SyncResult>> {
     return guard(async () => {
-      const updates = await this.getMirror().sync();
+      const mirror = this.getMirror();
+      const updates = await mirror.refresh();
       this.setMeta("synced_at", String(Date.now()));
-      return updates;
+      try {
+        await mirror.publish();
+        return { updates, publishError: null };
+      } catch (error) {
+        console.error(`publish failed for ${this.repoId}`, error);
+        return { updates, publishError: error instanceof Error ? error.message : String(error) };
+      }
     });
   }
 
@@ -432,20 +449,22 @@ export class Repo extends DurableObject<Env> {
     if (Date.now() - synced < FRESH_MS || this.meta("remote_full") === undefined) {
       return;
     }
-    try {
-      await this.getMirror().sync();
-      this.setMeta("synced_at", String(Date.now()));
-    } catch (error) {
-      console.error("mirror sync failed", error);
+    const result = await this.sync();
+    if (!result.ok) {
+      console.error(`mirror sync failed for ${this.repoId}: ${result.error}`);
     }
   }
 
-  /** Runs server-side writes one at a time: sync, apply locally, push to Artifacts. */
+  /**
+   * Runs server-side writes one at a time: refresh from the full repo, apply locally, push to
+   * Artifacts. It does not wait for the public view, so a broken projection cannot block a write
+   * that fixes it.
+   */
   private write<T extends { update: RefUpdate }>(run: () => T): Promise<Result<T>> {
     const next = this.writes.then(() =>
       guard(async () => {
         const mirror = this.getMirror();
-        await mirror.sync();
+        await mirror.refresh();
         const result = run();
         await mirror.pushLocal(result.update);
         this.setMeta("synced_at", String(Date.now()));
@@ -610,28 +629,34 @@ export class Repo extends DurableObject<Env> {
     return guard(() => this.repo.storage.refs.head());
   }
 
-  /** Deletes both Artifacts repos, the mirror's R2 objects, and the mirror. */
-  async destroy(): Promise<void> {
-    if (this.repoId !== "") {
-      for (const target of ["full", "public"] as const) {
-        try {
+  /**
+   * Deletes both Artifacts repos, then the mirror's R2 objects and the mirror. A failed Artifacts
+   * delete stops here with an error, so the D1 record stays and the delete can be retried.
+   */
+  destroy(): Promise<Result<null>> {
+    return guard(async () => {
+      if (this.repoId !== "") {
+        for (const target of ["full", "public"] as const) {
+          // `delete` returns false for a repo that is already gone, which is fine here.
           await this.env.ARTIFACTS.delete(this.artifactsName(target));
-        } catch (error) {
-          console.error(`could not delete the ${target} Artifacts repo`, error);
         }
       }
-    }
-    const prefix = `objects/${this.repoId}/`;
-    // Each listing returns one page. Deleting it moves the next keys to the front.
-    for (;;) {
-      const listed = await this.env.GIT.list({ prefix });
-      if (listed.objects.length > 0) {
-        await this.env.GIT.delete(listed.objects.map((object) => object.key));
+      const prefix = `objects/${this.repoId}/`;
+      // Each listing returns one page. Deleting it moves the next keys to the front.
+      for (;;) {
+        const listed = await this.env.GIT.list({ prefix });
+        if (listed.objects.length > 0) {
+          await this.env.GIT.delete(listed.objects.map((object) => object.key));
+        }
+        if (!listed.truncated) {
+          break;
+        }
       }
-      if (!listed.truncated) {
-        break;
-      }
-    }
-    await this.ctx.storage.deleteAll();
+      await this.ctx.storage.deleteAll();
+      this.repoId = "";
+      this.mirror = undefined;
+      this.tokens.clear();
+      return null;
+    });
   }
 }

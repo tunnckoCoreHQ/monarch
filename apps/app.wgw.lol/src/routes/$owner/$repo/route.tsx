@@ -49,7 +49,11 @@ function StatusBanner({ repo }: { repo: RepoDetail }) {
     return () => clearInterval(timer);
   }, [waiting, router]);
   if (repo.status === "ready") {
-    return null;
+    return repo.status_detail === null ? null : (
+      <p className="border-violet text-violet mt-4 border px-4 py-3 font-mono text-sm">
+        {repo.status_detail}
+      </p>
+    );
   }
   return (
     <p

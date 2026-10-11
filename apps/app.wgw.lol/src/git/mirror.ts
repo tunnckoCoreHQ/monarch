@@ -1,9 +1,12 @@
-import { ZERO_SHA } from "./objects";
-import { parsePack } from "./pack";
+import { parseCommit, parseTag, ZERO_SHA } from "./objects";
+import { PackLimitError, parsePack } from "./pack";
 import type { Command } from "./protocol";
 import { fetchPack, lsRemote, type Remote, sendPack } from "./remote";
 import { GitError, type GitRepo, isValidRef, type RefUpdate, type Storage } from "./repo";
 import { planPack } from "./walk";
+
+/** Commits per fetch round. A round that is over a pack limit retries with a quarter of the depth. */
+const FETCH_DEPTH = 256;
 
 /** The two remotes behind one repository: members read and write `full`, anyone reads `public`. */
 export interface Remotes {
@@ -16,47 +19,137 @@ export interface Remotes {
  * Reads run on the local copy; server-side writes apply locally first and then push.
  */
 export class Mirror {
-  private syncing: Promise<RefUpdate[]> | undefined;
+  private refreshing: Promise<RefUpdate[]> | undefined;
   private queued: Promise<RefUpdate[]> | undefined;
   private publishing: Promise<unknown> = Promise.resolve();
   /** Refs with a pushLocal in flight, and how many. Sync and publish leave them to that push. */
   private readonly pushing = new Map<string, number>();
+  private readonly depth: number;
 
   constructor(
     readonly repo: GitRepo,
     readonly storage: Storage,
     readonly remotes: Remotes,
     private readonly fetcher?: typeof fetch,
-  ) {}
+    options: { fetchDepth?: number } = {},
+  ) {
+    this.depth = options.fetchDepth ?? FETCH_DEPTH;
+  }
+
+  /** Refreshes from the full remote, then publishes the public projection. */
+  async sync(): Promise<RefUpdate[]> {
+    const updates = await this.refresh();
+    await this.publish();
+    return updates;
+  }
 
   /**
-   * Fetches objects and refs from the full remote into storage, makes local refs equal the remote
-   * refs (heads and tags only; deletes refs the remote no longer has; sets HEAD from the
-   * advertisement's symref), then calls publish(). A call during a run waits for one more run that
-   * starts after the current one, so it always sees remote changes made before the call. Returns the
-   * local ref changes.
+   * Fetches objects and refs from the full remote into storage and makes local refs equal the
+   * remote refs (heads and tags only; deletes refs the remote no longer has; sets HEAD from the
+   * advertisement's symref). It does not publish, so a broken public view never blocks a member's
+   * write. A call during a run waits for one more run that starts after the current one, so it
+   * always sees remote changes made before the call. Returns the local ref changes.
    */
-  sync(): Promise<RefUpdate[]> {
-    if (this.syncing === undefined) {
-      this.syncing = this.runSync().finally(() => {
-        this.syncing = undefined;
+  refresh(): Promise<RefUpdate[]> {
+    if (this.refreshing === undefined) {
+      this.refreshing = this.runRefresh().finally(() => {
+        this.refreshing = undefined;
       });
-      return this.syncing;
+      return this.refreshing;
     }
     // A run in progress may have read the remote refs before the change this caller wants to
     // see, so queue one more run after it. Callers that arrive meanwhile share that run.
-    this.queued ??= this.syncing
+    this.queued ??= this.refreshing
       .catch(() => undefined)
       .then(() => {
         this.queued = undefined;
-        return this.sync();
+        return this.refresh();
       });
     return this.queued;
   }
 
-  private async runSync(): Promise<RefUpdate[]> {
+  /**
+   * Fetches the objects for `wants` in rounds of at most FETCH_DEPTH commits, so a long history
+   * never has to fit in one pack. After each round, the commits whose parents are still missing
+   * are the next wants, and they are sent back as `shallow` lines so the remote skips the trees
+   * and blobs this run already has.
+   */
+  private async fetchObjects(wants: string[], haves: string[]): Promise<void> {
+    const { objects } = this.storage;
+    const fetched: string[] = [];
+    const boundary = new Set<string>();
+    let pending = wants;
+    let depth = this.depth;
+    while (pending.length > 0) {
+      let parsed;
+      try {
+        const pack = await fetchPack(
+          this.remotes.full,
+          pending,
+          [...haves, ...fetched],
+          this.fetcher,
+          {
+            depth,
+            shallow: [...boundary],
+          },
+        );
+        parsed = pack.length > 0 ? parsePack(pack, (sha) => objects.read(sha)) : [];
+      } catch (error) {
+        const tooLarge =
+          error instanceof PackLimitError || (error instanceof GitError && error.status === 413);
+        if (tooLarge && depth > 1) {
+          depth = Math.max(1, Math.floor(depth / 4));
+          continue;
+        }
+        if (tooLarge) {
+          const reason = error instanceof Error ? error.message : String(error);
+          throw new GitError(
+            `a single commit in the full remote is too large to mirror: ${reason}`,
+            413,
+          );
+        }
+        throw error;
+      }
+      await this.storage.saveObjects(parsed);
+      const next = new Set<string>();
+      for (const object of parsed) {
+        if (object.type === "tag") {
+          const target = parseTag(object.content).object;
+          if (!objects.has(target)) {
+            next.add(target);
+          }
+        } else if (object.type === "commit") {
+          fetched.push(object.sha);
+          const missing = parseCommit(object.content).parents.filter(
+            (parent) => !objects.has(parent),
+          );
+          if (missing.length > 0) {
+            boundary.add(object.sha);
+            for (const parent of missing) {
+              next.add(parent);
+            }
+          }
+        }
+      }
+      for (const sha of boundary) {
+        if (
+          parseCommit(objects.read(sha)!.content).parents.every((parent) => objects.has(parent))
+        ) {
+          boundary.delete(sha);
+        }
+      }
+      const unsent = pending.find((sha) => !objects.has(sha));
+      if (unsent !== undefined) {
+        throw new GitError(`the full remote did not send ${unsent}`, 502);
+      }
+      pending = [...next];
+      depth = this.depth;
+    }
+  }
+
+  private async runRefresh(): Promise<RefUpdate[]> {
     const { objects, refs } = this.storage;
-    // Refs a server-side write moves while this runs belong to that write; the sync leaves them.
+    // Refs a server-side write moves while this runs belong to that write; the refresh leaves them.
     const before = new Map(refs.list().map((ref) => [ref.name, ref.sha]));
     const remote = await lsRemote(this.remotes.full, "git-upload-pack", this.fetcher);
     const target = new Map<string, string>();
@@ -67,18 +160,12 @@ export class Mirror {
     }
     const wants = [...new Set(target.values())].filter((sha) => !objects.has(sha));
     if (wants.length > 0) {
+      // Local refs always have their whole history here, so their tips are safe haves.
       const haves = refs
         .list()
         .map((ref) => ref.sha)
         .filter((sha) => objects.has(sha));
-      const pack = await fetchPack(this.remotes.full, wants, haves, this.fetcher);
-      if (pack.length > 0) {
-        await this.storage.saveObjects(parsePack(pack, (sha) => objects.read(sha)));
-      }
-      const missing = wants.find((sha) => !objects.has(sha));
-      if (missing !== undefined) {
-        throw new GitError(`the full remote did not send ${missing}`, 502);
-      }
+      await this.fetchObjects(wants, haves);
     }
     const updates = this.storage.transaction(() => {
       const changed: RefUpdate[] = [];
@@ -108,7 +195,6 @@ export class Mirror {
       }
       return changed;
     });
-    await this.publish();
     return updates;
   }
 

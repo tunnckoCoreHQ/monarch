@@ -123,11 +123,22 @@ function packAfterAcks(body: Uint8Array, where: string): Uint8Array {
     if (line?.startsWith("ERR ")) {
       throw new GitError(`${where} refused the fetch: ${line.slice(4)}`, 502);
     }
-    if (line !== null && line !== "NAK" && !line.startsWith("ACK ")) {
+    // A deepen request is answered with shallow and unshallow lines first. The mirror works out
+    // its boundaries from the commits it receives, so it skips them.
+    const known = line === null || line === "NAK" || /^(ACK|shallow|unshallow) /.test(line);
+    if (!known) {
       throw new GitError(`${where} sent an unexpected line: ${line.slice(0, 100)}`, 502);
     }
   }
   return new Uint8Array();
+}
+
+/** Options for a bounded fetch. */
+export interface FetchOptions {
+  /** Sends `deepen <depth>`: the pack stops after this many commits from each want. */
+  depth?: number;
+  /** Commits the client has without their parents, sent as `shallow` lines. */
+  shallow?: string[];
 }
 
 /**
@@ -139,14 +150,23 @@ export async function fetchPack(
   wants: string[],
   haves: string[],
   fetcher: typeof fetch = fetch,
+  options: FetchOptions = {},
 ): Promise<Uint8Array> {
   const wanted = [...new Set(wants)];
   if (wanted.length === 0) {
     return new Uint8Array();
   }
+  const caps =
+    options.depth === undefined ? `no-progress ${AGENT}` : `no-progress shallow ${AGENT}`;
   const parts: Uint8Array[] = wanted.map((sha, index) =>
-    pkt(index === 0 ? `want ${sha} no-progress ${AGENT}\n` : `want ${sha}\n`),
+    pkt(index === 0 ? `want ${sha} ${caps}\n` : `want ${sha}\n`),
   );
+  for (const sha of new Set(options.shallow)) {
+    parts.push(pkt(`shallow ${sha}\n`));
+  }
+  if (options.depth !== undefined) {
+    parts.push(pkt(`deepen ${options.depth}\n`));
+  }
   parts.push(FLUSH);
   // No flush before `done`: a stateless upload-pack ends the exchange at a flush.
   for (const sha of new Set(haves)) {

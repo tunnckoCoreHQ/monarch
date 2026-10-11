@@ -87,6 +87,21 @@ api.get("/repos", async (c) => {
   return c.json(repos.map((repo) => repoJson(repo, c.env.ORIGIN)));
 });
 
+/**
+ * Removes a repository whose create, import, or fork failed. When its Artifacts repos cannot be
+ * deleted, the D1 row stays as failed, so the owner can delete it again later.
+ */
+async function discard(env: Env, id: string): Promise<void> {
+  const cleaned = await repoStub(env, id).destroy();
+  if (cleaned.ok) {
+    await env.DB.prepare("DELETE FROM repos WHERE id = ?").bind(id).run();
+  } else {
+    await env.DB.prepare("UPDATE repos SET status = 'failed', status_detail = ? WHERE id = ?")
+      .bind(`cleanup failed: ${cleaned.error}`, id)
+      .run();
+  }
+}
+
 api.post("/repos", async (c) => {
   const principal = requireUser(c, "write");
   if (principal.repoId !== null) {
@@ -162,8 +177,7 @@ api.post("/repos", async (c) => {
       ? await stub.create(id, branch, (input.description ?? "").slice(0, 400))
       : await stub.importFrom(id, source, importBranch);
   if (!started.ok) {
-    await stub.destroy();
-    await c.env.DB.prepare("DELETE FROM repos WHERE id = ?").bind(id).run();
+    await discard(c.env, id);
     throw new HttpError(
       started.status === 500 ? 502 : started.status,
       source === null
@@ -240,7 +254,7 @@ api.patch("/repos/:owner/:name", async (c) => {
 api.delete("/repos/:owner/:name", async (c) => {
   const grant = await loadRepo(c);
   need(grant, "admin");
-  await repoStub(c.env, grant.repo.id).destroy();
+  unwrap(await repoStub(c.env, grant.repo.id).destroy());
   await c.env.DB.prepare("DELETE FROM repos WHERE id = ?").bind(grant.repo.id).run();
   return c.json({ ok: true });
 });
@@ -282,8 +296,7 @@ api.post("/repos/:owner/:name/fork", async (c) => {
   // An outsider's fork copies the public projection, so private paths never leave the repository.
   const started = await stub.forkFrom(id, grant.repo.id, grant.view, grant.repo.default_branch);
   if (!started.ok) {
-    await stub.destroy();
-    await c.env.DB.prepare("DELETE FROM repos WHERE id = ?").bind(id).run();
+    await discard(c.env, id);
     throw new HttpError(
       started.status === 500 ? 502 : started.status,
       `fork failed: ${started.error}`,
@@ -340,11 +353,11 @@ api.get("/repos/:owner/:name/refs", async (c) => {
 api.post("/repos/:owner/:name/sync", async (c) => {
   const grant = await loadRepo(c);
   need(grant, "write");
-  const updates = unwrap(await repoStub(c.env, grant.repo.id).sync());
+  const { updates, publishError } = unwrap(await repoStub(c.env, grant.repo.id).sync());
   if (updates.length > 0) {
     await afterPush(c.env, grant.repo, grant.principal?.user.id ?? null, updates);
   }
-  return c.json({ updates });
+  return c.json({ updates, publish_error: publishError });
 });
 
 api.post("/repos/:owner/:name/branches", async (c) => {

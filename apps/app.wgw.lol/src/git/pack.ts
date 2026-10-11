@@ -25,9 +25,17 @@ interface Entry {
 export const MAX_OBJECT_SIZE = 64 * 1024 * 1024;
 export const MAX_EXPANDED_SIZE = 96 * 1024 * 1024;
 
+/** A pack that is over a size limit. A mirror fetch retries it in smaller pieces. */
+export class PackLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PackLimitError";
+  }
+}
+
 function checkSize(size: number): void {
   if (size > MAX_OBJECT_SIZE) {
-    throw new Error(`object of ${size} bytes is over the ${MAX_OBJECT_SIZE} byte limit`);
+    throw new PackLimitError(`object of ${size} bytes is over the ${MAX_OBJECT_SIZE} byte limit`);
   }
 }
 
@@ -139,7 +147,7 @@ export function parsePack(
     checkSize(size);
     expanded += size;
     if (expanded > MAX_EXPANDED_SIZE) {
-      throw new Error(`the pack expands past the ${MAX_EXPANDED_SIZE} byte limit`);
+      throw new PackLimitError(`the pack expands past the ${MAX_EXPANDED_SIZE} byte limit`);
     }
     const { data, used } = inflateAt(pack, pos, size);
     entry.data = data;
@@ -194,7 +202,7 @@ export function parsePack(
       content = applyDelta(base.content, entry.data);
       expanded += content.length;
       if (expanded > MAX_EXPANDED_SIZE) {
-        throw new Error(`the pack expands past the ${MAX_EXPANDED_SIZE} byte limit`);
+        throw new PackLimitError(`the pack expands past the ${MAX_EXPANDED_SIZE} byte limit`);
       }
     } else {
       type = TYPE_NAME[entry.code];

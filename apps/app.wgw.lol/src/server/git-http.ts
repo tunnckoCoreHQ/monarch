@@ -134,7 +134,7 @@ gitHttp.post("/:owner/:repo/git-receive-pack", async (c) => {
     (async () => {
       const synced = await repoStub(c.env, repo.id).sync();
       if (synced.ok) {
-        await afterPush(c.env, repo, actor, synced.value);
+        await afterPush(c.env, repo, actor, synced.value.updates);
       } else {
         console.error(`sync after push failed for ${repo.id}: ${synced.error}`);
       }

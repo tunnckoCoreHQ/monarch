@@ -200,12 +200,15 @@ describe("Mirror against real git", () => {
     const second = await git(src, "rev-parse", "HEAD");
 
     // A second call during a run gets its own run after it; callers during that wait share it.
-    const first = mirror.sync();
-    const queued = mirror.sync();
+    const first = mirror.refresh();
+    const queued = mirror.refresh();
     expect(queued).not.toBe(first);
-    expect(mirror.sync()).toBe(queued);
+    expect(mirror.refresh()).toBe(queued);
     expect(await first).toEqual([{ ref: MAIN, old: ZERO_SHA, new: second }]);
     expect(await queued).toEqual([]);
+    // A refresh alone never publishes; sync does.
+    expect(pub.storage.refs.list()).toEqual([]);
+    expect(await mirror.sync()).toEqual([]);
     expect(local.refs("full")).toEqual(full.refs("full"));
     expect(local.storage.refs.head()).toBe(MAIN);
     expect(pub.refs("full")).toEqual(local.refs("public"));
@@ -473,5 +476,30 @@ describe("Mirror against real git", () => {
     await asked;
     expect(local.storage.refs.get(MAIN)).toBe(late.sha);
     expect(local.readCommit(pub.storage.refs.get(MAIN)!).message).toBe("late push\n");
+  });
+
+  it("fetches a long history in bounded rounds", async () => {
+    // A fresh mirror with two commits per round has to deepen several times.
+    const fresh = memoryRepo();
+    const bounded = new Mirror(fresh, fresh.storage, remotes, undefined, { fetchDepth: 2 });
+    const before = requests.length;
+    await bounded.refresh();
+    const fetches = requests
+      .slice(before)
+      .filter((logged) => logged.path === "/full.git/git-upload-pack");
+    expect(fetches.length).toBeGreaterThan(2);
+    expect(fetches.every((logged) => contains(logged.body, "deepen 2"))).toBe(true);
+    // Later rounds tell the remote where this mirror's history stops.
+    expect(fetches.slice(1).every((logged) => contains(logged.body, "shallow "))).toBe(true);
+    expect(fresh.storage.refs.list()).toEqual(full.storage.refs.list());
+    const tip = full.storage.refs.get(MAIN)!;
+    expect(fresh.log("full", tip, 1000).map((commit) => commit.sha)).toEqual(
+      full.log("full", tip, 1000).map((commit) => commit.sha),
+    );
+    // Every object reachable from the tips arrived.
+    const tips = full.storage.refs.list().map((ref) => ref.sha);
+    expect(planPack(fresh.storage.objects, tips, []).objects.toSorted()).toEqual(
+      planPack(full.storage.objects, tips, []).objects.toSorted(),
+    );
   });
 });
