@@ -78,7 +78,8 @@ function agentidUpstreamId(profile: unknown): string {
 }
 
 // The access token comes from Triad's own code exchange, so the userinfo
-// response is the profile. Triad does not read the ID token.
+// response is the profile. Triad does not read the ID token. A failed or
+// malformed response returns null, which Better Auth turns into an OAuth error.
 async function agentidUserInfo(accessToken: string | undefined) {
   if (!accessToken) {
     return null;
@@ -86,12 +87,12 @@ async function agentidUserInfo(accessToken: string | undefined) {
 
   const response = await fetch(`${AGENTID_ISSUER}/v0/userinfo`, {
     headers: { accept: "application/json", authorization: `Bearer ${accessToken}` },
-  });
-  if (!response.ok) {
+  }).catch(() => undefined);
+  if (!response?.ok) {
     return null;
   }
 
-  const profile: unknown = await response.json();
+  const profile: unknown = await response.json().catch(() => undefined);
 
   return isRecord(profile)
     ? ({

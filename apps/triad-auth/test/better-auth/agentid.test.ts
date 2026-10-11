@@ -8,6 +8,7 @@ import type { TriadEnv } from "../../src/better-auth/env";
 import {
   accountSubject,
   createAgentIdAuthentication,
+  openProfileEncryptedData,
   providerSubject,
 } from "../../src/better-auth/identity";
 
@@ -44,8 +45,17 @@ function cookieHeader(response: Response): string {
     .join("; ");
 }
 
+const AGENT_PROFILE = {
+  sub: AGENT_SUB,
+  email: "agent@agentmail.to",
+  email_verified: true,
+  name: "Research Agent",
+  preferred_username: "agent_agentmail-to",
+  owner_sub: "oW7xN2pQ4mT8vL1kR6sC9dF3gH5jB0aE2uY4zI6nP8A",
+};
+
 // AgentID's token and userinfo endpoints, as documented at https://www.agentid.com/docs.
-function agentIdServer() {
+function agentIdServer(userinfo: () => Response) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     if (request.url === "https://auth.agentid.com/v0/token") {
@@ -68,18 +78,50 @@ function agentIdServer() {
     if (request.url === "https://auth.agentid.com/v0/userinfo") {
       expect(request.headers.get("authorization")).toBe("Bearer agentid-access-token");
 
-      return Response.json({
-        sub: AGENT_SUB,
-        email: "agent@agentmail.to",
-        email_verified: true,
-        name: "Research Agent",
-        preferred_username: "agent_agentmail-to",
-        owner_sub: "oW7xN2pQ4mT8vL1kR6sC9dF3gH5jB0aE2uY4zI6nP8A",
-      });
+      return userinfo();
     }
 
     throw new Error(`Unexpected request to ${request.url}`);
   });
+}
+
+// Starts an AgentID sign-in on a fresh Triad, then returns to its callback with a code.
+async function signInThroughAgentId(userinfo: () => Response) {
+  const memory: Record<string, Array<Record<string, unknown>>> = {
+    user: [],
+    account: [],
+    session: [],
+    verification: [],
+    oauthResource: [],
+  };
+  const env = createEnv();
+  const auth = betterAuth({
+    ...createTriadAuthOptions(env, createTriadConfiguration(env)),
+    database: memoryAdapter(memory),
+    rateLimit: { enabled: false },
+  });
+
+  const start = await auth.handler(
+    new Request(`${ORIGIN}/api/auth/sign-in/social`, {
+      method: "POST",
+      headers: { "content-type": "application/json", origin: ORIGIN },
+      body: JSON.stringify({ provider: "agentid", callbackURL: `${ORIGIN}/me` }),
+    }),
+  );
+  const { url } = await start.json<{ url: string }>();
+  const authorization = new URL(url);
+
+  const server = agentIdServer(userinfo);
+  vi.stubGlobal("fetch", server);
+  const state = authorization.searchParams.get("state") ?? "";
+  const callback = await auth.handler(
+    new Request(
+      `${ORIGIN}/api/auth/callback/agentid?code=agentid-code&state=${encodeURIComponent(state)}&iss=${encodeURIComponent("https://auth.agentid.com")}`,
+      { headers: { cookie: cookieHeader(start) } },
+    ),
+  );
+
+  return { authorization, callback, env, memory, server, start };
 }
 
 afterEach(() => {
@@ -109,29 +151,9 @@ describe("AgentID Identity Source", () => {
   });
 
   it("signs an agent in to a Triad Account through the AgentID code flow", async () => {
-    const memory: Record<string, Array<Record<string, unknown>>> = {
-      user: [],
-      account: [],
-      session: [],
-      verification: [],
-      oauthResource: [],
-    };
-    const env = createEnv();
-    const auth = betterAuth({
-      ...createTriadAuthOptions(env, createTriadConfiguration(env)),
-      database: memoryAdapter(memory),
-      rateLimit: { enabled: false },
-    });
-
-    const start = await auth.handler(
-      new Request(`${ORIGIN}/api/auth/sign-in/social`, {
-        method: "POST",
-        headers: { "content-type": "application/json", origin: ORIGIN },
-        body: JSON.stringify({ provider: "agentid", callbackURL: `${ORIGIN}/me` }),
-      }),
+    const { authorization, callback, env, memory, server, start } = await signInThroughAgentId(() =>
+      Response.json(AGENT_PROFILE),
     );
-    const { url } = await start.json<{ url: string }>();
-    const authorization = new URL(url);
 
     expect(start.status).toBe(200);
     expect(`${authorization.origin}${authorization.pathname}`).toBe(
@@ -144,17 +166,6 @@ describe("AgentID Identity Source", () => {
       scope: "openid email profile",
       code_challenge_method: "S256",
     });
-
-    const server = agentIdServer();
-    vi.stubGlobal("fetch", server);
-    const state = authorization.searchParams.get("state") ?? "";
-    const callback = await auth.handler(
-      new Request(
-        `${ORIGIN}/api/auth/callback/agentid?code=agentid-code&state=${encodeURIComponent(state)}&iss=${encodeURIComponent("https://auth.agentid.com")}`,
-        { headers: { cookie: cookieHeader(start) } },
-      ),
-    );
-
     expect(callback.status).toBe(302);
     expect(callback.headers.get("location")).toBe(`${ORIGIN}/me`);
     expect(server).toHaveBeenCalledTimes(2);
@@ -172,6 +183,18 @@ describe("AgentID Identity Source", () => {
       },
     ]);
     expect(JSON.stringify(memory.user)).not.toContain("agent@agentmail.to");
+    await expect(
+      openProfileEncryptedData(
+        env.ENCRYPTION_SECRETS,
+        accountSub,
+        String(memory.user[0]?.encryptedData),
+      ),
+    ).resolves.toEqual({
+      profileEmail: "agent@agentmail.to",
+      profileEmailVerified: true,
+      profileHandle: "agent_agentmail-to",
+      profileDisplayName: "Research Agent",
+    });
     expect(memory.account).toMatchObject([
       {
         providerId: "agentid",
@@ -179,8 +202,31 @@ describe("AgentID Identity Source", () => {
         accountId: AGENT_SUB,
         userId: accountSub,
         accessToken: null,
+        refreshToken: null,
         idToken: null,
+        accessTokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
       },
     ]);
+  });
+
+  it.each([
+    [
+      "is not JSON",
+      () => new Response("<html></html>", { headers: { "content-type": "text/html" } }),
+    ],
+    [
+      "cannot be reached",
+      () => {
+        throw new TypeError("network error");
+      },
+    ],
+  ])("fails the sign-in cleanly when AgentID userinfo %s", async (_case, userinfo) => {
+    const { callback, memory } = await signInThroughAgentId(userinfo);
+
+    expect(callback.status).toBe(302);
+    expect(callback.headers.get("location")).toContain("error=unable_to_get_user_info");
+    expect(memory.user).toEqual([]);
+    expect(memory.account).toEqual([]);
   });
 });
