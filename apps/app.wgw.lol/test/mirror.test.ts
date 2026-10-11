@@ -533,4 +533,27 @@ describe("Mirror against real git", () => {
       planPack(full.storage.objects, tips, []).objects.toSorted(),
     );
   });
+
+  it("keeps an abandoned fetch recorded without letting it block refreshes", async () => {
+    const fresh = memoryRepo();
+    // A commit from a fetch that stopped: its parent never arrived, and no remote branch reaches it.
+    const lost = "1".repeat(40);
+    const orphan = fresh.objects.write(
+      "commit",
+      utf8(
+        `tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\nparent ${lost}\nauthor A <a@x> 1 +0000\ncommitter A <a@x> 1 +0000\n\nabandoned\n`,
+      ),
+    );
+    fresh.storage.shallow.add(orphan);
+    const mirrored = new Mirror(fresh, fresh.storage, remotes);
+    const before = requests.length;
+    await mirrored.refresh();
+    expect(fresh.storage.refs.list()).toEqual(full.storage.refs.list());
+    // The refresh never asked for the lost parent, and the record of the abandoned fetch stays.
+    const asked = requests
+      .slice(before)
+      .filter((logged) => logged.path === "/full.git/git-upload-pack");
+    expect(asked.some((logged) => contains(logged.body, lost))).toBe(false);
+    expect(fresh.storage.shallow.list()).toEqual([orphan]);
+  });
 });

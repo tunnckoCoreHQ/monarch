@@ -69,27 +69,64 @@ export class Mirror {
   }
 
   /**
+   * The recorded shallow commits that `tips` reach through stored objects. Only these hold back the
+   * tips: a shallow commit left by an abandoned fetch, for a branch that is gone, stays recorded,
+   * so it is never taken as complete, but it does not block anything.
+   */
+  private reachedBoundary(tips: string[]): Set<string> {
+    const { objects, shallow } = this.storage;
+    const recorded = new Set(shallow.list());
+    const reached = new Set<string>();
+    if (recorded.size === 0) {
+      return reached;
+    }
+    const seen = new Set<string>();
+    const stack = tips.filter((sha) => objects.has(sha));
+    while (stack.length > 0) {
+      const sha = stack.pop()!;
+      if (seen.has(sha)) {
+        continue;
+      }
+      seen.add(sha);
+      if (recorded.has(sha)) {
+        reached.add(sha);
+        continue;
+      }
+      const object = objects.read(sha);
+      if (object?.type === "commit") {
+        stack.push(...parseCommit(object.content).parents.filter((parent) => objects.has(parent)));
+      } else if (object?.type === "tag") {
+        stack.push(parseTag(object.content).object);
+      }
+    }
+    return reached;
+  }
+
+  /**
    * Fetches the objects for `wants` in rounds of at most FETCH_DEPTH commits, so a long history
    * never has to fit in one pack. Commits that arrive without their parents are recorded in
    * `storage.shallow` before their objects are saved, and sent back as `shallow` lines so the
    * remote skips the trees and blobs already here. Their missing parents are the next wants. A
-   * fetch that stops between rounds leaves that record, and the next one resumes from it.
+   * fetch that stops between rounds leaves that record; `boundary` is the part of it the current
+   * tips reach, which this fetch resumes.
    */
-  private async fetchObjects(wants: string[], haves: string[]): Promise<void> {
+  private async fetchObjects(
+    wants: string[],
+    haves: string[],
+    boundary: Set<string>,
+  ): Promise<void> {
     const { objects, shallow } = this.storage;
     const missingParents = (): string[] => {
       const owed = new Set<string>();
-      for (const sha of shallow.list()) {
+      for (const sha of boundary) {
         const commit = objects.read(sha);
-        if (commit === undefined) {
-          // Recorded, but its objects never got saved; its descendant is refetched instead.
-          shallow.delete(sha);
-          continue;
-        }
-        const parents = parseCommit(commit.content).parents.filter(
-          (parent) => !objects.has(parent),
-        );
+        const parents =
+          commit === undefined
+            ? []
+            : parseCommit(commit.content).parents.filter((parent) => !objects.has(parent));
         if (parents.length === 0) {
+          // Complete now, or recorded without its objects; either way no longer a boundary.
+          boundary.delete(sha);
           shallow.delete(sha);
         }
         for (const parent of parents) {
@@ -107,9 +144,9 @@ export class Mirror {
         const pack = await fetchPack(
           this.remotes.full,
           pending,
-          [...haves, ...shallow.list(), ...fetched],
+          [...haves, ...boundary, ...fetched],
           this.fetcher,
-          { depth, shallow: shallow.list() },
+          { depth, shallow: [...boundary] },
         );
         parsed = pack.length > 0 ? parsePack(pack, (sha) => objects.read(sha)) : [];
       } catch (error) {
@@ -140,6 +177,7 @@ export class Mirror {
           fetched.push(object.sha);
           const parents = parseCommit(object.content).parents;
           if (parents.some((parent) => !objects.has(parent) && !arrived.has(parent))) {
+            boundary.add(object.sha);
             shallow.add(object.sha);
           }
         }
@@ -166,15 +204,18 @@ export class Mirror {
       }
     }
     const wants = [...new Set(target.values())].filter((sha) => !objects.has(sha));
-    // A fetch that stopped between rounds left commits without parents; finish it first.
-    if (wants.length > 0 || this.storage.shallow.list().length > 0) {
+    // A fetch that stopped between rounds left commits without parents; finish the part the
+    // current tips need first.
+    const tips = [...new Set(target.values())];
+    const boundary = this.reachedBoundary(tips);
+    if (wants.length > 0 || boundary.size > 0) {
       // Local refs always have their whole history here, so their tips are safe haves.
       const haves = refs
         .list()
         .map((ref) => ref.sha)
         .filter((sha) => objects.has(sha));
-      await this.fetchObjects(wants, haves);
-      if (this.storage.shallow.list().length > 0) {
+      await this.fetchObjects(wants, haves, boundary);
+      if (this.reachedBoundary(tips).size > 0) {
         throw new GitError("the full remote history is still incomplete", 502);
       }
     }

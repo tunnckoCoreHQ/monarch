@@ -464,20 +464,26 @@ export class Repo extends DurableObject<Env> {
       failure = error instanceof Error ? error.message : String(error);
     }
     if (failure !== (this.meta("publish_error") ?? null)) {
-      if (failure === null) {
-        this.sql.exec("DELETE FROM meta WHERE key = 'publish_error'");
-      } else {
-        this.setMeta("publish_error", failure);
-      }
-      // Only a ready repo shows the note; the RepoReady workflow writes it for the others.
-      await this.env.DB.prepare(
-        "UPDATE repos SET status_detail = ? WHERE id = ? AND status = 'ready'",
-      )
-        .bind(
-          failure === null ? null : `public view not published: ${failure}`.slice(0, 500),
-          this.repoId,
+      try {
+        // Only a ready repo shows the note; the RepoReady workflow writes it for the others.
+        await this.env.DB.prepare(
+          "UPDATE repos SET status_detail = ? WHERE id = ? AND status = 'ready'",
         )
-        .run();
+          .bind(
+            failure === null ? null : `public view not published: ${failure}`.slice(0, 500),
+            this.repoId,
+          )
+          .run();
+        // Recorded only after D1 took the note, so a failed update is tried again next time.
+        if (failure === null) {
+          this.sql.exec("DELETE FROM meta WHERE key = 'publish_error'");
+        } else {
+          this.setMeta("publish_error", failure);
+        }
+      } catch (error) {
+        // The note is informational; it must never turn a completed write into an error.
+        console.error(`could not update the publish note for ${this.repoId}`, error);
+      }
     }
     return failure;
   }
