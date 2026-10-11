@@ -86,7 +86,10 @@ function agentIdServer(userinfo: () => Response) {
 }
 
 // Starts an AgentID sign-in on a fresh Triad, then returns to its callback with a code.
-async function signInThroughAgentId(userinfo: () => Response) {
+async function signInThroughAgentId(
+  userinfo: () => Response = () => Response.json(AGENT_PROFILE),
+  iss = "https://auth.agentid.com",
+) {
   const memory: Record<string, Array<Record<string, unknown>>> = {
     user: [],
     account: [],
@@ -116,7 +119,7 @@ async function signInThroughAgentId(userinfo: () => Response) {
   const state = authorization.searchParams.get("state") ?? "";
   const callback = await auth.handler(
     new Request(
-      `${ORIGIN}/api/auth/callback/agentid?code=agentid-code&state=${encodeURIComponent(state)}&iss=${encodeURIComponent("https://auth.agentid.com")}`,
+      `${ORIGIN}/api/auth/callback/agentid?code=agentid-code&state=${encodeURIComponent(state)}&iss=${encodeURIComponent(iss)}`,
       { headers: { cookie: cookieHeader(start) } },
     ),
   );
@@ -226,6 +229,19 @@ describe("AgentID Identity Source", () => {
 
     expect(callback.status).toBe(302);
     expect(callback.headers.get("location")).toContain("error=unable_to_get_user_info");
+    expect(memory.user).toEqual([]);
+    expect(memory.account).toEqual([]);
+  });
+
+  it("rejects a callback whose iss is not AgentID before redeeming the code", async () => {
+    const { callback, memory, server } = await signInThroughAgentId(
+      undefined,
+      "https://attacker.example",
+    );
+
+    expect(callback.status).toBe(302);
+    expect(callback.headers.get("location")).toContain("error=issuer_mismatch");
+    expect(server).not.toHaveBeenCalled();
     expect(memory.user).toEqual([]);
     expect(memory.account).toEqual([]);
   });
