@@ -1,5 +1,14 @@
-/** How long the floor waits after the newest bubble before it closes the turn. Flat for now. */
-export const BURST_DELAY_MS = 1500;
+/**
+ * How long the floor waits after the newest bubble, or the newest typing signal, before
+ * it closes the turn. Flat for now.
+ */
+export const BURST_DELAY_MS = 3000;
+
+/**
+ * The control frame a client sends while the user types. Every other frame is a bubble.
+ * Clients send it at most about once a second, so it keeps an open burst from closing.
+ */
+export const TYPING_FRAME = JSON.stringify({ type: "typing" });
 
 /** One message as the user sent it, in arrival order. */
 export type Bubble = {

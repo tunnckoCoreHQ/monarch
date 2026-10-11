@@ -12,7 +12,8 @@ type BurstBufferOptions = {
 
 /**
  * NCR's idle buffer. Bubbles wait in this object's SQLite, without a model call, until
- * the user goes quiet for `delayMs`. Then they go to Pi as one turn.
+ * the user goes quiet for `delayMs`: no new bubble and no typing signal. Then they go to
+ * Pi as one turn.
  *
  * The quiet timer is a Lifecycle job, never `ctx.storage.setAlarm()`. A Durable Object
  * has one alarm, and the Agents SDK Lifecycle owns it: after every queue change it arms
@@ -45,10 +46,33 @@ export class BurstBuffer extends LifecycleCapability {
 
   /** Adds a bubble and restarts the quiet timer. Returns the burst's size. */
   async append(text: string): Promise<number> {
-    const now = Date.now();
-    this.lifecycle.storage.sql.exec("INSERT INTO ncr_burst (text, at) VALUES (?, ?)", text, now);
-    await this.lifecycle.jobs.push({ id: JOB_ID, fn: "flush", time: now + this.#options.delayMs });
+    this.lifecycle.storage.sql.exec(
+      "INSERT INTO ncr_burst (text, at) VALUES (?, ?)",
+      text,
+      Date.now(),
+    );
+    await this.#restartTimer();
     return this.size();
+  }
+
+  /**
+   * The user is typing: restart the quiet timer if a burst is open. With no open burst
+   * there is no timer to hold, so it does nothing. Returns whether it held one.
+   */
+  async hold(): Promise<boolean> {
+    if (this.size() === 0) {
+      return false;
+    }
+    await this.#restartTimer();
+    return true;
+  }
+
+  async #restartTimer(): Promise<void> {
+    await this.lifecycle.jobs.push({
+      id: JOB_ID,
+      fn: "flush",
+      time: Date.now() + this.#options.delayMs,
+    });
   }
 
   async onJob({ job }: LifecycleJobContext): Promise<void> {

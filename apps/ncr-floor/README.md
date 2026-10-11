@@ -2,7 +2,7 @@
 
 The MVP floor from [the NCR design notes](../../statics/ncr-identity-design/README.md): one Durable Object running a Pi Durable agent on Workers AI, one WebSocket, one user, one session. It has no auth, rooms, memory, or world system.
 
-When a message arrives, the model doesn't run yet. The message waits in a buffer, and every new message restarts a 1.5 s quiet timer. When the timer fires, the whole burst goes to Pi as one turn, and the reply streams back over the socket. A message that arrives while a reply is running goes to Pi as a steer.
+When a message arrives, the model doesn't run yet. The message waits in a buffer, and every new message restarts a 3 s quiet timer. While you type, the page sends a typing signal that restarts it too. When the timer fires, the whole burst goes to Pi as one turn, and the reply streams back over the socket. A message that arrives while a reply is running goes to Pi as a steer.
 
 ## Run it locally
 
@@ -13,7 +13,7 @@ pnpm install
 pnpm --filter ncr-floor run dev
 ```
 
-Open http://localhost:5173. Each Enter sends one bubble. Send a few in a row and the status line shows them being held for one turn.
+Open http://localhost:5173. Each Enter sends one bubble. Send a few in a row and the status line shows them being held for one turn. The turn closes 3 s after your last message or keystroke.
 
 On NixOS, workerd can't find the system CA bundle, and every model call fails with `TLS peer's certificate is not trusted`. Point it at the bundle:
 
@@ -25,7 +25,7 @@ Local state lives in `.cloudflare/state`. Delete `.cloudflare/state/v3/do` to st
 
 ## The socket
 
-Connect to `/ws`. Send plain text frames, one per bubble. The server sends JSON:
+Connect to `/ws`. Send plain text frames, one per bubble. While the user types, send `{"type":"typing"}` at most about once a second. It restarts the timer of an open burst and does nothing otherwise. The server sends JSON:
 
 | `type`     | When                                                              |
 | ---------- | ----------------------------------------------------------------- |

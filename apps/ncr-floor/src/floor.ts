@@ -10,7 +10,7 @@ import { Agent, type Connection, type WSMessage } from "agents";
 import { PiHarness } from "agents/harness/pi";
 import { createAI } from "agents/models/pi-ai";
 
-import { BURST_DELAY_MS, route } from "./burst";
+import { BURST_DELAY_MS, route, TYPING_FRAME } from "./burst";
 import { BurstBuffer } from "./burst-buffer";
 import type { Env } from "./env";
 
@@ -19,7 +19,10 @@ const MODEL = "@cf/zai-org/glm-4.7-flash";
 const PREAMBLE =
   "You are chatting with someone in a messaging app. They often send a few short messages in a row. Those arrive together as one turn, one message per line. Reply the way a person texts: short and natural, with no headings or lists.";
 
-/** What the socket sends the client. The client sends plain text frames, one per bubble. */
+/**
+ * What the socket sends the client. The client sends plain text frames, one per bubble,
+ * plus `TYPING_FRAME` while the user types.
+ */
 type ServerMessage =
   | { type: "history"; messages: Bubble[]; buffered: number }
   | { type: "buffered"; count: number }
@@ -116,6 +119,10 @@ export class NcrFloor extends Agent<Env> {
       return;
     }
     const text = message.trim();
+    if (text === TYPING_FRAME) {
+      await this.burst.hold();
+      return;
+    }
     await this.#watch();
     const busy = await this.harness.session().busy();
     if (route({ buffered: this.burst.size(), busy }) === "steer") {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { burstOperationId, joinBurst, route } from "../src/burst";
+import { burstOperationId, joinBurst, route, TYPING_FRAME } from "../src/burst";
 
 const burst = [
   { seq: 4, text: "hey", at: 0 },
@@ -39,5 +39,11 @@ describe("route", () => {
 
   it("keeps an open burst collecting while a reply runs", () => {
     expect(route({ buffered: 2, busy: true })).toBe("buffer");
+  });
+});
+
+describe("TYPING_FRAME", () => {
+  it("is the exact JSON clients send while typing", () => {
+    expect(TYPING_FRAME).toBe('{"type":"typing"}');
   });
 });

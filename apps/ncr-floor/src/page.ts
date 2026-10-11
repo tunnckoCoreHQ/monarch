@@ -1,4 +1,9 @@
-/** A bare test client for `/ws`: each Enter sends one bubble. */
+import { TYPING_FRAME } from "./burst";
+
+/**
+ * A bare test client for `/ws`: each Enter sends one bubble, and typing sends
+ * `TYPING_FRAME` at most once a second.
+ */
 export const PAGE = `<!doctype html>
 <html lang="en">
 <meta charset="utf-8">
@@ -41,11 +46,18 @@ export const PAGE = `<!doctype html>
     if (m.type === "error") status.textContent = "error: " + m.message;
   };
   ws.onclose = () => { status.textContent = "disconnected, reload to reconnect"; };
+  let lastTyping = 0;
+  box.oninput = () => {
+    if (box.value.trim() === "" || Date.now() - lastTyping < 1000) return;
+    lastTyping = Date.now();
+    ws.send(${JSON.stringify(TYPING_FRAME)});
+  };
   box.onkeydown = (e) => {
     if (e.key !== "Enter" || box.value.trim() === "") return;
     bubble("user", box.value);
     ws.send(box.value);
     box.value = "";
+    lastTyping = 0;
   };
 </script>
 </html>
