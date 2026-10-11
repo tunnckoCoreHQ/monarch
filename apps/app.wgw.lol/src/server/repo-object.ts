@@ -447,6 +447,25 @@ export class Repo extends DurableObject<Env> {
     });
   }
 
+  /**
+   * Drops the claims a push left behind. The proxy calls this after its own sync, which has seen
+   * every update of that push that Artifacts accepted, so what remains belongs to updates
+   * Artifacts refused. A later direct push of the same ref and commit then has no pusher.
+   */
+  releaseClaims(actorId: string, commands: PushCommand[]): Promise<Result<null>> {
+    return guard(() => {
+      for (const command of commands) {
+        this.sql.exec(
+          "DELETE FROM push_claims WHERE ref = ? AND new = ? AND actor_id = ?",
+          command.ref,
+          command.new,
+          actorId,
+        );
+      }
+      return null;
+    });
+  }
+
   /** Runs in the refresh's ref transaction, so a moved ref always has its row here. */
   private queuePushes(updates: RefUpdate[]): void {
     const run = Number(this.meta("push_run") ?? 0) + 1;
@@ -454,9 +473,10 @@ export class Repo extends DurableObject<Env> {
     for (const update of updates) {
       const claim = this.sql
         .exec<{ actor_id: string }>(
-          "DELETE FROM push_claims WHERE ref = ? AND new = ? RETURNING actor_id",
+          "DELETE FROM push_claims WHERE ref = ? AND new = ? AND at >= ? RETURNING actor_id",
           update.ref,
           update.new,
+          Date.now() - CLAIM_MS,
         )
         .toArray()[0];
       this.sql.exec(
@@ -494,7 +514,8 @@ export class Repo extends DurableObject<Env> {
         }
         const last = rows.at(-1)!.id;
         const repo = await findRepoById(this.env, this.repoId);
-        if (repo !== null) {
+        // An import or fork records itself once the RepoReady workflow marks it ready.
+        if (repo !== null && repo.status === "ready") {
           // One event per refresh and pusher, keyed by its first row. A retry sees the same groups:
           // rows queued later belong to later refreshes.
           const groups: PushRow[][] = [];

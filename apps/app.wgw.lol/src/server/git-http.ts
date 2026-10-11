@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 
-import { readCommands } from "../git/protocol";
+import { type Command, readCommands } from "../git/protocol";
 import { repoStub, unwrap } from "./api";
 import { type Access, access, type AppContext, type AppEnv } from "./auth";
 import { findRepo } from "./db";
@@ -140,6 +140,7 @@ gitHttp.post("/:owner/:repo/git-receive-pack", async (c) => {
   const repo = grant.repo;
   const stub = repoStub(c.env, repo.id);
   let body = c.req.raw.body;
+  let claimed: Command[] = [];
   const actor = grant.principal?.user.id;
   // git does not compress receive-pack bodies; one that is compressed is forwarded unread.
   if (body !== null && actor !== undefined && c.req.header("content-encoding") === undefined) {
@@ -147,9 +148,11 @@ gitHttp.post("/:owner/:repo/git-receive-pack", async (c) => {
     body = withLength(read.body, Number(c.req.header("content-length")));
     // The mirror records the push from whichever sync sees it first, this one or the queue's.
     // The claim tells it who pushed either way.
-    const claimed = await stub.claimPush(actor, read.commands);
-    if (!claimed.ok) {
-      console.error(`could not claim a push to ${repo.id}: ${claimed.error}`);
+    const claim = await stub.claimPush(actor, read.commands);
+    if (claim.ok) {
+      claimed = read.commands;
+    } else {
+      console.error(`could not claim a push to ${repo.id}: ${claim.error}`);
     }
   }
   const response = await forward(c, grant, "/git-receive-pack", true, body);
@@ -159,7 +162,10 @@ gitHttp.post("/:owner/:repo/git-receive-pack", async (c) => {
     (async () => {
       const synced = await stub.sync();
       if (!synced.ok) {
+        // The claims stay, for the queue's sync, until they expire.
         console.error(`sync after push failed for ${repo.id}: ${synced.error}`);
+      } else if (actor !== undefined && claimed.length > 0) {
+        await stub.releaseClaims(actor, claimed);
       }
     })(),
   );

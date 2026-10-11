@@ -3,8 +3,9 @@ import { base64url, fromBase64url, HttpError, now } from "./util";
 
 const encoder = new TextEncoder();
 
-// Wrapped repository keys are "v1". Secret values sealed with a repository key are "v2"; "v1"
-// values were sealed with the Worker-wide key that repository keys replaced, which no longer exists.
+// Wrapped repository keys are "v1", and new secret values are "v2". A "v1" secret value was sealed
+// either with its repository key, before "v2" existed, or with the Worker-wide key that repository
+// keys replaced, which no longer exists.
 const WRAP_VERSION = "v1";
 const SECRET_VERSION = "v2";
 
@@ -97,13 +98,20 @@ export async function openSecret(
   context: string,
   sealed: string,
 ): Promise<string> {
-  if (!sealed.startsWith(`${SECRET_VERSION}.`)) {
-    const name = context.split(":").at(-1);
-    throw new HttpError(
-      409,
-      `${name} was sealed with a retired key and cannot be opened; set it again`,
-      "secret_retired",
-    );
+  const key = await repoKey(env, repoId);
+  try {
+    return new TextDecoder().decode(await open(key, context, sealed));
+  } catch (error) {
+    // A "v1" value the repository key cannot open was sealed with the retired Worker-wide key.
+    const failed = error instanceof DOMException && error.name === "OperationError";
+    if (failed && !sealed.startsWith(`${SECRET_VERSION}.`)) {
+      const name = context.split(":").at(-1);
+      throw new HttpError(
+        409,
+        `${name} was sealed with a retired key and cannot be opened; set it again`,
+        "secret_retired",
+      );
+    }
+    throw error;
   }
-  return new TextDecoder().decode(await open(await repoKey(env, repoId), context, sealed));
 }
