@@ -14,12 +14,13 @@ import {
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { api, ApiError } from "~/lib/api";
-import { cn } from "~/lib/utils";
+import { cn, pageTitle } from "~/lib/utils";
 
 export const Route = createFileRoute("/device")({
   validateSearch: (search: Record<string, unknown>): { code?: string } => ({
     code: typeof search.code === "string" ? search.code : undefined,
   }),
+  head: () => ({ meta: [{ title: pageTitle("CLI sign-in") }] }),
   component: Device,
 });
 

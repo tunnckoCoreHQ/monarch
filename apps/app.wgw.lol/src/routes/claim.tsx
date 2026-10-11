@@ -14,6 +14,7 @@ import {
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { api, ApiError } from "~/lib/api";
+import { pageTitle } from "~/lib/utils";
 
 interface Claim {
   registration_id: string;
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/claim")({
   validateSearch: (search: Record<string, unknown>): { attempt?: string } => ({
     attempt: typeof search.attempt === "string" ? search.attempt : undefined,
   }),
+  head: () => ({ meta: [{ title: pageTitle("Agent claim") }] }),
   component: ClaimPage,
 });
 

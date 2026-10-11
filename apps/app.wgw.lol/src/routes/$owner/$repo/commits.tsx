@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CommitList, RefPicker, useRepo } from "~/components/repo";
 import { Empty, Page, Pending } from "~/components/site";
 import { api, type Commit } from "~/lib/api";
+import { pageTitle } from "~/lib/utils";
 
 const LIMIT = 100;
 
@@ -20,6 +21,9 @@ export const Route = createFileRoute("/$owner/$repo/commits")({
       return [];
     }
   },
+  head: ({ params }) => ({
+    meta: [{ title: pageTitle("Commits", `${params.owner}/${params.repo}`) }],
+  }),
   pendingComponent: () => <Pending label="Loading commits" />,
   component: Commits,
 });

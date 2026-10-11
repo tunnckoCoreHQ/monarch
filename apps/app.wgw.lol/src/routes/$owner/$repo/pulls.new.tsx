@@ -10,7 +10,7 @@ import { Input } from "~/components/ui/input";
 import { NativeSelect } from "~/components/ui/native-select";
 import { Textarea } from "~/components/ui/textarea";
 import { api, type Commit, type FileDiff } from "~/lib/api";
-import { cn } from "~/lib/utils";
+import { cn, pageTitle } from "~/lib/utils";
 
 interface Compare {
   commits: Commit[];
@@ -34,6 +34,9 @@ export const Route = createFileRoute("/$owner/$repo/pulls/new")({
       ref.name.startsWith("refs/heads/") ? [ref.name.slice("refs/heads/".length)] : [],
     );
   },
+  head: ({ params }) => ({
+    meta: [{ title: pageTitle("New pull request", `${params.owner}/${params.repo}`) }],
+  }),
   pendingComponent: () => <Pending label="Loading branches" />,
   component: NewPull,
 });

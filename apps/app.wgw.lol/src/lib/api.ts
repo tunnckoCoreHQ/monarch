@@ -44,7 +44,7 @@ export interface Me {
 
 export async function getMe(): Promise<Me | null> {
   try {
-    return await api<Me>("/api/me");
+    return (await api<{ me: Me | null }>("/api/session")).me;
   } catch {
     return null;
   }

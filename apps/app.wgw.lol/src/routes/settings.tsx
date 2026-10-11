@@ -20,7 +20,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { api, ago } from "~/lib/api";
-import { cn } from "~/lib/utils";
+import { cn, pageTitle } from "~/lib/utils";
 
 interface Key {
   id: string;
@@ -50,12 +50,21 @@ export const Route = createFileRoute("/settings")({
     ]);
     return { keys, state };
   },
+  head: () => ({ meta: [{ title: pageTitle("Settings") }] }),
   pendingComponent: () => <Pending label="Loading settings" />,
   errorComponent: ({ error }) => <RouteError error={error} />,
   component: Settings,
 });
 
 const SCOPES = ["read", "write", "admin", "secrets"];
+
+/** Display names of the sign-in providers stored on each account. */
+const PROVIDERS: Record<string, string> = {
+  agentid: "AgentID",
+  authmd: "auth.md",
+  google: "Google",
+  passkey: "Passkey",
+};
 
 function Settings() {
   const { keys, state } = Route.useLoaderData();
@@ -139,11 +148,12 @@ function Settings() {
   const toggleScope = (scope: string, checked: boolean) =>
     setScopes(checked ? [...scopes, scope] : scopes.filter((item) => item !== scope));
   const passkeys = state.passkeys ?? [];
+  const provider = state.user?.provider ?? "";
 
   return (
     <Page className="flex max-w-4xl flex-col gap-14">
       <PageHeader kicker="settings" title={`@${state.user?.handle ?? ""}`}>
-        Signed in with {state.user?.provider}.
+        Signed in with {PROVIDERS[provider] ?? provider}.
       </PageHeader>
       <ErrorNote error={error} />
 

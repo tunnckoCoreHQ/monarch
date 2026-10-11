@@ -19,6 +19,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { NativeSelect } from "~/components/ui/native-select";
 import { api } from "~/lib/api";
+import { pageTitle } from "~/lib/utils";
 
 interface Variable {
   name: string;
@@ -50,6 +51,9 @@ export const Route = createFileRoute("/$owner/$repo/settings")({
     ]);
     return { environments, collaborators };
   },
+  head: ({ params }) => ({
+    meta: [{ title: pageTitle("Settings", `${params.owner}/${params.repo}`) }],
+  }),
   pendingComponent: () => <Pending label="Loading settings" />,
   errorComponent: ({ error }) => <RouteError error={error} />,
   component: RepoSettings,

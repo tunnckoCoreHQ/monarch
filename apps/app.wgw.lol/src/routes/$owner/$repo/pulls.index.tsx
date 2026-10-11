@@ -6,7 +6,7 @@ import { Empty, Page, Pending, RouteError } from "~/components/site";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { ago, api } from "~/lib/api";
-import { cn } from "~/lib/utils";
+import { cn, pageTitle } from "~/lib/utils";
 
 export interface Pull {
   number: number;
@@ -38,6 +38,9 @@ export const Route = createFileRoute("/$owner/$repo/pulls/")({
     api<Pull[]>(
       `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}/pulls?state=${deps.state}`,
     ),
+  head: ({ params }) => ({
+    meta: [{ title: pageTitle("Pull requests", `${params.owner}/${params.repo}`) }],
+  }),
   pendingComponent: () => <Pending label="Loading pull requests" />,
   errorComponent: ({ error }) => <RouteError error={error} />,
   component: Pulls,

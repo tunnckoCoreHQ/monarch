@@ -13,6 +13,7 @@ import {
 } from "~/components/site";
 import { Button } from "~/components/ui/button";
 import { api } from "~/lib/api";
+import { pageTitle } from "~/lib/utils";
 
 interface AuthState {
   level: "none" | "pending" | "full";
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/login_/passkey")({
     return_to: typeof search.return_to === "string" ? search.return_to : undefined,
   }),
   loader: () => api<AuthState>("/api/auth/state"),
+  head: () => ({ meta: [{ title: pageTitle("Sign in") }] }),
   pendingComponent: () => <Pending label="Checking sign-in" />,
   errorComponent: ({ error }) => <RouteError error={error} />,
   component: PasskeyStep,

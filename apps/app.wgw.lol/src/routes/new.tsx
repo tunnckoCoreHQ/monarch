@@ -5,7 +5,7 @@ import { ErrorNote, Field, messageOf, Page, PageHeader, fire, useMe } from "~/co
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { api, type Repo } from "~/lib/api";
-import { cn } from "~/lib/utils";
+import { cn, pageTitle } from "~/lib/utils";
 
 const VISIBILITY = {
   public: "Anyone can read it. Paths in .gitprivate stay members-only.",
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/new")({
   validateSearch: (search: Record<string, unknown>): { import?: string } => ({
     import: typeof search.import === "string" ? search.import : undefined,
   }),
+  head: () => ({ meta: [{ title: pageTitle("New repository") }] }),
   component: NewRepo,
 });
 

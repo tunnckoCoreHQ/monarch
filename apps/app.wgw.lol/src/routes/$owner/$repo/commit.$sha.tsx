@@ -4,6 +4,7 @@ import { DiffView } from "~/components/diff";
 import { useRepo } from "~/components/repo";
 import { Kicker, Ledger, LedgerRow, Page, Pending, RouteError } from "~/components/site";
 import { api, ago, type Commit, type FileDiff } from "~/lib/api";
+import { pageTitle } from "~/lib/utils";
 
 const DATE = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
@@ -12,6 +13,16 @@ export const Route = createFileRoute("/$owner/$repo/commit/$sha")({
     api<{ commit: Commit; files: FileDiff[] }>(
       `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}/commits/${params.sha}`,
     ),
+  head: ({ params, loaderData }) => ({
+    meta: [
+      {
+        title: pageTitle(
+          loaderData?.commit.message.split("\n")[0] ?? params.sha.slice(0, 7),
+          `${params.owner}/${params.repo}`,
+        ),
+      },
+    ],
+  }),
   pendingComponent: () => <Pending label="Loading commit" />,
   errorComponent: ({ error }) => (
     <RouteError

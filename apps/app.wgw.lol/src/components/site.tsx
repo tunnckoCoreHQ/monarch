@@ -127,7 +127,19 @@ export function Count({ value }: { value: number }) {
   );
 }
 
-export function CopyField({ value, label }: { value: string; label?: string }) {
+/**
+ * Shows `children`, or the value when there are none, and copies the value. Below md the text
+ * wraps, so its end stays in view; from md up it stays on one line and scrolls.
+ */
+export function CopyField({
+  value,
+  label,
+  children,
+}: {
+  value: string;
+  label?: string;
+  children?: ReactNode;
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="bg-card flex min-w-0 items-stretch border font-mono text-xs">
@@ -138,9 +150,9 @@ export function CopyField({ value, label }: { value: string; label?: string }) {
       )}
       <code
         title={value}
-        className="min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto [mask-image:linear-gradient(to_right,black_90%,transparent)] px-3 py-2.5 whitespace-nowrap select-all"
+        className="min-w-0 flex-1 [scrollbar-width:none] overflow-x-auto px-3 py-2.5 break-all select-all md:[mask-image:linear-gradient(to_right,black_90%,transparent)] md:break-normal md:whitespace-nowrap"
       >
-        {value}
+        {children ?? value}
       </code>
       <button
         type="button"

@@ -2,11 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, Bot, Fingerprint, Mail } from "lucide-react";
 
 import { Page, PageHeader } from "~/components/site";
+import { pageTitle } from "~/lib/utils";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>): { return_to?: string } => ({
     return_to: typeof search.return_to === "string" ? search.return_to : undefined,
   }),
+  head: () => ({ meta: [{ title: pageTitle("Sign in") }] }),
   component: Login,
 });
 

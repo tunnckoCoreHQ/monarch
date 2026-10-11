@@ -537,14 +537,22 @@ login.delete("/api/auth/passkeys/:id", async (c) => {
   return c.json({ ok: true });
 });
 
-login.get("/api/me", (c) => {
-  const principal = requireUser(c);
-  return c.json({
+function meJson(principal: Principal) {
+  return {
     ...publicUser(principal.user),
     email: principal.user.email,
     via: principal.via,
     scopes: [...principal.scopes],
-  });
+  };
+}
+
+// The CLI reads the 401 from /api/me. The web app asks /api/session, which answers signed-out
+// callers with a 200, so the browser logs no failed request.
+login.get("/api/me", (c) => c.json(meJson(requireUser(c))));
+
+login.get("/api/session", (c) => {
+  const principal = c.get("principal");
+  return c.json({ me: principal === null ? null : meJson(principal) });
 });
 
 // Device flow for the CLI: the CLI shows a code, a signed-in browser approves it, and the CLI

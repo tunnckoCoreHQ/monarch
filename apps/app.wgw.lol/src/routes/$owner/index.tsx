@@ -5,6 +5,7 @@ import { RepoList } from "~/components/repo-list";
 import { Count, Page, PageHeader, Pending, RouteError, Section, useMe } from "~/components/site";
 import { Button } from "~/components/ui/button";
 import { ago, api, type Repo } from "~/lib/api";
+import { pageTitle } from "~/lib/utils";
 
 interface Profile {
   handle: string;
@@ -17,6 +18,9 @@ interface Profile {
 
 export const Route = createFileRoute("/$owner/")({
   loader: ({ params }) => api<Profile>(`/api/users/${encodeURIComponent(params.owner)}`),
+  head: ({ params, loaderData }) => ({
+    meta: [{ title: pageTitle(`@${loaderData?.handle ?? params.owner}`) }],
+  }),
   pendingComponent: () => <Pending label="Loading profile" />,
   errorComponent: ({ error }) => (
     <RouteError

@@ -4,9 +4,11 @@ import { RepoList } from "~/components/repo-list";
 import { Page, PageHeader, Pending, RouteError } from "~/components/site";
 import { Button } from "~/components/ui/button";
 import { api, type Repo } from "~/lib/api";
+import { pageTitle } from "~/lib/utils";
 
 export const Route = createFileRoute("/explore")({
   loader: () => api<Repo[]>("/api/explore"),
+  head: () => ({ meta: [{ title: pageTitle("Explore") }] }),
   pendingComponent: () => <Pending label="Loading repositories" />,
   errorComponent: ({ error }) => <RouteError error={error} />,
   component: Explore,

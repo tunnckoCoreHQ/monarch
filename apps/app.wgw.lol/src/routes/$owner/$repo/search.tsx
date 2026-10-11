@@ -7,6 +7,7 @@ import { Empty, Field, fire, Page, Pending, RouteError } from "~/components/site
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { api } from "~/lib/api";
+import { pageTitle } from "~/lib/utils";
 
 interface SearchHit {
   path: string;
@@ -29,6 +30,9 @@ export const Route = createFileRoute("/$owner/$repo/search")({
       : api<SearchHit[]>(
           `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}/search?${new URLSearchParams({ q: deps.q, limit: String(LIMIT) }).toString()}`,
         ),
+  head: ({ params }) => ({
+    meta: [{ title: pageTitle("Search", `${params.owner}/${params.repo}`) }],
+  }),
   pendingComponent: () => <Pending label="Searching" />,
   errorComponent: ({ error }) => <RouteError error={error} />,
   component: SearchPage,

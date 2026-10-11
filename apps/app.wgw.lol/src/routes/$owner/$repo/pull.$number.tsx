@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 import { ago, api, type Commit, type FileDiff } from "~/lib/api";
 import { renderMarkdown } from "~/lib/markdown";
-import { cn } from "~/lib/utils";
+import { cn, pageTitle } from "~/lib/utils";
 
 import { type Pull, StateBadge } from "./pulls.index";
 
@@ -55,6 +55,18 @@ export const Route = createFileRoute("/$owner/$repo/pull/$number")({
     ]);
     return { pull, comments };
   },
+  head: ({ params, loaderData }) => ({
+    meta: [
+      {
+        title: pageTitle(
+          loaderData === undefined
+            ? `#${params.number}`
+            : `#${params.number} ${loaderData.pull.title}`,
+          `${params.owner}/${params.repo}`,
+        ),
+      },
+    ],
+  }),
   pendingComponent: () => <Pending label="Loading pull request" />,
   errorComponent: ({ error }) => (
     <RouteError

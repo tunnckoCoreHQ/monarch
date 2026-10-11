@@ -8,6 +8,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { api, bytes } from "~/lib/api";
 import { renderMarkdown } from "~/lib/markdown";
+import { pageTitle } from "~/lib/utils";
 
 interface Blob {
   path: string;
@@ -28,6 +29,9 @@ export const Route = createFileRoute("/$owner/$repo/blob")({
     api<Blob>(
       `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}/blob?${new URLSearchParams({ ref: deps.ref ?? "", path: deps.path }).toString()}`,
     ),
+  head: ({ params, match }) => ({
+    meta: [{ title: pageTitle(match.search.path, `${params.owner}/${params.repo}`) }],
+  }),
   pendingComponent: () => <Pending label="Loading file" />,
   errorComponent: ({ error }) => (
     <RouteError

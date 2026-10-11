@@ -5,13 +5,14 @@ import { useEffect } from "react";
 import { CopyField, Count, Page, Pending, RouteError } from "~/components/site";
 import { Badge } from "~/components/ui/badge";
 import { api, type RepoDetail } from "~/lib/api";
-import { cn } from "~/lib/utils";
+import { cn, pageTitle } from "~/lib/utils";
 
 export const Route = createFileRoute("/$owner/$repo")({
   loader: ({ params }) =>
     api<RepoDetail>(
       `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}`,
     ),
+  head: ({ params }) => ({ meta: [{ title: pageTitle(`${params.owner}/${params.repo}`) }] }),
   pendingComponent: () => <Pending label="Loading repository" />,
   errorComponent: ({ error }) => (
     <RouteError
@@ -102,7 +103,8 @@ function RepoLayout() {
     <>
       <div className="border-b">
         <Page className="pb-0">
-          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:items-end">
+          {/* The clone box takes its own full-width row, so the whole URL fits. */}
+          <div className="grid gap-6">
             <div className="min-w-0">
               <p className="text-muted-foreground font-mono text-sm wrap-anywhere">
                 <Link to="/$owner" params={{ owner: repo.owner }} className="hover:text-foreground">
@@ -152,14 +154,19 @@ function RepoLayout() {
                 )}
               </div>
             </div>
-            <CopyField
-              label={repo.role === null ? "git" : "member"}
-              value={
-                repo.role === null
-                  ? repo.clone_url
-                  : `git clone ${repo.clone_url} -c http.proactiveAuth=basic`
-              }
-            />
+            {repo.role === null ? (
+              <CopyField label="git" value={repo.clone_url} />
+            ) : (
+              // Narrow screens show the URL alone, and the button still copies the command.
+              <CopyField
+                label="member"
+                value={`git clone ${repo.clone_url} -c http.proactiveAuth=basic`}
+              >
+                <span className="max-md:hidden">git clone </span>
+                {repo.clone_url}
+                <span className="max-md:hidden"> -c http.proactiveAuth=basic</span>
+              </CopyField>
+            )}
           </div>
           <StatusBanner repo={repo} />
           <nav
