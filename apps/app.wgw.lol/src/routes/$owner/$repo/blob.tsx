@@ -44,6 +44,8 @@ function BlobView() {
   const search = Route.useSearch();
   const ref = search.ref ?? repo.default_branch;
   const isMarkdown = /\.(md|markdown)$/i.test(blob.path);
+  // The raw route serves these with their image type; see IMAGE_TYPES in the API.
+  const isImage = /\.(png|jpe?g|gif|webp)$/i.test(blob.path);
   const html = useMemo(
     () => (isMarkdown && blob.text !== null ? renderMarkdown(blob.text) : ""),
     [isMarkdown, blob.text],
@@ -75,7 +77,12 @@ function BlobView() {
             <a href={raw}>Raw</a>
           </Button>
         </div>
-        {blob.text === null ? (
+        {blob.text === null && isImage ? (
+          <div className="bg-background flex justify-center p-4 md:p-8">
+            <img src={raw} alt={blob.path} className="max-h-[70vh] max-w-full object-contain" />
+          </div>
+        ) : null}
+        {blob.text === null && !isImage ? (
           <p className="text-muted-foreground px-6 py-12 text-center font-mono text-sm">
             Binary or large file. Open the raw file to see it.
           </p>

@@ -36,6 +36,9 @@ Files without a clone
   wgw ls [path] [--ref <ref>]    wgw cat <path> [--ref <ref>]    wgw log [--ref <ref>]
   wgw commit --branch <b> -m <message> <repo/path=local/file>... [--delete <path>]
 
+Search
+  wgw search "<query>" [-R owner/name] [--json]   code by meaning; outside a clone, all public repositories
+
 Pull requests
   wgw pr create --head <branch> [--base <branch>] --title <text> [--body <text>]
   wgw pr list [--state open|merged|closed|all]
@@ -139,7 +142,8 @@ async function call(method, path, body, { raw = false, auth = true } = {}) {
   return text === "" ? null : JSON.parse(text);
 }
 
-function currentRepo(flags) {
+/** The -R repository, else the one the git remote points at, else undefined. */
+function detectRepo(flags) {
   if (typeof flags.repo === "string") {
     return flags.repo;
   }
@@ -156,7 +160,11 @@ function currentRepo(flags) {
   } catch {
     // Not inside a git repository.
   }
-  fail("no repository: pass -R owner/name or run inside a clone");
+  return undefined;
+}
+
+function currentRepo(flags) {
+  return detectRepo(flags) ?? fail("no repository: pass -R owner/name or run inside a clone");
 }
 
 function base(flags) {
@@ -342,6 +350,9 @@ async function main() {
       console.log(`${result.sha}  ${result.branch}`);
       return;
     }
+    case "search": {
+      return search(positional[0], flags);
+    }
     case "pr": {
       return pr(positional, flags);
     }
@@ -501,6 +512,31 @@ async function repo([action, target], flags) {
     return;
   }
   fail("usage: wgw repo create|list|view|token|fork|delete");
+}
+
+/** Searches one repository, or every public repository when there is none to pick. */
+async function search(query, flags) {
+  if (query === undefined || query.trim() === "") {
+    fail('usage: wgw search "<query>" [-R owner/name] [--json]');
+  }
+  const repo = detectRepo(flags);
+  const params = new URLSearchParams({ q: query, limit: flags.limit ?? "10" });
+  const path = repo === undefined ? "/api/search" : `${base({ repo })}/search`;
+  const hits = await call("GET", `${path}?${params}`);
+  if (flags.json) {
+    return print(hits);
+  }
+  if (hits.length === 0) {
+    console.log("No matches.");
+  }
+  for (const hit of hits) {
+    const where = hit.owner === undefined ? "" : `${hit.owner}/${hit.name}  `;
+    console.log(`${where}${hit.path}:${hit.start_line}-${hit.end_line}  (${hit.score.toFixed(3)})`);
+    for (const line of hit.snippet.split("\n").slice(0, 3)) {
+      console.log(`    ${line}`);
+    }
+    console.log("");
+  }
 }
 
 async function pr([action, number], flags) {

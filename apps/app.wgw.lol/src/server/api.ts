@@ -27,6 +27,7 @@ import {
 } from "./db";
 import type { Env } from "./env";
 import type { Result } from "./result";
+import { deleteRepoIndex, enqueueIndex, searchPublic, searchRepo } from "./search";
 import { HttpError, isName, newId, now } from "./util";
 
 export function repoStub(env: Env, repoId: string) {
@@ -246,6 +247,10 @@ api.patch("/repos/:owner/:name", async (c) => {
   await c.env.DB.prepare("UPDATE repos SET description = ?, visibility = ? WHERE id = ?")
     .bind((input.description ?? repo.description).slice(0, 400), visibility, repo.id)
     .run();
+  if (visibility !== repo.visibility) {
+    // Every search chunk carries the repository's visibility.
+    await enqueueIndex(c.env, repo.id);
+  }
   return c.json(
     repoJson(requireFound(await findRepoById(c.env, repo.id), "repository"), c.env.ORIGIN),
   );
@@ -255,6 +260,11 @@ api.delete("/repos/:owner/:name", async (c) => {
   const grant = await loadRepo(c);
   need(grant, "admin");
   unwrap(await repoStub(c.env, grant.repo.id).destroy());
+  // The rows name the vectors, so the vectors go while the rows still exist. Vectors left by a
+  // failure never show: every search checks the repository in D1.
+  await deleteRepoIndex(c.env, grant.repo.id).catch((error: unknown) => {
+    console.error(`could not delete the search index of ${grant.repo.id}`, error);
+  });
   await c.env.DB.prepare("DELETE FROM repos WHERE id = ?").bind(grant.repo.id).run();
   return c.json({ ok: true });
 });
@@ -420,20 +430,26 @@ api.get("/repos/:owner/:name/blob", async (c) => {
   });
 });
 
+const IMAGE_TYPES: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+};
+
 api.get("/repos/:owner/:name/raw", async (c) => {
   const grant = await loadRepo(c);
-  const blob = unwrap(
-    await repoStub(c.env, grant.repo.id).blob(
-      grant.view,
-      refOf(c, grant),
-      c.req.query("path") ?? "",
-    ),
-  );
+  const path = c.req.query("path") ?? "";
+  const blob = unwrap(await repoStub(c.env, grant.repo.id).blob(grant.view, refOf(c, grant), path));
+  // Raster images keep their type, so pages and Markdown can show them. SVG can run scripts, so it
+  // stays a download like every other binary.
+  const image = IMAGE_TYPES[path.split(".").pop()?.toLowerCase() ?? ""];
   return new Response(new Uint8Array(blob.content), {
     headers: {
-      "content-type": isBinary(blob.content)
-        ? "application/octet-stream"
-        : "text/plain; charset=utf-8",
+      "content-type":
+        image ??
+        (isBinary(blob.content) ? "application/octet-stream" : "text/plain; charset=utf-8"),
       "x-content-type-options": "nosniff",
       "content-security-policy": "sandbox",
     },
@@ -527,6 +543,22 @@ api.get("/repos/:owner/:name/compare", async (c) => {
   );
 });
 
+function searchInput(c: AppContext): { query: string; limit: number } {
+  const query = (c.req.query("q") ?? "").trim().slice(0, 500);
+  if (query === "") {
+    throw new HttpError(400, "send a query in q", "invalid_request");
+  }
+  // Vectorize returns up to 50 matches with their metadata.
+  return { query, limit: Math.min(Math.max(Number(c.req.query("limit") ?? 10) || 10, 1), 50) };
+}
+
+// Semantic code search over the default branch tip. Non-members search the public paths only.
+api.get("/repos/:owner/:name/search", async (c) => {
+  const grant = await loadRepo(c);
+  const { query, limit } = searchInput(c);
+  return c.json(await searchRepo(c.env, grant, query, limit));
+});
+
 api.get("/repos/:owner/:name/events", async (c) => {
   const grant = await loadRepo(c);
   const rows = await c.env.DB.prepare(
@@ -565,6 +597,12 @@ export async function afterPush(
     doubles: [updates.length],
     indexes: [repo.id],
   });
+  if (updates.some((update) => update.ref === `refs/heads/${head}`)) {
+    // The commit has landed; a failed enqueue waits for the next push or the hourly check.
+    await enqueueIndex(env, repo.id).catch((error: unknown) => {
+      console.error(`could not enqueue a search index for ${repo.id}`, error);
+    });
+  }
 }
 
 // Pull requests.
@@ -793,17 +831,21 @@ api.post("/repos/:owner/:name/pulls/:number/summary", async (c) => {
     .join("")
     .slice(0, 24_000);
   const commits = result.commits.map((commit) => `- ${commit.message.split("\n")[0]}`).join("\n");
-  const answer = await c.env.AI.run("@cf/meta/llama-3.1-8b-instruct-fast", {
-    messages: [
-      {
-        role: "system",
-        content:
-          "You review pull requests. Write 3 to 6 short plain bullet points: what changed, and anything risky. No preamble.",
-      },
-      { role: "user", content: `Title: ${pull.title}\n\nCommits:\n${commits}\n\nDiff:\n${diff}` },
-    ],
-    max_tokens: 400,
-  });
+  const answer = await c.env.AI.run(
+    "@cf/meta/llama-3.1-8b-instruct-fast",
+    {
+      messages: [
+        {
+          role: "system",
+          content:
+            "You review pull requests. Write 3 to 6 short plain bullet points: what changed, and anything risky. No preamble.",
+        },
+        { role: "user", content: `Title: ${pull.title}\n\nCommits:\n${commits}\n\nDiff:\n${diff}` },
+      ],
+      max_tokens: 400,
+    },
+    { gateway: { id: c.env.AI_GATEWAY } },
+  );
   const summary =
     typeof answer === "object" && answer !== null && "response" in answer
       ? String(answer.response)
@@ -1039,4 +1081,10 @@ api.get("/explore", async (c) => {
     "SELECT repos.*, users.handle AS owner FROM repos JOIN users ON users.id = repos.owner_id WHERE repos.visibility = 'public' ORDER BY COALESCE(repos.pushed_at, repos.created_at) DESC LIMIT 50",
   ).all<RepoRow>();
   return c.json(repos.results.map((repo) => repoJson(repo, c.env.ORIGIN)));
+});
+
+// Code search across public repositories, public paths only.
+api.get("/search", async (c) => {
+  const { query, limit } = searchInput(c);
+  return c.json(await searchPublic(c.env, query, limit));
 });

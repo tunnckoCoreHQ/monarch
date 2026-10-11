@@ -17,12 +17,13 @@ import type { Remote } from "../git/remote";
 import { GitError, GitRepo, type RefUpdate, type Storage, type View } from "../git/repo";
 import { RULES_FILE } from "../git/rules";
 import type { RawObject } from "../git/store";
-import type { FileChange } from "../git/tree";
+import { type FileChange, listFiles } from "../git/tree";
 import { deflate, inflate } from "../git/zlib";
 import { eventStatement, findRepoById } from "./db";
 import type { Env } from "./env";
 import { subscribePushes, unsubscribe } from "./events";
 import { guard, type Result } from "./result";
+import { enqueueIndex } from "./search";
 import { now } from "./util";
 
 // SQLite rows and values are capped at 2 MB, so larger zlib streams go to R2.
@@ -552,6 +553,13 @@ export class Repo extends DurableObject<Env> {
               indexes: [repo.id],
             });
           }
+          if (rows.some((row) => row.ref === `refs/heads/${head}`)) {
+            // Search covers the default branch tip. A failed enqueue waits for the next push or
+            // the hourly check, and must not hold the push rows back.
+            await enqueueIndex(this.env, repo.id).catch((error: unknown) => {
+              console.error(`could not enqueue a search index for ${repo.id}`, error);
+            });
+          }
         }
         this.sql.exec("DELETE FROM pushes WHERE id <= ?", last);
       }
@@ -889,6 +897,29 @@ export class Repo extends DurableObject<Env> {
   /** The default branch the mirror saw in the full repo's advertisement. */
   head() {
     return guard(() => this.repo.storage.refs.head());
+  }
+
+  // Code search reads. The indexer in search.ts lists a commit once, then reads the blobs it needs.
+
+  /** Every file at a commit of the full repo, with its blob hash and size. */
+  searchFiles(rev: string) {
+    return guard(() => {
+      const sha = this.repo.resolve("full", rev);
+      if (sha === undefined) {
+        throw new GitError(`unknown revision ${rev}`, 404);
+      }
+      return listFiles(this.repo.objects, this.repo.readCommit(sha).tree);
+    });
+  }
+
+  /** Blob contents by hash, from the full repo. A blob kept in R2 comes back as null. */
+  searchBlobs(shas: string[]) {
+    return guard(() =>
+      shas.map((sha) => {
+        const object = this.repo.objects.read(sha);
+        return object?.type === "blob" ? object.content : null;
+      }),
+    );
   }
 
   /**

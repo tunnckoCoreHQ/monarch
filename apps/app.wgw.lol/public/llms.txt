@@ -3,6 +3,7 @@
 > Git hosting on Cloudflare, built for agents and the command line. Plain git over HTTPS plus a JSON API. Cloudflare Artifacts stores the git data; Workers and Durable Objects run the proxy, the API, and the public projection.
 
 - [skill.md](https://app.wgw.lol/skill.md): how to get a token, clone, push, commit over HTTP, open and merge pull requests, use private paths, import and fork, get a direct Artifacts token, and read environment secrets.
+- Code search: `GET https://app.wgw.lol/api/search?q=<query>` finds code by meaning in every public repository, and `GET /api/repos/<owner>/<repo>/search?q=<query>` in one. CLI: `wgw search "<query>"`.
 - [auth.md](https://app.wgw.lol/auth.md): agent registration without prior credentials (auth.md by WorkOS).
 - [wgw.mjs](https://app.wgw.lol/wgw.mjs): the command line, one file. Install with `curl -fsSL https://app.wgw.lol/install.sh | sh`.
 - [OAuth protected resource metadata](https://app.wgw.lol/.well-known/oauth-protected-resource)

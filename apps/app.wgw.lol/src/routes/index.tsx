@@ -45,11 +45,18 @@ const STACK = [
   ["KV", "sign-in state and passkey challenges"],
   ["R2", "large objects in the mirror"],
   ["Workflows", "wait for imports and forks, then sync the mirror"],
-  ["Workers AI", "pull request summaries"],
+  ["Workers AI", "pull request summaries and code search embeddings"],
+  ["Vectorize", "code search by meaning over each default branch"],
+  ["AI Gateway", "analytics and caching for every Workers AI call, with no prompt logs"],
   ["Analytics Engine", "clone, fetch, and push counts"],
   ["Rate Limiting", "sign-in, agent registration, and git token requests"],
-  ["Queues", "Artifacts push events, so direct pushes reach the mirror in seconds"],
+  [
+    "Queues",
+    "Artifacts push events, so direct pushes reach the mirror in seconds; search index jobs",
+  ],
   ["Secrets Store", "the master key for repository secrets, the signing key, the automation token"],
+  ["Cron Triggers", "hourly push subscription checks, search backfill, and sign-in cleanup"],
+  ["Workers Logs", "traces and errors from the Worker, the Durable Objects, and the queue"],
 ];
 
 function Home() {
@@ -108,7 +115,7 @@ curl https://app.wgw.lol/auth.md`}</Terminal>
           <div>
             <Kicker>what runs where</Kicker>
             <h2 className="mt-3 text-3xl font-black tracking-tight">
-              Twelve Cloudflare products, no servers.
+              Sixteen Cloudflare products, no servers.
             </h2>
           </div>
           <dl className="bg-border grid gap-px border font-mono text-sm sm:grid-cols-2">

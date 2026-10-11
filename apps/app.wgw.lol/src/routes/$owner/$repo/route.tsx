@@ -31,6 +31,7 @@ interface RepoTab {
     | "/$owner/$repo"
     | "/$owner/$repo/commits"
     | "/$owner/$repo/pulls"
+    | "/$owner/$repo/search"
     | "/$owner/$repo/settings";
   /** The first path segment after `/:owner/:repo` of every page under this tab. */
   sections: string[];
@@ -41,6 +42,7 @@ const TABS: RepoTab[] = [
   { label: "Code", to: "/$owner/$repo", sections: ["", "blob"] },
   { label: "Commits", to: "/$owner/$repo/commits", sections: ["commits", "commit"] },
   { label: "Pull requests", to: "/$owner/$repo/pulls", sections: ["pulls", "pull"] },
+  { label: "Search", to: "/$owner/$repo/search", sections: ["search"] },
   { label: "Settings", to: "/$owner/$repo/settings", sections: ["settings"] },
 ];
 

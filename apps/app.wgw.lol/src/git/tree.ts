@@ -35,6 +35,30 @@ export function lookupPath(store: ObjectStore, tree: string, path: string): Tree
   return entry;
 }
 
+export interface FileEntry {
+  path: string;
+  sha: string;
+  size: number;
+}
+
+/** Every regular file under `tree`, with its blob hash and size. Symlinks and submodules are left out. */
+export function listFiles(
+  store: ObjectStore,
+  tree: string,
+  prefix = "",
+  out: FileEntry[] = [],
+): FileEntry[] {
+  for (const entry of readTree(store, tree)) {
+    const path = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+    if (isTree(entry.mode)) {
+      listFiles(store, entry.sha, path, out);
+    } else if (entry.mode === "100644" || entry.mode === "100755") {
+      out.push({ path, sha: entry.sha, size: store.raw(entry.sha)?.size ?? 0 });
+    }
+  }
+  return out;
+}
+
 export function readBlobText(store: ObjectStore, tree: string, path: string): string | undefined {
   const entry = lookupPath(store, tree, path);
   if (entry === undefined || isTree(entry.mode)) {

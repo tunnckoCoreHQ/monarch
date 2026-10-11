@@ -1,6 +1,6 @@
 ---
 name: wgw-git
-description: Host, clone, push, review, and merge git repositories on app.wgw.lol, a git platform that runs on Cloudflare. Use it to create repositories, open and merge pull requests, commit files over HTTP without a clone, keep private paths inside a public repository, read deployment secrets for an environment, and get a short-lived token for the Artifacts git remote.
+description: Host, clone, push, review, and merge git repositories on app.wgw.lol, a git platform that runs on Cloudflare. Use it to create repositories, open and merge pull requests, commit files over HTTP without a clone, search code by meaning, keep private paths inside a public repository, read deployment secrets for an environment, and get a short-lived token for the Artifacts git remote.
 ---
 
 # wgw git hosting
@@ -172,7 +172,33 @@ An import copies one branch: the remote's default branch, or `import_branch` whe
 
 `wgw repo fork owner/repo` forks in Artifacts. Members of the source fork the full repository, private paths included. Everyone else forks the public projection, so private paths never leave the source. The fork shows `forking` until it is ready. You can only fork a repository that is `ready`.
 
-## 10. API reference
+## 10. Code search
+
+```sh
+wgw search "where tokens are checked"                 # the repository of this clone
+wgw search "retry with backoff" -R owner/repo --json
+wgw search "rate limiter"                             # outside a clone: every public repository
+```
+
+Without the CLI:
+
+```sh
+curl -s "https://app.wgw.lol/api/repos/OWNER/REPO/search?q=where+tokens+are+checked&limit=10" \
+  -H "Authorization: Bearer $WGW_TOKEN"
+```
+
+```json
+[{ "path": "src/auth.ts", "start_line": 108, "end_line": 145, "snippet": "…", "score": 0.81 }]
+```
+
+- Search matches by meaning, not by exact text. Workers AI embeds each file in chunks of about 1,500 characters, and Vectorize stores the vectors.
+- The index follows the tip of the default branch. After a push, only the changed files are embedded again.
+- Members search every file. Everyone else searches the public paths, the files the public projection shows.
+- `GET /api/search?q=` searches the public paths of every public repository. Each result also has `owner` and `name`.
+- The index skips binary files, files over 256 KB, lockfiles, and minified files.
+- `limit` is 1 to 50. The default is 10.
+
+## 11. API reference
 
 All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", "message": "<text>"}`.
 
@@ -190,6 +216,7 @@ All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", 
 | `GET /repos/:owner/:repo/commits?ref=&path=&limit=` | History, newest first |
 | `GET /repos/:owner/:repo/commits/:sha` · `POST …/commits` | One commit with its diff · commit files |
 | `GET /repos/:owner/:repo/compare?base=&head=` | Commits, file diffs, mergeability |
+| `GET /repos/:owner/:repo/search?q=&limit=` · `GET /search?q=&limit=` | Code search in one repository · in every public repository |
 | `GET` · `POST /repos/:owner/:repo/pulls` | List (`state=open,merged,closed,all`) · open (`title`, `head`, `base`, `body`) |
 | `GET` · `PATCH /repos/:owner/:repo/pulls/:n` | Read with diff · update `title`, `body`, `state` |
 | `GET /repos/:owner/:repo/pulls/:n/diff` | Unified diff as text |
@@ -207,7 +234,7 @@ Repository JSON has `status` (`ready`, `importing`, `forking`, or `failed`), `st
 
 Scopes: `read` (private repositories you can see; every key has it), `write` (push, pull requests, commits, write git tokens), `admin` (settings, collaborators, environments, keys), `secrets` (open secret values).
 
-## 11. Limits
+## 12. Limits
 
 - Artifacts stores up to 1 GB per repository and 32 MB per file.
 - Artifacts allows 2,000 git requests per 10 seconds per repository.

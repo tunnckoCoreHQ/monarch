@@ -53,8 +53,14 @@ export default defineConfig({
       GIT: bindings.r2({ name: "app-wgw-lol-git" }),
       // Short-lived sign-in state and passkey challenges.
       CACHE: bindings.kv({ id: "62b8e0bae315469ab347a692df78bf79" }),
-      // Pull request summaries.
+      // Pull request summaries and code search embeddings.
       AI: bindings.ai(),
+      // Every Workers AI call goes through this AI Gateway: analytics, caching, no prompt logs.
+      AI_GATEWAY: bindings.text("app-wgw-lol"),
+      // Code search: one vector per chunk of a file at the default branch tip.
+      CODE: bindings.vectorize({ name: "app-wgw-lol-code" }),
+      // Producer for the events queue; the app sends itself code search index jobs.
+      EVENTS: bindings.queue({ name: EVENTS_QUEUE }),
       // Counts of clones, fetches, and pushes per repository.
       METRICS: bindings.analyticsEngineDataset({ name: "app_wgw_lol_git" }),
       // Sign-in, device-code, agent-registration, and git-token endpoints.

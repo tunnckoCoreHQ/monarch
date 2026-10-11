@@ -2,6 +2,7 @@ import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloud
 
 import { recordEvent } from "./db";
 import type { Env } from "./env";
+import { enqueueIndex } from "./search";
 import { now } from "./util";
 
 export interface ReadyParams {
@@ -76,6 +77,9 @@ export class RepoReady extends WorkflowEntrypoint<Env, ReadyParams> {
         .bind(detail, branch, now(), repoId)
         .run();
       await recordEvent(this.env, repoId, actorId, kind, { source, refs: synced.refs });
+    });
+    await step.do("index for search", async () => {
+      await enqueueIndex(this.env, repoId);
     });
     return { ready: true, refs: synced.refs };
   }

@@ -1,5 +1,6 @@
 import { findRepoById } from "./db";
 import type { Env } from "./env";
+import { indexRepo, isIndexMessage } from "./search";
 
 const API = "https://api.cloudflare.com/client/v4";
 
@@ -106,9 +107,22 @@ async function handle(env: Env, event: ArtifactsEvent): Promise<void> {
   }
 }
 
-/** The queue consumer: syncs the mirror on Artifacts pushes, and records deletions. */
+/**
+ * The queue consumer: syncs the mirror on Artifacts pushes, records deletions, and runs the app's
+ * own code search index jobs.
+ */
 export async function handleEvents(batch: MessageBatch, env: Env): Promise<void> {
   for (const message of batch.messages) {
+    if (isIndexMessage(message.body)) {
+      try {
+        await indexRepo(env, message.body.repoId);
+        message.ack();
+      } catch (error) {
+        console.error(`search index of ${message.body.repoId} failed`, error);
+        message.retry({ delaySeconds: 30 });
+      }
+      continue;
+    }
     if (!isArtifactsEvent(message.body)) {
       message.ack();
       continue;

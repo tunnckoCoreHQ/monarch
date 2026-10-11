@@ -22,6 +22,7 @@ import { Route as LoginPasskeyRouteImport } from './routes/login_.passkey'
 import { Route as OwnerRepoIndexRouteImport } from './routes/$owner/$repo/index'
 import { Route as OwnerRepoBlobRouteImport } from './routes/$owner/$repo/blob'
 import { Route as OwnerRepoCommitsRouteImport } from './routes/$owner/$repo/commits'
+import { Route as OwnerRepoSearchRouteImport } from './routes/$owner/$repo/search'
 import { Route as OwnerRepoSettingsRouteImport } from './routes/$owner/$repo/settings'
 import { Route as OwnerRepoCommitShaRouteImport } from './routes/$owner/$repo/commit.$sha'
 import { Route as OwnerRepoPullNumberRouteImport } from './routes/$owner/$repo/pull.$number'
@@ -93,6 +94,11 @@ const OwnerRepoCommitsRoute = OwnerRepoCommitsRouteImport.update({
   path: '/commits',
   getParentRoute: () => OwnerRepoRouteRoute,
 } as any)
+const OwnerRepoSearchRoute = OwnerRepoSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => OwnerRepoRouteRoute,
+} as any)
 const OwnerRepoSettingsRoute = OwnerRepoSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/$owner/': typeof OwnerIndexRoute
   '/$owner/$repo/blob': typeof OwnerRepoBlobRoute
   '/$owner/$repo/commits': typeof OwnerRepoCommitsRoute
+  '/$owner/$repo/search': typeof OwnerRepoSearchRoute
   '/$owner/$repo/settings': typeof OwnerRepoSettingsRoute
   '/$owner/$repo/': typeof OwnerRepoIndexRoute
   '/$owner/$repo/commit/$sha': typeof OwnerRepoCommitShaRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/$owner': typeof OwnerIndexRoute
   '/$owner/$repo/blob': typeof OwnerRepoBlobRoute
   '/$owner/$repo/commits': typeof OwnerRepoCommitsRoute
+  '/$owner/$repo/search': typeof OwnerRepoSearchRoute
   '/$owner/$repo/settings': typeof OwnerRepoSettingsRoute
   '/$owner/$repo': typeof OwnerRepoIndexRoute
   '/$owner/$repo/commit/$sha': typeof OwnerRepoCommitShaRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/$owner/': typeof OwnerIndexRoute
   '/$owner/$repo/blob': typeof OwnerRepoBlobRoute
   '/$owner/$repo/commits': typeof OwnerRepoCommitsRoute
+  '/$owner/$repo/search': typeof OwnerRepoSearchRoute
   '/$owner/$repo/settings': typeof OwnerRepoSettingsRoute
   '/$owner/$repo/': typeof OwnerRepoIndexRoute
   '/$owner/$repo/commit/$sha': typeof OwnerRepoCommitShaRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/$owner/'
     | '/$owner/$repo/blob'
     | '/$owner/$repo/commits'
+    | '/$owner/$repo/search'
     | '/$owner/$repo/settings'
     | '/$owner/$repo/'
     | '/$owner/$repo/commit/$sha'
@@ -213,6 +223,7 @@ export interface FileRouteTypes {
     | '/$owner'
     | '/$owner/$repo/blob'
     | '/$owner/$repo/commits'
+    | '/$owner/$repo/search'
     | '/$owner/$repo/settings'
     | '/$owner/$repo'
     | '/$owner/$repo/commit/$sha'
@@ -233,6 +244,7 @@ export interface FileRouteTypes {
     | '/$owner/'
     | '/$owner/$repo/blob'
     | '/$owner/$repo/commits'
+    | '/$owner/$repo/search'
     | '/$owner/$repo/settings'
     | '/$owner/$repo/'
     | '/$owner/$repo/commit/$sha'
@@ -347,6 +359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerRepoCommitsRouteImport
       parentRoute: typeof OwnerRepoRouteRoute
     }
+    '/$owner/$repo/search': {
+      id: '/$owner/$repo/search'
+      path: '/search'
+      fullPath: '/$owner/$repo/search'
+      preLoaderRoute: typeof OwnerRepoSearchRouteImport
+      parentRoute: typeof OwnerRepoRouteRoute
+    }
     '/$owner/$repo/settings': {
       id: '/$owner/$repo/settings'
       path: '/settings'
@@ -388,6 +407,7 @@ declare module '@tanstack/react-router' {
 interface OwnerRepoRouteRouteChildren {
   OwnerRepoBlobRoute: typeof OwnerRepoBlobRoute
   OwnerRepoCommitsRoute: typeof OwnerRepoCommitsRoute
+  OwnerRepoSearchRoute: typeof OwnerRepoSearchRoute
   OwnerRepoSettingsRoute: typeof OwnerRepoSettingsRoute
   OwnerRepoIndexRoute: typeof OwnerRepoIndexRoute
   OwnerRepoCommitShaRoute: typeof OwnerRepoCommitShaRoute
@@ -399,6 +419,7 @@ interface OwnerRepoRouteRouteChildren {
 const OwnerRepoRouteRouteChildren: OwnerRepoRouteRouteChildren = {
   OwnerRepoBlobRoute: OwnerRepoBlobRoute,
   OwnerRepoCommitsRoute: OwnerRepoCommitsRoute,
+  OwnerRepoSearchRoute: OwnerRepoSearchRoute,
   OwnerRepoSettingsRoute: OwnerRepoSettingsRoute,
   OwnerRepoIndexRoute: OwnerRepoIndexRoute,
   OwnerRepoCommitShaRoute: OwnerRepoCommitShaRoute,
