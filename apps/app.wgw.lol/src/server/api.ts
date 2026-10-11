@@ -965,7 +965,7 @@ api.put("/repos/:owner/:name/variables/:var", async (c) => {
   }
   const secret = input.secret !== false;
   const value = secret
-    ? await sealSecret(c.env.SECRETS_KEY, `${grant.repo.id}:${environment}:${name}`, input.value)
+    ? await sealSecret(c.env, grant.repo.id, `${grant.repo.id}:${environment}:${name}`, input.value)
     : input.value;
   await c.env.DB.prepare(
     "INSERT INTO variables (repo_id, environment, name, secret, value, updated_by, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (repo_id, environment, name) DO UPDATE SET secret = excluded.secret, value = excluded.value, updated_by = excluded.updated_by, updated_at = excluded.updated_at",
@@ -1006,7 +1006,8 @@ api.get("/repos/:owner/:name/env", async (c) => {
     values[row.name] =
       row.secret === 1
         ? await openSecret(
-            c.env.SECRETS_KEY,
+            c.env,
+            grant.repo.id,
             `${grant.repo.id}:${row.environment}:${row.name}`,
             row.value,
           )

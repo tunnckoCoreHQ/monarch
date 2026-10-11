@@ -94,7 +94,7 @@ curl -s https://app.wgw.lol/api/repos/OWNER/REPO/git-token \
 - A write token needs write access to the repository and a key with the `write` scope.
 - Tokens expire after one hour. Ask for a new one when it runs out.
 - The endpoint answers 409 until the repository is `ready`.
-- The web view and the API show a direct push after the mirror syncs from Artifacts.
+- A direct push reaches the web view, the API, and the public projection within a few seconds: Artifacts sends a push event to a Cloudflare Queue, and the app syncs its mirror.
 
 ## 5. Commit without a clone
 
@@ -158,7 +158,7 @@ wgw secret set LOG_LEVEL --plain info            # repository-wide, not secret
 wgw env pull production > .env                   # needs a key with the secrets scope
 ```
 
-Repository values apply to every environment and environment values override them. Secret values are sealed with AES-256-GCM. Only `GET /api/repos/OWNER/REPO/env?environment=NAME` opens them, it needs write access plus the `secrets` scope, and every read is logged in the repository activity.
+Repository values apply to every environment and environment values override them. Secret values are sealed with AES-256-GCM under a key that belongs to the repository. That key is stored in D1 wrapped by a master key in Cloudflare Secrets Store, and it is deleted with the repository. Only `GET /api/repos/OWNER/REPO/env?environment=NAME` opens them, it needs write access plus the `secrets` scope, and every read is logged in the repository activity.
 
 ## 9. Imports and forks
 

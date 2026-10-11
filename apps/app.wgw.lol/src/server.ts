@@ -2,6 +2,7 @@ import handler from "@tanstack/react-start/server-entry";
 
 import { app, isServerPath } from "./server/app";
 import type { Env } from "./server/env";
+import { handleEvents } from "./server/events";
 
 export { Repo } from "./server/repo-object";
 export { RepoReady } from "./server/workflow";
@@ -14,4 +15,5 @@ export default {
     }
     return handler.fetch(request);
   },
+  queue: handleEvents,
 } satisfies ExportedHandler<Env>;

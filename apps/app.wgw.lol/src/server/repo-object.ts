@@ -20,6 +20,7 @@ import type { RawObject } from "../git/store";
 import type { FileChange } from "../git/tree";
 import { deflate, inflate } from "../git/zlib";
 import type { Env } from "./env";
+import { subscribePushes, unsubscribe } from "./events";
 import { guard, type Result } from "./result";
 
 // SQLite rows and values are capped at 2 MB, so larger zlib streams go to R2.
@@ -352,6 +353,15 @@ export class Repo extends DurableObject<Env> {
       setDefaultBranch: defaultBranch,
     });
     this.setMeta("remote_public", created.remote);
+    try {
+      this.setMeta(
+        "push_subscription",
+        await subscribePushes(this.env, this.artifactsName("full")),
+      );
+    } catch (error) {
+      // Without it, a direct push reaches the mirror on the next read instead, within 15 seconds.
+      console.error(`could not subscribe to pushes on ${repoId}`, error);
+    }
     this.mirror = undefined;
   }
 
@@ -686,6 +696,15 @@ export class Repo extends DurableObject<Env> {
         for (const target of ["full", "public"] as const) {
           // `delete` returns false for a repo that is already gone, which is fine here.
           await this.env.ARTIFACTS.delete(this.artifactsName(target));
+        }
+      }
+      const subscription = this.meta("push_subscription");
+      if (subscription !== undefined) {
+        try {
+          await unsubscribe(this.env, subscription);
+        } catch (error) {
+          // A subscription to a deleted repo delivers nothing, so a failure here only leaves clutter.
+          console.error(`could not delete push subscription ${subscription}`, error);
         }
       }
       const prefix = `objects/${this.repoId}/`;

@@ -28,11 +28,16 @@ let signing: Promise<{ key: CryptoKey; jwk: JWK }> | undefined;
 
 function signingKey(env: Env) {
   signing ??= (async () => {
-    const key = await importPKCS8(env.SIGNING_KEY, "ES256", { extractable: true });
+    // Secrets Store holds the PEM; the binding reads it with get().
+    const key = await importPKCS8(await env.SIGNING_KEY.get(), "ES256", { extractable: true });
     const { d: _private, ...jwk } = await exportJWK(key);
     const kid = await calculateJwkThumbprint(jwk);
     return { key, jwk: { ...jwk, kid, alg: "ES256", use: "sig" } };
-  })();
+  })().catch((error: unknown) => {
+    // A failed read must not stick; the next request tries again.
+    signing = undefined;
+    throw error;
+  });
   return signing;
 }
 

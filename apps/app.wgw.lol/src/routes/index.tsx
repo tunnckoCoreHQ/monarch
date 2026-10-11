@@ -48,6 +48,8 @@ const STACK = [
   ["Workers AI", "pull request summaries"],
   ["Analytics Engine", "clone, fetch, and push counts"],
   ["Rate Limiting", "sign-in, agent registration, and git token requests"],
+  ["Queues", "Artifacts push events, so direct pushes reach the mirror in seconds"],
+  ["Secrets Store", "the master key for repository secrets, the signing key, the automation token"],
 ];
 
 function Home() {
@@ -104,7 +106,7 @@ curl https://app.wgw.lol/auth.md`}</Terminal>
           <div>
             <Kicker>what runs where</Kicker>
             <h2 className="mt-3 text-3xl font-black tracking-tight">
-              Ten Cloudflare products, no servers.
+              Twelve Cloudflare products, no servers.
             </h2>
           </div>
           <dl className="bg-border grid gap-px border font-mono text-sm sm:grid-cols-2">

@@ -2,6 +2,11 @@ import { bindings, defineConfig, exports, triggers } from "cf/config";
 
 const ORIGIN = "https://app.wgw.lol";
 const WORKER = "app-wgw-lol";
+const ACCOUNT_ID = "b3e23415ee0a455f5711bf02945bbc06";
+// The account's Secrets Store; it holds the master keys and the automation token.
+const SECRETS_STORE = "33bb32010b244646ac4822e7c109a5e9";
+const EVENTS_QUEUE = "app-wgw-lol-events";
+const NAMESPACE = "app-wgw-lol";
 
 export default defineConfig({
   worker: {
@@ -11,7 +16,11 @@ export default defineConfig({
     compatibilityFlags: ["nodejs_compat", "global_fetch_strictly_public"],
     entrypoint: "src/server.ts",
     // A zone route, not a custom domain: wgw.lol hosts many subdomains on routes.
-    triggers: [triggers.fetch({ pattern: "app.wgw.lol/*", zone: "wgw.lol" })],
+    triggers: [
+      triggers.fetch({ pattern: "app.wgw.lol/*", zone: "wgw.lol" }),
+      // Artifacts events: pushes to each full repository, and account-level repo changes.
+      triggers.queue({ name: EVENTS_QUEUE, maxBatchSize: 20, maxBatchTimeout: 2, maxRetries: 3 }),
+    ],
     workersDev: false,
     previewUrls: false,
     observability: { enabled: true, headSamplingRate: 1 },
@@ -28,7 +37,8 @@ export default defineConfig({
       // The deploy task passes the commit being deployed; local builds get "local".
       COMMIT_SHA: bindings.text(process.env.COMMIT_SHA ?? "local"),
       // Git storage: two Artifacts repos per wgw repo, the full one and its public projection.
-      ARTIFACTS: bindings.artifacts({ namespace: "app-wgw-lol" }),
+      ARTIFACTS: bindings.artifacts({ namespace: NAMESPACE }),
+      ARTIFACTS_NAMESPACE: bindings.text(NAMESPACE),
       REPO: bindings.durableObject({ worker: WORKER, exportName: "Repo" }),
       READY: bindings.workflow({
         name: "app-wgw-lol-repo-ready",
@@ -48,10 +58,25 @@ export default defineConfig({
       // Sign-in, device-code, agent-registration, and git-token endpoints.
       LIMITER: bindings.rateLimit({ namespace: "4201", simple: { limit: 30, period: 60 } }),
       ASSETS: bindings.assets(),
-      // AES-GCM key for repository secrets: 32 random bytes, base64.
-      SECRETS_KEY: bindings.secret(),
-      // ES256 private key, PKCS#8 PEM, that signs auth.md identity assertions.
-      SIGNING_KEY: bindings.secret(),
+      // Secrets Store: the key that wraps each repository's secret key.
+      SECRETS_KEK: bindings.secretsStoreSecret({
+        storeId: SECRETS_STORE,
+        secretName: "app_wgw_lol_secrets_kek",
+      }),
+      // Secrets Store: the ES256 private key, PKCS#8 PEM, that signs auth.md identity assertions.
+      SIGNING_KEY: bindings.secretsStoreSecret({
+        storeId: SECRETS_STORE,
+        secretName: "app_wgw_lol_signing_key",
+      }),
+      // Secrets Store: an account API token limited to Queues Write. It creates and deletes the
+      // per-repository push subscriptions.
+      EVENTS_TOKEN: bindings.secretsStoreSecret({
+        storeId: SECRETS_STORE,
+        secretName: "app_wgw_lol_events_token",
+      }),
+      ACCOUNT_ID: bindings.text(ACCOUNT_ID),
+      // The queue that receives Artifacts events; its ID goes into each push subscription.
+      EVENTS_QUEUE_ID: bindings.text("8266fc1aac8c40fd8a807a5a4fbcc872"),
     },
   },
 });
