@@ -36,6 +36,10 @@ function fakeStub(repo: GitRepo) {
     ) => guard(() => repo.commitFiles(branch, expected, message, who, files, from)),
     publicShas: (shas: string[]) =>
       guard(() => shas.map((sha) => repo.viewSha("public", sha) ?? null)),
+    log: (view: View, rev: string, limit: number) => guard(() => repo.log(view, rev, limit)),
+    showCommit: (view: View, rev: string) => guard(() => repo.showCommit(view, rev)),
+    fullShas: (shas: string[]) => guard(() => shas.map((sha) => repo.fullShas(sha))),
+    resolve: (view: View, rev: string) => guard(() => repo.resolve(view, rev) ?? null),
   };
 }
 
@@ -637,5 +641,206 @@ describe("repository limits and inputs", () => {
       visibility: string;
     }>();
     expect(repo?.visibility).toBe("private");
+  });
+});
+
+interface StatusJson {
+  context: string;
+  state: string;
+  description: string;
+  target_url: string | null;
+  creator: string | null;
+}
+interface CombinedJson {
+  sha: string;
+  state: string | null;
+  statuses: StatusJson[];
+}
+
+/** Posts a status on a commit of one of alice's repositories. */
+const postStatus = (token: string, sha: string, body: unknown, repo = "pub") =>
+  call("POST", `/api/repos/alice/${repo}/statuses/${sha}`, { token, json: body });
+const listStatuses = (sha: string, token?: string) =>
+  json<CombinedJson>(call("GET", `/api/repos/alice/pub/statuses/${sha}`, { token }));
+
+describe("commit statuses", () => {
+  it("replaces the status of a context when it is posted again", async () => {
+    const sha = seed();
+    const alice = await key("usr_alice", {});
+    expect((await postStatus(alice, sha, { state: "pending", context: "tests" })).status).toBe(201);
+    const replaced = await postStatus(alice, sha, {
+      state: "success",
+      context: "tests",
+      description: "42 passed",
+      target_url: "https://ci.example/run/1",
+    });
+    expect(replaced.status).toBe(201);
+    expect(await json<StatusJson>(replaced)).toMatchObject({ context: "tests", state: "success" });
+    expect((await postStatus(alice, sha, { state: "success" })).status).toBe(201);
+    expect(await listStatuses(sha, alice)).toEqual({
+      sha,
+      state: "success",
+      statuses: [
+        expect.objectContaining({ context: "default", state: "success", target_url: null }),
+        expect.objectContaining({
+          context: "tests",
+          state: "success",
+          description: "42 passed",
+          target_url: "https://ci.example/run/1",
+          creator: "alice",
+        }),
+      ],
+    });
+  });
+
+  it("combines the states: failure and error beat pending, which beats success", async () => {
+    const sha = seed();
+    const alice = await key("usr_alice", {});
+    expect(await listStatuses(sha, alice)).toEqual({ sha, state: null, statuses: [] });
+    const steps: Array<[string, string, string]> = [
+      ["lint", "success", "success"],
+      ["tests", "pending", "pending"],
+      ["build", "error", "failure"],
+      ["build", "success", "pending"],
+      ["tests", "failure", "failure"],
+      ["tests", "success", "success"],
+    ];
+    for (const [context, state, combined] of steps) {
+      expect((await postStatus(alice, sha, { state, context })).status).toBe(201);
+      expect((await listStatuses(sha, alice)).state, `${context} ${state}`).toBe(combined);
+    }
+  });
+
+  it("validates the commit, state, context, description, and link", async () => {
+    const sha = seed();
+    const alice = await key("usr_alice", {});
+    const bad: Array<[string, unknown, number, RegExp]> = [
+      [sha.slice(0, 7), { state: "success" }, 400, /full 40-character/],
+      ["f".repeat(40), { state: "success" }, 404, /has no commit/],
+      [sha, {}, 400, /state must be/],
+      [sha, { state: "passed" }, 400, /state must be/],
+      [sha, { state: "success", context: "x".repeat(101) }, 400, /1 to 100/],
+      [sha, { state: "success", context: " " }, 400, /1 to 100/],
+      [sha, { state: "success", description: "x".repeat(141) }, 400, /140/],
+      [sha, { state: "success", target_url: "http://ci.example/1" }, 400, /https/],
+      [sha, { state: "success", target_url: "javascript:alert(1)" }, 400, /https/],
+      [sha, { state: "success", target_url: "not a url" }, 400, /not a URL/],
+    ];
+    for (const [target, body, status, message] of bad) {
+      const response = await postStatus(alice, target, body);
+      expect(response.status, JSON.stringify(body)).toBe(status);
+      expect((await json<{ message: string }>(response)).message).toMatch(message);
+    }
+    // A tree is an object the mirror knows, but not a commit.
+    const tree = git.readCommit(sha).tree;
+    expect((await postStatus(alice, tree, { state: "success" })).status).toBe(404);
+    expect((await postStatus(alice, sha.toUpperCase(), { state: "success" })).status).toBe(201);
+    expect((await call("POST", `/api/repos/alice/pub/statuses/${sha}`, { json: {} })).status).toBe(
+      401,
+    );
+    const read = await key("usr_alice", { scopes: ["read"] });
+    expect((await postStatus(read, sha, { state: "success" })).status).toBe(403);
+    const bob = await key("usr_bob", {});
+    expect((await postStatus(bob, sha, { state: "success" })).status).toBe(403);
+    expect((await listStatuses(sha, alice)).statuses.map((status) => status.context)).toEqual([
+      "default",
+    ]);
+  });
+
+  it("shows non-members only the statuses of commits in the public view", async () => {
+    const start = seed();
+    const hidden = git.commitFiles("main", undefined, "private only", person, [
+      { path: "secret/plan.md", content: utf8("new plan\n") },
+    ]).sha;
+    const alice = await key("usr_alice", {});
+    expect((await postStatus(alice, start, { state: "success", context: "tests" })).status).toBe(
+      201,
+    );
+    expect((await postStatus(alice, hidden, { state: "failure", context: "deploy" })).status).toBe(
+      201,
+    );
+    // Publishing builds the public projection.
+    git.refs("public");
+    const projected = git.viewSha("public", start)!;
+    expect(git.viewSha("public", hidden)).toBe(projected);
+
+    const bob = await key("usr_bob", {});
+    for (const token of [bob, undefined]) {
+      const outside = await listStatuses(projected, token);
+      expect(outside.state).toBe("success");
+      expect(outside.statuses.map((status) => status.context)).toEqual(["tests"]);
+      // The full hashes name a rewritten commit and a hidden one.
+      expect((await listStatuses(start, token)).statuses).toEqual([]);
+      expect((await listStatuses(hidden, token)).statuses).toEqual([]);
+      const shown = await json<{ status: CombinedJson }>(
+        call("GET", `/api/repos/alice/pub/commits/${projected}`, { token }),
+      );
+      expect(shown.status).toMatchObject({ sha: projected, state: "success" });
+      const commits = await json<Array<{ sha: string; status: string | null }>>(
+        call("GET", "/api/repos/alice/pub/commits", { token }),
+      );
+      expect(commits.map(({ sha, status }) => ({ sha, status }))).toEqual([
+        { sha: projected, status: "success" },
+      ]);
+    }
+    expect((await listStatuses(hidden, alice)).state).toBe("failure");
+    expect((await listStatuses(projected, alice)).statuses).toEqual([]);
+    const commits = await json<Array<{ sha: string; status: string | null }>>(
+      call("GET", "/api/repos/alice/pub/commits", { token: alice }),
+    );
+    expect(commits.map(({ sha, status }) => ({ sha, status }))).toEqual([
+      { sha: hidden, status: "failure" },
+      { sha: start, status: "success" },
+    ]);
+    // A private repository stays hidden.
+    const priv = await call("GET", `/api/repos/alice/priv/statuses/${start}`, { token: bob });
+    expect(priv.status).toBe(404);
+  });
+
+  it("show on a pull request and in the pull request list", async () => {
+    const start = seed();
+    git.updateRef("refs/heads/feature", ZERO_SHA, start);
+    const head = git.commitFiles("feature", undefined, "feature", person, [
+      { path: "src/feature.ts", content: utf8("export const on = true;\n") },
+    ]).sha;
+    const alice = await key("usr_alice", {});
+    expect(
+      (
+        await call("POST", "/api/repos/alice/pub/pulls", {
+          token: alice,
+          json: { title: "Feature", head: "feature" },
+        })
+      ).status,
+    ).toBe(201);
+    expect((await postStatus(alice, head, { state: "pending", context: "tests" })).status).toBe(
+      201,
+    );
+    git.refs("public");
+    interface Pull {
+      status: CombinedJson | null;
+    }
+    const full = await json<Pull>(call("GET", "/api/repos/alice/pub/pulls/1", { token: alice }));
+    expect(full.status).toMatchObject({ sha: head, state: "pending" });
+    expect(full.status?.statuses.map((status) => status.context)).toEqual(["tests"]);
+    const outside = await json<Pull>(call("GET", "/api/repos/alice/pub/pulls/1"));
+    expect(outside.status).toMatchObject({ sha: git.viewSha("public", head), state: "pending" });
+    const listed = await json<Array<{ status: string | null }>>(
+      call("GET", "/api/repos/alice/pub/pulls"),
+    );
+    expect(listed.map((pull) => pull.status)).toEqual(["pending"]);
+  });
+
+  it("let a repository-limited key post only to its repository", async () => {
+    const sha = seed();
+    const limited = await key("usr_alice", { repoId: "repo_priv" });
+    const other = await postStatus(limited, sha, { state: "success" });
+    expect(other.status).toBe(403);
+    expect((await postStatus(limited, sha, { state: "success" }, "priv")).status).toBe(201);
+    const environment = await key("usr_alice", { environment: "production" });
+    expect((await postStatus(environment, sha, { state: "success" })).status).toBe(201);
+    const rows = await env.DB.prepare("SELECT repo_id FROM statuses ORDER BY repo_id").all<{
+      repo_id: string;
+    }>();
+    expect(rows.results.map((row) => row.repo_id)).toEqual(["repo_priv", "repo_pub"]);
   });
 });

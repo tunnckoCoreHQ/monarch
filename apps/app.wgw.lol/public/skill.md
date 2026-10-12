@@ -1,6 +1,6 @@
 ---
 name: wgw-git
-description: Host, clone, push, review, and merge git repositories on app.wgw.lol, a git platform that runs on Cloudflare. Use it to create repositories, open and merge pull requests, commit files over HTTP without a clone, search code by meaning, keep private paths inside a public repository, read deployment secrets for an environment, and get a short-lived token for the Artifacts git remote.
+description: Host, clone, push, review, and merge git repositories on app.wgw.lol, a git platform that runs on Cloudflare. Use it to create repositories, open and merge pull requests, commit files over HTTP without a clone, post CI results on commits, search code by meaning, keep private paths inside a public repository, read deployment secrets for an environment, and get a short-lived token for the Artifacts git remote.
 ---
 
 # wgw git hosting
@@ -73,8 +73,8 @@ claude mcp add --transport http wgw https://app.wgw.lol/mcp --header "Authorizat
 
 Other clients take the same URL and header. The token is a wgw API key or an auth.md access token. Each tool calls the API with it, so the key's scopes, its repository limit, and `.gitprivate` apply as they do over the API. Without a token you get only the read tools, and they see public repositories and public paths. An invalid or expired token gets 401 with a `WWW-Authenticate` header that points at `/.well-known/oauth-protected-resource`.
 
-- For everyone: `whoami`, `list_repos`, `get_repo`, `list_tree`, `read_file`, `search_code`, `list_commits`, `get_commit`, `compare`, `list_pulls`, `get_pull` (with the unified diff), and `get_git_token`.
-- With a token: `create_repo`, `create_branch`, `commit_files`, `open_pull`, `comment_pull`, `merge_pull`, and `pull_env`. The `pull_env` tool opens secrets, so it needs write access and a key with the `secrets` scope.
+- For everyone: `whoami`, `list_repos`, `get_repo`, `list_tree`, `read_file`, `search_code`, `list_commits`, `get_commit`, `compare`, `list_pulls`, `get_pull` (with the unified diff), `list_statuses`, and `get_git_token`.
+- With a token: `create_repo`, `create_branch`, `commit_files`, `open_pull`, `comment_pull`, `merge_pull`, `set_status`, and `pull_env`. The `pull_env` tool opens secrets, so it needs write access and a key with the `secrets` scope.
 
 ## 4. Git
 
@@ -179,7 +179,34 @@ wgw pr close 3         # wgw pr reopen 3 opens it again
 
 Merges run on the server. The mirror makes the merge commit and pushes it to Artifacts. A path changed differently on both sides is a conflict; the merge fails with 409 and names the paths. Rebase locally and push again.
 
-## 8. Private paths in a public repository
+## 8. Commit statuses
+
+A status is a pass or fail result on one commit, such as a CI run or an agent's review. Each commit keeps one status per `context`, like `tests` or `lint`. Posting a context again replaces it, so post `pending` when a run starts and `success` or `failure` when it ends.
+
+```sh
+# in CI, after the tests pass
+wgw status set $(git rev-parse HEAD) success --context tests
+wgw status set $(git rev-parse HEAD) failure --context tests --description "3 failed" --url https://ci.example/run/41
+wgw status list $(git rev-parse HEAD)          # each context and the combined state
+```
+
+Without the CLI:
+
+```sh
+curl -s https://app.wgw.lol/api/repos/OWNER/REPO/statuses/$(git rev-parse HEAD) \
+  -H "Authorization: Bearer $WGW_TOKEN" -H 'content-type: application/json' \
+  -d '{ "state": "success", "context": "tests", "description": "212 passed", "target_url": "https://ci.example/run/41" }'
+```
+
+- `state` is `pending`, `success`, `failure`, or `error`. `context` is 1 to 100 characters and defaults to `default`. `description` is up to 140 characters. `target_url` must be `https://`.
+- The hash is a full 40-character commit hash the repository has. Push the commit first; an unknown hash is a 404.
+- Posting needs write access and a key with the `write` scope. A key limited to one repository posts only there. A key limited to one environment can post.
+- `GET …/statuses/:sha` returns `{ "sha", "state", "statuses" }`. The combined `state` is `failure` when any status failed or errored, else `pending` when any is pending, else `success`. It is null when the commit has no statuses.
+- A pull request shows the statuses of its head commit in the merge panel, and `GET …/pulls/:n` returns them as `status`. The pull request list and the commit list carry the combined state as `status`.
+- Statuses do not block a merge.
+- Everyone else asks with the public view's hashes, the ones they see in the history. A commit that touched only private paths has no public hash, so its statuses stay with the members.
+
+## 9. Private paths in a public repository
 
 Add `.gitprivate` at the repository root. The syntax is like `.gitignore`:
 
@@ -199,7 +226,7 @@ Members (the owner and collaborators) see everything, over git and over the API.
 
 Check what the public sees: `curl -s https://app.wgw.lol/api/repos/OWNER/REPO/tree` without a token.
 
-## 9. Environments and secrets
+## 10. Environments and secrets
 
 ```sh
 wgw env create production --kind production     # kinds: production, staging, preview, development
@@ -212,7 +239,7 @@ Running `env create` on an environment that exists changes its kind only when yo
 
 Repository values apply to every environment and environment values override them. Secret values are sealed with AES-256-GCM under a key that belongs to the repository. That key is stored in D1 wrapped by a master key in Cloudflare Secrets Store, and it is deleted with the repository. Only `GET /api/repos/OWNER/REPO/env?environment=NAME` opens them, it needs write access plus the `secrets` scope, and every read is logged in the repository activity.
 
-## 10. Imports and forks
+## 11. Imports and forks
 
 ```sh
 wgw repo create lib --import https://github.com/owner/lib                    # the default branch
@@ -224,7 +251,7 @@ An import copies one branch: the remote's default branch, or `import_branch` whe
 
 `wgw repo fork owner/repo` forks in Artifacts. Members of the source fork the full repository, private paths included. Everyone else forks the public projection, so private paths never leave the source. The fork shows `forking` until it is ready. You can only fork a repository that is `ready`. The fork keeps the source's name; to fork your own repository, pass `--name <new>`.
 
-## 11. Code search
+## 12. Code search
 
 ```sh
 wgw search "where tokens are checked"                 # the repository of this clone
@@ -250,7 +277,7 @@ curl -s "https://app.wgw.lol/api/repos/OWNER/REPO/search?q=where+tokens+are+chec
 - The index skips binary files, files over 256 KB, lockfiles, and minified files.
 - `limit` (`--limit` in the CLI) is 1 to 50. The default is 10. Any other value is a 400.
 
-## 12. API reference
+## 13. API reference
 
 All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", "message": "<text>"}`. A JSON field of the wrong type is a 400 that names the field.
 
@@ -267,10 +294,11 @@ All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", 
 | `GET /repos/:owner/:repo/blob?ref=&path=` · `GET …/raw?ref=&path=` | File as JSON (text) · raw bytes |
 | `GET /repos/:owner/:repo/commits?ref=&path=&limit=` | History, newest first; `limit` is 1 to 200, 30 by default |
 | `GET /repos/:owner/:repo/commits/:sha` · `POST …/commits` | One commit with its diff · commit files (`branch`, `message`, `files`, `expected_sha`, `from`) |
+| `GET` · `POST /repos/:owner/:repo/statuses/:sha` | Statuses of a commit with the combined state · post one (`state`, `context`, `description`, `target_url`) |
 | `GET /repos/:owner/:repo/compare?base=&head=` | Commits, file diffs, mergeability |
 | `GET /repos/:owner/:repo/search?q=&limit=` · `GET /search?q=&limit=` | Code search in one repository · in every public repository |
 | `GET` · `POST /repos/:owner/:repo/pulls` | List (`state=open,merged,closed,all`) · open (`title`, `head`, `base`, `body`) |
-| `GET` · `PATCH /repos/:owner/:repo/pulls/:n` | Read with diff · update `title`, `body`, `state` |
+| `GET` · `PATCH /repos/:owner/:repo/pulls/:n` | Read with diff and head commit statuses · update `title`, `body`, `state` |
 | `GET /repos/:owner/:repo/pulls/:n/diff` | Unified diff as text |
 | `POST /repos/:owner/:repo/pulls/:n/merge` · `…/summary` | Merge · AI summary |
 | `GET` · `POST /repos/:owner/:repo/pulls/:n/comments` | Comments |
@@ -285,9 +313,9 @@ All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", 
 
 Repository JSON has `status` (`ready`, `importing`, `forking`, or `failed`), `status_detail` (why it failed, or null), and `storage` (`artifacts`).
 
-Scopes: `read` (private repositories you can see; every key has it), `write` (push, pull requests, commits, write git tokens), `admin` (settings, collaborators, environments, keys), `secrets` (open secret values).
+Scopes: `read` (private repositories you can see; every key has it), `write` (push, pull requests, commits, commit statuses, write git tokens), `admin` (settings, collaborators, environments, keys), `secrets` (open secret values).
 
-## 13. Limits
+## 14. Limits
 
 - Artifacts stores up to 1 GB per repository and 32 MB per file.
 - Artifacts allows 2,000 git requests per 10 seconds per repository.

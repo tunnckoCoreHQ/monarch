@@ -109,6 +109,8 @@ export function memoryRepo(): GitRepo {
       setCommit: (sha, projected) => {
         commits.set(sha, projected);
       },
+      sources: (projected) =>
+        [...commits].filter(([, value]) => value === projected).map(([sha]) => sha),
       getTree: (key) => trees.get(key),
       setTree: (key, projected) => {
         trees.set(key, projected);

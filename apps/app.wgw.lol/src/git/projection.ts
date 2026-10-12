@@ -8,6 +8,8 @@ import { commitTree, readTree } from "./tree";
 export interface ProjectionMemo {
   getCommit(sha: string): string | undefined;
   setCommit(sha: string, projected: string): void;
+  /** The commits whose public counterpart is `projected`. */
+  sources(projected: string): string[];
   getTree(key: string): string | undefined;
   setTree(key: string, projected: string): void;
 }

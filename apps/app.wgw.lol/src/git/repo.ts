@@ -142,6 +142,25 @@ export class GitRepo {
     return undefined;
   }
 
+  /**
+   * The full-repository commits whose public counterpart is the public commit `sha`. A commit that
+   * touched only private paths shares its parent's public commit, so it is left out: what belongs
+   * to it, such as a status, stays with the members.
+   */
+  fullShas(sha: string): string[] {
+    if (!/^[0-9a-f]{40}$/.test(sha)) {
+      return [];
+    }
+    const { memo } = this.storage;
+    return memo.sources(sha).filter((source) => {
+      const object = this.objects.read(source);
+      return (
+        object?.type === "commit" &&
+        parseCommit(object.content).parents.every((parent) => memo.getCommit(parent) !== sha)
+      );
+    });
+  }
+
   refs(view: View): Ref[] {
     const refs: Ref[] = [];
     for (const ref of this.storage.refs.list()) {

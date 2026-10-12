@@ -93,6 +93,29 @@ export interface Commit {
   author: Person;
   committer: Person;
   message: string;
+  /** The combined status; only the commit list sends it. */
+  status?: CombinedState;
+}
+
+export type StatusState = "pending" | "success" | "failure" | "error";
+
+/** Any failure or error fails a commit, then any pending; null when it has no statuses. */
+export type CombinedState = "pending" | "success" | "failure" | null;
+
+export interface CommitStatus {
+  context: string;
+  state: StatusState;
+  description: string;
+  target_url: string | null;
+  creator: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+export interface CombinedStatus {
+  sha: string;
+  state: CombinedState;
+  statuses: CommitStatus[];
 }
 
 export interface FileDiff {

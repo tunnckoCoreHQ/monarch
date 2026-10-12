@@ -51,6 +51,11 @@ Pull requests
   wgw pr view <n> | diff <n> | merge <n> | close <n> | reopen <n> | summary <n>
   wgw pr comment <n> [--body <text>]   reads stdin without --body
 
+Commit statuses
+  wgw status set <sha> <pending|success|failure|error> [--context <name>] [--description <text>]
+                 [--url <https url>]    posting a context again replaces it; context defaults to default
+  wgw status list <sha> [--json]       each context and the combined state
+
 Environments and secrets
   wgw env list | env create <name> [--kind production|staging|preview|development] | env delete <name>
   wgw secret set <NAME> [--env <name>] [--plain] [<value>]   (reads stdin without a value)
@@ -130,6 +135,8 @@ const VALUE_FLAGS = new Set([
   "scopes",
   "days",
   "role",
+  "context",
+  "url",
 ]);
 
 /** A value flag takes the next argument as it is, so `--body "- item"` keeps its text. */
@@ -424,6 +431,9 @@ async function main() {
     }
     case "pr": {
       return pr(args, flags);
+    }
+    case "status": {
+      return status(args, flags);
     }
     case "env": {
       return env(args, flags);
@@ -735,6 +745,46 @@ async function pr([action, number], flags) {
       // Only summary is left; the checks at the top allow no other action.
       console.log((await call("POST", `${root}/${number}/summary`)).summary);
     }
+  }
+}
+
+const STATES = new Set(["pending", "success", "failure", "error"]);
+
+async function status([action, sha, state], flags) {
+  if (action === "set") {
+    const usage =
+      "wgw status set <sha> <pending|success|failure|error> [--context <name>] [--description <text>] [--url <https url>]";
+    required(sha, usage);
+    if (!STATES.has(required(state, usage))) {
+      fail(`state must be pending, success, failure, or error; got ${state}`);
+    }
+  } else if (action === "list") {
+    required(sha, "wgw status list <sha> [--json]");
+  } else {
+    fail("usage: wgw status set|list");
+  }
+  if (!/^[0-9a-fA-F]{40}$/.test(sha)) {
+    fail(`expected a full 40-character commit sha, got ${sha}; try $(git rev-parse HEAD)`);
+  }
+  const path = `${base(flags)}/statuses/${sha}`;
+  if (action === "set") {
+    const posted = await call("POST", path, {
+      state,
+      context: flags.context,
+      description: flags.description,
+      target_url: flags.url,
+    });
+    console.log(`${posted.state}  ${posted.context}  ${sha.slice(0, 7)}`);
+    return;
+  }
+  const combined = await call("GET", path);
+  if (flags.json) {
+    return print(combined);
+  }
+  console.log(`${sha.slice(0, 7)}  ${combined.state ?? "no statuses"}`);
+  for (const item of combined.statuses) {
+    const details = [item.description, item.target_url].filter(Boolean).join("  ");
+    console.log(`  ${item.state.padEnd(8)} ${item.context}${details ? `  ${details}` : ""}`);
   }
 }
 

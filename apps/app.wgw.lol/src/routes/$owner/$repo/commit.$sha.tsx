@@ -2,15 +2,24 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { DiffView } from "~/components/diff";
 import { useRepo } from "~/components/repo";
-import { Kicker, Ledger, LedgerRow, Page, Pending, RouteError } from "~/components/site";
-import { api, ago, type Commit, type FileDiff } from "~/lib/api";
+import {
+  Checks,
+  Kicker,
+  Ledger,
+  LedgerRow,
+  Page,
+  Pending,
+  RouteError,
+  StatusBadge,
+} from "~/components/site";
+import { api, ago, type CombinedStatus, type Commit, type FileDiff } from "~/lib/api";
 import { pageTitle } from "~/lib/utils";
 
 const DATE = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
 export const Route = createFileRoute("/$owner/$repo/commit/$sha")({
   loader: ({ params }) =>
-    api<{ commit: Commit; files: FileDiff[] }>(
+    api<{ commit: Commit; files: FileDiff[]; status: CombinedStatus }>(
       `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}/commits/${params.sha}`,
     ),
   head: ({ params, loaderData }) => ({
@@ -35,7 +44,7 @@ export const Route = createFileRoute("/$owner/$repo/commit/$sha")({
 
 function CommitView() {
   const repo = useRepo();
-  const { commit, files } = Route.useLoaderData();
+  const { commit, files, status } = Route.useLoaderData();
   const [subject, ...rest] = commit.message.split("\n");
   const body = rest.join("\n").trim();
   const parents =
@@ -59,7 +68,10 @@ function CommitView() {
   return (
     <Page className="flex flex-col gap-8">
       <header className="min-w-0">
-        <Kicker>commit {commit.sha.slice(0, 7)}</Kicker>
+        <div className="flex items-center gap-3">
+          <Kicker>commit {commit.sha.slice(0, 7)}</Kicker>
+          <StatusBadge state={status.state} />
+        </div>
         <h2 className="mt-3 text-3xl leading-tight font-black tracking-tight text-balance wrap-anywhere md:text-4xl">
           {subject}
         </h2>
@@ -79,6 +91,7 @@ function CommitView() {
         </LedgerRow>
         <LedgerRow term="parents">{parents}</LedgerRow>
       </Ledger>
+      {status.statuses.length === 0 ? null : <Checks status={status} className="border" />}
       <DiffView files={files} />
     </Page>
   );

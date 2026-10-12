@@ -32,6 +32,10 @@ const REF = z
   .string()
   .optional()
   .describe("Branch, tag, or commit SHA. Defaults to the default branch.");
+const SHA = z
+  .string()
+  .regex(/^[0-9a-fA-F]{40}$/)
+  .describe("Full 40-character commit SHA");
 const NUMBER = z.number().int().positive().describe("Pull request number");
 const READ_ONLY = { readOnlyHint: true };
 
@@ -193,7 +197,7 @@ function readTools(server: McpServer, api: Api): void {
     "get_pull",
     {
       description:
-        "Get a pull request with its commits, changed files, mergeability, and the unified diff.",
+        "Get a pull request with its commits, changed files, mergeability, the statuses of its head commit, and the unified diff.",
       inputSchema: { ...REPO, number: NUMBER },
       annotations: READ_ONLY,
     },
@@ -217,6 +221,16 @@ function readTools(server: McpServer, api: Api): void {
         ],
       };
     },
+  );
+  server.registerTool(
+    "list_statuses",
+    {
+      description:
+        "List the statuses CI runners and agents posted on a commit, one per context, with the combined state: failure when any failed or errored, else pending when any is pending, else success.",
+      inputSchema: { ...REPO, sha: SHA },
+      annotations: READ_ONLY,
+    },
+    (args) => result(api.get(`${repoPath(args)}/statuses/${args.sha}`)),
   );
   server.registerTool(
     "get_git_token",
@@ -355,6 +369,35 @@ function writeTools(server: McpServer, api: Api): void {
     },
     (args) =>
       result(api.post(`${repoPath(args)}/pulls/${args.number}/merge`, { message: args.message })),
+  );
+  server.registerTool(
+    "set_status",
+    {
+      description:
+        "Post a status on a commit, such as a test run's result. Needs write access. Posting the same context again replaces it.",
+      inputSchema: {
+        ...REPO,
+        sha: SHA,
+        state: z.enum(["pending", "success", "failure", "error"]),
+        context: z
+          .string()
+          .min(1)
+          .max(100)
+          .optional()
+          .describe('What the status reports on, such as tests or lint. Defaults to "default".'),
+        description: z.string().max(140).optional().describe("One short line"),
+        target_url: z.string().optional().describe("An https:// link to the run or its log"),
+      },
+    },
+    (args) =>
+      result(
+        api.post(`${repoPath(args)}/statuses/${args.sha}`, {
+          state: args.state,
+          context: args.context,
+          description: args.description,
+          target_url: args.target_url,
+        }),
+      ),
   );
   server.registerTool(
     "pull_env",

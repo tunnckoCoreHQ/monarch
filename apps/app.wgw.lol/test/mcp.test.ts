@@ -25,6 +25,7 @@ const READ_TOOLS = [
   "list_commits",
   "list_pulls",
   "list_repos",
+  "list_statuses",
   "list_tree",
   "read_file",
   "search_code",
@@ -38,6 +39,7 @@ const WRITE_TOOLS = [
   "merge_pull",
   "open_pull",
   "pull_env",
+  "set_status",
 ];
 
 /** The Repo Durable Object calls the tests reach, over an in-memory git repository. */
@@ -54,10 +56,13 @@ function fakeStub(repo: GitRepo) {
       files: FileChange[],
       from?: string,
     ) => guard(() => repo.commitFiles(branch, expected, message, who, files, from)),
+    resolve: (view: View, rev: string) => guard(() => repo.resolve(view, rev) ?? null),
+    fullShas: (shas: string[]) => guard(() => shas.map((sha) => repo.fullShas(sha))),
   };
 }
 
 let env: Env;
+let git: GitRepo;
 
 async function connect(token?: string): Promise<Client> {
   const transport = new StreamableHTTPClientTransport(new URL("/mcp", ORIGIN), {
@@ -89,7 +94,7 @@ let bobKey: string;
 
 beforeEach(async () => {
   const db = fakeD1();
-  const git = memoryRepo();
+  git = memoryRepo();
   git.commitFiles(
     "main",
     undefined,
@@ -221,5 +226,44 @@ describe("mcp", () => {
     expect(items.map(({ name, mode }) => ({ name, mode }))).toEqual([
       { name: "run.sh", mode: "100755" },
     ]);
+  });
+
+  it("posts a status with set_status and reads it back with list_statuses", async () => {
+    const repo = { owner: "alice", name: "pub" };
+    const sha = git.resolve("full", "main")!;
+    const posted = await call(await connect(aliceKey), "set_status", {
+      ...repo,
+      sha,
+      state: "failure",
+      context: "tests",
+      description: "2 failed",
+      target_url: "https://ci.example/run/7",
+    });
+    expect(posted.failed).toBe(false);
+    expect(JSON.parse(posted.text)).toMatchObject({ context: "tests", state: "failure" });
+
+    const owner = await call(await connect(aliceKey), "list_statuses", { ...repo, sha });
+    expect(JSON.parse(owner.text)).toMatchObject({
+      sha,
+      state: "failure",
+      statuses: [{ context: "tests", description: "2 failed" }],
+    });
+    // A non-member reads the public commit; the full hash names a rewritten one.
+    const projected = git.viewSha("public", sha)!;
+    const outside = await call(await connect(), "list_statuses", { ...repo, sha: projected });
+    expect(JSON.parse(outside.text)).toMatchObject({ sha: projected, state: "failure" });
+
+    const denied = await call(await connect(bobKey), "set_status", {
+      ...repo,
+      sha,
+      state: "success",
+    });
+    expect(denied).toMatchObject({ failed: true, text: /^403 / });
+    const missing = await call(await connect(aliceKey), "set_status", {
+      ...repo,
+      sha: "a".repeat(40),
+      state: "success",
+    });
+    expect(missing).toMatchObject({ failed: true, text: /^404 / });
   });
 });

@@ -1,10 +1,17 @@
 import { getRouteApi, Link, useLocation, useRouter } from "@tanstack/react-router";
-import { Check, Copy } from "lucide-react";
+import { Check, CircleAlert, CircleCheck, CircleDot, CircleX, Copy } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
-import { ApiError, type Me } from "~/lib/api";
+import {
+  ApiError,
+  type CombinedState,
+  type CombinedStatus,
+  type Me,
+  type StatusState,
+} from "~/lib/api";
 import { cn } from "~/lib/utils";
 
 const rootRoute = getRouteApi("__root__");
@@ -183,6 +190,92 @@ export function Terminal({ children, title }: { children: string; title?: string
         {children}
       </pre>
     </div>
+  );
+}
+
+const STATUS_ICONS = {
+  success: { Icon: CircleCheck, color: "text-signal" },
+  failure: { Icon: CircleX, color: "text-destructive" },
+  error: { Icon: CircleAlert, color: "text-destructive" },
+  pending: { Icon: CircleDot, color: "text-muted-foreground" },
+} as const;
+
+/** The icon of one commit status. */
+export function StatusIcon({ state, className }: { state: StatusState; className?: string }) {
+  const { Icon, color } = STATUS_ICONS[state];
+  return <Icon role="img" aria-label={state} className={cn("size-3.5", color, className)} />;
+}
+
+const STATUS_BADGE = { success: "signal", failure: "destructive", pending: "outline" } as const;
+
+/** The combined state of a commit's statuses. Nothing when it has none. */
+export function StatusBadge({ state }: { state: CombinedState }) {
+  if (state === null) {
+    return null;
+  }
+  return (
+    <Badge variant={STATUS_BADGE[state]} title={`Checks: ${state}`}>
+      {state}
+    </Badge>
+  );
+}
+
+const STATUS_DOT = {
+  success: "bg-signal",
+  failure: "bg-destructive",
+  pending: "bg-faint",
+} as const;
+
+/** A small square in the color of the combined state. Nothing when there are no statuses. */
+export function StatusDot({ state, className }: { state: CombinedState; className?: string }) {
+  if (state === null) {
+    return null;
+  }
+  return (
+    <span
+      role="img"
+      aria-label={`checks ${state}`}
+      title={`Checks: ${state}`}
+      className={cn("inline-block size-2 shrink-0", STATUS_DOT[state], className)}
+    />
+  );
+}
+
+/** Each status of a commit, with the combined state on top. */
+export function Checks({ status, className }: { status: CombinedStatus; className?: string }) {
+  return (
+    <section aria-label="Checks" className={cn("min-w-0", className)}>
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5">
+        <p className="text-muted-foreground font-mono text-xs tracking-wider uppercase">Checks</p>
+        <StatusBadge state={status.state} />
+      </div>
+      <ul className="divide-y border-t">
+        {status.statuses.map((item) => (
+          <li key={item.context} className="flex items-start gap-2.5 px-4 py-2.5">
+            <StatusIcon state={item.state} className="mt-0.5 size-4 shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-mono text-xs font-semibold wrap-anywhere">{item.context}</p>
+              {item.description === "" ? null : (
+                <p className="text-muted-foreground mt-0.5 text-xs wrap-anywhere">
+                  {item.description}
+                </p>
+              )}
+            </div>
+            {item.target_url === null ? null : (
+              // The API takes https links only.
+              <a
+                href={item.target_url}
+                target="_blank"
+                rel="noopener noreferrer nofollow"
+                className="text-signal shrink-0 font-mono text-xs underline-offset-4 hover:underline"
+              >
+                Details
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

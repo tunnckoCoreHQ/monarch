@@ -109,6 +109,7 @@ export class Repo extends DurableObject<Env> {
       CREATE TABLE IF NOT EXISTS refs (name TEXT PRIMARY KEY, sha TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS projected_commits (sha TEXT PRIMARY KEY, projected TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS projected_commits_projected ON projected_commits (projected);
       CREATE TABLE IF NOT EXISTS projected_trees (key TEXT PRIMARY KEY, projected TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS shallow (sha TEXT PRIMARY KEY);
       CREATE TABLE IF NOT EXISTS pushes (id INTEGER PRIMARY KEY AUTOINCREMENT, run INTEGER NOT NULL, ref TEXT NOT NULL, old TEXT NOT NULL, new TEXT NOT NULL, actor_id TEXT);
@@ -236,6 +237,14 @@ export class Repo extends DurableObject<Env> {
             projected,
           );
         },
+        sources: (projected) =>
+          sql
+            .exec<{ sha: string }>(
+              "SELECT sha FROM projected_commits WHERE projected = ?",
+              projected,
+            )
+            .toArray()
+            .map((row) => row.sha),
         getTree: (key) =>
           sql
             .exec<{ projected: string }>(
@@ -848,6 +857,14 @@ export class Repo extends DurableObject<Env> {
    */
   publicShas(shas: string[]) {
     return guard(() => shas.map((sha) => this.repo.viewSha("public", sha) ?? null));
+  }
+
+  /**
+   * The full-repository commits behind each public commit. Statuses store full-repository hashes;
+   * a non-member asks with the public view's hash.
+   */
+  fullShas(shas: string[]) {
+    return guard(() => shas.map((sha) => this.repo.fullShas(sha)));
   }
 
   merge(base: string, head: string, message: string, person: Person) {

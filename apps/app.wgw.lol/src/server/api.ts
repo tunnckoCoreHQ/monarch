@@ -515,25 +515,212 @@ api.get("/repos/:owner/:name/raw", async (c) => {
   });
 });
 
+// Commit statuses: CI runners and agents post a state per context on a commit.
+
+const STATUS_STATES = new Set(["pending", "success", "failure", "error"]);
+const FULL_SHA = /^[0-9a-f]{40}$/;
+
+type StatusState = "pending" | "success" | "failure" | "error";
+
+interface StatusRow {
+  sha: string;
+  context: string;
+  state: StatusState;
+  description: string;
+  target_url: string | null;
+  creator: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
+function statusJson({ sha: _sha, ...status }: StatusRow) {
+  return status;
+}
+
+/** One state for the commit: any failure or error fails it, then any pending; null when empty. */
+function combinedState(statuses: StatusRow[]): "pending" | "success" | "failure" | null {
+  if (statuses.length === 0) {
+    return null;
+  }
+  if (statuses.some((status) => status.state === "failure" || status.state === "error")) {
+    return "failure";
+  }
+  return statuses.some((status) => status.state === "pending") ? "pending" : "success";
+}
+
+function combinedJson(sha: string, statuses: StatusRow[]) {
+  return { sha, state: combinedState(statuses), statuses: statuses.map(statusJson) };
+}
+
+/**
+ * The statuses of each commit, by the view's hash. Rows store full-repository hashes, so the
+ * public view maps each public commit back to the full commits behind it. A commit the public
+ * view leaves out has no public hash, so its statuses never reach a non-member.
+ */
+async function viewStatuses(
+  env: Env,
+  grant: Access,
+  shas: string[],
+): Promise<Map<string, StatusRow[]>> {
+  const wanted = [...new Set(shas)].filter((sha) => FULL_SHA.test(sha));
+  const out = new Map<string, StatusRow[]>(shas.map((sha) => [sha, []]));
+  if (wanted.length === 0) {
+    return out;
+  }
+  const sources =
+    grant.view === "full"
+      ? wanted.map((sha) => [sha])
+      : unwrap(await repoStub(env, grant.repo.id).fullShas(wanted));
+  const viewSha = new Map<string, string>();
+  for (const [i, list] of sources.entries()) {
+    for (const full of list) {
+      viewSha.set(full, wanted[i]);
+    }
+  }
+  if (viewSha.size === 0) {
+    return out;
+  }
+  const rows = await env.DB.prepare(
+    "SELECT statuses.sha, statuses.context, statuses.state, statuses.description, statuses.target_url, users.handle AS creator, statuses.created_at, statuses.updated_at FROM statuses LEFT JOIN users ON users.id = statuses.creator_id WHERE statuses.repo_id = ? AND statuses.sha IN (SELECT value FROM json_each(?)) ORDER BY statuses.context, statuses.updated_at DESC",
+  )
+    .bind(grant.repo.id, JSON.stringify([...viewSha.keys()]))
+    .all<StatusRow>();
+  for (const row of rows.results) {
+    const list = out.get(viewSha.get(row.sha)!)!;
+    // Several full commits can share one public commit; the newest status of a context wins.
+    if (!list.some((status) => status.context === row.context)) {
+      list.push(row);
+    }
+  }
+  return out;
+}
+
+api.get("/repos/:owner/:name/statuses/:sha", async (c) => {
+  const grant = await loadRepo(c);
+  const sha = c.req.param("sha").toLowerCase();
+  if (!FULL_SHA.test(sha)) {
+    throw new HttpError(400, "sha must be a full 40-character commit hash", "invalid_request");
+  }
+  const statuses = await viewStatuses(c.env, grant, [sha]);
+  return c.json(combinedJson(sha, statuses.get(sha) ?? []));
+});
+
+// Posting a context again replaces its state, description, and link.
+api.post("/repos/:owner/:name/statuses/:sha", async (c) => {
+  const grant = await loadRepo(c);
+  const principal = need(grant, "write");
+  const sha = c.req.param("sha").toLowerCase();
+  if (!FULL_SHA.test(sha)) {
+    throw new HttpError(400, "sha must be a full 40-character commit hash", "invalid_request");
+  }
+  const input = await readJson<{
+    state?: string;
+    context?: string;
+    description?: string;
+    target_url?: string;
+  }>(c, { state: "string", context: "string", description: "string", target_url: "string" });
+  if (input.state === undefined || !STATUS_STATES.has(input.state)) {
+    throw new HttpError(
+      400,
+      "state must be pending, success, failure, or error",
+      "invalid_request",
+    );
+  }
+  const context = (input.context ?? "default").trim();
+  if (context === "" || context.length > 100) {
+    throw new HttpError(400, "context must be 1 to 100 characters", "invalid_request");
+  }
+  const description = input.description ?? "";
+  if (description.length > 140) {
+    throw new HttpError(400, "description must be at most 140 characters", "invalid_request");
+  }
+  let targetUrl: string | null = null;
+  if (input.target_url !== undefined && input.target_url !== "") {
+    let url: URL;
+    try {
+      url = new URL(input.target_url);
+    } catch {
+      throw new HttpError(400, "target_url is not a URL", "invalid_request");
+    }
+    if (url.protocol !== "https:") {
+      throw new HttpError(400, "target_url must be an https:// URL", "invalid_request");
+    }
+    if (input.target_url.length > 2000) {
+      throw new HttpError(400, "target_url must be at most 2000 characters", "invalid_request");
+    }
+    targetUrl = url.toString();
+  }
+  const commit = unwrap(await repoStub(c.env, grant.repo.id).resolve("full", sha));
+  if (commit !== sha) {
+    throw new HttpError(
+      404,
+      `${grant.repo.owner}/${grant.repo.name} has no commit ${sha}`,
+      "not_found",
+    );
+  }
+  const at = now();
+  const row = await c.env.DB.prepare(
+    "INSERT INTO statuses (repo_id, sha, context, state, description, target_url, creator_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (repo_id, sha, context) DO UPDATE SET state = excluded.state, description = excluded.description, target_url = excluded.target_url, creator_id = excluded.creator_id, updated_at = excluded.updated_at RETURNING created_at",
+  )
+    .bind(
+      grant.repo.id,
+      sha,
+      context,
+      input.state,
+      description,
+      targetUrl,
+      principal.user.id,
+      at,
+      at,
+    )
+    .first<{ created_at: number }>();
+  return c.json(
+    {
+      context,
+      state: input.state,
+      description,
+      target_url: targetUrl,
+      creator: principal.user.handle,
+      created_at: row?.created_at ?? at,
+      updated_at: at,
+    },
+    201,
+  );
+});
+
 api.get("/repos/:owner/:name/commits", async (c) => {
   const grant = await loadRepo(c);
-  return c.json(
-    unwrap(
-      await repoStub(c.env, grant.repo.id).log(
-        grant.view,
-        refOf(c, grant),
-        limitOf(c, 30, 200),
-        c.req.query("path"),
-      ),
+  const commits = unwrap(
+    await repoStub(c.env, grant.repo.id).log(
+      grant.view,
+      refOf(c, grant),
+      limitOf(c, 30, 200),
+      c.req.query("path"),
     ),
+  );
+  const statuses = await viewStatuses(
+    c.env,
+    grant,
+    commits.map((commit) => commit.sha),
+  );
+  return c.json(
+    commits.map((commit) => ({
+      ...commit,
+      status: combinedState(statuses.get(commit.sha) ?? []),
+    })),
   );
 });
 
 api.get("/repos/:owner/:name/commits/:sha", async (c) => {
   const grant = await loadRepo(c);
-  return c.json(
-    unwrap(await repoStub(c.env, grant.repo.id).showCommit(grant.view, c.req.param("sha"))),
+  const shown = unwrap(
+    await repoStub(c.env, grant.repo.id).showCommit(grant.view, c.req.param("sha")),
   );
+  const statuses = await viewStatuses(c.env, grant, [shown.commit.sha]);
+  return c.json({
+    ...shown,
+    status: combinedJson(shown.commit.sha, statuses.get(shown.commit.sha) ?? []),
+  });
 });
 
 interface FileInput {
@@ -825,6 +1012,21 @@ async function viewPulls(env: Env, grant: Access, pulls: PullRow[]): Promise<Pul
   }));
 }
 
+/**
+ * The head commit of each pull request, in the view: the branch tip until the merge, then the
+ * tip that was merged. Null when the branch is gone.
+ */
+async function pullHeads(env: Env, grant: Access, pulls: PullRow[]): Promise<Array<string | null>> {
+  const refs = pulls.some((pull) => pull.state !== "merged")
+    ? unwrap(await repoStub(env, grant.repo.id).refs(grant.view)).refs
+    : [];
+  return pulls.map((pull) =>
+    pull.state === "merged"
+      ? pull.head_sha
+      : (refs.find((ref) => ref.name === `refs/heads/${pull.head}`)?.sha ?? null),
+  );
+}
+
 api.get("/repos/:owner/:name/pulls", async (c) => {
   const grant = await loadRepo(c);
   const state = c.req.query("state") ?? "open";
@@ -837,7 +1039,18 @@ api.get("/repos/:owner/:name/pulls", async (c) => {
           `${PULL_SELECT} WHERE pulls.repo_id = ? AND pulls.state = ? ORDER BY pulls.number DESC LIMIT 100`,
         ).bind(grant.repo.id, state);
   const rows = await viewPulls(c.env, grant, (await query.all<PullRow>()).results);
-  return c.json(rows.map((row) => pullJson(row, grant.repo, c.env.ORIGIN)));
+  const heads = await pullHeads(c.env, grant, rows);
+  const statuses = await viewStatuses(
+    c.env,
+    grant,
+    heads.filter((sha) => sha !== null),
+  );
+  return c.json(
+    rows.map((row, i) => ({
+      ...pullJson(row, grant.repo, c.env.ORIGIN),
+      status: combinedState(statuses.get(heads[i] ?? "") ?? []),
+    })),
+  );
 });
 
 api.post("/repos/:owner/:name/pulls", async (c) => {
@@ -901,7 +1114,12 @@ api.get("/repos/:owner/:name/pulls/:number", async (c) => {
     const result = await stub.compare(grant.view, pull.base_sha, pull.head_sha);
     compare = result.ok ? { ...result.value, merged: true } : { error: result.error };
   }
-  return c.json({ ...pullJson(pull, grant.repo, c.env.ORIGIN), compare });
+  const [head] = await pullHeads(c.env, grant, [pull]);
+  const status =
+    head === null
+      ? null
+      : combinedJson(head, (await viewStatuses(c.env, grant, [head])).get(head) ?? []);
+  return c.json({ ...pullJson(pull, grant.repo, c.env.ORIGIN), compare, status });
 });
 
 api.get("/repos/:owner/:name/pulls/:number/diff", async (c) => {

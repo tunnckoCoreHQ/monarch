@@ -1,6 +1,7 @@
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { Fragment } from "react";
 
+import { StatusBadge } from "~/components/site";
 import { NativeSelect } from "~/components/ui/native-select";
 import { ago, type Commit } from "~/lib/api";
 
@@ -24,7 +25,10 @@ function CommitRow({ commit, owner, repo }: { commit: Commit; owner: string; rep
       >
         {subject}
       </Link>
-      <span className="text-violet font-mono text-xs">{commit.sha.slice(0, 7)}</span>
+      <span className="flex items-center gap-2">
+        <StatusBadge state={commit.status ?? null} />
+        <span className="text-violet font-mono text-xs">{commit.sha.slice(0, 7)}</span>
+      </span>
       <p className="text-muted-foreground col-span-2 truncate font-mono text-xs">
         {commit.author.name} · {ago(commit.committer.time)}
       </p>

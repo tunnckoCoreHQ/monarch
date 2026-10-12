@@ -2,10 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 
 import { useRepo } from "~/components/repo";
-import { Empty, Page, Pending, RouteError } from "~/components/site";
+import { Empty, Page, Pending, RouteError, StatusDot } from "~/components/site";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { ago, api } from "~/lib/api";
+import { ago, api, type CombinedState } from "~/lib/api";
 import { cn, pageTitle } from "~/lib/utils";
 
 export interface Pull {
@@ -20,6 +20,8 @@ export interface Pull {
   author: string;
   created_at: number;
   updated_at: number;
+  /** The combined status of the head commit. */
+  status: CombinedState;
 }
 
 const FILTERS = ["open", "merged", "closed", "all"] as const;
@@ -106,7 +108,8 @@ function Pulls() {
                 {pull.title}
               </Link>
               <p className="text-muted-foreground col-start-2 font-mono text-xs wrap-anywhere">
-                #{pull.number} · {pull.head} → {pull.base} · @{pull.author} · {ago(pull.created_at)}
+                <StatusDot state={pull.status} className="mr-2 align-middle" />#{pull.number} ·{" "}
+                {pull.head} → {pull.base} · @{pull.author} · {ago(pull.created_at)}
               </p>
             </li>
           ))}

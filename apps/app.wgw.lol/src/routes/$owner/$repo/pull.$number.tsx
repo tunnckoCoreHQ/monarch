@@ -5,6 +5,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { DiffView } from "~/components/diff";
 import { CommitList, useRepo } from "~/components/repo";
 import {
+  Checks,
   CopyField,
   Count,
   Empty,
@@ -19,13 +20,15 @@ import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
-import { ago, api, type Commit, type FileDiff } from "~/lib/api";
+import { ago, api, type CombinedStatus, type Commit, type FileDiff } from "~/lib/api";
 import { renderMarkdown } from "~/lib/markdown";
 import { cn, pageTitle } from "~/lib/utils";
 
 import { type Pull, StateBadge } from "./pulls.index";
 
-interface PullDetail extends Pull {
+interface PullDetail extends Omit<Pull, "status"> {
+  /** The statuses of the head commit; null when the head branch is gone. */
+  status: CombinedStatus | null;
   /** Only `error` is set when a branch of the pull request is gone. */
   compare: {
     commits?: Commit[];
@@ -142,6 +145,8 @@ function PullView() {
   const commits = pull.compare?.commits ?? [];
   const files = pull.compare?.files ?? [];
   const status = mergeStatus(pull.compare);
+  const checks = pull.status !== null && pull.status.statuses.length > 0 ? pull.status : null;
+  const mergePanel = pull.state === "open" && canWrite;
 
   // Event handlers get a plain function; the request runs in the background and reports errors.
   const act = (action: Action, run: () => Promise<unknown>) => {
@@ -278,7 +283,7 @@ function PullView() {
             ) : null}
           </div>
           <aside className="flex min-w-0 flex-col gap-4">
-            {pull.state === "open" && canWrite ? (
+            {mergePanel ? (
               <section
                 aria-label="Merge"
                 className={cn(
@@ -294,6 +299,7 @@ function PullView() {
                 >
                   {status.text}
                 </p>
+                {checks === null ? null : <Checks status={checks} className="border-t" />}
                 <div className="flex flex-col gap-2 border-t p-4">
                   <Button
                     disabled={busy || pull.compare?.mergeable !== true}
@@ -323,6 +329,7 @@ function PullView() {
                 </div>
               </section>
             ) : null}
+            {checks !== null && !mergePanel ? <Checks status={checks} className="border" /> : null}
             {pull.state === "closed" && canWrite ? (
               <Button
                 variant="outline"
