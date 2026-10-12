@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { app } from "../src/server/app";
 import { findRepo, type RepoRow } from "../src/server/db";
 import type { Env } from "../src/server/env";
-import { cardHtml, cardKey, cardMeta, pageRepo } from "../src/server/og";
+import { cardHtml, cardKey, cardMeta, cardVersion, pageRepo } from "../src/server/og";
 import { fakeD1 } from "./memory";
 
 const ORIGIN = "https://app.wgw.lol";
@@ -70,10 +70,14 @@ beforeEach(async () => {
 });
 
 describe("cardKey", () => {
-  it("keys a card by repository and push time", async () => {
+  it("keys a card by repository, push time, and text", async () => {
     const repo = await addRepo("site", "public");
-    expect(cardKey(repo)).toBe(`og/repo_site/${PUSHED_AT}.png`);
-    expect(cardKey({ ...repo, pushed_at: null })).toBe("og/repo_site/0.png");
+    expect(cardKey(repo)).toBe(`og/repo_site/${cardVersion(repo)}.png`);
+    expect(cardVersion(repo).startsWith(`${PUSHED_AT}-`)).toBe(true);
+    expect(cardVersion({ ...repo, pushed_at: null }).startsWith("0-")).toBe(true);
+    // A description edit, without a push, still draws a new card.
+    expect(cardKey({ ...repo, description: "edited" })).not.toBe(cardKey(repo));
+    expect(cardKey({ ...repo })).toBe(cardKey(repo));
   });
 });
 
@@ -98,7 +102,7 @@ describe("cardMeta", () => {
     expect(cardMeta(repo, ORIGIN)).toEqual({
       "og:title": "alice/site",
       "og:description": "<b>site</b> & co",
-      "og:image": `${ORIGIN}/og/alice/site.png?v=${PUSHED_AT}`,
+      "og:image": `${ORIGIN}/og/alice/site.png?v=${cardVersion(repo)}`,
     });
     expect(cardMeta({ ...repo, description: "" }, ORIGIN)["og:description"]).toBe(
       "alice/site on wgw, git hosting on Cloudflare.",

@@ -76,9 +76,21 @@ footer {
 }
 `;
 
-/** One card per push: a push changes `pushed_at`, so the next request draws a new card. */
+/**
+ * Names the card's content: the push time plus a hash of the description and default branch, so a
+ * push or a settings edit draws a new card and gives the page a new og:image URL.
+ */
+export function cardVersion(repo: RepoRow): string {
+  // FNV-1a; the key only has to change when the text does.
+  let hash = 0x81_1c_9d_c5;
+  for (const char of `${repo.description}\0${repo.default_branch}`) {
+    hash = Math.imul(hash ^ (char.codePointAt(0) ?? 0), 0x01_00_01_93) >>> 0;
+  }
+  return `${repo.pushed_at ?? 0}-${hash.toString(36)}`;
+}
+
 export function cardKey(repo: RepoRow): string {
-  return `og/${repo.id}/${repo.pushed_at ?? 0}.png`;
+  return `og/${repo.id}/${cardVersion(repo)}.png`;
 }
 
 /** The card shows what the repository page shows everyone, plus whether `.gitprivate` has rules. */
@@ -120,8 +132,8 @@ export function cardMeta(repo: RepoRow, origin: string): Record<string, string> 
     "og:title": title,
     "og:description":
       repo.description === "" ? `${title} on wgw, git hosting on Cloudflare.` : repo.description,
-    // The push time in the URL makes crawlers fetch the new card after a push.
-    "og:image": `${origin}/og/${repo.owner}/${repo.name}.png?v=${repo.pushed_at ?? 0}`,
+    // The version in the URL makes crawlers fetch the new card after a push or an edit.
+    "og:image": `${origin}/og/${repo.owner}/${repo.name}.png?v=${cardVersion(repo)}`,
   };
 }
 
@@ -211,8 +223,17 @@ og.get("/og/:owner/:file{.+\\.png}", async (c) => {
     const privacy = unwrap(await repoStub(c.env, repo.id).privacy(repo.default_branch));
     const image = await screenshot(c.env, cardHtml(repo, privacy.rules !== ""));
     await c.env.GIT.put(key, image, { httpMetadata: { contentType: "image/png" } });
+    // A delete that ran while the card was drawn already cleared the card prefix; drop this one.
+    const still = await findRepo(c.env, repo.owner, repo.name);
+    if (still?.id !== repo.id) {
+      await c.env.GIT.delete(key);
+      throw new HttpError(404, "repository not found", "not_found");
+    }
     return png(image);
   } catch (error) {
+    if (error instanceof HttpError) {
+      throw error;
+    }
     // A crawler gets the static card now and retries the real one on its next fetch.
     console.error(error);
     return c.redirect(`${c.env.ORIGIN}${FALLBACK}`, 302);
