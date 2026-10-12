@@ -19,6 +19,8 @@ minimumReleaseAgeExclude:
   - "@astrojs/cloudflare@15.0.0-beta.0"
   - astro@7.4.0-beta.0
   - cf@1.0.0-beta.10
+  - cf@1.0.0-beta.14
+  - "@cloudflare/vite-plugin@2.0.0-beta.sha-91c870c02"
   - "@turbo/darwin-64@2.11.7"
   - "@turbo/darwin-arm64@2.11.7"
   - "@turbo/linux-64@2.11.7"
@@ -64,6 +66,8 @@ catalogs:
     valibot: ^1.5.0
     '@standard-schema/spec': ^1.1.0
     badgen: 3.3.2
+    '@modelcontextprotocol/sdk': ^1.32.1
+    '@cloudflare/puppeteer': ^1.4.0
   types:
     "@cloudflare/workers-types": 5.20260928.1
     "@types/bun": ^1.4.2
@@ -75,6 +79,10 @@ catalogs:
     "@scure/base": 2.4.0
     "@scure/bip32": 2.4.0
     "@scure/btc-signer": 2.4.1
+  # Newer cf and vite-plugin builds with the Artifacts, Secrets Store, and Browser bindings.
+  cloudflare-next:
+    cf: 1.0.0-beta.14
+    "@cloudflare/vite-plugin": 2.0.0-beta.sha-91c870c02
   better-auth:
     auth: 1.7.0-rc.4
     "@better-auth/cimd": 1.7.0-rc.4
