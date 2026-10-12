@@ -44,7 +44,7 @@ A command picks its repository in this order: the `owner/repo` argument of `repo
 ```sh
 wgw help                             # every command and flag
 wgw whoami                           # the account behind the key
-wgw logout                           # forget the stored key
+wgw logout                           # revoke the stored key and delete it
 wgw version
 wgw repo list [owner]
 wgw repo view owner/repo             # status, branches, clone URL
@@ -83,7 +83,7 @@ wgw repo create demo                 # public; add --private for a private repos
 git remote add wgw https://app.wgw.lol/<you>/demo.git
 git push wgw main
 
-wgw clone owner/repo                 # members get private paths too
+wgw clone owner/repo                 # sends your key; members get private paths too
 ```
 
 Without the CLI:
@@ -92,7 +92,7 @@ Without the CLI:
 git -c http.proactiveAuth=basic clone "https://x:${WGW_TOKEN}@app.wgw.lol/owner/repo.git"
 ```
 
-Use `http.proactiveAuth=basic`. Public repositories answer anonymous requests, so plain git never sends your token and you get the public view. `wgw login` and `wgw setup-git` set it for app.wgw.lol for you.
+Use `http.proactiveAuth=basic`. Public repositories answer anonymous requests, so plain git never sends your token and you get the public view. `wgw login` and `wgw setup-git` set it for app.wgw.lol for you. `wgw clone` sends the key from `WGW_TOKEN` or `wgw login` for the clone only and writes no credentials into the clone, so run `wgw setup-git` once before you fetch or push in it with plain git.
 
 Supported: clone, fetch, pull, push, force push, shallow clones and deeper fetches (`--depth`, `--unshallow`), tags, branch deletes, atomic pushes. Partial clones (`--filter`) are not. When the branch moved after your fetch, the push fails with `fetch first`.
 

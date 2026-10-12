@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // wgw: the command line for app.wgw.lol. One file, no dependencies, Node 20+ or Bun.
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -18,7 +18,8 @@ const HELP = `wgw: git hosting for people and agents at ${HOST}
 Sign-in
   wgw login                      approve this terminal in the browser; stores an API key
   wgw login --token <key>        store an existing key (or set WGW_TOKEN)
-  wgw logout | wgw whoami
+  wgw logout                     revoke the stored key and delete the config file
+  wgw whoami
   wgw setup-git                  make plain git use the stored key for ${new URL(HOST).host}
 
 Repositories
@@ -27,7 +28,8 @@ Repositories
   wgw repo list [owner]          wgw repo view [owner/name] [--json]   shows status
   wgw repo fork [owner/name] [--name <new>]
   wgw repo delete <owner/name> --yes
-  wgw clone <owner/name> [dir]   members get the private paths too
+  wgw clone <owner/name> [dir]   sends the key, so members get the private paths too. Later
+                                 git fetch and push in the clone need wgw setup-git
 
 Direct Artifacts access
   wgw repo token [owner/name] [--write] [--json]   a 1-hour token for the Artifacts git remote
@@ -178,6 +180,20 @@ function parseArgs(argv) {
   return { positional, flags };
 }
 
+/** The message of an API error body, or the body as it is when it is not JSON. */
+function errorMessage(text) {
+  try {
+    return JSON.parse(text).message ?? text;
+  } catch {
+    return text;
+  }
+}
+
+/** The status and message of a failed API response, as one line. */
+async function failedWith(res) {
+  return `${res.status} ${errorMessage(await res.text())}`;
+}
+
 /**
  * `raw: true` returns the body as text; `raw: "bytes"` returns it as a Buffer. `hint` maps a
  * failed status and message to a hint, or to undefined for none.
@@ -199,12 +215,7 @@ async function call(method, path, body, { raw = false, auth = true, hint } = {})
   }
   const text = await res.text();
   if (!res.ok) {
-    let message = text;
-    try {
-      message = JSON.parse(text).message ?? text;
-    } catch {
-      // The body is not JSON; show it as it is.
-    }
+    const message = errorMessage(text);
     let note = hint?.(res.status, message);
     if (note === undefined && res.status === 401) {
       note =
@@ -264,30 +275,58 @@ function print(value) {
   console.log(typeof value === "string" ? value : JSON.stringify(value, null, 2));
 }
 
+/** How long ago a Unix time in seconds was, rounded down, like the web app shows it. */
 function ago(seconds) {
-  const diff = Date.now() / 1000 - seconds;
-  if (diff < 3600) {
-    return `${Math.max(1, Math.round(diff / 60))}m ago`;
+  const diff = Math.max(0, Date.now() / 1000 - seconds);
+  const units = [
+    [31_536_000, "y"],
+    [2_592_000, "mo"],
+    [86_400, "d"],
+    [3600, "h"],
+    [60, "m"],
+  ];
+  for (const [size, label] of units) {
+    if (diff >= size) {
+      return `${Math.floor(diff / size)}${label} ago`;
+    }
   }
-  if (diff < 86400) {
-    return `${Math.round(diff / 3600)}h ago`;
-  }
-  return `${Math.round(diff / 86400)}d ago`;
+  return "just now";
+}
+
+/**
+ * The git credential helper that runs `wgw git-credential`, which answers with WGW_TOKEN or the
+ * stored key. The runtime goes by name, not by path, so the helper still runs after a Node upgrade.
+ */
+function credentialHelper() {
+  const runtime = process.versions.bun === undefined ? "node" : "bun";
+  return `!${runtime} "${process.argv[1]}" git-credential`;
 }
 
 function setupGit() {
   const host = new URL(HOST).origin;
-  // The runtime goes by name, not by path, so the helper still runs after a Node upgrade.
-  const runtime = process.versions.bun === undefined ? "node" : "bun";
-  git([
-    "config",
-    "--global",
-    `credential.${host}.helper`,
-    `!${runtime} "${process.argv[1]}" git-credential`,
-  ]);
+  git(["config", "--global", `credential.${host}.helper`, credentialHelper()]);
   // Public repositories answer anonymous requests, so git must send the key up front for members
   // to receive private paths.
   git(["config", "--global", `http.${host}.proactiveAuth`, "basic"]);
+}
+
+/**
+ * The -c options that make one git command send the key to the host, or none without a key. The
+ * empty helper drops the helpers from git config first. Git reads the key from the helper's
+ * output, so the key stays out of the remote URL, .git/config, and the process list.
+ */
+function gitAuth() {
+  if (!token()) {
+    return [];
+  }
+  return [
+    "-c",
+    "http.proactiveAuth=basic",
+    "-c",
+    "credential.helper=",
+    "-c",
+    `credential.${new URL(HOST).origin}.helper=${credentialHelper()}`,
+  ];
 }
 
 /** Runs git. Its stderr is shown after it exits; on a failure, its first error line. */
@@ -296,7 +335,7 @@ function git(args) {
     encoding: "utf-8",
     stdio: ["inherit", "inherit", "pipe"],
   });
-  const command = args[0] === "-c" ? args[2] : args[0];
+  const command = args.find((arg, i) => arg !== "-c" && args[i - 1] !== "-c");
   if (result.status !== 0) {
     const lines = (result.stderr ?? "").trim().split("\n");
     const reason =
@@ -320,7 +359,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function login(flags) {
   if (typeof flags.token === "string") {
-    writeConfig({ ...readConfig(), token: flags.token });
+    writeConfig({ token: flags.token });
   } else {
     const code = await call(
       "POST",
@@ -340,7 +379,8 @@ async function login(flags) {
       });
       const data = await res.json();
       if (res.ok) {
-        writeConfig({ ...readConfig(), token: data.token });
+        // The id lets logout revoke the key.
+        writeConfig({ token: data.token, token_id: data.token_id });
         break;
       }
       if (data.error === "slow_down") {
@@ -354,6 +394,54 @@ async function login(flags) {
   writeConfig({ ...readConfig(), handle: me.handle });
   setupGit();
   console.log(`Signed in as @${me.handle}. Git now uses this key for ${HOST}.`);
+}
+
+/**
+ * Revokes the stored key with the key itself. A key stored by `wgw login --token` has no id, so
+ * it is found by its prefix. Returns why the revoke failed, or undefined when it worked.
+ */
+async function revokeStored(config) {
+  const headers = { accept: "application/json", authorization: `Bearer ${config.token}` };
+  try {
+    let id = config.token_id;
+    if (id === undefined) {
+      const res = await fetch(`${HOST}/api/keys`, { headers });
+      if (!res.ok) {
+        return failedWith(res);
+      }
+      id = (await res.json()).find((item) => config.token.startsWith(item.prefix))?.id;
+      if (id === undefined) {
+        return "the server does not list it, so it is revoked or expired already";
+      }
+    }
+    const res = await fetch(`${HOST}/api/keys/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers,
+    });
+    return res.ok ? undefined : failedWith(res);
+  } catch (error) {
+    return error.cause instanceof Error
+      ? `${error.message}: ${error.cause.message}`
+      : error.message;
+  }
+}
+
+/** Revokes the stored key, then deletes the config file even when the revoke fails. */
+async function logout() {
+  const config = readConfig();
+  const reason = config.token === undefined ? undefined : await revokeStored(config);
+  rmSync(CONFIG, { force: true });
+  if (config.token === undefined) {
+    console.log("No key is stored.");
+  } else if (reason === undefined) {
+    console.log(`Revoked the stored key and deleted ${CONFIG}.`);
+  } else {
+    console.error(`wgw: deleted ${CONFIG}, but could not revoke the key on the server: ${reason}.`);
+    console.error(`Revoke it at ${HOST}/settings if it still works.`);
+  }
+  if (process.env.WGW_TOKEN !== undefined) {
+    console.log("WGW_TOKEN is still set, so wgw and git keep using it. Unset it to sign out.");
+  }
 }
 
 async function main() {
@@ -372,9 +460,7 @@ async function main() {
       return login(flags);
     }
     case "logout": {
-      writeConfig({});
-      console.log("Forgot the stored key.");
-      return;
+      return logout();
     }
     case "whoami": {
       return print(await call("GET", "/api/me"));
@@ -393,7 +479,7 @@ async function main() {
     case "clone": {
       const [target, dir] = args;
       const repo = ownerName(required(target, "wgw clone <owner/name> [dir]"));
-      const cloneArgs = ["-c", "http.proactiveAuth=basic", "clone", `${HOST}/${repo}.git`];
+      const cloneArgs = [...gitAuth(), "clone", `${HOST}/${repo}.git`];
       if (dir !== undefined) {
         cloneArgs.push(dir);
       }

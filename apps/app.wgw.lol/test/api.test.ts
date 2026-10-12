@@ -320,6 +320,39 @@ describe("auth.md agents", () => {
   });
 });
 
+describe("API keys", () => {
+  it("returns the fields of the key list on create, plus the token", async () => {
+    const created = await json<Record<string, unknown>>(
+      call("POST", "/api/keys", {
+        session: "alice-session",
+        json: {
+          name: "ci",
+          scopes: ["write"],
+          repo: "Alice/priv",
+          environment: "staging",
+          expires_in_days: 7,
+        },
+      }),
+    );
+    const listed = await json<Array<Record<string, unknown>>>(
+      call("GET", "/api/keys", { session: "alice-session" }),
+    );
+    const { token, ...fields } = created;
+    expect(listed).toEqual([fields]);
+    expect(fields).toMatchObject({
+      name: "ci",
+      kind: "key",
+      scopes: ["read", "write"],
+      repo_id: "repo_priv",
+      repo: "alice/priv",
+      environment: "staging",
+      last_used_at: null,
+    });
+    expect(fields.expires_at).toBe(Number(fields.created_at) + 7 * 24 * 3600);
+    expect(String(token).startsWith(String(fields.prefix))).toBe(true);
+  });
+});
+
 describe("repository activity", () => {
   it("shows non-members only public events, with public hashes", async () => {
     const start = seed();

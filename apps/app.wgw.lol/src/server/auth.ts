@@ -237,6 +237,10 @@ export interface MintedToken {
   id: string;
   token: string;
   prefix: string;
+  /** The stored scopes, which always include read. */
+  scopes: Scope[];
+  createdAt: number;
+  expiresAt: number | null;
 }
 
 interface MintOptions {
@@ -273,6 +277,9 @@ export async function mintToken(
   const id = newId("tok");
   const prefix = token.slice(0, 12);
   const registrationId = options.registrationId ?? null;
+  const createdAt = now();
+  const expiresAt =
+    options.ttl === undefined || options.ttl === null ? null : createdAt + options.ttl;
   const result = await env.DB.prepare(
     "INSERT INTO tokens (id, user_id, kind, name, prefix, token_hash, scopes, repo_id, environment, registration_id, created_at, expires_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ? IS NULL OR EXISTS (SELECT 1 FROM agent_registrations WHERE id = ? AND status != 'revoked')",
   )
@@ -287,11 +294,11 @@ export async function mintToken(
       options.repoId ?? null,
       options.environment ?? null,
       registrationId,
-      now(),
-      options.ttl === undefined || options.ttl === null ? null : now() + options.ttl,
+      createdAt,
+      expiresAt,
       registrationId,
       registrationId,
     )
     .run();
-  return result.meta.changes === 1 ? { id, token, prefix } : null;
+  return result.meta.changes === 1 ? { id, token, prefix, scopes, createdAt, expiresAt } : null;
 }

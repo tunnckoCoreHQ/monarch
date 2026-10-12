@@ -25,6 +25,7 @@ import {
   findRepo,
   type Identity,
   publicUser,
+  type RepoRow,
   requireFound,
   roleOf,
   type Scope,
@@ -725,26 +726,41 @@ login.post("/api/keys", async (c) => {
       "invalid_request",
     );
   }
-  let repoId: string | null = null;
+  let repo: RepoRow | null = null;
   if (body.repo !== undefined && body.repo !== "") {
     const [owner, name] = body.repo.split("/");
-    const repo = await findRepo(c.env, owner ?? "", name ?? "");
+    repo = await findRepo(c.env, owner ?? "", name ?? "");
     if (repo === null || (await roleOf(c.env, repo, principal.user)) === null) {
       throw new HttpError(404, "repository not found", "not_found");
     }
-    repoId = repo.id;
   }
   const days = body.expires_in_days ?? 90;
+  const name = (body.name ?? "api key").slice(0, 80);
+  const environment = body.environment ?? null;
   const minted = await mintToken(c.env, principal.user.id, {
     kind: "key",
-    name: (body.name ?? "api key").slice(0, 80),
+    name,
     scopes,
-    repoId,
-    environment: body.environment ?? null,
+    repoId: repo?.id ?? null,
+    environment,
     ttl: days > 0 ? days * 24 * 3600 : null,
   });
+  // The fields of a key in GET /api/keys, plus the token, which is shown only here.
   return c.json(
-    { id: minted.id, token: minted.token, prefix: minted.prefix, scopes, repo_id: repoId },
+    {
+      id: minted.id,
+      name,
+      kind: "key",
+      prefix: minted.prefix,
+      scopes: minted.scopes,
+      repo_id: repo?.id ?? null,
+      repo: repo === null ? null : `${repo.owner}/${repo.name}`,
+      environment,
+      created_at: minted.createdAt,
+      expires_at: minted.expiresAt,
+      last_used_at: null,
+      token: minted.token,
+    },
     201,
   );
 });
