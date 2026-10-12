@@ -219,23 +219,21 @@ og.get("/og/:owner/:file{.+\\.png}", async (c) => {
     return png(cached.body);
   }
 
+  let image;
   try {
     const privacy = unwrap(await repoStub(c.env, repo.id).privacy(repo.default_branch));
-    const image = await screenshot(c.env, cardHtml(repo, privacy.rules !== ""));
+    image = await screenshot(c.env, cardHtml(repo, privacy.rules !== ""));
     await c.env.GIT.put(key, image, { httpMetadata: { contentType: "image/png" } });
-    // A delete that ran while the card was drawn already cleared the card prefix; drop this one.
-    const still = await findRepo(c.env, repo.owner, repo.name);
-    if (still?.id !== repo.id) {
-      await c.env.GIT.delete(key);
-      throw new HttpError(404, "repository not found", "not_found");
-    }
-    return png(image);
   } catch (error) {
-    if (error instanceof HttpError) {
-      throw error;
-    }
     // A crawler gets the static card now and retries the real one on its next fetch.
     console.error(error);
     return c.redirect(`${c.env.ORIGIN}${FALLBACK}`, 302);
   }
+  // A delete that ran while the card was drawn already cleared the card prefix; drop this one.
+  const still = await findRepo(c.env, repo.owner, repo.name);
+  if (still?.id !== repo.id) {
+    await c.env.GIT.delete(key);
+    throw new HttpError(404, "repository not found", "not_found");
+  }
+  return png(image);
 });
