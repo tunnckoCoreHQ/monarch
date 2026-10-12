@@ -180,6 +180,8 @@ export async function sendWebhooks(
   payloads: (sender: Sender | null) => Payload[],
   repoDeleted = false,
 ): Promise<void> {
+  // Bodies saved to R2 for messages that never reached the queue; nothing else would delete them.
+  const unsent = new Set<string>();
   try {
     const hooks = await env.DB.prepare(
       "SELECT webhooks.id, webhooks.url, webhooks.secret, (SELECT handle FROM users WHERE id = ?) AS sender FROM webhooks WHERE repo_id = ? AND active = 1 AND EXISTS (SELECT 1 FROM json_each(webhooks.events) WHERE value = ?)",
@@ -201,7 +203,8 @@ export async function sendWebhooks(
         const signature = await signBody(secret, body);
         let bodyKey: string | undefined;
         if (encoder.encode(body).length > INLINE_BODY_BYTES) {
-          bodyKey = `${BODY_PREFIX}${delivery}.json`;
+          bodyKey = `${BODY_PREFIX}${repo.id}/${delivery}.json`;
+          unsent.add(bodyKey);
           await env.GIT.put(bodyKey, body, { httpMetadata: { contentType: "application/json" } });
         }
         messages.push({
@@ -217,9 +220,22 @@ export async function sendWebhooks(
         });
       }
     }
-    await Promise.all(messages.map((message) => env.EVENTS.send(message)));
+    const sent = await Promise.allSettled(messages.map((message) => env.EVENTS.send(message)));
+    for (const [index, result] of sent.entries()) {
+      const key = messages[index].bodyKey;
+      if (result.status === "fulfilled" && key !== undefined) {
+        unsent.delete(key);
+      } else if (result.status === "rejected") {
+        console.error(`could not queue a ${event} webhook for ${repo.id}`, result.reason);
+      }
+    }
   } catch (error) {
     console.error(`could not queue ${event} webhooks for ${repo.id}`, error);
+  }
+  if (unsent.size > 0) {
+    await env.GIT.delete([...unsent]).catch((error: unknown) => {
+      console.error(`could not delete unsent webhook bodies for ${repo.id}`, error);
+    });
   }
 }
 

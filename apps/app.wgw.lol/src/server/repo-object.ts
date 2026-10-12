@@ -993,8 +993,13 @@ export class Repo extends DurableObject<Env> {
           console.error(`could not delete push subscription ${subscription}`, error);
         }
       }
-      // og/ holds the preview cards og.ts draws, one per push.
-      for (const prefix of [`objects/${this.repoId}/`, `og/${this.repoId}/`]) {
+      // og/ holds the preview cards og.ts draws, and webhooks/ the large webhook bodies waiting in
+      // the queue.
+      for (const prefix of [
+        `objects/${this.repoId}/`,
+        `og/${this.repoId}/`,
+        `webhooks/${this.repoId}/`,
+      ]) {
         // Each listing returns one page. Deleting it moves the next keys to the front.
         for (;;) {
           const listed = await this.env.GIT.list({ prefix });
