@@ -21,6 +21,13 @@ catalogs:
     better-auth:
       specifier: 1.7.0-rc.4
       version: 1.7.0-rc.4
+  cloudflare-next:
+    '@cloudflare/vite-plugin':
+      specifier: 2.0.0-beta.sha-91c870c02
+      version: 2.0.0-beta.sha-91c870c02
+    cf:
+      specifier: 1.0.0-beta.14
+      version: 1.0.0-beta.14
   crypto:
     '@noble/curves':
       specifier: 2.4.0
@@ -297,7 +304,7 @@ importers:
         version: 4.6.5
     devDependencies:
       '@cloudflare/vite-plugin':
-        specifier: 2.0.0-beta.sha-91c870c02
+        specifier: catalog:cloudflare-next
         version: 2.0.0-beta.sha-91c870c02(@types/node@24.19.1)(vite@8.3.2(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(workerd@1.20260930.2)
       '@tailwindcss/vite':
         specifier: 4.3.3
@@ -312,7 +319,7 @@ importers:
         specifier: ^6.0.0
         version: 6.1.2(vite@8.3.2(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       cf:
-        specifier: 1.0.0-beta.14
+        specifier: catalog:cloudflare-next
         version: 1.0.0-beta.14(@types/node@24.19.1)
       tailwindcss:
         specifier: 4.3.3
