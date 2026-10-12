@@ -907,9 +907,18 @@ api.get("/repos/:owner/:name/pulls/:number", async (c) => {
 api.get("/repos/:owner/:name/pulls/:number/diff", async (c) => {
   const grant = await loadRepo(c);
   const pull = await loadPull(c, grant);
-  const result = unwrap(
-    await repoStub(c.env, grant.repo.id).compare(grant.view, pull.base, pull.head),
-  );
+  const stub = repoStub(c.env, grant.repo.id);
+  let result: { files: FileDiff[] };
+  if (pull.state !== "open" && pull.base_sha !== null && pull.head_sha !== null) {
+    // The tips at merge time, as in the detail route, so deleted or moved branches do not matter.
+    const [shown] = await viewPulls(c.env, grant, [pull]);
+    if (shown.base_sha === null || shown.head_sha === null) {
+      throw new HttpError(404, "the pull request has no public commits", "not_found");
+    }
+    result = unwrap(await stub.compare(grant.view, shown.base_sha, shown.head_sha));
+  } else {
+    result = unwrap(await stub.compare(grant.view, pull.base, pull.head));
+  }
   return c.text(result.files.map((file: FileDiff) => file.patch).join(""), 200, {
     "content-type": "text/x-diff; charset=utf-8",
   });

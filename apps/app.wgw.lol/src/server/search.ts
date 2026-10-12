@@ -410,11 +410,21 @@ export async function searchRepo(
   query: string,
   limit: number,
 ): Promise<SearchHit[]> {
-  const filter: VectorizeVectorMetadataFilter =
-    grant.view === "full"
-      ? { repo_id: grant.repo.id }
-      : { repo_id: grant.repo.id, visibility: "public" };
-  return (await nearest(env, query, limit, filter)).map(hitOf);
+  if (grant.view === "full") {
+    return (await nearest(env, query, limit, { repo_id: grant.repo.id })).map(hitOf);
+  }
+  // A push that adds a rule leaves public chunks of the newly private paths until the reindex
+  // runs, so the rules at the default branch tip filter the hits too. Without rules, no hits.
+  const privacy = await env.REPO.getByName(grant.repo.id).privacy(grant.repo.default_branch);
+  if (!privacy.ok) {
+    return [];
+  }
+  const rules = new PrivateRules(privacy.value.rules);
+  const matches = await nearest(env, query, limit, {
+    repo_id: grant.repo.id,
+    visibility: "public",
+  });
+  return matches.map(hitOf).filter((hit) => !rules.isPrivate(hit.path));
 }
 
 /**

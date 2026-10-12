@@ -523,6 +523,43 @@ describe("merged pull requests", () => {
     const listed = await json<Pull[]>(call("GET", "/api/repos/alice/pub/pulls?state=all"));
     expect(listed.map((pull) => pull.head_sha)).toEqual([outside.head_sha]);
   });
+
+  it("keep their public files after the pull request adds a rule and its branch is gone", async () => {
+    const start = git.commitFiles("main", undefined, "start", person, [
+      { path: "src/app.ts", content: utf8("export const port = 8080;\n") },
+    ]).sha;
+    git.updateRef("refs/heads/feature", ZERO_SHA, start);
+    const head = git.commitFiles("feature", undefined, "feature", person, [
+      { path: ".gitprivate", content: utf8("secret/\n") },
+      { path: "secret/plan.md", content: utf8("launch plan\n") },
+      { path: "src/feature.ts", content: utf8("export const on = true;\n") },
+    ]).sha;
+    const alice = await key("usr_alice", {});
+    await call("POST", "/api/repos/alice/pub/pulls", {
+      token: alice,
+      json: { title: "Feature", head: "feature" },
+    });
+    expect(
+      (await call("POST", "/api/repos/alice/pub/pulls/1/merge", { token: alice })).status,
+    ).toBe(200);
+    git.updateRef("refs/heads/feature", head, ZERO_SHA);
+
+    const outside = await json<{ compare: { error?: string; files?: Array<{ path: string }> } }>(
+      call("GET", "/api/repos/alice/pub/pulls/1"),
+    );
+    expect(outside.compare.error).toBeUndefined();
+    expect(outside.compare.files?.map((file) => file.path)).toEqual([
+      ".gitprivate",
+      "src/feature.ts",
+    ]);
+    const diff = await call("GET", "/api/repos/alice/pub/pulls/1/diff");
+    expect(diff.status).toBe(200);
+    const patch = await diff.text();
+    expect(patch).toContain("src/feature.ts");
+    expect(patch).not.toContain("secret/plan.md");
+    const inside = await call("GET", "/api/repos/alice/pub/pulls/1/diff", { token: alice });
+    expect(await inside.text()).toContain("secret/plan.md");
+  });
 });
 
 describe("repository limits and inputs", () => {

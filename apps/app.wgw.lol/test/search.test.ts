@@ -314,6 +314,25 @@ describe("search", () => {
     ]);
   });
 
+  it("hides a path made private before the reindex runs", async () => {
+    commit(gits.get("repo_pub")!, { ".gitprivate": "secret/\nsrc/\n" });
+    const outsider = await searchRepo(env, await grant("repo_pub", null), "bearer token", 10);
+    expect(outsider.map((hit) => hit.path)).toEqual([".gitprivate"]);
+
+    // Rules that cannot be read show non-members nothing.
+    // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- the fake implements only the search reads.
+    env.REPO = {
+      getByName: (id: string) => ({
+        ...fakeStub(gits.get(id)!),
+        privacy: async () => ({ ok: false as const, status: 500, error: "cannot read" }),
+      }),
+    } as unknown as Env["REPO"];
+    expect(await searchRepo(env, await grant("repo_pub", null), "bearer token", 10)).toEqual([]);
+    expect(await searchRepo(env, await grant("repo_pub", "read"), "bearer token", 10)).toHaveLength(
+      3,
+    );
+  });
+
   it("searches public chunks of public repositories across repositories", async () => {
     const hits = await searchPublic(env, "bearer token", 10);
     expect(hits.map((hit) => `${hit.owner}/${hit.name}:${hit.path}`).toSorted()).toEqual([
