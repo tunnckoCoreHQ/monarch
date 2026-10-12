@@ -156,6 +156,26 @@ describe("the webhook consumer", () => {
     expect(await deliveries()).toEqual([{ id: "dlv-1", status: null, error: "fetch failed" }]);
   });
 
+  it("reads a large body from R2, and deletes it once the delivery is final", async () => {
+    const stored = new Map([["webhooks/dlv-1.json", '{"big":true}']]);
+    // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- the consumer calls only get and delete.
+    env.GIT = {
+      get: async (key: string) =>
+        stored.has(key) ? { text: async () => stored.get(key) ?? "" } : null,
+      delete: async (key: string) => {
+        stored.delete(key);
+      },
+    } as unknown as R2Bucket;
+    const fetch = answer(503);
+    const large = webhookMessage({ body: "", bodyKey: "webhooks/dlv-1.json" });
+    // A retry keeps the body; the fourth attempt is the last, so it clears it.
+    expect((await consume(large, 1)).retry).toHaveBeenCalled();
+    expect(stored.has("webhooks/dlv-1.json")).toBe(true);
+    expect(fetch.mock.calls[0][1].body).toBe('{"big":true}');
+    expect((await consume(large, 4)).ack).toHaveBeenCalled();
+    expect(stored.has("webhooks/dlv-1.json")).toBe(false);
+  });
+
   it("does not retry a 4xx or a redirect", async () => {
     for (const status of [400, 404, 410, 302]) {
       answer(status);

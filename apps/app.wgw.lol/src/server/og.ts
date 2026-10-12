@@ -230,7 +230,11 @@ og.get("/og/:owner/:file{.+\\.png}", async (c) => {
     return c.redirect(`${c.env.ORIGIN}${FALLBACK}`, 302);
   }
   // A delete that ran while the card was drawn already cleared the card prefix; drop this one.
-  const still = await findRepo(c.env, repo.owner, repo.name);
+  // A failed lookup serves the card: it was drawn for a repository that existed a moment ago.
+  const still = await findRepo(c.env, repo.owner, repo.name).catch((error: unknown) => {
+    console.error(error);
+    return repo;
+  });
   if (still?.id !== repo.id) {
     await c.env.GIT.delete(key);
     throw new HttpError(404, "repository not found", "not_found");

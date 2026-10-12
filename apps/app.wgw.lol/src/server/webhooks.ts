@@ -10,8 +10,13 @@ const KEEP_DELIVERIES = 50;
 const TIMEOUT_MS = 10_000;
 // Queue retries wait 30, 60, then 120 seconds; the consumer trigger stops after 3.
 const RETRY_BASE_SECONDS = 30;
+// The queue consumer has maxRetries: 3, so the fourth attempt is the last one.
+const MAX_ATTEMPTS = 3;
 
 const encoder = new TextEncoder();
+// A queue message holds at most 128 KiB. Larger bodies wait in R2 and the message names them.
+const INLINE_BODY_BYTES = 64 * 1024;
+const BODY_PREFIX = "webhooks/";
 
 /** One delivery to one webhook. The body is signed when it is queued, so the consumer needs no key. */
 export interface WebhookMessage {
@@ -20,7 +25,9 @@ export interface WebhookMessage {
   url: string;
   event: string;
   delivery: string;
+  /** The body, or "" when it was too large for a queue message and `bodyKey` names it in R2. */
   body: string;
+  bodyKey?: string;
   signature: string;
   /** Queued while the repository is deleted, which deletes the webhook row before delivery. */
   repoDeleted: boolean;
@@ -191,14 +198,21 @@ export async function sendWebhooks(
       for (const payload of payloads(sender)) {
         const delivery = crypto.randomUUID();
         const body = hookBody(repo, sender, delivery, payload);
+        const signature = await signBody(secret, body);
+        let bodyKey: string | undefined;
+        if (encoder.encode(body).length > INLINE_BODY_BYTES) {
+          bodyKey = `${BODY_PREFIX}${delivery}.json`;
+          await env.GIT.put(bodyKey, body, { httpMetadata: { contentType: "application/json" } });
+        }
         messages.push({
           type: "wgw.webhook",
           hookId: hook.id,
           url: hook.url,
           event,
           delivery,
-          body,
-          signature: await signBody(secret, body),
+          body: bodyKey === undefined ? body : "",
+          bodyKey,
+          signature,
           repoDeleted,
         });
       }
@@ -316,18 +330,36 @@ export async function handleWebhook(
   body: WebhookMessage,
   message: Message,
 ): Promise<void> {
+  const done = async () => {
+    message.ack();
+    if (body.bodyKey !== undefined) {
+      await env.GIT.delete(body.bodyKey);
+    }
+  };
   const hook = await env.DB.prepare("SELECT active FROM webhooks WHERE id = ?")
     .bind(body.hookId)
     .first<{ active: number }>();
   if (hook === null ? !body.repoDeleted : hook.active !== 1) {
-    message.ack();
+    await done();
     return;
   }
-  const delivery = await deliver(env, body);
-  if (delivery.status === null || delivery.status >= 500) {
+  let text = body.body;
+  if (body.bodyKey !== undefined) {
+    const stored = await env.GIT.get(body.bodyKey);
+    if (stored === null) {
+      console.error(`webhook body ${body.bodyKey} is gone; delivery ${body.delivery} dropped`);
+      message.ack();
+      return;
+    }
+    text = await stored.text();
+  }
+  const delivery = await deliver(env, { ...body, body: text });
+  const retry = delivery.status === null || delivery.status >= 500;
+  // On the last attempt the body in R2 goes too, whatever the result.
+  if (retry && message.attempts <= MAX_ATTEMPTS) {
     message.retry({ delaySeconds: RETRY_BASE_SECONDS * 2 ** (message.attempts - 1) });
   } else {
-    message.ack();
+    await done();
   }
 }
 
