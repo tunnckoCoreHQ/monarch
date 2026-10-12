@@ -158,6 +158,11 @@ describe("sign-in return address", () => {
     "https://evil.example/",
     "javascript:alert(1)",
     "\\\\evil.example",
+    "https://app.wgw.lol//evil.example",
+    "///evil.example",
+    "/%2F%2Fevil.example",
+    "/\\\\evil.example",
+    "/%5Cevil.example",
   ];
 
   it("keeps only addresses on this origin", () => {
@@ -166,8 +171,8 @@ describe("sign-in return address", () => {
     }
     expect(returnPath(undefined, ORIGIN)).toBe("/");
     expect(returnPath("/alice/pub?tab=code#readme", ORIGIN)).toBe("/alice/pub?tab=code#readme");
-    // An encoded backslash stays encoded, so the browser reads it as part of a path here.
-    expect(returnPath("/%5Cevil.example", ORIGIN)).toBe("/%5Cevil.example");
+    expect(returnPath("https://app.wgw.lol/alice/pub", ORIGIN)).toBe("/alice/pub");
+    expect(returnPath("/alice//pub", ORIGIN)).toBe("/alice//pub");
   });
 
   it("stores / for a sign-in that would leave the origin", async () => {
@@ -259,6 +264,43 @@ describe("auth.md agents", () => {
     expect((await call("DELETE", path, { session: "alice-session" })).status).toBe(200);
     await refused(agent);
     expect((await call("DELETE", path, { session: "alice-session" })).status).toBe(404);
+  });
+
+  it("gives a grant that races a revoke no live token", async () => {
+    const agent = await claimed();
+    const path = `/api/agents/${agent.registration_id}`;
+    expect((await call("DELETE", path, { session: "alice-session" })).status).toBe(200);
+    // The grant read the registration before the revoke and mints after it.
+    const late = await mintToken(env, "usr_alice", {
+      kind: "agent",
+      name: "late",
+      scopes: ["write"],
+      ttl: 3600,
+      registrationId: agent.registration_id,
+    });
+    expect(late).toBeNull();
+    // A token the old insert stored after the revoke is refused too.
+    await env.DB.prepare(
+      "INSERT INTO tokens (id, user_id, kind, name, prefix, token_hash, scopes, registration_id, created_at) VALUES ('tok_late', 'usr_alice', 'agent', 'late', 'wgw_at_late', ?, 'read write', ?, 0)",
+    )
+      .bind(await sha256("wgw_at_late"), agent.registration_id)
+      .run();
+    expect((await call("GET", "/api/me", { token: "wgw_at_late" })).status).toBe(401);
+  });
+
+  it("finishes a key revoke that stopped before the registration", async () => {
+    const agent = await claimed();
+    const keys = await json<Array<{ id: string; kind: string }>>(
+      call("GET", "/api/keys", { session: "alice-session" }),
+    );
+    const token = keys.find((item) => item.kind === "agent")!;
+    // The token is revoked and the registration is not, as after a failed second call.
+    await env.DB.prepare("UPDATE tokens SET revoked_at = 1 WHERE id = ?").bind(token.id).run();
+    const revoke = () => call("DELETE", `/api/keys/${token.id}`, { session: "alice-session" });
+    expect((await revoke()).status).toBe(200);
+    expect((await revoke()).status).toBe(404);
+    await refused(agent);
+    expect(await json(call("GET", "/api/agents", { session: "alice-session" }))).toEqual([]);
   });
 });
 

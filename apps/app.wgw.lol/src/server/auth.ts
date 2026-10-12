@@ -111,8 +111,9 @@ export async function authenticate(c: AppContext, { cookie }: { cookie: boolean 
   c.set("pendingUser", null);
   const secret = credential(c.req.header("authorization"));
   if (secret !== undefined && secret !== "") {
+    // An agent token dies with its registration, even when a grant minted it after the revoke.
     const row = await c.env.DB.prepare(
-      "SELECT id, user_id, scopes, repo_id, environment, expires_at, last_used_at FROM tokens WHERE token_hash = ? AND revoked_at IS NULL",
+      "SELECT tokens.id, tokens.user_id, tokens.scopes, tokens.repo_id, tokens.environment, tokens.expires_at, tokens.last_used_at FROM tokens LEFT JOIN agent_registrations ON agent_registrations.id = tokens.registration_id WHERE tokens.token_hash = ? AND tokens.revoked_at IS NULL AND (tokens.registration_id IS NULL OR agent_registrations.status != 'revoked')",
     )
       .bind(await sha256(secret))
       .first<TokenRow>();
@@ -238,25 +239,42 @@ export interface MintedToken {
   prefix: string;
 }
 
+interface MintOptions {
+  kind: "key" | "agent";
+  name: string;
+  scopes: Scope[];
+  repoId?: string | null;
+  environment?: string | null;
+  ttl?: number | null;
+  registrationId?: string;
+}
+
+/**
+ * Stores a new token. A token for an auth.md registration is stored only while the registration
+ * is not revoked, so a grant that read the registration before a revoke gets null instead.
+ */
 export async function mintToken(
   env: Env,
   userId: string,
-  options: {
-    kind: "key" | "agent";
-    name: string;
-    scopes: Scope[];
-    repoId?: string | null;
-    environment?: string | null;
-    ttl?: number | null;
-    registrationId?: string;
-  },
-): Promise<MintedToken> {
+  options: MintOptions & { registrationId: string },
+): Promise<MintedToken | null>;
+export async function mintToken(
+  env: Env,
+  userId: string,
+  options: MintOptions & { registrationId?: undefined },
+): Promise<MintedToken>;
+export async function mintToken(
+  env: Env,
+  userId: string,
+  options: MintOptions,
+): Promise<MintedToken | null> {
   const scopes = [...new Set<Scope>(["read", ...options.scopes])];
   const token = `${options.kind === "agent" ? "wgw_at" : "wgw"}_${randomToken(30)}`;
   const id = newId("tok");
   const prefix = token.slice(0, 12);
-  await env.DB.prepare(
-    "INSERT INTO tokens (id, user_id, kind, name, prefix, token_hash, scopes, repo_id, environment, registration_id, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  const registrationId = options.registrationId ?? null;
+  const result = await env.DB.prepare(
+    "INSERT INTO tokens (id, user_id, kind, name, prefix, token_hash, scopes, repo_id, environment, registration_id, created_at, expires_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE ? IS NULL OR EXISTS (SELECT 1 FROM agent_registrations WHERE id = ? AND status != 'revoked')",
   )
     .bind(
       id,
@@ -268,10 +286,12 @@ export async function mintToken(
       scopes.join(" "),
       options.repoId ?? null,
       options.environment ?? null,
-      options.registrationId ?? null,
+      registrationId,
       now(),
       options.ttl === undefined || options.ttl === null ? null : now() + options.ttl,
+      registrationId,
+      registrationId,
     )
     .run();
-  return { id, token, prefix };
+  return result.meta.changes === 1 ? { id, token, prefix } : null;
 }

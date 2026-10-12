@@ -105,18 +105,19 @@ async function startClaim(c: AppContext, registrationId: string) {
 }
 
 /**
- * Revokes a registration that `userId` claimed, and every token it holds. Each grant refuses a
- * revoked registration, so the agent cannot get new tokens with its claim token or assertion.
+ * The statements that revoke a registration that `userId` claimed, and every token it holds. Each
+ * grant refuses a revoked registration, so the agent cannot get new tokens with its claim token or
+ * assertion. Run them in one batch, which D1 applies as a transaction.
  */
-export async function revokeRegistration(env: Env, id: string, userId: string): Promise<void> {
-  await env.DB.batch([
+export function registrationRevokes(env: Env, id: string, userId: string): D1PreparedStatement[] {
+  return [
     env.DB.prepare(
       "UPDATE agent_registrations SET status = 'revoked' WHERE id = ? AND user_id = ?",
     ).bind(id, userId),
     env.DB.prepare(
       "UPDATE tokens SET revoked_at = ? WHERE registration_id = ? AND user_id = ? AND revoked_at IS NULL",
     ).bind(now(), id, userId),
-  ]);
+  ];
 }
 
 export const authmd = new Hono<AppEnv>();
@@ -378,6 +379,9 @@ authmd.post("/oauth2/token", async (c) => {
       ttl: ACCESS_TTL,
       registrationId: registration.id,
     });
+    if (access === null) {
+      return oauthError(c, "invalid_grant", "the person who claimed this agent revoked it");
+    }
     return c.json(
       {
         access_token: access.token,
@@ -428,6 +432,9 @@ authmd.post("/oauth2/token", async (c) => {
       ttl: ACCESS_TTL,
       registrationId: registration.id,
     });
+    if (access === null) {
+      return oauthError(c, "invalid_grant", "the registration is gone; register again");
+    }
     return c.json(
       {
         access_token: access.token,

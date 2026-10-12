@@ -20,7 +20,7 @@ import {
   requireUser,
   upgradeSession,
 } from "./auth";
-import { revokeRegistration } from "./authmd";
+import { registrationRevokes } from "./authmd";
 import {
   findRepo,
   type Identity,
@@ -752,22 +752,31 @@ login.post("/api/keys", async (c) => {
 login.delete("/api/keys/:id", async (c) => {
   const principal = accountPrincipal(c);
   const id = c.req.param("id");
-  const result = await c.env.DB.prepare(
-    "UPDATE tokens SET revoked_at = ? WHERE id = ? AND user_id = ? AND revoked_at IS NULL",
+  const token = await c.env.DB.prepare(
+    "SELECT tokens.revoked_at, tokens.registration_id, agent_registrations.status FROM tokens LEFT JOIN agent_registrations ON agent_registrations.id = tokens.registration_id AND agent_registrations.user_id = tokens.user_id WHERE tokens.id = ? AND tokens.user_id = ?",
   )
-    .bind(now(), id, principal.user.id)
-    .run();
-  if (result.meta.changes !== 1) {
+    .bind(id, principal.user.id)
+    .first<{ revoked_at: number | null; registration_id: string | null; status: string | null }>();
+  // A revoked agent token whose registration is still live is a revoke that failed halfway, so a
+  // retry finishes it.
+  const live =
+    token !== null &&
+    (token.revoked_at === null || (token.status !== null && token.status !== "revoked"));
+  if (!live) {
     throw new HttpError(404, "key not found", "not_found");
   }
   // An auth.md agent's token names its registration. Revoking the token revokes the registration
-  // too, so the agent cannot trade its claim token or identity assertion for new tokens.
-  const token = await c.env.DB.prepare("SELECT registration_id FROM tokens WHERE id = ?")
-    .bind(id)
-    .first<{ registration_id: string | null }>();
-  if (token !== null && token.registration_id !== null) {
-    await revokeRegistration(c.env, token.registration_id, principal.user.id);
-  }
+  // too, so the agent cannot trade its claim token or identity assertion for new tokens. D1 runs
+  // the batch as one transaction, so both revokes land or neither does.
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE tokens SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL").bind(
+      now(),
+      id,
+    ),
+    ...(token.registration_id === null
+      ? []
+      : registrationRevokes(c.env, token.registration_id, principal.user.id)),
+  ]);
   return c.json({ ok: true });
 });
 
@@ -794,6 +803,6 @@ login.delete("/api/agents/:id", async (c) => {
       .first(),
     "agent",
   );
-  await revokeRegistration(c.env, id, principal.user.id);
+  await c.env.DB.batch(registrationRevokes(c.env, id, principal.user.id));
   return c.json({ ok: true });
 });
