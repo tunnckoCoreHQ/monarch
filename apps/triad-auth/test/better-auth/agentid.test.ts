@@ -90,6 +90,53 @@ function agentIdServer(userinfo: () => Response) {
 
 const APP_CALLBACK = "https://app.example.com/callback";
 
+// Triad reads a stored profile envelope from D1 by user id. This stub answers
+// that single-row lookup from the memory adapter's user table.
+function memoryUserDatabase(memory: Record<string, Array<Record<string, unknown>>>): D1Database {
+  const meta = {
+    duration: 0,
+    size_after: 0,
+    rows_read: 0,
+    rows_written: 0,
+    last_row_id: 0,
+    changed_db: false,
+    changes: 0,
+  };
+
+  return {
+    prepare: () => {
+      let id: unknown;
+      const statement: D1PreparedStatement = {
+        bind: (value) => {
+          id = value;
+
+          return statement;
+        },
+        first: async <T>() => {
+          const row: unknown = memory.user?.find((user) => user.id === id) ?? null;
+
+          return row as T | null;
+        },
+        all: async () => ({ success: true, results: [], meta }),
+        raw: () => {
+          throw new Error("Unexpected raw query");
+        },
+        run: async () => ({ success: true, results: [], meta }),
+      };
+
+      return statement;
+    },
+    batch: async () => [],
+    exec: async () => ({ count: 0, duration: 0 }),
+    withSession: () => {
+      throw new Error("Unexpected session");
+    },
+    dump: () => {
+      throw new Error("Unexpected dump");
+    },
+  };
+}
+
 function createTriad() {
   const memory: Record<string, Array<Record<string, unknown>>> = {
     user: [],
@@ -112,7 +159,7 @@ function createTriad() {
       },
     ],
   };
-  const env = createEnv();
+  const env = createEnv({ DB: memoryUserDatabase(memory) });
   const auth = betterAuth({
     ...createTriadAuthOptions(env, createTriadConfiguration(env)),
     database: memoryAdapter(memory),
@@ -266,6 +313,7 @@ describe("AgentID Identity Source", () => {
       "is not JSON",
       () => new Response("<html></html>", { headers: { "content-type": "text/html" } }),
     ],
+    ["has no valid sub", () => Response.json({ email: "agent@agentmail.to", sub: 123 })],
     [
       "cannot be reached",
       () => {
@@ -372,6 +420,25 @@ describe("AgentID Identity Source", () => {
     expect(profile).not.toHaveProperty("profileOwnerEmailVerified");
   });
 
+  it("keeps the owner email verification when the same owner email arrives without one", async () => {
+    const triad = createTriad();
+    const signIn = (owner: Record<string, unknown>) =>
+      signInThroughAgentId(triad, {
+        userinfo: () => Response.json({ ...AGENT_PROFILE, ...owner }),
+      });
+    await signIn({ owner_email: "owner@example.com", owner_email_verified: true });
+    await signIn({ owner_email: "owner@example.com" });
+    const accountSub = await accountSubject(IDENTIFIER_SECRET, "agentid", AGENT_SUB);
+    const profile = await openProfileEncryptedData(
+      triad.env.ENCRYPTION_SECRETS,
+      accountSub,
+      String(triad.memory.user[0]?.encryptedData),
+    );
+
+    expect(profile.profileOwnerEmail).toBe("owner@example.com");
+    expect(profile.profileOwnerEmailVerified).toBe(true);
+  });
+
   it("sends an AgentID account back to sign in only when requested owner data is missing", async () => {
     const env = createEnv();
     const id = `acc_${"a".repeat(64)}`;
@@ -399,5 +466,37 @@ describe("AgentID Identity Source", () => {
     await expect(
       missing({ provider: "google", encryptedData: withoutOwner }, ["openid", "owner_email"]),
     ).resolves.toBe(false);
+  });
+
+  it("sends an AgentID session without owner data back to sign in before authorizing", async () => {
+    const triad = createTriad();
+    const authorize = async (cookie: string) => {
+      const query = new URLSearchParams({
+        response_type: "code",
+        client_id: "agent-app",
+        redirect_uri: APP_CALLBACK,
+        scope: "openid owner_email",
+        state: "app-state",
+        code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+        code_challenge_method: "S256",
+      });
+      const response = await triad.auth.handler(
+        new Request(`${ORIGIN}/api/auth/oauth2/authorize?${query}`, { headers: { cookie } }),
+      );
+
+      return new URL(response.headers.get("location") ?? "", ORIGIN);
+    };
+
+    const withoutOwner = await signInThroughAgentId(triad);
+    const redirected = await authorize(cookieHeader(withoutOwner.callback));
+    const withOwner = await signInThroughAgentId(triad, {
+      userinfo: () => Response.json({ ...AGENT_PROFILE, owner_email: "owner@example.com" }),
+    });
+    const authorized = await authorize(cookieHeader(withOwner.callback));
+
+    expect(`${redirected.origin}${redirected.pathname}`).toBe(`${ORIGIN}/me`);
+    expect(redirected.searchParams.get("client_id")).toBe("agent-app");
+    expect(`${authorized.origin}${authorized.pathname}`).toBe(APP_CALLBACK);
+    expect(authorized.searchParams.has("code")).toBe(true);
   });
 });

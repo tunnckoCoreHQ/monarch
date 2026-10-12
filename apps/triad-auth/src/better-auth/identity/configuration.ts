@@ -88,7 +88,8 @@ function agentidUpstreamId(profile: unknown): string {
 
 // The access token comes from Triad's own code exchange, so the userinfo
 // response is the profile. Triad does not read the ID token. A failed or
-// malformed response returns null, which Better Auth turns into an OAuth error.
+// malformed response, including one without a valid `sub`, returns null, which
+// Better Auth turns into an OAuth error.
 async function agentidUserInfo(accessToken: string | undefined) {
   if (!accessToken) {
     return null;
@@ -103,7 +104,7 @@ async function agentidUserInfo(accessToken: string | undefined) {
 
   const profile: unknown = await response.json().catch(() => undefined);
 
-  return isRecord(profile)
+  return isRecord(profile) && typeof profile.sub === "string" && OIDC_SUB_PATTERN.test(profile.sub)
     ? ({
         ...profile,
         emailVerified: profile.email_verified === true,
@@ -560,6 +561,9 @@ export function createAgentIdAuthentication(env: TriadEnv) {
           handler: createAuthMiddleware(async (context) => {
             const userId = context.context.newSession?.user.id;
             const owner = ownerProfile((userId && signedInProfiles.get(userId)) || {});
+            if (userId) {
+              signedInProfiles.delete(userId);
+            }
             if (!userId || Object.keys(owner).length === 0) {
               return;
             }
@@ -573,15 +577,14 @@ export function createAgentIdAuthentication(env: TriadEnv) {
                 where: [{ field: "id", value: userId }],
               });
               const envelope = typeof user?.encryptedData === "string" ? user.encryptedData : null;
-              const merged: CapturedProfile = {
-                ...(envelope
-                  ? await openProfileEncryptedData(env.ENCRYPTION_SECRETS, userId, envelope)
-                  : {}),
-                ...owner,
-              };
+              const stored: CapturedProfile = envelope
+                ? await openProfileEncryptedData(env.ENCRYPTION_SECRETS, userId, envelope)
+                : {};
+              const merged: CapturedProfile = { ...stored, ...owner };
               // A new owner email never keeps the verification status of the old one.
               if (
                 owner.profileOwnerEmail !== undefined &&
+                owner.profileOwnerEmail !== stored.profileOwnerEmail &&
                 owner.profileOwnerEmailVerified === undefined
               ) {
                 delete merged.profileOwnerEmailVerified;
@@ -604,7 +607,9 @@ export function createAgentIdAuthentication(env: TriadEnv) {
               }
             }
 
-            throw new Error("AgentID owner data could not be saved");
+            // The sign-in already succeeded. A later sign-in retries the merge,
+            // and the owner-data check sends the agent back until it lands.
+            context.context.logger.warn("AgentID owner data could not be saved");
           }),
         },
       ],

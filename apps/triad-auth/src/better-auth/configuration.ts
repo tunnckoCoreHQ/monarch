@@ -103,6 +103,7 @@ export function createTriadConfiguration(env: TriadEnv) {
       // An AgentID account without the owner data that the app asks for goes back
       // to the account page, where an AgentID sign-in requests the owner scopes.
       signup: {
+        page: "/me",
         shouldRedirect: ({ user, scopes }) => agentidOwnerDataMissing(env, user, scopes),
       },
       postLogin: {
