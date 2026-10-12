@@ -527,7 +527,10 @@ export const prerender = true;
           response_types: ["code"],
           token_endpoint_auth_method: "none",
           scope: requestedScope,
-          application_type: "web",
+          // Better Auth accepts http redirects only for native clients on loopback hosts.
+          application_type: ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)
+            ? "native"
+            : "web",
         }),
       });
       const body: unknown = await response.json();

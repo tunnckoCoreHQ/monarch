@@ -89,7 +89,7 @@ describe("preserved Better Auth UI wiring", () => {
   it("starts the selected provider through Better Auth DCR and social sign-in", () => {
     expect(demo).toContain("/api/auth/oauth2/register");
     expect(demo).toContain('token_endpoint_auth_method: "none"');
-    expect(demo).toContain('application_type: "web"');
+    expect(demo).toContain('? "native"\n            : "web"');
     expect(demo).toContain("scope: requestedScope");
     expect(demo).toContain("authorizationRequest");
     expect(demo).toContain("/api/auth/sign-in/social");
