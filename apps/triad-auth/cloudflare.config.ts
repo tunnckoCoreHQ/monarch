@@ -38,7 +38,8 @@ export default defineConfig(({ mode }) => {
       },
       env: {
         // Typed as string, so tests and local tools can pass any origin.
-        AUTH_ORIGIN: bindings.text<string>(`https://${host}`),
+        // Deploys use the Worker host. A local run sets AUTH_ORIGIN, for example http://localhost:4321.
+        AUTH_ORIGIN: bindings.text<string>(process.env.AUTH_ORIGIN ?? `https://${host}`),
         DB: bindings.d1(target.database),
         ASSETS: bindings.assets(),
         // The twelve secrets live on each Worker; `.env` holds local values.
