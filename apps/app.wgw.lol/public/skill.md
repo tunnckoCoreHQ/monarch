@@ -23,7 +23,7 @@ The clone URL stays on app.wgw.lol. wgw checks who you are and forwards git to t
 
 Pick the first option that fits.
 
-1. **A person gives you a key.** They create one at `https://app.wgw.lol/settings`, or run `wgw key create my-agent --scopes read,write --repo owner/repo`. Keys can be limited to one repository and one environment. A limited key cannot create, list, or revoke keys. A key limited to one environment reads repository values as part of that environment but cannot change them. It also cannot change the visibility, collaborators, or environments, or delete the repository.
+1. **A person gives you a key.** They create one at `https://app.wgw.lol/settings`, or run `wgw key create my-agent --scopes read,write --repo owner/repo`. Keys can be limited to one repository and one environment. A limited key cannot create, list, or revoke keys. A key limited to one environment reads repository values as part of that environment but cannot change them. It also cannot change the visibility, collaborators, environments, or webhooks, or delete the repository.
 2. **The CLI device flow.** Run `wgw login`. It prints a URL and a code. A signed-in person (or an agent with an AgentID session) approves it. The CLI stores a 90-day key in `~/.config/wgw/config.json`.
 3. **AgentID.** If you own an AgentMail inbox, open `https://app.wgw.lol/auth/agentid/start?login_hint=<inbox>` in your browser. You get an agent account and a browser session; then approve a `wgw login` code with it.
 4. **auth.md.** Register yourself with no prior credentials. Follow `https://app.wgw.lol/auth.md`. Before a person claims you, you can read public repositories. After the claim, you act as that person with `read write` scopes for one hour per access token.
@@ -277,7 +277,42 @@ curl -s "https://app.wgw.lol/api/repos/OWNER/REPO/search?q=where+tokens+are+chec
 - The index skips binary files, files over 256 KB, lockfiles, and minified files.
 - `limit` (`--limit` in the CLI) is 1 to 50. The default is 10. Any other value is a 400.
 
-## 13. API reference
+## 13. Webhooks
+
+```sh
+wgw hook create https://example.com/wgw --events push,pull_request   # prints the signing secret once
+wgw hook list
+wgw hook ping hook_…                                                  # delivers now, prints the status
+wgw hook deliveries hook_…                                            # the last 50
+wgw hook delete hook_…
+```
+
+Admins manage webhooks. A key limited to one environment cannot, and a key limited to one repository manages only that repository's webhooks. The URL must be `https://` and must not point at app.wgw.lol, localhost, or a private address. Send `secret` to pick the signing secret; without it, the app makes one from 32 random bytes. The create response is the only place it shows.
+
+Events:
+
+- `push`: one delivery per ref update, with `ref`, `before`, `after`, and `pusher` (`{"handle"}`, or null for a direct Artifacts push nobody claimed).
+- `pull_request`: `action` is `opened`, `closed`, `reopened`, or `merged`, plus `pull_request`.
+- `pull_request_comment`: `action` is `created`, plus `comment` and `pull_request`.
+- `repository`: `action` is `visibility_changed` (with `changes.visibility.from`) or `deleted`.
+
+Every body also has `repository` (`owner`, `name`, `visibility`), `sender` (`{"handle"}`, when known), and `delivery`. Webhooks get the full repository, so hashes and pull requests are the members' view. Secret values are never sent. `POST …/hooks/:id/ping` sends a `ping` with the webhook's `hook` settings.
+
+Each request is a `POST` with `X-WGW-Event`, `X-WGW-Delivery` (the same on retries), and `X-WGW-Signature-256: sha256=<hex HMAC-SHA256 of the body>`. The app waits 10 seconds for an answer and does not follow redirects. A 5xx or no answer is retried up to 3 times, after 30, 60, and 120 seconds. Any other status is final. Check the signature over the raw body before you parse it:
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+function verify(secret, rawBody, header) {
+  const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
+  return (
+    header?.length === expected.length &&
+    timingSafeEqual(Buffer.from(header), Buffer.from(expected))
+  );
+}
+```
+
+## 14. API reference
 
 All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", "message": "<text>"}`. A JSON field of the wrong type is a 400 that names the field.
 
@@ -307,15 +342,18 @@ All paths start with `https://app.wgw.lol/api`. Errors are `{"error": "<code>", 
 | `PUT` · `DELETE /repos/:owner/:repo/variables/:NAME` | Set (`value`, `secret`, `environment`) or delete |
 | `GET /repos/:owner/:repo/env?environment=&format=dotenv` | Opened values for one environment; 404 for an unknown one |
 | `GET /repos/:owner/:repo/events` | Pushes, merges, secret reads |
+| `GET` · `POST /repos/:owner/:repo/hooks` | Webhooks · create one (`url`, `events`, `secret`, `active`); the response has the secret |
+| `PATCH` · `DELETE /repos/:owner/:repo/hooks/:id` | Update `url`, `events`, `secret`, `active` · delete |
+| `GET /repos/:owner/:repo/hooks/:id/deliveries` · `POST …/hooks/:id/ping` | The last 50 deliveries · send a `ping` now and return its result |
 | `GET` · `POST /keys` · `DELETE /keys/:id` | API keys (`name`, `scopes`, `repo`, `environment`, `expires_in_days`); revoking an unknown key is a 404 |
 | `POST /device/code` · `POST /device/token` | CLI device flow |
 | `GET /agents` · `DELETE /agents/:id` | auth.md agents you claimed · revoke one and its tokens |
 
 Repository JSON has `status` (`ready`, `importing`, `forking`, or `failed`), `status_detail` (why it failed, or null), and `storage` (`artifacts`).
 
-Scopes: `read` (private repositories you can see; every key has it), `write` (push, pull requests, commits, commit statuses, write git tokens), `admin` (settings, collaborators, environments, keys), `secrets` (open secret values).
+Scopes: `read` (private repositories you can see; every key has it), `write` (push, pull requests, commits, commit statuses, write git tokens), `admin` (settings, collaborators, environments, webhooks, keys), `secrets` (open secret values).
 
-## 14. Limits
+## 15. Limits
 
 - Artifacts stores up to 1 GB per repository and 32 MB per file.
 - Artifacts allows 2,000 git requests per 10 seconds per repository.

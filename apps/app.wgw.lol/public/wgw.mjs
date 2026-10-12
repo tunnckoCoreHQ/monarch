@@ -67,6 +67,11 @@ Access
   wgw key list | key revoke <id>
   wgw collab list | collab add <handle> [--role read|write|admin] | collab remove <handle>
 
+Webhooks
+  wgw hook list | hook create <https url> [--events push,pull_request,pull_request_comment,repository]
+      --events defaults to push. create prints the signing secret once.
+  wgw hook ping <id> | hook deliveries <id> | hook delete <id>
+
 Other
   wgw api <METHOD> <path> [json]   raw API call, prints the response
   wgw version | wgw --version
@@ -137,6 +142,7 @@ const VALUE_FLAGS = new Set([
   "role",
   "context",
   "url",
+  "events",
 ]);
 
 /** A value flag takes the next argument as it is, so `--body "- item"` keeps its text. */
@@ -446,6 +452,9 @@ async function main() {
     }
     case "collab": {
       return collab(args, flags);
+    }
+    case "hook": {
+      return hook(args, flags);
     }
     case "api": {
       const usage = "wgw api <METHOD> <path> [json]";
@@ -913,6 +922,55 @@ async function collab([action, handle], flags) {
   }
   await call("DELETE", `${root}/${encodeURIComponent(handle)}`);
   console.log(`Removed @${handle}`);
+}
+
+function showDelivery(item) {
+  const status = item.status === null ? "no response" : String(item.status);
+  const note = item.error === null ? "" : `  ${item.error}`;
+  console.log(
+    `${item.id}  ${item.event}  ${status}  ${item.duration_ms} ms  ${ago(item.created_at)}${note}`,
+  );
+}
+
+async function hook([action, target], flags) {
+  if (action === "create") {
+    required(target, "wgw hook create <https url> [--events push,pull_request]");
+  } else if (action === "delete" || action === "ping" || action === "deliveries") {
+    required(target, `wgw hook ${action} <id>`);
+  } else if (action !== "list") {
+    fail("usage: wgw hook list|create|delete|ping|deliveries");
+  }
+  const root = `${base(flags)}/hooks`;
+  if (action === "list") {
+    for (const item of await call("GET", root)) {
+      const last =
+        item.last_delivery_at === null
+          ? "never delivered"
+          : `last ${item.last_status ?? "no response"} ${ago(item.last_delivery_at)}`;
+      console.log(
+        `${item.id}  ${item.url}  [${item.events.join(",")}]  ${item.active ? "" : "paused  "}${last}`,
+      );
+    }
+    return;
+  }
+  if (action === "create") {
+    const created = await call("POST", root, { url: target, events: flags.events?.split(",") });
+    console.log(`Created ${created.id} for ${created.url}`);
+    console.log(`Signing secret (shown once): ${created.secret}`);
+    return;
+  }
+  const path = `${root}/${encodeURIComponent(target)}`;
+  if (action === "ping") {
+    return showDelivery(await call("POST", `${path}/ping`));
+  }
+  if (action === "deliveries") {
+    for (const item of await call("GET", `${path}/deliveries`)) {
+      showDelivery(item);
+    }
+    return;
+  }
+  await call("DELETE", path);
+  console.log(`Deleted ${target}`);
 }
 
 // Any error left, like a network failure or bad JSON, prints one line instead of a stack trace.

@@ -32,6 +32,15 @@ import type { Env } from "./env";
 import type { Result } from "./result";
 import { deleteRepoIndex, enqueueIndex, searchPublic, searchRepo } from "./search";
 import { fields, HttpError, isName, NAME_RULE, newId, now, readJson } from "./util";
+import {
+  hookEvents,
+  hookSecretContext,
+  hookUrl,
+  newHookSecret,
+  pingHook,
+  sendPushHooks,
+  sendWebhooks,
+} from "./webhooks";
 
 export function repoStub(env: Env, repoId: string) {
   return env.REPO.getByName(repoId);
@@ -279,7 +288,7 @@ const repositorySettings = createMiddleware<AppEnv>(async (c, next) => {
 
 api.patch("/repos/:owner/:name", repositorySettings, async (c) => {
   const grant = await loadRepo(c);
-  need(grant, "admin");
+  const principal = need(grant, "admin");
   const input = await readJson<{
     description?: string;
     visibility?: string;
@@ -300,24 +309,35 @@ api.patch("/repos/:owner/:name", repositorySettings, async (c) => {
   await c.env.DB.prepare("UPDATE repos SET description = ?, visibility = ? WHERE id = ?")
     .bind((input.description ?? repo.description).slice(0, 400), visibility, repo.id)
     .run();
+  const updated = requireFound(await findRepoById(c.env, repo.id), "repository");
   if (visibility !== repo.visibility) {
     // Every search chunk carries the repository's visibility.
     await enqueueIndex(c.env, repo.id);
+    await sendWebhooks(c.env, updated, "repository", principal.user.id, () => [
+      { action: "visibility_changed", changes: { visibility: { from: repo.visibility } } },
+    ]);
   }
-  return c.json(
-    repoJson(requireFound(await findRepoById(c.env, repo.id), "repository"), c.env.ORIGIN),
-  );
+  return c.json(repoJson(updated, c.env.ORIGIN));
 });
 
 api.delete("/repos/:owner/:name", repositorySettings, async (c) => {
   const grant = await loadRepo(c);
-  need(grant, "admin");
+  const principal = need(grant, "admin");
   unwrap(await repoStub(c.env, grant.repo.id).destroy());
   // The rows name the vectors, so the vectors go while the rows still exist. Vectors left by a
   // failure never show: every search checks the repository in D1.
   await deleteRepoIndex(c.env, grant.repo.id).catch((error: unknown) => {
     console.error(`could not delete the search index of ${grant.repo.id}`, error);
   });
+  // Queued while the webhooks and the repository key still exist; the row delete removes both.
+  await sendWebhooks(
+    c.env,
+    grant.repo,
+    "repository",
+    principal.user.id,
+    () => [{ action: "deleted" }],
+    true,
+  );
   await c.env.DB.prepare("DELETE FROM repos WHERE id = ?").bind(grant.repo.id).run();
   return c.json({ ok: true });
 });
@@ -438,6 +458,7 @@ api.post("/repos/:owner/:name/branches", async (c) => {
     ),
   );
   await recordEvent(c.env, grant.repo.id, principal.user.id, "push", { updates: [update] });
+  await sendPushHooks(c.env, grant.repo, principal.user.id, [update]);
   return c.json(update, 201);
 });
 
@@ -450,6 +471,7 @@ api.delete("/repos/:owner/:name/branches/*", async (c) => {
   }
   const { update } = unwrap(await repoStub(c.env, grant.repo.id).deleteBranch(branch));
   await recordEvent(c.env, grant.repo.id, principal.user.id, "push", { updates: [update] });
+  await sendPushHooks(c.env, grant.repo, principal.user.id, [update]);
   return c.json(update);
 });
 
@@ -939,6 +961,7 @@ export async function afterPush(
     .bind(now(), head, repo.id)
     .run();
   await recordEvent(env, repo.id, actorId, "push", { updates });
+  await sendPushHooks(env, repo, actorId, updates);
   env.METRICS.writeDataPoint({
     blobs: ["push", `${repo.owner}/${repo.name}`],
     doubles: [updates.length],
@@ -1098,7 +1121,11 @@ api.post("/repos/:owner/:name/pulls", async (c) => {
     number: pull.number,
     title: pull.title,
   });
-  return c.json(pullJson(pull, grant.repo, c.env.ORIGIN), 201);
+  const json = pullJson(pull, grant.repo, c.env.ORIGIN);
+  await sendWebhooks(c.env, grant.repo, "pull_request", principal.user.id, () => [
+    { action: "opened", pull_request: json },
+  ]);
+  return c.json(json, 201);
 });
 
 api.get("/repos/:owner/:name/pulls/:number", async (c) => {
@@ -1166,16 +1193,17 @@ api.patch("/repos/:owner/:name/pulls/:number", async (c) => {
       pull.id,
     )
     .run();
+  const json = pullJson(await loadPull(c, grant), grant.repo, c.env.ORIGIN);
   if (state !== pull.state) {
-    await recordEvent(
-      c.env,
-      grant.repo.id,
-      principal.user.id,
-      state === "closed" ? "pull_closed" : "pull_reopened",
-      { number: pull.number },
-    );
+    const action = state === "closed" ? "closed" : "reopened";
+    await recordEvent(c.env, grant.repo.id, principal.user.id, `pull_${action}`, {
+      number: pull.number,
+    });
+    await sendWebhooks(c.env, grant.repo, "pull_request", principal.user.id, () => [
+      { action, pull_request: json },
+    ]);
   }
-  return c.json(pullJson(await loadPull(c, grant), grant.repo, c.env.ORIGIN));
+  return c.json(json);
 });
 
 api.post("/repos/:owner/:name/pulls/:number/merge", async (c) => {
@@ -1206,6 +1234,10 @@ api.post("/repos/:owner/:name/pulls/:number/merge", async (c) => {
     number: pull.number,
     sha: merged.sha,
   });
+  const json = pullJson(await loadPull(c, grant), grant.repo, c.env.ORIGIN);
+  await sendWebhooks(c.env, grant.repo, "pull_request", principal.user.id, () => [
+    { action: "merged", pull_request: json },
+  ]);
   return c.json({ merged: true, sha: merged.sha });
 });
 
@@ -1237,12 +1269,18 @@ api.post("/repos/:owner/:name/pulls/:number/comments", async (c) => {
     throw new HttpError(400, "the comment is empty", "invalid_request");
   }
   const id = newId("cmt");
+  const body = input.body!.slice(0, 60_000);
+  const createdAt = now();
   await c.env.DB.prepare(
     "INSERT INTO comments (id, pull_id, author_id, body, created_at) VALUES (?, ?, ?, ?, ?)",
   )
-    .bind(id, pull.id, principal.user.id, input.body!.slice(0, 60_000), now())
+    .bind(id, pull.id, principal.user.id, body, createdAt)
     .run();
-  return c.json({ id, body: input.body, author: principal.user.handle, created_at: now() }, 201);
+  const comment = { id, body, author: principal.user.handle, created_at: createdAt };
+  await sendWebhooks(c.env, grant.repo, "pull_request_comment", principal.user.id, () => [
+    { action: "created", comment, pull_request: pullJson(pull, grant.repo, c.env.ORIGIN) },
+  ]);
+  return c.json(comment, 201);
 });
 
 // A short summary of the pull request diff from Workers AI.
@@ -1531,6 +1569,156 @@ api.get("/repos/:owner/:name/env", async (c) => {
     return c.text(`${text}\n`);
   }
   return c.json(values);
+});
+
+// Webhooks. Their URLs and secrets are settings of the whole repository, so admins manage them and
+// limited keys follow the repository settings rule.
+
+api.on(
+  ["GET", "POST", "PATCH", "DELETE"],
+  ["/repos/:owner/:name/hooks", "/repos/:owner/:name/hooks/*"],
+  repositorySettings,
+);
+
+interface HookRow {
+  id: string;
+  url: string;
+  events: string;
+  secret: string;
+  active: number;
+  created_at: number;
+  last_status: number | null;
+  last_delivery_at: number | null;
+}
+
+function hookJson(hook: HookRow) {
+  return {
+    id: hook.id,
+    url: hook.url,
+    events: JSON.parse(hook.events),
+    active: hook.active === 1,
+    created_at: hook.created_at,
+    last_status: hook.last_status,
+    last_delivery_at: hook.last_delivery_at,
+  };
+}
+
+async function loadHook(c: AppContext, grant: Access): Promise<HookRow> {
+  const row = await c.env.DB.prepare("SELECT * FROM webhooks WHERE repo_id = ? AND id = ?")
+    .bind(grant.repo.id, c.req.param("id"))
+    .first<HookRow>();
+  return requireFound(row, "webhook");
+}
+
+function hookSecret(value: string): string {
+  if (value === "" || value.length > 256) {
+    throw new HttpError(400, "secret must be 1 to 256 characters", "invalid_request");
+  }
+  return value;
+}
+
+api.get("/repos/:owner/:name/hooks", async (c) => {
+  const grant = await loadRepo(c);
+  need(grant, "admin");
+  const rows = await c.env.DB.prepare(
+    "SELECT * FROM webhooks WHERE repo_id = ? ORDER BY created_at, id",
+  )
+    .bind(grant.repo.id)
+    .all<HookRow>();
+  return c.json(rows.results.map(hookJson));
+});
+
+// The response is the only time the signing secret is shown.
+api.post("/repos/:owner/:name/hooks", async (c) => {
+  const grant = await loadRepo(c);
+  need(grant, "admin");
+  const input = await readJson<{
+    url?: string;
+    events?: unknown[];
+    secret?: string;
+    active?: boolean;
+  }>(c, { url: "string", events: "array", secret: "string", active: "boolean" });
+  const url = hookUrl(input.url ?? "", c.env.ORIGIN);
+  const events = hookEvents(input.events ?? ["push"]);
+  const secret = input.secret === undefined ? newHookSecret() : hookSecret(input.secret);
+  const id = newId("hook");
+  const hook: HookRow = {
+    id,
+    url,
+    events: JSON.stringify(events),
+    secret: await sealSecret(c.env, grant.repo.id, hookSecretContext(grant.repo.id, id), secret),
+    active: input.active === false ? 0 : 1,
+    created_at: now(),
+    last_status: null,
+    last_delivery_at: null,
+  };
+  await c.env.DB.prepare(
+    "INSERT INTO webhooks (id, repo_id, url, events, secret, active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  )
+    .bind(id, grant.repo.id, hook.url, hook.events, hook.secret, hook.active, hook.created_at)
+    .run();
+  return c.json({ ...hookJson(hook), secret }, 201, { "cache-control": "no-store" });
+});
+
+api.patch("/repos/:owner/:name/hooks/:id", async (c) => {
+  const grant = await loadRepo(c);
+  need(grant, "admin");
+  const hook = await loadHook(c, grant);
+  const input = await readJson<{
+    url?: string;
+    events?: unknown[];
+    secret?: string;
+    active?: boolean;
+  }>(c, { url: "string", events: "array", secret: "string", active: "boolean" });
+  const next: HookRow = {
+    ...hook,
+    url: input.url === undefined ? hook.url : hookUrl(input.url, c.env.ORIGIN),
+    events: input.events === undefined ? hook.events : JSON.stringify(hookEvents(input.events)),
+    secret:
+      input.secret === undefined
+        ? hook.secret
+        : await sealSecret(
+            c.env,
+            grant.repo.id,
+            hookSecretContext(grant.repo.id, hook.id),
+            hookSecret(input.secret),
+          ),
+    active: input.active === undefined ? hook.active : input.active ? 1 : 0,
+  };
+  await c.env.DB.prepare(
+    "UPDATE webhooks SET url = ?, events = ?, secret = ?, active = ? WHERE id = ?",
+  )
+    .bind(next.url, next.events, next.secret, next.active, hook.id)
+    .run();
+  return c.json(hookJson(next));
+});
+
+api.delete("/repos/:owner/:name/hooks/:id", async (c) => {
+  const grant = await loadRepo(c);
+  need(grant, "admin");
+  const hook = await loadHook(c, grant);
+  await c.env.DB.prepare("DELETE FROM webhooks WHERE id = ?").bind(hook.id).run();
+  return c.json({ ok: true });
+});
+
+api.get("/repos/:owner/:name/hooks/:id/deliveries", async (c) => {
+  const grant = await loadRepo(c);
+  need(grant, "admin");
+  const hook = await loadHook(c, grant);
+  const rows = await c.env.DB.prepare(
+    "SELECT id, event, status, error, duration_ms, created_at FROM webhook_deliveries WHERE webhook_id = ? ORDER BY created_at DESC, rowid DESC",
+  )
+    .bind(hook.id)
+    .all();
+  return c.json(rows.results);
+});
+
+// Delivers a ping now and answers with the result, so a new webhook can be checked at once.
+api.post("/repos/:owner/:name/hooks/:id/ping", async (c) => {
+  const grant = await loadRepo(c);
+  const principal = need(grant, "admin");
+  const hook = await loadHook(c, grant);
+  return c.json(await pingHook(c.env, grant.repo, hook, { handle: principal.user.handle }));
 });
 
 api.get("/users/:handle", async (c) => {

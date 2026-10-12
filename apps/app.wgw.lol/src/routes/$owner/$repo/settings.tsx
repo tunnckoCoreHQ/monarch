@@ -4,6 +4,7 @@ import { type FormEvent, type ReactNode, useState } from "react";
 
 import { useRepo } from "~/components/repo";
 import {
+  CopyField,
   Empty,
   ErrorNote,
   Field,
@@ -18,7 +19,7 @@ import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { NativeSelect } from "~/components/ui/native-select";
-import { api } from "~/lib/api";
+import { ago, api, ApiError } from "~/lib/api";
 import { pageTitle } from "~/lib/utils";
 
 interface Variable {
@@ -39,17 +40,44 @@ interface Collaborator {
   kind?: string;
 }
 
+interface Hook {
+  id: string;
+  url: string;
+  events: string[];
+  active: boolean;
+  created_at: number;
+  last_status: number | null;
+  last_delivery_at: number | null;
+}
+
+interface Delivery {
+  id: string;
+  event: string;
+  status: number | null;
+  error: string | null;
+  duration_ms: number;
+  created_at: number;
+}
+
+const HOOK_EVENTS = ["push", "pull_request", "pull_request_comment", "repository"];
 const ENVIRONMENT_KINDS = ["production", "staging", "preview", "development"];
 const ROLES = ["read", "write", "admin"];
 
 export const Route = createFileRoute("/$owner/$repo/settings")({
   loader: async ({ params }) => {
     const base = `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}`;
-    const [environments, collaborators] = await Promise.all([
+    const [environments, collaborators, hooks] = await Promise.all([
       api<Environments>(`${base}/environments`),
       api<Collaborator[]>(`${base}/collaborators`),
+      // Only admins may list webhooks; everyone else gets no section.
+      api<Hook[]>(`${base}/hooks`).catch((error: unknown) => {
+        if (error instanceof ApiError && error.status === 403) {
+          return null;
+        }
+        throw error;
+      }),
     ]);
-    return { environments, collaborators };
+    return { environments, collaborators, hooks };
   },
   head: ({ params }) => ({
     meta: [{ title: pageTitle("Settings", `${params.owner}/${params.repo}`) }],
@@ -108,9 +136,109 @@ function VariableTable({
   );
 }
 
+/** A delivery's HTTP status, or "no response". */
+function StatusBadge({ status }: { status: number | null }) {
+  const ok = status !== null && status >= 200 && status < 300;
+  return (
+    <Badge variant={ok ? "signal" : "destructive"}>
+      {status === null ? "no response" : status}
+    </Badge>
+  );
+}
+
+/** One webhook: its events, the last result, ping, recent deliveries, and delete. */
+function HookPanel({
+  hook,
+  base,
+  act,
+}: {
+  hook: Hook;
+  base: string;
+  act: (run: () => Promise<unknown>) => void;
+}) {
+  const [deliveries, setDeliveries] = useState<Delivery[] | null>(null);
+  const root = `${base}/hooks/${hook.id}`;
+  const load = async () => setDeliveries(await api<Delivery[]>(`${root}/deliveries`));
+  return (
+    <Panel
+      header={
+        <>
+          <span className="font-bold wrap-anywhere">{hook.url}</span>
+          {hook.active ? null : <Badge variant="outline">paused</Badge>}
+          {hook.last_delivery_at === null ? null : (
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              <StatusBadge status={hook.last_status} /> {ago(hook.last_delivery_at)}
+            </span>
+          )}
+          <span className="ml-auto flex gap-1">
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() =>
+                act(async () => {
+                  await api(`${root}/ping`, { method: "POST" });
+                  await load();
+                })
+              }
+            >
+              Ping
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() => (deliveries === null ? act(load) : setDeliveries(null))}
+            >
+              {deliveries === null ? "Deliveries" : "Hide deliveries"}
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={() =>
+                window.confirm(`Delete the webhook to ${hook.url}?`)
+                  ? act(() => api(root, { method: "DELETE" }))
+                  : undefined
+              }
+            >
+              Delete
+            </Button>
+          </span>
+        </>
+      }
+    >
+      <div className="flex flex-wrap gap-1.5 px-4 py-2.5">
+        {hook.events.map((event) => (
+          <Badge key={event} variant="outline">
+            {event}
+          </Badge>
+        ))}
+      </div>
+      {deliveries === null ? null : deliveries.length === 0 ? (
+        <p className="text-faint border-t px-4 py-3 font-mono text-xs">No deliveries yet.</p>
+      ) : (
+        <ul className="divide-y border-t">
+          {deliveries.map((delivery) => (
+            <li
+              key={delivery.id}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 font-mono text-xs"
+            >
+              <StatusBadge status={delivery.status} />
+              <span className="font-semibold">{delivery.event}</span>
+              <span className="text-muted-foreground min-w-0 flex-1 truncate" title={delivery.id}>
+                {delivery.error ?? delivery.id}
+              </span>
+              <span className="text-muted-foreground">{delivery.duration_ms} ms</span>
+              <span className="text-muted-foreground">{ago(delivery.created_at)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
 function RepoSettings() {
   const repo = useRepo();
-  const { environments, collaborators } = Route.useLoaderData();
+  const { environments, collaborators, hooks } = Route.useLoaderData();
   const router = useRouter();
   const navigate = useNavigate();
   const base = `/api/repos/${repo.owner}/${repo.name}`;
@@ -125,6 +253,9 @@ function RepoSettings() {
   const [varSecret, setVarSecret] = useState(true);
   const [collaborator, setCollaborator] = useState("");
   const [role, setRole] = useState("write");
+  const [hookUrl, setHookUrl] = useState("");
+  const [hookEvents, setHookEvents] = useState<string[]>(["push"]);
+  const [hookSecret, setHookSecret] = useState<string | null>(null);
 
   // Event handlers get a plain function; the request runs in the background and reports errors.
   const act = (run: () => Promise<unknown>) => {
@@ -467,6 +598,84 @@ function RepoSettings() {
           </form>
         ) : null}
       </Section>
+
+      {isAdmin && hooks !== null ? (
+        <Section
+          title="Webhooks"
+          description={
+            <>
+              app.wgw.lol POSTs JSON to each URL when its events happen. The{" "}
+              <code className="text-foreground font-mono">X-WGW-Signature-256</code> header is the
+              HMAC-SHA256 of the body under the webhook's secret. A 5xx or no answer in 10 seconds
+              is retried up to 3 times.
+            </>
+          }
+        >
+          {hooks.length === 0 ? (
+            <Empty>No webhooks yet.</Empty>
+          ) : (
+            hooks.map((hook) => <HookPanel key={hook.id} hook={hook} base={base} act={act} />)
+          )}
+          <form
+            onSubmit={onSubmit(async () => {
+              const created = await api<Hook & { secret: string }>(`${base}/hooks`, {
+                method: "POST",
+                json: { url: hookUrl, events: hookEvents },
+              });
+              setHookSecret(created.secret);
+              setHookUrl("");
+            })}
+            className="bg-card grid gap-3 border p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+          >
+            <Field label="Payload URL" htmlFor="hook-url">
+              <Input
+                id="hook-url"
+                value={hookUrl}
+                onChange={(event) => setHookUrl(event.target.value)}
+                placeholder="https://example.com/wgw"
+                className="font-mono"
+              />
+            </Field>
+            <Button type="submit" disabled={hookUrl.trim() === "" || hookEvents.length === 0}>
+              Add webhook
+            </Button>
+            <fieldset className="flex flex-wrap gap-x-5 gap-y-2 sm:col-span-2">
+              <legend className="sr-only">Events</legend>
+              {HOOK_EVENTS.map((event) => (
+                <label
+                  key={event}
+                  className="flex cursor-pointer items-center gap-2 font-mono text-xs tracking-wider uppercase"
+                >
+                  <input
+                    type="checkbox"
+                    checked={hookEvents.includes(event)}
+                    onChange={(change) =>
+                      setHookEvents((list) =>
+                        change.target.checked
+                          ? [...list, event]
+                          : list.filter((item) => item !== event),
+                      )
+                    }
+                    className="accent-signal size-4"
+                  />
+                  {event}
+                </label>
+              ))}
+            </fieldset>
+          </form>
+          {hookSecret === null ? null : (
+            <div
+              role="status"
+              className="border-signal bg-signal/5 flex flex-col gap-3 border-l-2 p-4"
+            >
+              <p className="text-sm font-bold">
+                Copy the signing secret now. This page shows it once.
+              </p>
+              <CopyField label="secret" value={hookSecret} />
+            </div>
+          )}
+        </Section>
+      ) : null}
 
       {isAdmin ? (
         <section className="border-destructive flex flex-col gap-4 border p-5">

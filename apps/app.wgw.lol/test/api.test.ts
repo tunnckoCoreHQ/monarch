@@ -1,3 +1,5 @@
+import { createHmac } from "node:crypto";
+
 import { exportPKCS8, generateKeyPair } from "jose";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -12,6 +14,7 @@ import type { Scope } from "../src/server/db";
 import type { Env } from "../src/server/env";
 import { guard } from "../src/server/result";
 import { sha256 } from "../src/server/util";
+import { isWebhookMessage } from "../src/server/webhooks";
 import { fakeD1, memoryRepo } from "./memory";
 
 const ORIGIN = "https://app.wgw.lol";
@@ -47,6 +50,9 @@ let env: Env;
 let git: GitRepo;
 let signingKey: string;
 let saved: Map<string, string>;
+let sent: unknown[];
+// The master key that wraps each repository's key: 32 bytes, base64.
+const KEK = btoa(String.fromCharCode(...new Uint8Array(32).fill(7)));
 
 interface Call {
   token?: string;
@@ -105,6 +111,7 @@ beforeEach(async () => {
   const db = fakeD1();
   git = memoryRepo();
   saved = new Map();
+  sent = [];
   // oxlint-disable-next-line anti-slop/no-chained-type-assertions -- the fakes implement only the bindings the tests reach.
   env = {
     ORIGIN,
@@ -118,8 +125,13 @@ beforeEach(async () => {
       },
     },
     METRICS: { writeDataPoint: () => undefined },
-    EVENTS: { send: async () => undefined },
+    EVENTS: {
+      send: async (message: unknown) => {
+        sent.push(message);
+      },
+    },
     SIGNING_KEY: { get: async () => signingKey },
+    SECRETS_KEK: { get: async () => KEK },
   } as unknown as Env;
   await db
     .prepare(
@@ -842,5 +854,168 @@ describe("commit statuses", () => {
       repo_id: string;
     }>();
     expect(rows.results.map((row) => row.repo_id)).toEqual(["repo_priv", "repo_pub"]);
+  });
+});
+
+/** The webhook messages queued so far, with their bodies parsed. */
+function queued() {
+  return sent
+    .filter(isWebhookMessage)
+    .map((message) => ({ ...message, payload: JSON.parse(message.body) }));
+}
+
+describe("webhooks", () => {
+  it("shows the secret only on create and refuses unsafe URLs", async () => {
+    const alice = await key("usr_alice", { scopes: ["admin"] });
+    const created = await json<{ id: string; secret: string; events: string[] }>(
+      call("POST", "/api/repos/alice/pub/hooks", {
+        token: alice,
+        json: { url: "https://hooks.example.com/wgw" },
+      }),
+    );
+    expect(created.secret).toMatch(/^[0-9a-f]{64}$/);
+    expect(created.events).toEqual(["push"]);
+    const listed = await json<Array<Record<string, unknown>>>(
+      call("GET", "/api/repos/alice/pub/hooks", { token: alice }),
+    );
+    expect(listed.map((hook) => hook.id)).toEqual([created.id]);
+    expect(listed[0]).not.toHaveProperty("secret");
+    const stored = await env.DB.prepare("SELECT secret FROM webhooks").first<{ secret: string }>();
+    expect(stored?.secret).toMatch(/^v2\./);
+    for (const url of [
+      "http://hooks.example.com/wgw",
+      "https://localhost/hook",
+      "https://app.wgw.lol/api/me",
+      "https://10.0.0.8/hook",
+      "https://192.168.1.1/hook",
+      "https://169.254.169.254/latest",
+      "https://[::1]/hook",
+      "not a url",
+    ]) {
+      const response = await call("POST", "/api/repos/alice/pub/hooks", {
+        token: alice,
+        json: { url },
+      });
+      expect(response.status, url).toBe(400);
+    }
+    const unknown = await call("POST", "/api/repos/alice/pub/hooks", {
+      token: alice,
+      json: { url: "https://hooks.example.com/wgw", events: ["push", "issues"] },
+    });
+    expect(unknown.status).toBe(400);
+  });
+
+  it("queue signed payloads with the repository, sender, and delivery id", async () => {
+    const start = seed();
+    git.updateRef("refs/heads/feature", ZERO_SHA, start);
+    git.commitFiles("feature", undefined, "feature", person, [
+      { path: "src/feature.ts", content: utf8("export const on = true;\n") },
+    ]);
+    const alice = await key("usr_alice", { scopes: ["write", "admin"] });
+    const hook = await json<{ secret: string }>(
+      call("POST", "/api/repos/alice/pub/hooks", {
+        token: alice,
+        json: {
+          url: "https://hooks.example.com/wgw",
+          events: ["push", "pull_request", "pull_request_comment", "repository"],
+        },
+      }),
+    );
+    // Another hook takes pull requests only, and a paused one takes everything.
+    await call("POST", "/api/repos/alice/pub/hooks", {
+      token: alice,
+      json: { url: "https://other.example.com/wgw", events: ["pull_request"] },
+    });
+    await call("POST", "/api/repos/alice/pub/hooks", {
+      token: alice,
+      json: { url: "https://paused.example.com/wgw", events: ["push"], active: false },
+    });
+    await call("POST", "/api/repos/alice/pub/pulls", {
+      token: alice,
+      json: { title: "Feature", head: "feature" },
+    });
+    await call("POST", "/api/repos/alice/pub/pulls/1/comments", {
+      token: alice,
+      json: { body: "looks good" },
+    });
+    const commit = await json<{ sha: string }>(
+      call("POST", "/api/repos/alice/pub/commits", {
+        token: alice,
+        json: { message: "readme", files: [{ path: "README.md", content: "# pub\n" }] },
+      }),
+    );
+    await call("PATCH", "/api/repos/alice/pub", { token: alice, json: { visibility: "private" } });
+
+    const messages = queued();
+    expect(messages.map((message) => [message.url, message.event])).toEqual([
+      ["https://hooks.example.com/wgw", "pull_request"],
+      ["https://other.example.com/wgw", "pull_request"],
+      ["https://hooks.example.com/wgw", "pull_request_comment"],
+      ["https://hooks.example.com/wgw", "push"],
+      ["https://hooks.example.com/wgw", "repository"],
+    ]);
+    const [opened, , comment, push, repository] = messages;
+    for (const message of messages.filter((item) => item.url === "https://hooks.example.com/wgw")) {
+      expect(message.signature).toBe(
+        `sha256=${createHmac("sha256", hook.secret).update(message.body).digest("hex")}`,
+      );
+      expect(message.payload.delivery).toBe(message.delivery);
+      expect(message.payload.sender).toEqual({ handle: "alice" });
+      expect(message.body).not.toContain(hook.secret);
+    }
+    expect(opened.payload).toMatchObject({
+      action: "opened",
+      pull_request: { number: 1, title: "Feature", head: "feature", base: "main", author: "alice" },
+      repository: { owner: "alice", name: "pub", visibility: "public" },
+    });
+    expect(comment.payload).toMatchObject({
+      action: "created",
+      comment: { body: "looks good", author: "alice" },
+      pull_request: { number: 1 },
+    });
+    expect(push.payload).toMatchObject({
+      ref: "refs/heads/main",
+      before: start,
+      after: commit.sha,
+      pusher: { handle: "alice" },
+    });
+    expect(repository.payload).toEqual({
+      action: "visibility_changed",
+      changes: { visibility: { from: "public" } },
+      repository: { owner: "alice", name: "pub", visibility: "private" },
+      sender: { handle: "alice" },
+      delivery: repository.delivery,
+    });
+  });
+
+  it("stay closed to keys limited to an environment or another repository", async () => {
+    const alice = await key("usr_alice", { scopes: ["admin"] });
+    const hook = await json<{ id: string }>(
+      call("POST", "/api/repos/alice/pub/hooks", {
+        token: alice,
+        json: { url: "https://hooks.example.com/wgw" },
+      }),
+    );
+    const staging = await key("usr_alice", { scopes: ["admin"], environment: "staging" });
+    const other = await key("usr_alice", { scopes: ["admin"], repoId: "repo_priv" });
+    const writer = await key("usr_alice", { scopes: ["write"] });
+    const root = "/api/repos/alice/pub/hooks";
+    for (const token of [staging, other, writer]) {
+      const attempts = [
+        call("GET", root, { token }),
+        call("POST", root, { token, json: { url: "https://evil.example.com/wgw" } }),
+        call("PATCH", `${root}/${hook.id}`, { token, json: { url: "https://evil.example.com" } }),
+        call("DELETE", `${root}/${hook.id}`, { token }),
+        call("GET", `${root}/${hook.id}/deliveries`, { token }),
+        call("POST", `${root}/${hook.id}/ping`, { token }),
+      ];
+      for (const response of await Promise.all(attempts)) {
+        expect(response.status).toBe(403);
+      }
+    }
+    const rows = await env.DB.prepare("SELECT url FROM webhooks").all<{ url: string }>();
+    expect(rows.results).toEqual([{ url: "https://hooks.example.com/wgw" }]);
+    const own = await key("usr_alice", { scopes: ["admin"], repoId: "repo_pub" });
+    expect((await call("GET", root, { token: own })).status).toBe(200);
   });
 });

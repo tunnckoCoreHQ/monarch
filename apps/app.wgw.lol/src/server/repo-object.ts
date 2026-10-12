@@ -25,6 +25,7 @@ import { subscribePushes, unsubscribe } from "./events";
 import { guard, type Result } from "./result";
 import { enqueueIndex, type IndexResult, indexRepo } from "./search";
 import { now } from "./util";
+import { sendPushHooks } from "./webhooks";
 
 // SQLite rows and values are capped at 2 MB, so larger zlib streams go to R2.
 const MAX_INLINE = 1_000_000;
@@ -563,6 +564,8 @@ export class Repo extends DurableObject<Env> {
               doubles: [group.length],
               indexes: [repo.id],
             });
+            // Best effort, like the search index below.
+            await sendPushHooks(this.env, repo, group[0].actor_id, group);
           }
           if (rows.some((row) => row.ref === `refs/heads/${head}`)) {
             // Search covers the default branch tip. A failed enqueue waits for the next push or

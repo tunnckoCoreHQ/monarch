@@ -1,6 +1,7 @@
 import { findRepoById } from "./db";
 import type { Env } from "./env";
 import { isIndexMessage } from "./search";
+import { handleWebhook, isWebhookMessage } from "./webhooks";
 
 const API = "https://api.cloudflare.com/client/v4";
 
@@ -108,11 +109,20 @@ async function handle(env: Env, event: ArtifactsEvent): Promise<void> {
 }
 
 /**
- * The queue consumer: syncs the mirror on Artifacts pushes, records deletions, and runs the app's
- * own code search index jobs.
+ * The queue consumer: syncs the mirror on Artifacts pushes, records deletions, runs the app's own
+ * code search index jobs, and delivers webhooks.
  */
 export async function handleEvents(batch: MessageBatch, env: Env): Promise<void> {
   for (const message of batch.messages) {
+    if (isWebhookMessage(message.body)) {
+      try {
+        await handleWebhook(env, message.body, message);
+      } catch (error) {
+        console.error(`webhook delivery ${message.body.delivery} failed`, error);
+        message.retry({ delaySeconds: 30 });
+      }
+      continue;
+    }
     if (isIndexMessage(message.body)) {
       try {
         // Through the repository's Durable Object, which runs one index at a time.
