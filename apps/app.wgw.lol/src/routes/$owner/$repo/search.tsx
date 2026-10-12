@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Search as SearchIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useRepo } from "~/components/repo";
 import { Empty, Field, fire, Page, Pending, RouteError } from "~/components/site";
@@ -67,6 +67,8 @@ function SearchPage() {
   const { q } = Route.useSearch();
   const navigate = useNavigate();
   const [query, setQuery] = useState(q);
+  // A navigation or Back changes q without remounting the page.
+  useEffect(() => setQuery(q), [q]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();

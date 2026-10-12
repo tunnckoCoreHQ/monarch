@@ -24,25 +24,32 @@ export const Route = createFileRoute("/device")({
   component: Device,
 });
 
+interface Lookup {
+  /** The code that was looked up. Approve and Deny post this one, not the input's text. */
+  code: string;
+  client_name: string;
+  status: string;
+}
+
 function Device() {
   const search = Route.useSearch();
   const [code, setCode] = useState(search.code ?? "");
-  const [info, setInfo] = useState<{ client_name: string; status: string } | null>(null);
+  const [info, setInfo] = useState<Lookup | null>(null);
   const [decision, setDecision] = useState<"approved" | "denied" | null>(null);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const lookup = async (event: React.FormEvent) => {
     event.preventDefault();
+    const wanted = code.trim();
     setChecking(true);
     setError(null);
     try {
-      setInfo(await api(`/api/device/${encodeURIComponent(code.trim())}`));
+      const found = await api<Omit<Lookup, "code">>(`/api/device/${encodeURIComponent(wanted)}`);
+      setInfo({ ...found, code: wanted });
     } catch (caught) {
       if (caught instanceof ApiError && caught.status === 401) {
-        window.location.assign(
-          `/login?return_to=${encodeURIComponent(`/device?code=${code.trim()}`)}`,
-        );
+        window.location.assign(`/login?return_to=${encodeURIComponent(`/device?code=${wanted}`)}`);
         return;
       }
       setError(messageOf(caught));
@@ -51,9 +58,9 @@ function Device() {
     }
   };
 
-  const decide = async (approve: boolean) => {
+  const decide = async (looked: Lookup, approve: boolean) => {
     try {
-      await api(`/api/device/${encodeURIComponent(code.trim())}`, {
+      await api(`/api/device/${encodeURIComponent(looked.code)}`, {
         method: "POST",
         json: { approve },
       });
@@ -91,7 +98,10 @@ function Device() {
                 <Input
                   id="device-code"
                   value={code}
-                  onChange={(event) => setCode(event.target.value.toUpperCase())}
+                  onChange={(event) => {
+                    setCode(event.target.value.toUpperCase());
+                    setInfo(null);
+                  }}
                   placeholder="BCDF-GHJK"
                   autoComplete="off"
                   spellCheck={false}
@@ -106,13 +116,14 @@ function Device() {
           {info === null ? null : (
             <div className="flex flex-col gap-3">
               <Ledger>
+                <LedgerRow term="code">{info.code}</LedgerRow>
                 <LedgerRow term="client">{info.client_name}</LedgerRow>
                 <LedgerRow term="status">{info.status}</LedgerRow>
               </Ledger>
               {info.status === "pending" ? (
                 <div className="flex gap-2">
-                  <Button onClick={fire(() => decide(true))}>Approve</Button>
-                  <Button variant="outline" onClick={fire(() => decide(false))}>
+                  <Button onClick={fire(() => decide(info, true))}>Approve</Button>
+                  <Button variant="outline" onClick={fire(() => decide(info, false))}>
                     Deny
                   </Button>
                 </div>

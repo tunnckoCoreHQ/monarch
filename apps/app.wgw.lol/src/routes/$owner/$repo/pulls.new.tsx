@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { DiffView } from "~/components/diff";
 import { useRepo } from "~/components/repo";
@@ -59,6 +59,8 @@ function NewPull() {
     search.head ?? branches.find((branch) => branch !== repo.default_branch) ?? "",
   );
   const [title, setTitle] = useState("");
+  // Once the person types a title, a compare that lands later leaves it alone.
+  const titleEdited = useRef(false);
   const [body, setBody] = useState("");
   const [compare, setCompare] = useState<Compare | null>(null);
   const [comparing, setComparing] = useState(false);
@@ -76,7 +78,7 @@ function NewPull() {
     )
       .then((result) => {
         setCompare(result);
-        if (title === "" && result.commits.length > 0) {
+        if (!titleEdited.current && result.commits.length > 0) {
           setTitle(result.commits.at(-1)!.message.split("\n")[0]);
         }
       })
@@ -161,7 +163,10 @@ function NewPull() {
           <Input
             id="title"
             value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            onChange={(event) => {
+              titleEdited.current = true;
+              setTitle(event.target.value);
+            }}
             className="h-10 text-base"
           />
         </Field>

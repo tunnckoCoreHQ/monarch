@@ -3,9 +3,9 @@ import { BookOpen, File, Folder, FolderGit2, History } from "lucide-react";
 import { useMemo } from "react";
 
 import { PathCrumbs, RefPicker, useRepo } from "~/components/repo";
-import { Empty, Kicker, Page, Pending, Terminal } from "~/components/site";
+import { Empty, Kicker, Page, Pending, RouteError, Terminal } from "~/components/site";
 import { Button } from "~/components/ui/button";
-import { ago, api, bytes, type TreeItem } from "~/lib/api";
+import { ago, api, ApiError, bytes, type TreeItem } from "~/lib/api";
 import { renderMarkdown } from "~/lib/markdown";
 
 interface Search {
@@ -30,35 +30,52 @@ export const Route = createFileRoute("/$owner/$repo/")({
     }
     const base = `/api/repos/${encodeURIComponent(params.owner)}/${encodeURIComponent(params.repo)}`;
     const query = new URLSearchParams({ ref: deps.ref ?? "", path: deps.path ?? "" });
+    let tree: { commit: string; items: TreeItem[]; readme?: string };
     try {
-      const tree = await api<{ commit: string; items: TreeItem[]; readme?: string }>(
-        `${base}/tree?${query.toString()}`,
-      );
-      const readme =
-        tree.readme === undefined
-          ? null
-          : await api<{ text: string | null }>(
-              `${base}/blob?${new URLSearchParams({ ref: tree.commit, path: tree.readme }).toString()}`,
-            );
-      const [latest] = await api<
-        Array<{
-          sha: string;
-          message: string;
-          author: { name: string };
-          committer: { time: number };
-        }>
-      >(`${base}/commits?${new URLSearchParams({ ref: tree.commit, limit: "1" }).toString()}`);
-      return {
-        tree,
-        readme: readme?.text ?? null,
-        readmeName: tree.readme ?? null,
-        latest: latest ?? null,
-      };
-    } catch {
-      return { tree: null, readme: null, readmeName: null, latest: null };
+      tree = await api(`${base}/tree?${query.toString()}`);
+    } catch (error) {
+      // A missing path, or a default branch with nothing in this view, is an empty listing. A bad
+      // ref and every other failure go to the error page.
+      if (
+        error instanceof ApiError &&
+        error.status === 404 &&
+        ((deps.path ?? "") !== "" || deps.ref === undefined)
+      ) {
+        return { tree: null, readme: null, readmeName: null, latest: null };
+      }
+      throw error;
     }
+    const readme =
+      tree.readme === undefined
+        ? null
+        : await api<{ text: string | null }>(
+            `${base}/blob?${new URLSearchParams({ ref: tree.commit, path: tree.readme }).toString()}`,
+          );
+    // The latest commit only decorates the listing, so a failure leaves it out.
+    const [latest] = await api<
+      Array<{
+        sha: string;
+        message: string;
+        author: { name: string };
+        committer: { time: number };
+      }>
+    >(`${base}/commits?${new URLSearchParams({ ref: tree.commit, limit: "1" }).toString()}`).catch(
+      () => [],
+    );
+    return {
+      tree,
+      readme: readme?.text ?? null,
+      readmeName: tree.readme ?? null,
+      latest: latest ?? null,
+    };
   },
   pendingComponent: () => <Pending label="Loading files" />,
+  errorComponent: ({ error }) => (
+    <RouteError
+      error={error}
+      notFound={{ title: "No such revision.", text: "That branch, tag, or commit does not exist." }}
+    />
+  ),
   component: Code,
 });
 
