@@ -10,8 +10,8 @@
       "git diff --quiet \"$BASE\" HEAD -- pnpm-lock.yaml pnpm-workspace.yaml .npmrc patches || pnpm install --frozen-lockfile --ignore-scripts"
     ],
     "jobs": {
-      "check": "pnpm exec turbo run check $AFFECTED",
-      "test": "pnpm exec turbo run test --filter='!./solidity/*' $AFFECTED",
+      "check": "pnpm exec turbo run check --filter='!./crates' $AFFECTED",
+      "test": "pnpm exec turbo run test --filter='!./solidity/*' --filter='!./crates' $AFFECTED",
       "test-solidity": "pnpm exec turbo run test --filter='./solidity/*'",
       "build": "pnpm exec turbo run build --filter='./packages/*' --filter='./solidity/*' $AFFECTED"
     },
