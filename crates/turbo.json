@@ -1,0 +1,21 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "check": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/Cargo.toml", "$TURBO_ROOT$/Cargo.lock", "$TURBO_ROOT$/rust-toolchain.toml"],
+      "passThroughEnv": ["CARGO_*", "RUSTUP_*"],
+      "outputs": []
+    },
+    "test": {
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/Cargo.toml", "$TURBO_ROOT$/Cargo.lock", "$TURBO_ROOT$/rust-toolchain.toml"],
+      "passThroughEnv": ["CARGO_*", "RUSTUP_*", "WASMTIME"],
+      "outputs": []
+    },
+    "build": {
+      "inputs": ["$TURBO_DEFAULT$", "!**/tests/**", "!**/e2e/**", "$TURBO_ROOT$/Cargo.toml", "$TURBO_ROOT$/Cargo.lock", "$TURBO_ROOT$/rust-toolchain.toml"],
+      "passThroughEnv": ["CARGO_*", "RUSTUP_*"],
+      "outputs": []
+    }
+  }
+}

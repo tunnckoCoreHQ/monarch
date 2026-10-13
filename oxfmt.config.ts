@@ -28,5 +28,6 @@ export default defineConfig({
     "**/.dev.vars",
     "skills/**",
     "**/solidity/**",
+    "crates/**",
   ],
 });

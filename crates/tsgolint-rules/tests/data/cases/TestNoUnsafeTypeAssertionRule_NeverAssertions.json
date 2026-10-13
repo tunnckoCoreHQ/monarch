@@ -1,0 +1,51 @@
+{
+  "test": "TestNoUnsafeTypeAssertionRule_NeverAssertions",
+  "rule": "no-unsafe-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const _never_: never;\n_never_ as never;\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const _never_: never;\n_never_ as unknown;\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const _never_: never;\n_never_ as any;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 3,
+          "column": 9,
+          "endLine": 3,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const _string_: string;\n_string_ as never;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 10,
+          "endLine": 3,
+          "endColumn": 18,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+# The Rust toolchain of the crates (crates/), for rustup and CI. wasm32-wasip1 is the
+# thread-free WASI build of tsgolint-rust.
+[toolchain]
+channel = "1.95.0"
+profile = "minimal"
+components = ["clippy", "rustfmt"]
+targets = ["wasm32-wasip1"]

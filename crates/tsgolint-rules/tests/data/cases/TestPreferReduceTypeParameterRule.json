@@ -1,0 +1,318 @@
+{
+  "test": "TestPreferReduceTypeParameterRule",
+  "rule": "prefer-reduce-type-parameter",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\n      new (class Mine {\n        reduce() {}\n      })().reduce(() => {}, 1 as any);\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\n      class Mine {\n        reduce() {}\n      }\n\n      new Mine().reduce(() => {}, 1 as any);\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\n      import { Reducable } from './class';\n\n      new Reducable().reduce(() => {}, 1 as any);\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "[1, 2, 3]['reduce']((sum, num) => sum + num, 0);",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "[1, 2, 3][null]((sum, num) => sum + num, 0);",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "[1, 2, 3]?.[null]((sum, num) => sum + num, 0);",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "[1, 2, 3].reduce((sum, num) => sum + num, 0);",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "[1, 2, 3].reduce<number[]>((a, s) => a.concat(s * 2), []);",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "[1, 2, 3]?.reduce<number[]>((a, s) => a.concat(s * 2), []);",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\n      declare const tuple: [number, number, number];\n      tuple.reduce<number[]>((a, s) => a.concat(s * 2), []);\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\n      type Reducer = { reduce: (callback: (arg: any) => any, arg: any) => any };\n      declare const tuple: [number, number, number] | Reducer;\n      tuple.reduce(a => {\n        return a.concat(1);\n      }, [] as number[]);\n    ",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\n      type Reducer = { reduce: (callback: (arg: any) => any, arg: any) => any };\n      declare const arrayOrReducer: number[] & Reducer;\n      arrayOrReducer.reduce(a => {\n        return a.concat(1);\n      }, [] as number[]);\n    ",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "\n      ['a', 'b'].reduce(\n        (accum, name) => ({\n          ...accum,\n          [name]: true,\n        }),\n        {} as Record<'a' | 'b', boolean>,\n      );\n    ",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "\n      ['a', 'b'].reduce(\n        (accum, name) => ({\n          ...accum,\n          [name]: true,\n        }),\n        { a: true, b: false, c: true } as Record<'a' | 'b', boolean>,\n      );\n    ",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\n      function f<T extends Record<string, boolean>>() {\n        ['a', 'b'].reduce(\n          (accum, name) => ({\n            ...accum,\n            [name]: true,\n          }),\n          {} as T,\n        );\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "\n      function f<T>() {\n        ['a', 'b'].reduce(\n          (accum, name) => ({\n            ...accum,\n            [name]: true,\n          }),\n          {} as T,\n        );\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "\n      ['a', 'b'].reduce((accum, name) => `${accum} | hello ${name}!`);\n    ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const arr: string[];\narr.reduce<string | undefined>(acc => acc, arr.shift() as string | undefined);\n      ",
+      "options": null,
+      "output": [
+        "\ndeclare const arr: string[];\narr.reduce<string | undefined>(acc => acc, arr.shift());\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 3,
+          "column": 44,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "[1, 2, 3].reduce((a, s) => a.concat(s * 2), [] as number[]);",
+      "options": null,
+      "output": [
+        "[1, 2, 3].reduce< number[]>((a, s) => a.concat(s * 2), []);"
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 1,
+          "column": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "[1, 2, 3].reduce((a, s) => a.concat(s * 2), <number[]>[]);",
+      "options": null,
+      "output": [
+        "[1, 2, 3].reduce<number[]>((a, s) => a.concat(s * 2),[]);"
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 1,
+          "column": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "[1, 2, 3]?.reduce((a, s) => a.concat(s * 2), [] as number[]);",
+      "options": null,
+      "output": [
+        "[1, 2, 3]?.reduce< number[]>((a, s) => a.concat(s * 2), []);"
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 1,
+          "column": 46,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "[1, 2, 3]?.reduce((a, s) => a.concat(s * 2), <number[]>[]);",
+      "options": null,
+      "output": [
+        "[1, 2, 3]?.reduce<number[]>((a, s) => a.concat(s * 2),[]);"
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 1,
+          "column": 46,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nconst names = ['a', 'b', 'c'];\n\nnames.reduce(\n  (accum, name) => ({\n    ...accum,\n    [name]: true,\n  }),\n  {} as Record<string, boolean>,\n);\n      ",
+      "options": null,
+      "output": [
+        "\nconst names = ['a', 'b', 'c'];\n\nnames.reduce< Record<string, boolean>>(\n  (accum, name) => ({\n    ...accum,\n    [name]: true,\n  }),\n  {},\n);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 9,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\n['a', 'b'].reduce(\n  (accum, name) => ({\n    ...accum,\n    [name]: true,\n  }),\n  <Record<string, boolean>>{},\n);\n      ",
+      "options": null,
+      "output": [
+        "\n['a', 'b'].reduce<Record<string, boolean>>(\n  (accum, name) => ({\n    ...accum,\n    [name]: true,\n  }),{},\n);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 7,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\n['a', 'b']['reduce'](\n  (accum, name) => ({\n    ...accum,\n    [name]: true,\n  }),\n  {} as Record<string, boolean>,\n);\n      ",
+      "options": null,
+      "output": [
+        "\n['a', 'b']['reduce']< Record<string, boolean>>(\n  (accum, name) => ({\n    ...accum,\n    [name]: true,\n  }),\n  {},\n);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 7,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nfunction f<T, U extends T[]>(a: U) {\n  return a.reduce(() => {}, {} as Record<string, boolean>);\n}\n      ",
+      "options": null,
+      "output": [
+        "\nfunction f<T, U extends T[]>(a: U) {\n  return a.reduce< Record<string, boolean>>(() => {}, {});\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 3,
+          "column": 29,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\ndeclare const tuple: [number, number, number];\ntuple.reduce((a, s) => a.concat(s * 2), [] as number[]);\n      ",
+      "options": null,
+      "output": [
+        "\ndeclare const tuple: [number, number, number];\ntuple.reduce< number[]>((a, s) => a.concat(s * 2), []);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 3,
+          "column": 41,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\ndeclare const tupleOrArray: [number, number, number] | number[];\ntupleOrArray.reduce((a, s) => a.concat(s * 2), [] as number[]);\n      ",
+      "options": null,
+      "output": [
+        "\ndeclare const tupleOrArray: [number, number, number] | number[];\ntupleOrArray.reduce< number[]>((a, s) => a.concat(s * 2), []);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 3,
+          "column": 48,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\ndeclare const tuple: [number, number, number] & number[];\ntuple.reduce((a, s) => a.concat(s * 2), [] as number[]);\n      ",
+      "options": null,
+      "output": [
+        "\ndeclare const tuple: [number, number, number] & number[];\ntuple.reduce< number[]>((a, s) => a.concat(s * 2), []);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 3,
+          "column": 41,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\n['a', 'b'].reduce(\n  (accum, name) => ({\n    ...accum,\n    [name]: true,\n  }),\n  {} as Record<string, boolean>,\n);\n      ",
+      "options": null,
+      "output": [
+        "\n['a', 'b'].reduce< Record<string, boolean>>(\n  (accum, name) => ({\n    ...accum,\n    [name]: true,\n  }),\n  {},\n);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 7,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\nfunction f<T extends Record<string, boolean>>(t: T) {\n  ['a', 'b'].reduce(\n    (accum, name) => ({\n      ...accum,\n      [name]: true,\n    }),\n    t as Record<string, boolean | number>,\n  );\n}\n      ",
+      "options": null,
+      "output": [
+        "\nfunction f<T extends Record<string, boolean>>(t: T) {\n  ['a', 'b'].reduce< Record<string, boolean | number>>(\n    (accum, name) => ({\n      ...accum,\n      [name]: true,\n    }),\n    t,\n  );\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "preferTypeParameter",
+          "line": 8,
+          "column": 5,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

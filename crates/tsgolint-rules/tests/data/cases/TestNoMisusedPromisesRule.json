@@ -1,0 +1,2371 @@
+{
+  "test": "TestNoMisusedPromisesRule",
+  "rule": "no-misused-promises",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nif (true) {\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nif (Promise.resolve()) {\n}\n      ",
+      "options": {
+        "checksConditionals": false,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 2,
+      "code": "\nif (true) {\n} else if (false) {\n} else {\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nif (Promise.resolve()) {\n} else if (Promise.resolve()) {\n} else {\n}\n      ",
+      "options": {
+        "checksConditionals": false,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 4,
+      "code": "for (;;) {}",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "for (let i; i < 10; i++) {}",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "for (let i; Promise.resolve(); i++) {}",
+      "options": {
+        "checksConditionals": false,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 7,
+      "code": "do {} while (true);",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "do {} while (Promise.resolve());",
+      "options": {
+        "checksConditionals": false,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 9,
+      "code": "while (true) {}",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "while (Promise.resolve()) {}",
+      "options": {
+        "checksConditionals": false,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 11,
+      "code": "true ? 123 : 456;",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "Promise.resolve() ? 123 : 456;",
+      "options": {
+        "checksConditionals": false,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 13,
+      "code": "\nif (!true) {\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\nif (!Promise.resolve()) {\n}\n      ",
+      "options": {
+        "checksConditionals": false,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 15,
+      "code": "(await Promise.resolve()) || false;",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "Promise.resolve() || false;",
+      "options": {
+        "checksConditionals": false,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 17,
+      "code": "(true && (await Promise.resolve())) || false;",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "(true && Promise.resolve()) || false;",
+      "options": {
+        "checksConditionals": false,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 19,
+      "code": "false || (true && Promise.resolve());",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "(true && Promise.resolve()) || false;",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\nasync function test() {\n  if (await Promise.resolve()) {\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\nasync function test() {\n  const mixed: Promise | undefined = Promise.resolve();\n  if (mixed) {\n    await mixed;\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 23,
+      "code": "\nif (~Promise.resolve()) {\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 24,
+      "code": "\ninterface NotQuiteThenable {\n  then(param: string): void;\n  then(): void;\n}\nconst value: NotQuiteThenable = { then() {} };\nif (value) {\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 25,
+      "code": "[1, 2, 3].forEach(val => {});",
+      "options": null
+    },
+    {
+      "index": 26,
+      "code": "[1, 2, 3].forEach(async val => {});",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": false
+      }
+    },
+    {
+      "index": 27,
+      "code": "new Promise((resolve, reject) => resolve());",
+      "options": null
+    },
+    {
+      "index": 28,
+      "code": "new Promise(async (resolve, reject) => resolve());",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": false
+      }
+    },
+    {
+      "index": 29,
+      "code": "\nPromise.all(\n  ['abc', 'def'].map(async val => {\n    await val;\n  }),\n);\n    ",
+      "options": null
+    },
+    {
+      "index": 30,
+      "code": "\nconst fn: (arg: () => Promise<void> | void) => void = () => {};\nfn(() => Promise.resolve());\n    ",
+      "options": null
+    },
+    {
+      "index": 31,
+      "code": "\ndeclare const returnsPromise: (() => Promise<void>) | null;\nif (returnsPromise?.()) {\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 32,
+      "code": "\ndeclare const returnsPromise: { call: () => Promise<void> } | null;\nif (returnsPromise?.call()) {\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 33,
+      "code": "Promise.resolve() ?? false;",
+      "options": null
+    },
+    {
+      "index": 34,
+      "code": "\nfunction test(a: Promise<void> | undefined) {\n  const foo = a ?? Promise.reject();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 35,
+      "code": "\nfunction test(p: Promise<boolean> | undefined, bool: boolean) {\n  if (p ?? bool) {\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 36,
+      "code": "\nasync function test(p: Promise<boolean | undefined>, bool: boolean) {\n  if ((await p) ?? bool) {\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 37,
+      "code": "\nasync function test(p: Promise<boolean> | undefined) {\n  if (await (p ?? Promise.reject())) {\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 38,
+      "code": "\ndeclare let a: Promise<string> | undefined\n\ndeclare let b: Promise<string>\n\na = a ?? b\n\t\t",
+      "options": null
+    },
+    {
+      "index": 39,
+      "code": "\nlet f;\nf = async () => 10;\n    ",
+      "options": null
+    },
+    {
+      "index": 40,
+      "code": "\nlet f: () => Promise<void>;\nf = async () => 10;\nconst g = async () => 0;\nconst h: () => Promise<void> = async () => 10;\n    ",
+      "options": null
+    },
+    {
+      "index": 41,
+      "code": "\nconst obj = {\n  f: async () => 10,\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 42,
+      "code": "\nconst f = async () => 123;\nconst obj = {\n  f,\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 43,
+      "code": "\nconst obj = {\n  async f() {\n    return 0;\n  },\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 44,
+      "code": "\ntype O = { f: () => Promise<void>; g: () => Promise<void> };\nconst g = async () => 0;\nconst obj: O = {\n  f: async () => 10,\n  g,\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 45,
+      "code": "\ntype O = { f: () => Promise<void> };\nconst name = 'f';\nconst obj: O = {\n  async [name]() {\n    return 10;\n  },\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 46,
+      "code": "\nconst obj: number = {\n  g() {\n    return 10;\n  },\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 47,
+      "code": "\nconst obj = {\n  f: async () => 'foo',\n  async g() {\n    return 0;\n  },\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 48,
+      "code": "\nfunction f() {\n  return async () => 0;\n}\nfunction g() {\n  return;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 49,
+      "code": "\ntype O = {\n  bool: boolean;\n  func: () => Promise<void>;\n};\nconst Component = (obj: O) => null;\n<Component bool func={async () => 10} />;\n      ",
+      "options": null,
+      "tsx": true
+    },
+    {
+      "index": 50,
+      "code": "\nconst Component: any = () => null;\n<Component func={async () => 10} />;\n      ",
+      "options": null,
+      "tsx": true
+    },
+    {
+      "index": 51,
+      "code": "\ndeclare namespace JSX {\n  interface IntrinsicElements { div: { onClick?: () => void }; }\n}\nfunction MyComponent() { return <div onClick={} />; }\n      ",
+      "options": null,
+      "tsx": true
+    },
+    {
+      "index": 52,
+      "code": "\ninterface ItLike {\n  (name: string, callback: () => Promise<void>): void;\n  (name: string, callback: () => void): void;\n}\n\ndeclare const it: ItLike;\n\nit('', async () => {});\n      ",
+      "options": null
+    },
+    {
+      "index": 53,
+      "code": "\ninterface ItLike {\n  (name: string, callback: () => void): void;\n  (name: string, callback: () => Promise<void>): void;\n}\n\ndeclare const it: ItLike;\n\nit('', async () => {});\n      ",
+      "options": null
+    },
+    {
+      "index": 54,
+      "code": "\ninterface ItLike {\n  (name: string, callback: () => void): void;\n}\ninterface ItLike {\n  (name: string, callback: () => Promise<void>): void;\n}\n\ndeclare const it: ItLike;\n\nit('', async () => {});\n      ",
+      "options": null
+    },
+    {
+      "index": 55,
+      "code": "\ninterface ItLike {\n  (name: string, callback: () => Promise<void>): void;\n}\ninterface ItLike {\n  (name: string, callback: () => void): void;\n}\n\ndeclare const it: ItLike;\n\nit('', async () => {});\n      ",
+      "options": null
+    },
+    {
+      "index": 56,
+      "code": "\ninterface Props {\n  onEvent: (() => void) | (() => Promise<void>);\n}\n\ndeclare function Component(props: Props): any;\n\nconst _ = <Component onEvent={async () => {}} />;\n      ",
+      "options": null,
+      "tsx": true
+    },
+    {
+      "index": 57,
+      "code": "\nconsole.log({ ...(await Promise.resolve({ key: 42 })) });\n    ",
+      "options": null
+    },
+    {
+      "index": 58,
+      "code": "\nconst getData = () => Promise.resolve({ key: 42 });\n\nconsole.log({\n  someData: 42,\n  ...(await getData()),\n});\n    ",
+      "options": null
+    },
+    {
+      "index": 59,
+      "code": "\ndeclare const condition: boolean;\n\nconsole.log({ ...(condition && (await Promise.resolve({ key: 42 }))) });\nconsole.log({ ...(condition || (await Promise.resolve({ key: 42 }))) });\nconsole.log({ ...(condition ? {} : await Promise.resolve({ key: 42 })) });\nconsole.log({ ...(condition ? await Promise.resolve({ key: 42 }) : {}) });\n    ",
+      "options": null
+    },
+    {
+      "index": 60,
+      "code": "\nconsole.log([...(await Promise.resolve(42))]);\n    ",
+      "options": null
+    },
+    {
+      "index": 61,
+      "code": "\nconsole.log({ ...Promise.resolve({ key: 42 }) });\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": false,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 62,
+      "code": "\nconst getData = () => Promise.resolve({ key: 42 });\n\nconsole.log({\n  someData: 42,\n  ...getData(),\n});\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": false,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 63,
+      "code": "\ndeclare const condition: boolean;\n\nconsole.log({ ...(condition && Promise.resolve({ key: 42 })) });\nconsole.log({ ...(condition || Promise.resolve({ key: 42 })) });\nconsole.log({ ...(condition ? {} : Promise.resolve({ key: 42 })) });\nconsole.log({ ...(condition ? Promise.resolve({ key: 42 }) : {}) });\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": false,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 64,
+      "code": "\n// This is invalid Typescript, but it shouldn't trigger this linter specifically\nconsole.log([...Promise.resolve(42)]);\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": false,
+        "checksVoidReturn": true
+      }
+    },
+    {
+      "index": 65,
+      "code": "\nfunction spreadAny(..._args: any): void {}\n\nspreadAny(\n  true,\n  () => Promise.resolve(1),\n  () => Promise.resolve(false),\n);\n    ",
+      "options": null
+    },
+    {
+      "index": 66,
+      "code": "\nfunction spreadArrayAny(..._args: Array<any>): void {}\n\nspreadArrayAny(\n  true,\n  () => Promise.resolve(1),\n  () => Promise.resolve(false),\n);\n    ",
+      "options": null
+    },
+    {
+      "index": 67,
+      "code": "\nfunction spreadArrayUnknown(..._args: Array<unknown>): void {}\n\nspreadArrayUnknown(() => Promise.resolve(true), 1, 2);\n\nfunction spreadArrayFuncPromise(\n  ..._args: Array<() => Promise<undefined>>\n): void {}\n\nspreadArrayFuncPromise(\n  () => Promise.resolve(undefined),\n  () => Promise.resolve(undefined),\n);\n    ",
+      "options": null
+    },
+    {
+      "index": 68,
+      "code": "\nclass TakeCallbacks {\n  constructor(...callbacks: Array<() => void>) {}\n}\n\nnew TakeCallbacks;\nnew TakeCallbacks();\nnew TakeCallbacks(\n  () => 1,\n  () => true,\n);\n    ",
+      "options": null
+    },
+    {
+      "index": 69,
+      "code": "\nclass Foo {\n  public static doThing(): void {}\n}\n\nclass Bar extends Foo {\n  public async doThing(): Promise<void> {}\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 70,
+      "code": "\nclass Foo {\n  public doThing(): void {}\n}\n\nclass Bar extends Foo {\n  public static async doThing(): Promise<void> {}\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 71,
+      "code": "\nclass Foo {\n  public doThing = (): void => {};\n}\n\nclass Bar extends Foo {\n  public static doThing = async (): Promise<void> => {};\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 72,
+      "code": "\nclass Foo {\n  public doThing = (): void => {};\n}\n\nclass Bar extends Foo {\n  public static accessor doThing = async (): Promise<void> => {};\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 73,
+      "code": "\nclass Foo {\n  public accessor doThing = (): void => {};\n}\n\nclass Bar extends Foo {\n  public static accessor doThing = (): void => {};\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 74,
+      "code": "\nclass Foo {\n  [key: string]: void;\n}\n\nclass Bar extends Foo {\n  [key: string]: Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 75,
+      "code": "\nfunction restTuple(...args: []): void;\nfunction restTuple(...args: [string]): void;\nfunction restTuple(..._args: string[]): void {}\n\nrestTuple();\nrestTuple('Hello');\n    ",
+      "options": null
+    },
+    {
+      "index": 76,
+      "code": "\n      let value: Record<string, () => void>;\n      value.sync = () => {};\n    ",
+      "options": null
+    },
+    {
+      "index": 77,
+      "code": "\n      type ReturnsRecord = () => Record<string, () => void>;\n\n      const test: ReturnsRecord = () => {\n        return { sync: () => {} };\n      };\n    ",
+      "options": null
+    },
+    {
+      "index": 78,
+      "code": "\n      type ReturnsRecord = () => Record<string, () => void>;\n\n      function sync() {}\n\n      const test: ReturnsRecord = () => {\n        return { sync };\n      };\n    ",
+      "options": null
+    },
+    {
+      "index": 79,
+      "code": "\n      function withTextRecurser<Text extends string>(\n        recurser: (text: Text) => void,\n      ): (text: Text) => void {\n        return (text: Text): void => {\n          if (text.length) {\n            return;\n          }\n\n          return recurser(node);\n        };\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 80,
+      "code": "\ndeclare function foo(cb: undefined | (() => void));\ndeclare const bar: undefined | (() => void);\nfoo(bar);\n    ",
+      "options": null
+    },
+    {
+      "index": 81,
+      "code": "\n        type OnSelectNodeFn = (node: string | null) => void;\n\n        interface ASTViewerBaseProps {\n          readonly onSelectNode?: OnSelectNodeFn;\n        }\n\n        declare function ASTViewer(props: ASTViewerBaseProps): null;\n        declare const onSelectFn: OnSelectNodeFn;\n\n        <ASTViewer onSelectNode={onSelectFn} />;\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "attributes": true
+        }
+      },
+      "tsx": true
+    },
+    {
+      "index": 82,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nclass MySubclassExtendsMyClass extends MyClass {\n  setThing(): void {\n    return;\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 83,
+      "code": "\nclass MyClass {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n\nclass MySubclassExtendsMyClass extends MyClass {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 84,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nclass MySubclassExtendsMyClass extends MyClass {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 85,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nabstract class MyAbstractClassExtendsMyClass extends MyClass {\n  abstract setThing(): void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 86,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nabstract class MyAbstractClassExtendsMyClass extends MyClass {\n  abstract setThing(): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 87,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\ninterface MyInterfaceExtendsMyClass extends MyClass {\n  setThing(): void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 88,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\ninterface MyInterfaceExtendsMyClass extends MyClass {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 89,
+      "code": "\nabstract class MyAbstractClass {\n  abstract setThing(): void;\n}\n\nclass MySubclassExtendsMyAbstractClass extends MyAbstractClass {\n  setThing(): void {\n    return;\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 90,
+      "code": "\nabstract class MyAbstractClass {\n  abstract setThing(): void;\n}\n\nclass MySubclassExtendsMyAbstractClass extends MyAbstractClass {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 91,
+      "code": "\nabstract class MyAbstractClass {\n  abstract setThing(): void;\n}\n\nabstract class MyAbstractSubclassExtendsMyAbstractClass extends MyAbstractClass {\n  abstract setThing(): void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 92,
+      "code": "\nabstract class MyAbstractClass {\n  abstract setThing(): void;\n}\n\nabstract class MyAbstractSubclassExtendsMyAbstractClass extends MyAbstractClass {\n  abstract setThing(): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 93,
+      "code": "\nabstract class MyAbstractClass {\n  abstract setThing(): void;\n}\n\ninterface MyInterfaceExtendsMyAbstractClass extends MyAbstractClass {\n  setThing(): void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 94,
+      "code": "\nabstract class MyAbstractClass {\n  abstract setThing(): void;\n}\n\ninterface MyInterfaceExtendsMyAbstractClass extends MyAbstractClass {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 95,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\ninterface MySubInterfaceExtendsMyInterface extends MyInterface {\n  setThing(): void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 96,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\ninterface MySubInterfaceExtendsMyInterface extends MyInterface {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 97,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\nclass MyClassImplementsMyInterface implements MyInterface {\n  setThing(): void {\n    return;\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 98,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\nclass MyClassImplementsMyInterface implements MyInterface {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 99,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\nabstract class MyAbstractClassImplementsMyInterface implements MyInterface {\n  abstract setThing(): void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 100,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\nabstract class MyAbstractClassImplementsMyInterface implements MyInterface {\n  abstract setThing(): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 101,
+      "code": "\ntype MyTypeLiteralsIntersection = { setThing(): void } & { thing: number };\n\nclass MyClass implements MyTypeLiteralsIntersection {\n  thing = 1;\n  setThing(): void {\n    return;\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 102,
+      "code": "\ntype MyTypeLiteralsIntersection = { setThing(): void } & { thing: number };\n\nclass MyClass implements MyTypeLiteralsIntersection {\n  thing = 1;\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 103,
+      "code": "\ntype MyGenericType<IsAsync extends boolean = true> = IsAsync extends true\n  ? { setThing(): Promise<void> }\n  : { setThing(): void };\n\ninterface MyAsyncInterface extends MyGenericType {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 104,
+      "code": "\ntype MyGenericType<IsAsync extends boolean = true> = IsAsync extends true\n  ? { setThing(): Promise<void> }\n  : { setThing(): void };\n\ninterface MyAsyncInterface extends MyGenericType<false> {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": false
+        }
+      }
+    },
+    {
+      "index": 105,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\ninterface MyOtherInterface {\n  setThing(): void;\n}\n\ninterface MyThirdInterface extends MyInterface, MyOtherInterface {\n  setThing(): void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 106,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nclass MyOtherClass {\n  setThing(): void {\n    return;\n  }\n}\n\ninterface MyInterface extends MyClass, MyOtherClass {\n  setThing(): void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 107,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\ninterface MyOtherInterface {\n  setThing(): void;\n}\n\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nclass MySubclass extends MyClass implements MyInterface, MyOtherInterface {\n  setThing(): void {\n    return;\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 108,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nconst MyClassExpressionExtendsMyClass = class extends MyClass {\n  setThing(): void {\n    return;\n  }\n};\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 109,
+      "code": "\nconst MyClassExpression = class {\n  setThing(): void {\n    return;\n  }\n};\n\nclass MyClassExtendsMyClassExpression extends MyClassExpression {\n  setThing(): void {\n    return;\n  }\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 110,
+      "code": "\nconst MyClassExpression = class {\n  setThing(): void {\n    return;\n  }\n};\ntype MyClassExpressionType = typeof MyClassExpression;\n\ninterface MyInterfaceExtendsMyClassExpression extends MyClassExpressionType {\n  setThing(): void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 111,
+      "code": "\ninterface MySyncCallSignatures {\n  (): void;\n  (arg: string): void;\n}\ninterface MyAsyncInterface extends MySyncCallSignatures {\n  (): Promise<void>;\n  (arg: string): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 112,
+      "code": "\ninterface MySyncConstructSignatures {\n  new (): void;\n  new (arg: string): void;\n}\ninterface ThisIsADifferentIssue extends MySyncConstructSignatures {\n  new (): Promise<void>;\n  new (arg: string): Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 113,
+      "code": "\ninterface MySyncIndexSignatures {\n  [key: string]: void;\n  [key: number]: void;\n}\ninterface ThisIsADifferentIssue extends MySyncIndexSignatures {\n  [key: string]: Promise<void>;\n  [key: number]: Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 114,
+      "code": "\ninterface MySyncInterfaceSignatures {\n  (): void;\n  (arg: string): void;\n  new (): void;\n  [key: string]: () => void;\n  [key: number]: () => void;\n}\ninterface MyAsyncInterface extends MySyncInterfaceSignatures {\n  (): Promise<void>;\n  (arg: string): Promise<void>;\n  new (): Promise<void>;\n  [key: string]: () => Promise<void>;\n  [key: number]: () => Promise<void>;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 115,
+      "code": "\ninterface MyCall {\n  (): void;\n  (arg: string): void;\n}\n\ninterface MyIndex {\n  [key: string]: () => void;\n  [key: number]: () => void;\n}\n\ninterface MyConstruct {\n  new (): void;\n  new (arg: string): void;\n}\n\ninterface MyMethods {\n  doSyncThing(): void;\n  doOtherSyncThing(): void;\n  syncMethodProperty: () => void;\n}\ninterface MyInterface extends MyCall, MyIndex, MyConstruct, MyMethods {\n  (): void;\n  (arg: string): void;\n  new (): void;\n  new (arg: string): void;\n  [key: string]: () => void;\n  [key: number]: () => void;\n  doSyncThing(): void;\n  doAsyncThing(): Promise<void>;\n  syncMethodProperty: () => void;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "inheritedMethods": true
+        }
+      }
+    },
+    {
+      "index": 116,
+      "code": "const notAFn1: string = '';",
+      "options": null
+    },
+    {
+      "index": 117,
+      "code": "const notAFn2: number = 1;",
+      "options": null
+    },
+    {
+      "index": 118,
+      "code": "const notAFn3: boolean = true;",
+      "options": null
+    },
+    {
+      "index": 119,
+      "code": "const notAFn4: { prop: 1 } = { prop: 1 };",
+      "options": null
+    },
+    {
+      "index": 120,
+      "code": "const notAFn5: {} = {};",
+      "options": null
+    },
+    {
+      "index": 121,
+      "code": "\nconst array: number[] = [1, 2, 3];\narray.filter(a => a > 1);\n    ",
+      "options": null
+    },
+    {
+      "index": 122,
+      "code": "\ntype ReturnsPromiseVoid = () => Promise<void>;\ndeclare const useCallback: <T extends (...args: unknown[]) => unknown>(\n  fn: T,\n) => T;\nuseCallback<ReturnsPromiseVoid>(async () => {});\n    ",
+      "options": null
+    },
+    {
+      "index": 123,
+      "code": "\ntype ReturnsVoid = () => void;\ntype ReturnsPromiseVoid = () => Promise<void>;\ndeclare const useCallback: <T extends (...args: unknown[]) => unknown>(\n  fn: T,\n) => T;\nuseCallback<ReturnsVoid | ReturnsPromiseVoid>(async () => {});\n    ",
+      "options": null
+    },
+    {
+      "index": 124,
+      "code": "if (process.env.SKIP) { return x; }",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nif (Promise.resolve()) {\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 2,
+          "column": 5,
+          "endLine": 2,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\nif (Promise.resolve()) {\n} else if (Promise.resolve()) {\n} else {\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 2,
+          "suggestions": []
+        },
+        {
+          "messageId": "conditional",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "for (let i; Promise.resolve(); i++) {}",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "do {} while (Promise.resolve());",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "while (Promise.resolve()) {}",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "Promise.resolve() ? 123 : 456;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nif (!Promise.resolve()) {\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 2,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "Promise.resolve() || false;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\n[Promise.resolve(), Promise.reject()].forEach(async val => {\n  await val;\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 2,
+          "column": 57,
+          "endLine": 2,
+          "endColumn": 59,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nnew Promise(async (resolve, reject) => {\n  await Promise.resolve();\n  resolve();\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 2,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nconst fnWithCallback = (arg: string, cb: (err: any, res: string) => void) => {\n  cb(null, arg);\n};\n\nfnWithCallback('val', async (err, res) => {\n  await res;\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "column": 40,
+          "endLine": 6,
+          "endColumn": 42,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\nconst fnWithCallback = (arg: string, cb: (err: any, res: string) => void) => {\n  cb(null, arg);\n};\n\nfnWithCallback('val', (err, res) => Promise.resolve(res));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\nconst fnWithCallback = (arg: string, cb: (err: any, res: string) => void) => {\n  cb(null, arg);\n};\n\nfnWithCallback('val', (err, res) => {\n  if (err) {\n    return 'abc';\n  } else {\n    return Promise.resolve(res);\n  }\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\nconst fnWithCallback:\n  | ((arg: string, cb: (err: any, res: string) => void) => void)\n  | null = (arg, cb) => {\n  cb(null, arg);\n};\n\nfnWithCallback?.('val', (err, res) => Promise.resolve(res));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\nconst fnWithCallback:\n  | ((arg: string, cb: (err: any, res: string) => void) => void)\n  | null = (arg, cb) => {\n  cb(null, arg);\n};\n\nfnWithCallback('val', (err, res) => {\n  if (err) {\n    return 'abc';\n  } else {\n    return Promise.resolve(res);\n  }\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\nfunction test(bool: boolean, p: Promise<void>) {\n  if (bool || p) {\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\nfunction test(bool: boolean, p: Promise<void>) {\n  if (bool && p) {\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\nfunction test(a: any, p: Promise<void>) {\n  if (a ?? p) {\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\nfunction test(p: Promise<void> | undefined) {\n  if (p ?? Promise.reject()) {\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "conditional",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\nlet f: () => void;\nf = async () => {\n  return 3;\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnVariable",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\nlet f: () => void;\nf = async () => {\n  return 3;\n};\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "variables": true
+        }
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnVariable",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\nconst f: () => void = async () => {\n  return 0;\n};\nconst g = async () => 1,\n  h: () => void = async () => {};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnVariable",
+          "line": 2,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnVariable",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\nconst obj: {\n  f?: () => void;\n} = {};\nobj.f = async () => {\n  return 0;\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnVariable",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\ntype O = { f: () => void };\nconst obj: O = {\n  f: async () => 'foo',\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 4,
+          "column": 15,
+          "endLine": 4,
+          "endColumn": 17,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\ntype O = { f: () => void };\nconst obj: O = {\n  f: async () => 'foo',\n};\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "properties": true
+        }
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 4,
+          "column": 15,
+          "endLine": 4,
+          "endColumn": 17,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\ntype O = { f: () => void };\nconst f = async () => 0;\nconst obj: O = {\n  f,\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\ntype O = { f: () => void };\nconst obj: O = {\n  async f() {\n    return 0;\n  },\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 4,
+          "column": 3,
+          "endLine": 4,
+          "endColumn": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "\ntype O = { f: () => void; g: () => void; h: () => void };\nfunction f(): O {\n  const h = async () => 0;\n  return {\n    async f() {\n      return 123;\n    },\n    g: async () => 0,\n    h,\n  };\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 6,
+          "column": 5,
+          "endLine": 6,
+          "endColumn": 12,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnProperty",
+          "line": 9,
+          "column": 17,
+          "endLine": 9,
+          "endColumn": 19,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnProperty",
+          "line": 10,
+          "column": 5,
+          "endLine": 10,
+          "endColumn": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\nfunction f(): () => void {\n  return async () => 0;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnReturnValue",
+          "line": 3,
+          "column": 19,
+          "endLine": 3,
+          "endColumn": 21,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "code": "\nfunction f(): () => void {\n  return async () => 0;\n}\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "returns": true
+        }
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnReturnValue",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "code": "\ntype O = {\n  func: () => void;\n};\nconst Component = (obj: O) => null;\n<Component func={async () => 0} />;\n      ",
+      "options": null,
+      "tsx": true,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnAttribute",
+          "line": 6,
+          "column": 27,
+          "endLine": 6,
+          "endColumn": 29,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "code": "\ntype O = {\n  func: () => void;\n};\nconst Component = (obj: O) => null;\n<Component func={async () => 0} />;\n      ",
+      "skip": true,
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": {
+          "attributes": true
+        }
+      },
+      "tsx": true,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnAttribute",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "code": "\ntype O = {\n  func: () => void;\n};\nconst g = async () => 'foo';\nconst Component = (obj: O) => null;\n<Component func={g} />;\n      ",
+      "options": null,
+      "tsx": true,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnAttribute",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "code": "\ninterface ItLike {\n  (name: string, callback: () => number): void;\n  (name: string, callback: () => void): void;\n}\n\ndeclare const it: ItLike;\n\nit('', async () => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "code": "\ninterface ItLike {\n  (name: string, callback: () => number): void;\n}\ninterface ItLike {\n  (name: string, callback: () => void): void;\n}\n\ndeclare const it: ItLike;\n\nit('', async () => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "code": "\ninterface ItLike {\n  (name: string, callback: () => void): void;\n}\ninterface ItLike {\n  (name: string, callback: () => number): void;\n}\n\ndeclare const it: ItLike;\n\nit('', async () => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "code": "\nconsole.log({ ...Promise.resolve({ key: 42 }) });\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "spread",
+          "line": 2,
+          "column": 15,
+          "endLine": 2,
+          "endColumn": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "code": "\nconst getData = () => Promise.resolve({ key: 42 });\n\nconsole.log({\n  someData: 42,\n  ...getData(),\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "spread",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "code": "\ndeclare const condition: boolean;\n\nconsole.log({ ...(condition && Promise.resolve({ key: 42 })) });\nconsole.log({ ...(condition || Promise.resolve({ key: 42 })) });\nconsole.log({ ...(condition ? {} : Promise.resolve({ key: 42 })) });\nconsole.log({ ...(condition ? Promise.resolve({ key: 42 }) : {}) });\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "spread",
+          "line": 4,
+          "suggestions": []
+        },
+        {
+          "messageId": "spread",
+          "line": 5,
+          "suggestions": []
+        },
+        {
+          "messageId": "spread",
+          "line": 6,
+          "suggestions": []
+        },
+        {
+          "messageId": "spread",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "code": "\nfunction restPromises(first: Boolean, ...callbacks: Array<() => void>): void {}\n\nrestPromises(\n  true,\n  () => Promise.resolve(true),\n  () => Promise.resolve(null),\n  () => true,\n  () => Promise.resolve('Hello'),\n);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnArgument",
+          "line": 7,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnArgument",
+          "line": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "code": "\ntype MyUnion = (() => void) | boolean;\n\nfunction restUnion(first: string, ...callbacks: Array<MyUnion>): void {}\nrestUnion('Testing', false, () => Promise.resolve(true));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "code": "\nfunction restTupleOne(first: string, ...callbacks: [() => void]): void {}\nrestTupleOne('My string', () => Promise.resolve(1));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "code": "\nfunction restTupleTwo(\n  first: boolean,\n  ...callbacks: [undefined, () => void, undefined]\n): void {}\n\nrestTupleTwo(true, undefined, () => Promise.resolve(true), undefined);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "code": "\nfunction restTupleFour(\n  first: number,\n  ...callbacks: [() => void, boolean, () => void, () => void]\n): void;\n\nrestTupleFour(\n  1,\n  () => Promise.resolve(true),\n  false,\n  () => {},\n  () => Promise.resolve(1),\n);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 9,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnArgument",
+          "line": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "code": "\nclass TakesVoidCb {\n  constructor(first: string, ...args: Array<() => void>);\n}\n\nnew TakesVoidCb;\nnew TakesVoidCb();\nnew TakesVoidCb(\n  'Testing',\n  () => {},\n  () => Promise.resolve(true),\n);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "code": "\nfunction restTuple(...args: []): void;\nfunction restTuple(...args: [boolean, () => void]): void;\nfunction restTuple(..._args: any[]): void {}\n\nrestTuple();\nrestTuple(true, () => Promise.resolve(1));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "code": "\ntype ReturnsRecord = () => Record<string, () => void>;\n\nconst test: ReturnsRecord = () => {\n  return { asynchronous: async () => {} };\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 5,
+          "column": 35,
+          "endLine": 5,
+          "endColumn": 37,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "code": "\nlet value: Record<string, () => void>;\nvalue.asynchronous = async () => {};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnVariable",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "code": "\ntype ReturnsRecord = () => Record<string, () => void>;\n\nasync function asynchronous() {}\n\nconst test: ReturnsRecord = () => {\n  return { asynchronous };\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "code": "\ndeclare function foo(cb: undefined | (() => void));\ndeclare const bar: undefined | (() => Promise<void>);\nfoo(bar);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "code": "\ndeclare function foo(cb: string & (() => void));\ndeclare const bar: string & (() => Promise<void>);\nfoo(bar);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "code": "\nfunction consume(..._callbacks: Array<() => void>): void {}\nlet cbs: Array<() => Promise<boolean>> = [\n  () => Promise.resolve(true),\n  () => Promise.resolve(true),\n];\nconsume(...cbs);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "code": "\nfunction consume(..._callbacks: Array<() => void>): void {}\nlet cbs = [() => Promise.resolve(true), () => Promise.resolve(true)] as const;\nconsume(...cbs);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "code": "\nfunction consume(..._callbacks: Array<() => void>): void {}\nlet cbs = [() => Promise.resolve(true), () => Promise.resolve(true)];\nconsume(...cbs);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nclass MySubclassExtendsMyClass extends MyClass {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nabstract class MyAbstractClassExtendsMyClass extends MyClass {\n  abstract setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\ninterface MyInterfaceExtendsMyClass extends MyClass {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "code": "\nabstract class MyAbstractClass {\n  abstract setThing(): void;\n}\n\nclass MySubclassExtendsMyAbstractClass extends MyAbstractClass {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "code": "\nabstract class MyAbstractClass {\n  abstract setThing(): void;\n}\n\nabstract class MyAbstractSubclassExtendsMyAbstractClass extends MyAbstractClass {\n  abstract setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 59,
+      "code": "\nabstract class MyAbstractClass {\n  abstract setThing(): void;\n}\n\ninterface MyInterfaceExtendsMyAbstractClass extends MyAbstractClass {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 60,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\nclass MyInterfaceSubclass implements MyInterface {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 61,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\nabstract class MyAbstractClassImplementsMyInterface implements MyInterface {\n  abstract setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 62,
+      "code": "\nclass MyClass {\n  accessor setThing = (): void => {\n    return;\n  };\n}\n\nclass MySubclassExtendsMyClass extends MyClass {\n  accessor setThing = async (): Promise<void> => {\n    await Promise.resolve();\n  };\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 63,
+      "code": "\nabstract class MyClass {\n  abstract accessor setThing: () => void;\n}\n\nabstract class MySubclassExtendsMyClass extends MyClass {\n  abstract accessor setThing: () => Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 64,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\ninterface MySubInterface extends MyInterface {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 65,
+      "code": "\ntype MyTypeIntersection = { setThing(): void } & { thing: number };\n\nclass MyClassImplementsMyTypeIntersection implements MyTypeIntersection {\n  thing = 1;\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 66,
+      "code": "\ntype MyGenericType<IsAsync extends boolean = true> = IsAsync extends true\n  ? { setThing(): Promise<void> }\n  : { setThing(): void };\n\ninterface MyAsyncInterface extends MyGenericType<false> {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 67,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\ninterface MyOtherInterface {\n  setThing(): void;\n}\n\ninterface MyThirdInterface extends MyInterface, MyOtherInterface {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 11,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 68,
+      "code": "\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nclass MyOtherClass {\n  setThing(): void {\n    return;\n  }\n}\n\ninterface MyInterface extends MyClass, MyOtherClass {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 15,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 69,
+      "code": "\ninterface MyAsyncInterface {\n  setThing(): Promise<void>;\n}\n\ninterface MySyncInterface {\n  setThing(): void;\n}\n\nclass MyClass {\n  setThing(): void {\n    return;\n  }\n}\n\nclass MySubclass extends MyClass implements MyAsyncInterface, MySyncInterface {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 17,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 17,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 70,
+      "code": "\ninterface MyInterface {\n  setThing(): void;\n}\n\nconst MyClassExpressionExtendsMyClass = class implements MyInterface {\n  setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 71,
+      "code": "\nconst MyClassExpression = class {\n  setThing(): void {\n    return;\n  }\n};\n\nclass MyClassExtendsMyClassExpression extends MyClassExpression {\n  async setThing(): Promise<void> {\n    await Promise.resolve();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 72,
+      "code": "\nconst MyClassExpression = class {\n  setThing(): void {\n    return;\n  }\n};\ntype MyClassExpressionType = typeof MyClassExpression;\n\ninterface MyInterfaceExtendsMyClassExpression extends MyClassExpressionType {\n  setThing(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 73,
+      "code": "\ninterface MySyncInterface {\n  (): void;\n  (arg: string): void;\n  new (): void;\n  [key: string]: () => void;\n  [key: number]: () => void;\n  myMethod(): void;\n}\ninterface MyAsyncInterface extends MySyncInterface {\n  (): Promise<void>;\n  (arg: string): Promise<void>;\n  new (): Promise<void>;\n  [key: string]: () => Promise<void>;\n  [key: number]: () => Promise<void>;\n  myMethod(): Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 16,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 74,
+      "code": "\ninterface MyCall {\n  (): void;\n  (arg: string): void;\n}\n\ninterface MyIndex {\n  [key: string]: () => void;\n  [key: number]: () => void;\n}\n\ninterface MyConstruct {\n  new (): void;\n  new (arg: string): void;\n}\n\ninterface MyMethods {\n  doSyncThing(): void;\n  doOtherSyncThing(): void;\n  syncMethodProperty: () => void;\n}\ninterface MyInterface extends MyCall, MyIndex, MyConstruct, MyMethods {\n  (): void;\n  (arg: string): Promise<void>;\n  new (): void;\n  new (arg: string): void;\n  [key: string]: () => Promise<void>;\n  [key: number]: () => void;\n  doSyncThing(): Promise<void>;\n  doAsyncThing(): Promise<void>;\n  syncMethodProperty: () => Promise<void>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 29,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnInheritedMethod",
+          "line": 31,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 75,
+      "code": "\ndeclare function isTruthy(value: unknown): Promise<boolean>;\n[0, 1, 2].filter(isTruthy);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "predicate",
+          "line": 3,
+          "column": 18,
+          "endLine": 3,
+          "endColumn": 26,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 76,
+      "code": "\nconst array: number[] = [];\narray.every(() => Promise.resolve(true));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "predicate",
+          "line": 3,
+          "column": 16,
+          "endLine": 3,
+          "endColumn": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 77,
+      "code": "\nconst array: (string[] & { foo: 'bar' }) | (number[] & { bar: 'foo' }) = [];\narray.every(() => Promise.resolve(true));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "predicate",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 78,
+      "code": "\nconst tuple: [number, number, number] = [1, 2, 3];\ntuple.find(() => Promise.resolve(false));\n      ",
+      "options": {
+        "checksConditionals": true,
+        "checksSpreads": true,
+        "checksVoidReturn": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "predicate",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 79,
+      "code": "\ntype ReturnsVoid = () => void;\ndeclare const useCallback: <T extends (...args: unknown[]) => unknown>(\n  fn: T,\n) => T;\ndeclare const useCallbackReturningVoid: typeof useCallback<ReturnsVoid>;\nuseCallbackReturningVoid(async () => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 80,
+      "code": "\ntype ReturnsVoid = () => void;\ndeclare const useCallback: <T extends (...args: unknown[]) => unknown>(\n  fn: T,\n) => T;\nuseCallback<ReturnsVoid>(async () => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 81,
+      "code": "\ninterface Foo<T> {\n  (callback: () => T): void;\n  (callback: () => number): void;\n}\ndeclare const foo: Foo<void>;\n\nfoo(async () => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 82,
+      "code": "\ndeclare function tupleFn<T extends (...args: unknown[]) => unknown>(\n  ...fns: [T, string, T]\n): void;\ntupleFn<() => void>(\n  async () => {},\n  'foo',\n  async () => {},\n);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnArgument",
+          "line": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 83,
+      "code": "\ndeclare function arrayFn<T extends (...args: unknown[]) => unknown>(\n  ...fns: (T | string)[]\n): void;\narrayFn<() => void>(\n  async () => {},\n  'foo',\n  async () => {},\n);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnArgument",
+          "line": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 84,
+      "code": "\ntype HasVoidMethod = {\n  f(): void;\n};\n\nconst o: HasVoidMethod = {\n  async f() {\n    return 3;\n  },\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 7,
+          "column": 3,
+          "endLine": 7,
+          "endColumn": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 85,
+      "code": "\ntype HasVoidMethod = {\n  f(): void;\n};\n\nconst o: HasVoidMethod = {\n  async f(): Promise<number> {\n    return 3;\n  },\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 7,
+          "column": 14,
+          "endLine": 7,
+          "endColumn": 29,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 86,
+      "code": "\ntype HasVoidMethod = {\n  f(): void;\n};\nconst obj: HasVoidMethod = {\n  f() {\n    return Promise.resolve('foo');\n  },\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 6,
+          "column": 3,
+          "endLine": 6,
+          "endColumn": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 87,
+      "code": "\ntype HasVoidMethod = {\n  f(): void;\n};\nconst obj: HasVoidMethod = {\n  f(): Promise<void> {\n    throw new Error();\n  },\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 6,
+          "column": 8,
+          "endLine": 6,
+          "endColumn": 21,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 88,
+      "code": "\ntype O = { f: () => void };\nconst asyncFunction = async () => 'foo';\nconst obj: O = {\n  f: asyncFunction,\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 5,
+          "column": 6,
+          "endLine": 5,
+          "endColumn": 19,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 89,
+      "code": "\ntype O = { f: () => void };\nconst obj: O = {\n  f: async (): Promise<string> => 'foo',\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnProperty",
+          "line": 4,
+          "column": 16,
+          "endLine": 4,
+          "endColumn": 31,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 90,
+      "code": "\ndeclare function on(this: void, ...callbacks: Array<() => void>): void;\non(async () => {}, async () => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 3,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnArgument",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 91,
+      "code": "\nclass C {\n  private _handler: ((x: number) => Promise<void>) | undefined;\n\n  set handler(handler: undefined | ((x: number) => void)) {\n    this._handler = handler as ((x: number) => Promise<void>) | undefined;\n  }\n\n  get handler() {\n    return this._handler;\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnReturnValue",
+          "line": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 92,
+      "code": "\ndeclare function takesCb(cb: () => void): void;\nfunction f<T extends () => Promise<void>>(t: T) {\n  takesCb({ ...t });\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 93,
+      "code": "\nfunction f<T extends () => Promise<void>>(t: T) {\n  const cb: () => void = { ...t };\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnVariable",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 94,
+      "code": "\ninterface String {\n  (): Promise<void>;\n}\ndeclare function takesCb(cb: () => void): void;\ntakesCb('literal');\ntakesCb(`template`);\nconst cb: () => void = 'literal';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnArgument",
+          "line": 7,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnVariable",
+          "line": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 95,
+      "code": "\ninterface Number {\n  (): Promise<void>;\n}\ndeclare function takesCb(cb: () => void): void;\ntakesCb(123);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 96,
+      "code": "\ninterface Array<T> {\n  (): Promise<void>;\n}\ndeclare function takesCb(cb: () => void): void;\ntakesCb([1, 2]);\nconst cb: () => void = [1, 2];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "voidReturnArgument",
+          "line": 6,
+          "suggestions": []
+        },
+        {
+          "messageId": "voidReturnVariable",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

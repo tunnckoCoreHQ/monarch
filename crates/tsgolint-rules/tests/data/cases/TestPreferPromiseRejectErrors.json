@@ -1,0 +1,1847 @@
+{
+  "test": "TestPreferPromiseRejectErrors",
+  "rule": "prefer-promise-reject-errors",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "Promise.resolve(5);",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "Promise.reject();",
+      "options": {
+        "allowEmptyReject": true,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      }
+    },
+    {
+      "index": 2,
+      "code": "\n        declare const someAnyValue: any;\n        Promise.reject(someAnyValue);\n      ",
+      "options": {
+        "allowEmptyReject": false,
+        "allowThrowingAny": true,
+        "allowThrowingUnknown": false
+      }
+    },
+    {
+      "index": 3,
+      "code": "\n        declare const someUnknownValue: unknown;\n        Promise.reject(someUnknownValue);\n      ",
+      "options": {
+        "allowEmptyReject": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": true
+      }
+    },
+    {
+      "index": 4,
+      "code": "Promise.reject(new Error());",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "Promise.reject(new TypeError());",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "Promise.reject(new Error('foo'));",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\n      class CustomError extends Error {}\n      Promise.reject(new CustomError());\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\n      declare const foo: () => { err: SyntaxError };\n      Promise.reject(foo().err);\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\n      declare const foo: () => Promise<Error>;\n      Promise.reject(await foo());\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "Promise.reject((foo = new Error()));",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\n      const foo = Promise;\n      foo.reject(new Error());\n    ",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "Promise['reject'](new Error());",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "Promise.reject(true && new Error());",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\n      const foo = false;\n      Promise.reject(false || new Error());\n    ",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "\n      declare const foo: Readonly<Error>;\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "\n      declare const foo: Readonly<Error> | Readonly<TypeError>;\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "\n      declare const foo: Readonly<Error> & Readonly<TypeError>;\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "\n      declare const foo: Readonly<Error> & { foo: 'bar' };\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 19,
+      "code": "\n      declare const foo: Readonly<Error & { bar: 'foo' }> & { foo: 'bar' };\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "\n      declare const foo: Readonly<Readonly<Error>>;\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\n      declare const foo: Readonly<Readonly<Readonly<Error>>>;\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\n      declare const foo: Readonly<\n        Readonly<Readonly<Error & { bar: 'foo' }> & { foo: 'bar' }> & {\n          fooBar: 'barFoo';\n        }\n      > & { barFoo: 'fooBar' };\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 23,
+      "code": "\n      declare const foo:\n        | Readonly<Readonly<Error> | Readonly<TypeError & string>>\n        | Readonly<Error>;\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 24,
+      "code": "\n      type Wrapper<T> = { foo: Readonly<T>[] };\n      declare const foo: Wrapper<Error>['foo'][5];\n      Promise.reject(foo);\n    ",
+      "options": null
+    },
+    {
+      "index": 25,
+      "code": "\n      declare const foo: Error[];\n      Promise.reject(foo[5]);\n    ",
+      "options": null
+    },
+    {
+      "index": 26,
+      "code": "\n      declare const foo: ReadonlyArray<Error>;\n      Promise.reject(foo[5]);\n    ",
+      "options": null
+    },
+    {
+      "index": 27,
+      "code": "\n      declare const foo: [Error];\n      Promise.reject(foo[0]);\n    ",
+      "options": null
+    },
+    {
+      "index": 28,
+      "code": "\n      new Promise(function (resolve, reject) {\n        resolve(5);\n      });\n    ",
+      "options": null
+    },
+    {
+      "index": 29,
+      "code": "\n      new Promise(function (resolve, reject) {\n        reject(new Error());\n      });\n    ",
+      "options": null
+    },
+    {
+      "index": 30,
+      "code": "\n      new Promise((resolve, reject) => {\n        reject(new Error());\n      });\n\t\t\t",
+      "options": null
+    },
+    {
+      "index": 31,
+      "code": "new Promise((resolve, reject) => reject(new Error()));",
+      "options": null
+    },
+    {
+      "index": 32,
+      "code": "\n        new Promise(function (resolve, reject) {\n          reject();\n        });\n      ",
+      "options": {
+        "allowEmptyReject": true,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      }
+    },
+    {
+      "index": 33,
+      "code": "new Promise((yes, no) => no(new Error()));",
+      "options": null
+    },
+    {
+      "index": 34,
+      "code": "new Promise();",
+      "options": null
+    },
+    {
+      "index": 35,
+      "code": "new Promise(5);",
+      "options": null
+    },
+    {
+      "index": 36,
+      "code": "new Promise((resolve, { apply }) => {});",
+      "options": null
+    },
+    {
+      "index": 37,
+      "code": "new Promise((resolve, reject) => {});",
+      "options": null
+    },
+    {
+      "index": 38,
+      "code": "new Promise((resolve, reject) => reject);",
+      "options": null
+    },
+    {
+      "index": 39,
+      "code": "\n      class CustomError extends Error {}\n      new Promise(function (resolve, reject) {\n        reject(new CustomError());\n      });\n    ",
+      "options": null
+    },
+    {
+      "index": 40,
+      "code": "\n      declare const foo: () => { err: SyntaxError };\n      new Promise(function (resolve, reject) {\n        reject(foo().err);\n      });\n    ",
+      "options": null
+    },
+    {
+      "index": 41,
+      "code": "new Promise((resolve, reject) => reject((foo = new Error())));",
+      "options": null
+    },
+    {
+      "index": 42,
+      "code": "\n      new Foo((resolve, reject) => reject(5));\n    ",
+      "options": null
+    },
+    {
+      "index": 43,
+      "code": "\n      class Foo {\n        constructor(\n          executor: (resolve: () => void, reject: (reason?: any) => void) => void,\n        ): Promise<any> {}\n      }\n      new Foo((resolve, reject) => reject(5));\n    ",
+      "options": null
+    },
+    {
+      "index": 44,
+      "code": "\n      new Promise((resolve, reject) => {\n        return function (reject) {\n          reject(5);\n        };\n      });\n    ",
+      "options": null
+    },
+    {
+      "index": 45,
+      "code": "new Promise((resolve, reject) => resolve(5, reject));",
+      "options": null
+    },
+    {
+      "index": 46,
+      "code": "\n      class C {\n        #error: Error;\n        foo() {\n          Promise.reject(this.#error);\n        }\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 47,
+      "code": "\n      const foo = Promise;\n      new foo((resolve, reject) => reject(new Error()));\n    ",
+      "options": null
+    },
+    {
+      "index": 48,
+      "code": "\n      declare const foo: Readonly<Error>;\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 49,
+      "code": "\n      declare const foo: Readonly<Error> | Readonly<TypeError>;\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 50,
+      "code": "\n      declare const foo: Readonly<Error> & Readonly<TypeError>;\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 51,
+      "code": "\n      declare const foo: Readonly<Error> & { foo: 'bar' };\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 52,
+      "code": "\n      declare const foo: Readonly<Error & { bar: 'foo' }> & { foo: 'bar' };\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 53,
+      "code": "\n      declare const foo: Readonly<Readonly<Error>>;\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 54,
+      "code": "\n      declare const foo: Readonly<Readonly<Readonly<Error>>>;\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 55,
+      "code": "\n      declare const foo: Readonly<\n        Readonly<Readonly<Error & { bar: 'foo' }> & { foo: 'bar' }> & {\n          fooBar: 'barFoo';\n        }\n      > & { barFoo: 'fooBar' };\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 56,
+      "code": "\n      declare const foo:\n        | Readonly<Readonly<Error> | Readonly<TypeError & string>>\n        | Readonly<Error>;\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 57,
+      "code": "\n      type Wrapper<T> = { foo: Readonly<T>[] };\n      declare const foo: Wrapper<Error>['foo'][5];\n      new Promise((resolve, reject) => reject(foo));\n    ",
+      "options": null
+    },
+    {
+      "index": 58,
+      "code": "\n      declare const foo: Error[];\n      new Promise((resolve, reject) => reject(foo[5]));\n    ",
+      "options": null
+    },
+    {
+      "index": 59,
+      "code": "\n      declare const foo: ReadonlyArray<Error>;\n      new Promise((resolve, reject) => reject(foo[5]));\n    ",
+      "options": null
+    },
+    {
+      "index": 60,
+      "code": "\n      declare const foo: [Error];\n      new Promise((resolve, reject) => reject(foo[0]));\n    ",
+      "options": null
+    },
+    {
+      "index": 61,
+      "code": "\n      class Foo extends Promise<number> {}\n      Foo.reject(new Error());\n    ",
+      "options": null
+    },
+    {
+      "index": 62,
+      "code": "\n      class Foo extends Promise<number> {}\n      new Foo((resolve, reject) => reject(new Error()));\n    ",
+      "options": null
+    },
+    {
+      "index": 63,
+      "code": "\n      declare const someRandomCall: {\n        reject(arg: any): void;\n      };\n      someRandomCall.reject(5);\n    ",
+      "options": null
+    },
+    {
+      "index": 64,
+      "code": "\n      declare const foo: PromiseConstructor;\n      foo.reject(new Error());\n    ",
+      "options": null
+    },
+    {
+      "index": 65,
+      "code": "console[Symbol.iterator]();",
+      "options": null
+    },
+    {
+      "index": 66,
+      "code": "\n      class A {\n        a = [];\n        [Symbol.iterator]() {\n          return this.a[Symbol.iterator]();\n        }\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 67,
+      "code": "\n      declare const foo: PromiseConstructor;\n      function fun<T extends Error>(t: T): void {\n        foo.reject(t);\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 68,
+      "code": "\n        declare const someAnyValue: any;\n        Promise.reject(someAnyValue);\n      ",
+      "options": {
+        "allowEmptyReject": false,
+        "allowThrowingAny": true,
+        "allowThrowingUnknown": true
+      }
+    },
+    {
+      "index": 69,
+      "code": "\n        declare const someUnknownValue: unknown;\n        Promise.reject(someUnknownValue);\n      ",
+      "options": {
+        "allowEmptyReject": false,
+        "allowThrowingAny": true,
+        "allowThrowingUnknown": true
+      }
+    },
+    {
+      "index": 70,
+      "code": "\n        class CustomRejection {}\n        Promise.reject(new CustomRejection());\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "file",
+            "name": [
+              "CustomRejection"
+            ]
+          }
+        ],
+        "allowEmptyReject": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      }
+    },
+    {
+      "index": 71,
+      "code": "\n        class CustomRejection {}\n        Promise.reject(new CustomRejection());\n      ",
+      "options": {
+        "allow": [
+          "CustomRejection"
+        ],
+        "allowEmptyReject": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      }
+    },
+    {
+      "index": 72,
+      "code": "\n        Promise.reject(new Date());\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Date"
+            ]
+          }
+        ],
+        "allowEmptyReject": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      }
+    },
+    {
+      "index": 73,
+      "code": "\n        new Promise((resolve, reject) => reject(new Date()));\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Date"
+            ]
+          }
+        ],
+        "allowEmptyReject": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      }
+    },
+    {
+      "index": 74,
+      "code": "\n        import { createError } from 'errors';\n        Promise.reject(createError());\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "package",
+            "name": [
+              "ErrorLike"
+            ],
+            "package": "errors"
+          }
+        ],
+        "allowEmptyReject": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      },
+      "files": {
+        "node_modules/errors/package.json": "{\n          \"name\": \"errors\",\n          \"version\": \"1.0.0\",\n          \"types\": \"index.d.ts\"\n        }",
+        "node_modules/errors/index.d.ts": "\n          export interface ErrorLike extends Error {}\n          export function createError(): ErrorLike;\n        "
+      }
+    },
+    {
+      "index": 75,
+      "code": "\n        import { createError } from 'errors';\n        new Promise((resolve, reject) => reject(createError()));\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "package",
+            "name": [
+              "ErrorLike"
+            ],
+            "package": "errors"
+          }
+        ],
+        "allowEmptyReject": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      },
+      "files": {
+        "node_modules/errors/package.json": "{\n          \"name\": \"errors\",\n          \"version\": \"1.0.0\",\n          \"types\": \"index.d.ts\"\n        }",
+        "node_modules/errors/index.d.ts": "\n          export interface ErrorLike extends Error {}\n          export function createError(): ErrorLike;\n        "
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "Promise.reject(5);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "Promise.reject('foo');",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "Promise.reject(`foo`);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "Promise.reject('foo', somethingElse);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 37,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "Promise.reject(false);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "Promise.reject(void `foo`);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 27,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "Promise.reject();",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 17,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "Promise.reject(undefined);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 26,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "Promise.reject(undefined);",
+      "options": {
+        "allowEmptyReject": true,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 26,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "Promise.reject(null);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 21,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "Promise.reject({ foo: 1 });",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 27,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "Promise.reject([1, 2, 3]);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 26,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\ndeclare const foo: Error | undefined;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\ndeclare const foo: () => Promise<string>;\nPromise.reject(await foo());\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 28,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\ndeclare const foo: boolean;\nPromise.reject(foo && new Error());\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 35,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\nconst foo = Promise;\nfoo.reject();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "Promise.reject?.(5);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "Promise?.reject(5);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 19,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "Promise?.reject?.(5);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 21,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "(Promise?.reject)(5);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 21,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "(Promise?.reject)?.(5);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 23,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "Promise['reject'](5);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 21,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "Promise.reject((foo += new Error()));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 37,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "Promise.reject((foo -= new Error()));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 37,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "Promise.reject((foo **= new Error()));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 38,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "Promise.reject((foo <<= new Error()));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 38,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "Promise.reject((foo |= new Error()));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 37,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "Promise.reject((foo &= new Error()));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 37,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\ndeclare const foo: never;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "code": "\ndeclare const foo: unknown;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "code": "\ntype FakeReadonly<T> = { 'fake readonly': T };\ndeclare const foo: FakeReadonly<Error>;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 4,
+          "column": 1,
+          "endLine": 4,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "code": "\ndeclare const foo: Readonly<'error'>;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "code": "\ndeclare const foo: Readonly<Error | 'error'>;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "code": "\ndeclare const foo: Readonly<Error> | 'error';\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "code": "\ndeclare const foo: Readonly<Error> | Readonly<TypeError> | Readonly<'error'>;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "code": "\ndeclare const foo: Readonly<Readonly<'error'>>;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "code": "\ndeclare const foo: Readonly<Readonly<Readonly<Error> | 'error'>>;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "code": "\ndeclare const foo: Readonly<Readonly<Readonly<Error> & TypeError>> | 'error';\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "code": "\ndeclare const foo: Readonly<Readonly<Error>> | Readonly<TypeError> | 'error';\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "code": "\ntype Wrapper<T> = { foo: Readonly<T>[] };\ndeclare const foo: Wrapper<Error | 'error'>['foo'][5];\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 4,
+          "column": 1,
+          "endLine": 4,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "code": "\ndeclare const foo: Error[];\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "code": "\ndeclare const foo: ReadonlyArray<Error>;\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "code": "\ndeclare const foo: [Error];\nPromise.reject(foo);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "code": "\nnew Promise(function (resolve, reject) {\n  reject();\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "code": "\nnew Promise(function (resolve, reject) {\n  reject(5);\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "code": "\nnew Promise((resolve, reject) => {\n  reject();\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "code": "new Promise((resolve, reject) => reject(5));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 34,
+          "endLine": 1,
+          "endColumn": 43,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "code": "\nnew Promise((resolve, reject) => {\n  fs.readFile('foo.txt', (err, file) => {\n    if (err) reject('File not found');\n    else resolve(file);\n  });\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 4,
+          "column": 14,
+          "endLine": 4,
+          "endColumn": 38,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "code": "new Promise((yes, no) => no(5));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 26,
+          "endLine": 1,
+          "endColumn": 31,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "code": "new Promise(({ foo, bar, baz }, reject) => reject(5));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 44,
+          "endLine": 1,
+          "endColumn": 53,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "code": "\nnew Promise(function (reject, reject) {\n  reject(5);\n});\n      ",
+      "skip": true,
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "code": "\nnew Promise(function (foo, arguments) {\n  arguments(5);\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "code": "new Promise((foo, arguments) => arguments(5));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 33,
+          "endLine": 1,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "code": "\nnew Promise(function ({}, reject) {\n  reject(5);\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "code": "new Promise(({}, reject) => reject(5));",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 29,
+          "endLine": 1,
+          "endColumn": 38,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "code": "new Promise((resolve, reject, somethingElse = reject(5)) => {});",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 1,
+          "column": 47,
+          "endLine": 1,
+          "endColumn": 56,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "code": "\ndeclare const foo: {\n  bar: PromiseConstructor;\n};\nnew foo.bar((resolve, reject) => reject(5));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 5,
+          "column": 34,
+          "endLine": 5,
+          "endColumn": 43,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "code": "\ndeclare const foo: {\n  bar: PromiseConstructor;\n};\nnew (foo?.bar)((resolve, reject) => reject(5));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 5,
+          "column": 37,
+          "endLine": 5,
+          "endColumn": 46,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "code": "\nconst foo = Promise;\nnew foo((resolve, reject) => reject(5));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 30,
+          "endLine": 3,
+          "endColumn": 39,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 59,
+      "code": "\ndeclare const foo: never;\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 60,
+      "code": "\ndeclare const foo: unknown;\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 61,
+      "code": "\ntype FakeReadonly<T> = { 'fake readonly': T };\ndeclare const foo: FakeReadonly<Error>;\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 4,
+          "column": 34,
+          "endLine": 4,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 62,
+      "code": "\ndeclare const foo: Readonly<'error'>;\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 63,
+      "code": "\ndeclare const foo: Readonly<Error | 'error'>;\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 64,
+      "code": "\ndeclare const foo: Readonly<Error> | 'error';\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 65,
+      "code": "\ndeclare const foo: Readonly<Error> | Readonly<TypeError> | Readonly<'error'>;\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 66,
+      "code": "\ndeclare const foo: Readonly<Readonly<'error'>>;\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 67,
+      "code": "\ndeclare const foo: Readonly<Readonly<Readonly<Error> | 'error'>>;\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 68,
+      "code": "\ndeclare const foo: Readonly<Readonly<Readonly<Error> & TypeError>> | 'error';\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 69,
+      "code": "\ndeclare const foo: Readonly<Readonly<Error>> | Readonly<TypeError> | 'error';\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 70,
+      "code": "\ntype Wrapper<T> = { foo: Readonly<T>[] };\ndeclare const foo: Wrapper<Error | 'error'>['foo'][5];\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 4,
+          "column": 34,
+          "endLine": 4,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 71,
+      "code": "\ndeclare const foo: Error[];\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 72,
+      "code": "\ndeclare const foo: ReadonlyArray<Error>;\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 73,
+      "code": "\ndeclare const foo: [Error];\nnew Promise((resolve, reject) => reject(foo));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 34,
+          "endLine": 3,
+          "endColumn": 45,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 74,
+      "code": "\nclass Foo extends Promise<number> {}\nFoo.reject(5);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 14,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 75,
+      "code": "\ndeclare const foo: PromiseConstructor & string;\nfoo.reject(5);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 14,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 76,
+      "code": "\nclass Foo extends Promise<number> {}\nclass Bar extends Foo {}\nBar.reject(5);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 4,
+          "column": 1,
+          "endLine": 4,
+          "endColumn": 14,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 77,
+      "code": "\ndeclare const foo: PromiseConstructor;\nfunction fun<T extends number>(t: T): void {\n  foo.reject(t);\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "line": 4,
+          "column": 3,
+          "endLine": 4,
+          "endColumn": 16,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 78,
+      "code": "\n        declare const someAnyValue: any;\n        Promise.reject(someAnyValue);\n      ",
+      "options": {
+        "allowEmptyReject": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 79,
+      "code": "\n        declare const someUnknownValue: unknown;\n        Promise.reject(someUnknownValue);\n      ",
+      "options": {
+        "allowEmptyReject": false,
+        "allowThrowingAny": true,
+        "allowThrowingUnknown": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 80,
+      "code": "\n        declare const someUnknownValue: unknown;\n        Promise.reject(someUnknownValue);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 81,
+      "code": "\n        declare const someAnyValue: any;\n        Promise.reject(someAnyValue);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 82,
+      "code": "\nclass CustomRejection {}\nPromise.reject(new CustomRejection());\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 83,
+      "code": "\nPromise.reject(new Date());\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 84,
+      "code": "\nimport { createError } from 'errors';\nPromise.reject(createError());\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 85,
+      "code": "\nimport { createError } from 'errors';\nnew Promise((resolve, reject) => reject(createError()));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "rejectAnError",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

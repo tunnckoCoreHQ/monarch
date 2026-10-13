@@ -1,0 +1,235 @@
+{
+  "test": "TestNonNullableTypeAssertionStyleRule",
+  "rule": "non-nullable-type-assertion-style",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const original: number | string;\nconst cast = original as string;\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const original: number | undefined;\nconst cast = original as string | number | undefined;\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const original: number | any;\nconst cast = original as string | number | undefined;\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const original: number | undefined;\nconst cast = original as any;\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare const original: number | null | undefined;\nconst cast = original as number | null;\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\ntype Type = { value: string };\ndeclare const original: Type | number;\nconst cast = original as Type;\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\ntype T = string;\ndeclare const x: T | number;\n\nconst y = x as NonNullable<T>;\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\ntype T = string | null;\ndeclare const x: T | number;\n\nconst y = x as NonNullable<T>;\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\nconst foo = [] as const;\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\nconst x = 1 as 1;\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\ndeclare function foo<T = any>(): T;\nconst bar = foo() as number;\n    ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const maybe: string | undefined;\nconst bar = maybe as string;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 3,
+          "column": 13,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\ndeclare const maybe: string | undefined;\nconst bar = maybe!;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const maybe: string | null;\nconst bar = maybe as string;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 3,
+          "column": 13,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\ndeclare const maybe: string | null;\nconst bar = maybe!;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const maybe: string | null | undefined;\nconst bar = maybe as string;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 3,
+          "column": 13,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\ndeclare const maybe: string | null | undefined;\nconst bar = maybe!;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\ntype Type = { value: string };\ndeclare const maybe: Type | undefined;\nconst bar = maybe as Type;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 4,
+          "column": 13,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\ntype Type = { value: string };\ndeclare const maybe: Type | undefined;\nconst bar = maybe!;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\ninterface Interface {\n  value: string;\n}\ndeclare const maybe: Interface | undefined;\nconst bar = maybe as Interface;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 6,
+          "column": 13,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\ninterface Interface {\n  value: string;\n}\ndeclare const maybe: Interface | undefined;\nconst bar = maybe!;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\ntype T = string | null;\ndeclare const x: T;\n\nconst y = x as NonNullable<T>;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 5,
+          "column": 11,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\ntype T = string | null;\ndeclare const x: T;\n\nconst y = x!;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\ntype T = string | null | undefined;\ndeclare const x: T;\n\nconst y = x as NonNullable<T>;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 5,
+          "column": 11,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\ntype T = string | null | undefined;\ndeclare const x: T;\n\nconst y = x!;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\ndeclare function nullablePromise(): Promise<string | null>;\n\nasync function fn(): Promise<string> {\n  return (await nullablePromise()) as string;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 5,
+          "column": 10,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\ndeclare function nullablePromise(): Promise<string | null>;\n\nasync function fn(): Promise<string> {\n  return (await nullablePromise())!;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\ndeclare const a: string | null;\n\nconst b = (a || undefined) as string;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 4,
+          "column": 11,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\ndeclare const a: string | null;\n\nconst b = (a || undefined)!;\n      "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

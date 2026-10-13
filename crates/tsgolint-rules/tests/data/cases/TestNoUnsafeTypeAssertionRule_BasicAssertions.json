@@ -1,0 +1,180 @@
+{
+  "test": "TestNoUnsafeTypeAssertionRule_BasicAssertions",
+  "rule": "no-unsafe-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const a: string;\na as string | number;\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const a: string;\n<string | number>a;\n      ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const a: string;\na as string | number as string | number | boolean;\n      ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const a: string;\na as string;\n      ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare const a: { hello: 'world' };\na as { hello: string };\n      ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\n'hello' as const;\n      ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\nfunction foo<T extends boolean>(a: T) {\n  return a as T | number;\n}\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const a: string | number;\na as string;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const a: string | number;\na satisfies string as string;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 20,
+          "endLine": 3,
+          "endColumn": 29,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const a: string | number;\n<string>a;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 1,
+          "endLine": 3,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const a: string | undefined;\na as string | boolean;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare const a: string;\na as 'foo' as 'bar';\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 12,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        },
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nfunction foo<T extends boolean>(a: T) {\n  return a as true;\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 12,
+          "endLine": 3,
+          "endColumn": 19,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\ndeclare const a: string;\na as Omit<Required<Readonly<{ hello: 'world'; foo: 'bar' }>>, 'foo'>;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 69,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\ndeclare const foo: readonly number[];\nconst bar = foo as number[];\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 17,
+          "endLine": 3,
+          "endColumn": 28,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

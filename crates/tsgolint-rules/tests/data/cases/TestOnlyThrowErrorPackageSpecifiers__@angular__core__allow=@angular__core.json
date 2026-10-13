@@ -1,0 +1,30 @@
+{
+  "test": "TestOnlyThrowErrorPackageSpecifiers/@angular/core/allow=@angular/core",
+  "rule": "only-throw-error",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "import type { ErrorLike } from \"@angular/core\"; declare const error: ErrorLike; throw error;",
+      "options": {
+        "allow": [
+          {
+            "from": "package",
+            "name": [
+              "ErrorLike"
+            ],
+            "package": "@angular/core"
+          }
+        ],
+        "allowRethrowing": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      },
+      "files": {
+        "node_modules/@angular/core/package.json": "{\"name\": \"@angular/core\", \"version\": \"1.0.0\", \"types\": \"lib/index.d.ts\"}",
+        "node_modules/@angular/core/lib/index.d.ts": "export interface ErrorLike { message: string }"
+      }
+    }
+  ],
+  "invalid": []
+}

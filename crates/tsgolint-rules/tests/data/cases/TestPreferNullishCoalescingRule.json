@@ -1,0 +1,3776 @@
+{
+  "test": "TestPreferNullishCoalescingRule",
+  "rule": "prefer-nullish-coalescing",
+  "tsconfig": "tsconfig.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "x !== undefined && x !== null ? x : y;",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": true
+      }
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (!foo) {\n    foo = makeFoo();\n  }\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": true,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (!foo) foo = makeFoo();\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": true,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 3,
+      "code": "\n      declare let x: never;\n      declare let y: number;\n      x || y;\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\n      declare let x: never;\n      declare let y: number;\n      x ? x : y;\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\n      declare let x: never;\n      declare let y: number;\n      !x ? y : x;\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b !== null ? defaultBoxOptional.a?.b : getFallbackBox();\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | null } };\n\ndefaultBoxOptional.a?.b !== null ? defaultBoxOptional.a?.b : getFallbackBox();\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | null } };\n\ndefaultBoxOptional.a?.b !== undefined\n  ? defaultBoxOptional.a?.b\n  : getFallbackBox();\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | null } };\n\ndefaultBoxOptional.a?.b !== undefined\n  ? defaultBoxOptional.a.b\n  : getFallbackBox();\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 11,
+      "code": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 12,
+      "code": "\ndeclare let x: 0 | 'foo' | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 13,
+      "code": "\ndeclare let x: 0 | 'foo' | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 14,
+      "code": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 15,
+      "code": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum.A | Enum.B | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 16,
+      "code": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 17,
+      "code": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum.A | Enum.B | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 18,
+      "code": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 19,
+      "code": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 20,
+      "code": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 21,
+      "code": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 22,
+      "code": "\ndeclare let x: 0 | 'foo' | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 23,
+      "code": "\ndeclare let x: 0 | 'foo' | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 24,
+      "code": "\ndeclare let x: 0 | 'foo' | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 25,
+      "code": "\ndeclare let x: 0 | 'foo' | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 26,
+      "code": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 27,
+      "code": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 28,
+      "code": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum.A | Enum.B | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 29,
+      "code": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum.A | Enum.B | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 30,
+      "code": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 31,
+      "code": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 32,
+      "code": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum.A | Enum.B | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 33,
+      "code": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum.A | Enum.B | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 34,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = Boolean(a || b);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 35,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nconst test = Boolean(a || b || c);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 36,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nconst test = Boolean(a || (b && c));\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 37,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nconst test = Boolean((a || b) ?? c);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 38,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nconst test = Boolean(a ?? (b || c));\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 39,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nconst test = Boolean(a ? b || c : 'fail');\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 40,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nconst test = Boolean(a ? 'success' : b || c);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 41,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nconst test = Boolean(((a = b), b || c));\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 42,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nconst test = Boolean((a ? a : b) || c);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 43,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nconst test = Boolean(c || (!a ? b : a));\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 44,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nif (a || b || c) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 45,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nif (a || (b && c)) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 46,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nif ((a || b) ?? c) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 47,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nif (a ?? (b || c)) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 48,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nif (a ? b || c : 'fail') {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 49,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nif (a ? 'success' : b || c) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 50,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nif (((a = b), b || c)) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 51,
+      "code": "\nlet a: string | undefined;\nlet b: string | undefined;\n\nif (!(a || b)) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 52,
+      "code": "\nlet a: string | undefined;\nlet b: string | undefined;\n\nif (!!(a || b)) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 53,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nif (a ? a : b) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 54,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\n\nif (!a ? b : a) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 55,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nif ((a ? a : b) || c) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 56,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\nlet c: string | boolean | undefined;\n\nif (c || (!a ? b : a)) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 57,
+      "code": "\ndeclare const a: any;\ndeclare const b: any;\na ? a : b;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": true,
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 58,
+      "code": "\ndeclare const a: any;\ndeclare const b: any;\na ? a : b;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": false,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    },
+    {
+      "index": 59,
+      "code": "\ndeclare const a: unknown;\nconst b = a || 'bar';\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": false,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "this != undefined ? this : y;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "this ?? y;"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare let x: string[] | null;\nif (x) {\n}\n      ",
+      "options": null,
+      "tsconfig": "tsconfig.unstrict.json",
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noStrictNullCheck",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare let x: string | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: string | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare let x: number | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: number | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare let x: boolean | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: boolean | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\ndeclare let x: bigint | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: bigint | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\ndeclare let x: string | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: string | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\ndeclare let x: number | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: number | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\ndeclare let x: boolean | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: boolean | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\ndeclare let x: bigint | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: bigint | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\ndeclare let x: '' | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: '' | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\ndeclare let x: `` | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: `` | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\ndeclare let x: 0 | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\ndeclare let x: 0n | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\ndeclare let x: false | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: false | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\ndeclare let x: '' | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: '' | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\ndeclare let x: `` | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: `` | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\ndeclare let x: 0 | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\ndeclare let x: 0n | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\ndeclare let x: false | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: false | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\ndeclare let x: 'a' | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 'a' | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\ndeclare let x: `hello${'string'}` | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: `hello${'string'}` | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\ndeclare let x: 1 | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\ndeclare let x: 1n | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\ndeclare let x: true | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: true | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\ndeclare let x: 'a' | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 'a' | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\ndeclare let x: 'a' | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 'a' | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "\ndeclare let x: `hello${'string'}` | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: `hello${'string'}` | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\ndeclare let x: `hello${'string'}` | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: `hello${'string'}` | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "code": "\ndeclare let x: 1 | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "code": "\ndeclare let x: 1 | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "code": "\ndeclare let x: 1n | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "code": "\ndeclare let x: 1n | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "code": "\ndeclare let x: true | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: true | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "code": "\ndeclare let x: true | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: true | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "code": "\ndeclare let x: 'a' | 'b' | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 'a' | 'b' | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "code": "\ndeclare let x: 'a' | `b` | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 'a' | `b` | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "code": "\ndeclare let x: 0 | 1 | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0 | 1 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "code": "\ndeclare let x: 1 | 2 | 3 | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1 | 2 | 3 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "code": "\ndeclare let x: 0n | 1n | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0n | 1n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "code": "\ndeclare let x: 1n | 2n | 3n | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1n | 2n | 3n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "code": "\ndeclare let x: true | false | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: true | false | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "code": "\ndeclare let x: 'a' | 'b' | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 'a' | 'b' | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "code": "\ndeclare let x: 'a' | 'b' | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 'a' | 'b' | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "code": "\ndeclare let x: 'a' | `b` | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 'a' | `b` | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "code": "\ndeclare let x: 'a' | `b` | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": true,
+          "string": false
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 'a' | `b` | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "code": "\ndeclare let x: 0 | 1 | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0 | 1 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "code": "\ndeclare let x: 0 | 1 | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0 | 1 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "code": "\ndeclare let x: 1 | 2 | 3 | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1 | 2 | 3 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "code": "\ndeclare let x: 1 | 2 | 3 | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1 | 2 | 3 | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "code": "\ndeclare let x: 0n | 1n | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0n | 1n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "code": "\ndeclare let x: 0n | 1n | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0n | 1n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "code": "\ndeclare let x: 1n | 2n | 3n | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1n | 2n | 3n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "code": "\ndeclare let x: 1n | 2n | 3n | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 1n | 2n | 3n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "code": "\ndeclare let x: true | false | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: true | false | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "code": "\ndeclare let x: true | false | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: true | false | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "code": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "code": "\ndeclare let x: true | false | null | undefined;\nx || y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: true | false | null | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "code": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 59,
+      "code": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": false,
+          "boolean": true,
+          "number": false,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: 0 | 1 | 0n | 1n | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 60,
+      "code": "\ndeclare let x: true | false | null | undefined;\nx ? x : y;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: true | false | null | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 61,
+      "code": "\ndeclare let x: true | false | null | undefined;\n!x ? y : x;\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignorePrimitives": {
+          "bigint": true,
+          "boolean": false,
+          "number": true,
+          "string": true
+        },
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: true | false | null | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 62,
+      "code": "\ndeclare let x: null;\nx || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: null;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 63,
+      "code": "\nconst x = undefined;\nx || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nconst x = undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 64,
+      "code": "\nnull || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nnull ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 65,
+      "code": "\nundefined || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nundefined ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 66,
+      "code": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum | undefined;\nx || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 67,
+      "code": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum.A | Enum.B | undefined;\nx || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nenum Enum {\n  A = 0,\n  B = 1,\n  C = 2,\n}\ndeclare let x: Enum.A | Enum.B | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 68,
+      "code": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum | undefined;\nx || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 69,
+      "code": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum.A | Enum.B | undefined;\nx || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nenum Enum {\n  A = 'a',\n  B = 'b',\n  C = 'c',\n}\ndeclare let x: Enum.A | Enum.B | undefined;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 70,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\nlet c: boolean | undefined;\n\nconst x = Boolean(a || b);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\nlet c: boolean | undefined;\n\nconst x = Boolean(a ?? b);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 71,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = String(a || b);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = String(a ?? b);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 72,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = Boolean(() => a || b);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = Boolean(() => a ?? b);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 73,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = Boolean(function weird() {\n  return a || b;\n});\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = Boolean(function weird() {\n  return a ?? b;\n});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 74,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\ndeclare function f(x: unknown): unknown;\n\nconst x = Boolean(f(a || b));\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\ndeclare function f(x: unknown): unknown;\n\nconst x = Boolean(f(a ?? b));\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 75,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = Boolean(1 + (a || b));\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = Boolean(1 + (a ?? b));\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 76,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = Boolean(a ? a : b);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\nconst x = Boolean(a ?? b);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 77,
+      "code": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\n\nconst test = Boolean(!a ? b : a);\n      ",
+      "options": {
+        "ignoreBooleanCoercion": true,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | boolean | undefined;\nlet b: string | boolean | undefined;\n\nconst test = Boolean(a ?? b);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 78,
+      "code": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\ndeclare function f(x: unknown): unknown;\n\nif (f(a || b)) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | true | undefined;\nlet b: string | boolean | undefined;\n\ndeclare function f(x: unknown): unknown;\n\nif (f(a ?? b)) {\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 79,
+      "code": "\ndeclare const a: string | undefined;\ndeclare const b: string;\n\nif (+(a || b)) {\n}\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": true,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare const a: string | undefined;\ndeclare const b: string;\n\nif (+(a ?? b)) {\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 80,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBox: Box | undefined;\n\ndefaultBox || getFallbackBox();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBox: Box | undefined;\n\ndefaultBox ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 81,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBox: Box | undefined;\n\ndefaultBox ? defaultBox : getFallbackBox();\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBox: Box | undefined;\n\ndefaultBox ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 82,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b != null ? defaultBoxOptional.a?.b : getFallbackBox();\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 83,
+      "code": "\ndeclare const x: any;\ndeclare const y: any;\nx || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare const x: any;\ndeclare const y: any;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 84,
+      "code": "\ndeclare const x: unknown;\ndeclare const y: any;\nx || y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare const x: unknown;\ndeclare const y: any;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 85,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b != null ? defaultBoxOptional.a.b : getFallbackBox();\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 86,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ? defaultBoxOptional.a?.b : getFallbackBox();\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 87,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ? defaultBoxOptional.a.b : getFallbackBox();\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 88,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b !== undefined\n  ? defaultBoxOptional.a?.b\n  : getFallbackBox();\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 89,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b !== undefined\n  ? defaultBoxOptional.a.b\n  : getFallbackBox();\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 90,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b !== undefined && defaultBoxOptional.a?.b !== null\n  ? defaultBoxOptional.a?.b\n  : getFallbackBox();\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 91,
+      "code": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b !== undefined && defaultBoxOptional.a?.b !== null\n  ? defaultBoxOptional.a.b\n  : getFallbackBox();\n      ",
+      "options": {
+        "ignoreBooleanCoercion": false,
+        "ignoreConditionalTests": false,
+        "ignoreIfStatements": false,
+        "ignoreMixedLogicalExpressions": false,
+        "ignoreTernaryTests": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ninterface Box {\n  value: string;\n}\ndeclare function getFallbackBox(): Box;\ndeclare const defaultBoxOptional: { a?: { b?: Box | undefined } };\n\ndefaultBoxOptional.a?.b ?? getFallbackBox();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 92,
+      "code": "\ndeclare let x: unknown;\ndeclare let y: number;\n!x ? y : x;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: unknown;\ndeclare let y: number;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 93,
+      "code": "\ndeclare let x: unknown;\ndeclare let y: number;\nx ? x : y;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: unknown;\ndeclare let y: number;\nx ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 94,
+      "code": "\ndeclare let x: { n: unknown };\n!x.n ? y : x.n;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: { n: unknown };\nx.n ?? y;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 95,
+      "code": "\ndeclare let x: { a: string } | null;\n\nx?.['a'] != null ? x['a'] : 'foo';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: { a: string } | null;\n\nx?.['a'] ?? 'foo';\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 96,
+      "code": "\ndeclare let x: { a: string } | null;\n\nx?.['a'] != null ? x.a : 'foo';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: { a: string } | null;\n\nx?.['a'] ?? 'foo';\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 97,
+      "code": "\ndeclare let x: { a: string } | null;\n\nx?.a != null ? x['a'] : 'foo';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let x: { a: string } | null;\n\nx?.a ?? 'foo';\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 98,
+      "code": "\nconst a = 'b';\ndeclare let x: { a: string; b: string } | null;\n\nx?.[a] != null ? x[a] : 'foo';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nconst a = 'b';\ndeclare let x: { a: string; b: string } | null;\n\nx?.[a] ?? 'foo';\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 99,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (!foo) {\n    foo = makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 100,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo == null) {\n    foo = makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 101,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo == null) {\n    foo ??= makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 102,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo == null) {\n    foo ||= makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo == null) {\n    foo ??= makeFoo();\n  }\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 103,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo === null) {\n    foo = makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 104,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo == null) foo = makeFoo();\n  const bar = 42;\n  return bar;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n  const bar = 42;\n  return bar;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 105,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo == null) foo ??= makeFoo();\n  const bar = 42;\n  return bar;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n  const bar = 42;\n  return bar;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 106,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo == null) foo ||= makeFoo();\n  const bar = 42;\n  return bar;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n  const bar = 42;\n  return bar;\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo == null) foo ??= makeFoo();\n  const bar = 42;\n  return bar;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 107,
+      "code": "\ndeclare let foo: { a: string } | undefined;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo === undefined) {\n    foo = makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | undefined;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 108,
+      "code": "\ndeclare let foo: { a: string } | null | undefined;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  if (foo === undefined || foo === null) {\n    foo = makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null | undefined;\ndeclare function makeFoo(): { a: string };\n\nfunction lazyInitialize() {\n  foo ??= makeFoo();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 109,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): string;\n\nfunction lazyInitialize() {\n  if (foo.a == null) {\n    foo.a = makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): string;\n\nfunction lazyInitialize() {\n  foo.a ??= makeFoo();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 110,
+      "code": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): string;\n\nfunction lazyInitialize() {\n  if (foo?.a == null) {\n    foo.a = makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string } | null;\ndeclare function makeFoo(): string;\n\nfunction lazyInitialize() {\n  foo.a ??= makeFoo();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 111,
+      "code": "\ndeclare let foo: string | null;\ndeclare function makeFoo(): string;\n\nfunction lazyInitialize() {\n  // comment\n  if (foo == null) {\n    foo = makeFoo();\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: string | null;\ndeclare function makeFoo(): string;\n\nfunction lazyInitialize() {\n  // comment\n  foo ??= makeFoo();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 112,
+      "code": "\ndeclare let foo: string | null;\ndeclare function makeFoo(): string;\n\nif (foo == null) {\n  // comment before 1\n  /* comment before 2 */\n  /* comment before 3\n    which is multiline\n  */\n  /**\n   * comment before 4\n   * which is also multiline\n   */\n  foo = makeFoo(); // comment inline\n  // comment after 1\n  /* comment after 2 */\n  /* comment after 3\n    which is multiline\n  */\n  /**\n   * comment after 4\n   * which is also multiline\n   */\n}\n      ",
+      "skip": true,
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: string | null;\ndeclare function makeFoo(): string;\n\n// comment before 1\n/* comment before 2 */\n/* comment before 3\n    which is multiline\n  */\n/**\n   * comment before 4\n   * which is also multiline\n   */\nfoo ??= makeFoo(); // comment inline\n// comment after 1\n/* comment after 2 */\n/* comment after 3\n    which is multiline\n  */\n/**\n   * comment after 4\n   * which is also multiline\n   */\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 113,
+      "code": "\ndeclare let foo: string | null;\ndeclare function makeFoo(): string;\n\nif (foo == null) {\n  // comment before 1\n  /* comment before 2 */\n  /* comment before 3\n    which is multiline\n  */\n  /**\n   * comment before 4\n   * which is also multiline\n   */\n  foo = makeFoo(); // comment inline\n  // comment after 1\n  /* comment after 2 */\n  /* comment after 3\n    which is multiline\n  */\n  /**\n   * comment after 4\n   * which is also multiline\n   */\n}\n      ",
+      "skip": true,
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: string | null;\ndeclare function makeFoo(): string;\n\n// comment before 1\n/* comment before 2 */\n/* comment before 3\n    which is multiline\n  */\n/**\n   * comment before 4\n   * which is also multiline\n   */\nfoo ??= makeFoo(); // comment inline\n// comment after 1\n/* comment after 2 */\n/* comment after 3\n    which is multiline\n  */\n/**\n   * comment after 4\n   * which is also multiline\n   */\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 114,
+      "code": "\ndeclare let foo: string | null;\ndeclare function makeFoo(): string;\n\nif (foo == null) /* comment before 1 */ /* comment before 2 */ foo = makeFoo(); // comment inline\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: string | null;\ndeclare function makeFoo(): string;\n\n/* comment before 1 */ /* comment before 2 */ foo ??= makeFoo(); // comment inline\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 115,
+      "code": "\ndeclare let foo: { a: string | null };\ndeclare function makeString(): string;\n\nfunction weirdParens() {\n  if (((((foo.a)) == null))) {\n    ((((((((foo).a))))) = makeString()));\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverAssignment",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let foo: { a: string | null };\ndeclare function makeString(): string;\n\nfunction weirdParens() {\n  ((foo).a) ??= makeString();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 116,
+      "code": "\nlet a: string | undefined;\nlet b: { message: string } | undefined;\n\nconst foo = a ? a : b ? 1 : 2;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | undefined;\nlet b: { message: string } | undefined;\n\nconst foo = a ?? (b ? 1 : 2);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 117,
+      "code": "\nlet a: string | undefined;\nlet b: { message: string } | undefined;\n\nconst foo = a ? a : (b ? 1 : 2);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\nlet a: string | undefined;\nlet b: { message: string } | undefined;\n\nconst foo = a ?? (b ? 1 : 2);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 118,
+      "code": "\ndeclare const c: string | null;\nc !== null ? c : c ? 1 : 2;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverTernary",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare const c: string | null;\nc ?? (c ? 1 : 2);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 119,
+      "code": "\ndeclare let a: string | null;\ndeclare let b: string;\ndeclare let c: string;\nconst x = (a && b) || c || 'd';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let a: string | null;\ndeclare let b: string;\ndeclare let c: string;\nconst x = ((a && b) ?? c) || 'd';\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 120,
+      "code": "\ndeclare let a: string | null;\ndeclare let b: string;\ndeclare let c: string;\nconst x = ((a && b)) || c || 'd';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let a: string | null;\ndeclare let b: string;\ndeclare let c: string;\nconst x = (((a && b)) ?? c) || 'd';\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 121,
+      "code": "\ndeclare let a: string | null;\ndeclare let b: string;\ndeclare let c: string;\nconst x = a && b || c || 'd';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare let a: string | null;\ndeclare let b: string;\ndeclare let c: string;\nconst x = a && (b ?? c) || 'd';\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 122,
+      "code": "\ndeclare const isLoading: boolean;\ndeclare const isPending: boolean | undefined;\ndeclare const fallback: boolean;\nexport const result = isLoading || isPending || fallback;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare const isLoading: boolean;\ndeclare const isPending: boolean | undefined;\ndeclare const fallback: boolean;\nexport const result = (isLoading || isPending) ?? fallback;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 123,
+      "code": "\ndeclare const value: string | undefined;\ndeclare const fallback: string;\ndeclare const alternate: string;\nexport const result = value || fallback && alternate;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare const value: string | undefined;\ndeclare const fallback: string;\ndeclare const alternate: string;\nexport const result = value ?? (fallback && alternate);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 124,
+      "code": "\ndeclare const value: string | undefined;\ndeclare const fallback: string;\ndeclare const alternate: string;\nexport const result = value || (fallback && alternate);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare const value: string | undefined;\ndeclare const fallback: string;\ndeclare const alternate: string;\nexport const result = value ?? (fallback && alternate);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 125,
+      "code": "\ndeclare const value: string | undefined;\ndeclare const fallback: string;\ndeclare const alternate: string;\ndeclare const finalFallback: string;\nexport const result = value || fallback && alternate || finalFallback;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNullishOverOr",
+          "suggestions": [
+            {
+              "messageId": "suggestNullishCoalescing",
+              "output": "\ndeclare const value: string | undefined;\ndeclare const fallback: string;\ndeclare const alternate: string;\ndeclare const finalFallback: string;\nexport const result = (value ?? (fallback && alternate)) || finalFallback;\n      "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

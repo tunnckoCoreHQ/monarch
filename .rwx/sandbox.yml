@@ -30,6 +30,21 @@ tasks:
       "$HOME/.foundry/bin/foundryup" --install v1.7.1
       echo "$HOME/.foundry/bin" > "$RWX_ENV/PATH"
 
+  # The Rust toolchain and wasmtime, like in ci.yml.
+  - key: rust
+    use: code
+    filter: [rust-toolchain.toml]
+    run: |
+      sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential
+      curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+      "$HOME/.cargo/bin/rustup" toolchain install
+      echo "$HOME/.cargo/bin" > "$RWX_ENV/PATH"
+
+  - key: wasmtime
+    run: |
+      curl -fsSL https://wasmtime.dev/install.sh | bash -s -- --version v44.0.1
+      echo "$HOME/.wasmtime/bin" > "$RWX_ENV/PATH"
+
   # The standalone pnpm, like in ci.yml.
   - key: pnpm
     use: code
@@ -54,7 +69,7 @@ tasks:
       - patches
 
   - key: sandbox
-    use: [deps, foundry]
+    use: [deps, foundry, rust, wasmtime]
     env:
       TURBO_TELEMETRY_DISABLED: 1
     run: rwx-sandbox

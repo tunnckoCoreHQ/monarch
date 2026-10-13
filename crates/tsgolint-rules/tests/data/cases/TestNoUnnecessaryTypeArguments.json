@@ -1,0 +1,854 @@
+{
+  "test": "TestNoUnnecessaryTypeArguments",
+  "rule": "no-unnecessary-type-arguments",
+  "tsconfig": "tsconfig.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "f();",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "f<string>();",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "class Foo extends Bar {}",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "class Foo extends Bar<string> {}",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "class Foo implements Bar {}",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "class Foo implements Bar<string> {}",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\nfunction f<T = number>() {}\nf();\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\nfunction f<T = number>() {}\nf<string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\ndeclare const f: (<T = number>() => void) | null;\nf?.();\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\ndeclare const f: (<T = number>() => void) | null;\nf?.<string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\ndeclare const f: any;\nf();\n    ",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\ndeclare const f: any;\nf<string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "\ndeclare const f: unknown;\nf();\n    ",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "\ndeclare const f: unknown;\nf<string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\nfunction g<T = number, U = string>() {}\ng<number, number>();\n    ",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "\ndeclare const g: any;\ng<string, string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "\ndeclare const g: unknown;\ng<string, string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "\ndeclare const f: unknown;\nf<string>``;\n    ",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "\nfunction f<T = number>(template: TemplateStringsArray) {}\nf<string>``;\n    ",
+      "options": null
+    },
+    {
+      "index": 19,
+      "code": "\nclass C<T = number> {}\nnew C<string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "\ndeclare const C: any;\nnew C<string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\ndeclare const C: unknown;\nnew C<string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\nclass C<T = number> {}\nclass D extends C<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 23,
+      "code": "\ndeclare const C: any;\nclass D extends C<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 24,
+      "code": "\ndeclare const C: unknown;\nclass D extends C<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 25,
+      "code": "\ninterface I<T = number> {}\nclass Impl implements I<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 26,
+      "code": "\nclass C<TC = number> {}\nclass D<TD = number> extends C {}\n    ",
+      "options": null
+    },
+    {
+      "index": 27,
+      "code": "\ndeclare const C: any;\nclass D<TD = number> extends C {}\n    ",
+      "options": null
+    },
+    {
+      "index": 28,
+      "code": "\ndeclare const C: unknown;\nclass D<TD = number> extends C {}\n    ",
+      "options": null
+    },
+    {
+      "index": 29,
+      "code": "let a: A<number>;",
+      "options": null
+    },
+    {
+      "index": 30,
+      "code": "\nclass Foo<T> {}\nconst foo = new Foo<number>();\n    ",
+      "options": null
+    },
+    {
+      "index": 31,
+      "code": "type Foo<T> = import('foo').Foo<T>;",
+      "options": null
+    },
+    {
+      "index": 32,
+      "code": "\nclass Bar<T = number> {}\nclass Foo<T = number> extends Bar<T> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 33,
+      "code": "\ninterface Bar<T = number> {}\nclass Foo<T = number> implements Bar<T> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 34,
+      "code": "\nclass Bar<T = number> {}\nclass Foo<T = number> extends Bar<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 35,
+      "code": "\ninterface Bar<T = number> {}\nclass Foo<T = number> implements Bar<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 36,
+      "code": "\nimport { F } from './missing';\nfunction bar<T = F>() {}\nbar<F<number>>();\n    ",
+      "options": null
+    },
+    {
+      "index": 37,
+      "code": "\ntype A<T = Element> = T;\ntype B = A<HTMLInputElement>;\n      ",
+      "options": null,
+      "tsconfig": "tsconfig.lib-dom.json"
+    },
+    {
+      "index": 38,
+      "code": "\ntype A<T = Map<string, string>> = T;\ntype B = A<Map<string, number>>;\n    ",
+      "options": null
+    },
+    {
+      "index": 39,
+      "code": "\ntype A = Map<string, string>;\ntype B<T = A> = T;\ntype C2 = B<Map<string, number>>;\n    ",
+      "options": null
+    },
+    {
+      "index": 40,
+      "code": "\ninterface Foo<T = string> {}\ndeclare var Foo: {\n  new <T>(type: T): any;\n};\nclass Bar extends Foo<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 41,
+      "code": "\ninterface Foo<T = string> {}\nclass Foo<T> {}\nclass Bar extends Foo<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 42,
+      "code": "\nclass Foo<T = string> {}\ninterface Foo<T> {}\nclass Bar implements Foo<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 43,
+      "code": "\nclass Foo<T> {}\nnamespace Foo {\n  export class Bar {}\n}\nclass Bar extends Foo<string> {}\n    ",
+      "options": null
+    },
+    {
+      "index": 44,
+      "code": "\nfunction Button<T>() {\n  return <div></div>;\n}\nconst button = <Button<string>></Button>;\n      ",
+      "options": null,
+      "tsx": true
+    },
+    {
+      "index": 45,
+      "code": "\nfunction Button<T>() {\n  return <div></div>;\n}\nconst button = <Button<string> />;\n      ",
+      "options": null,
+      "tsx": true
+    },
+    {
+      "index": 46,
+      "code": "\nfunction f<T = number>() {}\nconst g = f<number>;\n    ",
+      "options": null
+    },
+    {
+      "index": 47,
+      "code": "\nfunction f<T = number>() {}\nfunction takesFn(fn: () => void) {}\ntakesFn(f<number>);\n    ",
+      "options": null
+    },
+    {
+      "index": 48,
+      "code": "\nfunction f<T>(x: T) {}\nf(10);\n    ",
+      "options": null
+    },
+    {
+      "index": 49,
+      "code": "\nfunction f<T>(x: T) {}\nf<10>(10);\n    ",
+      "options": null
+    },
+    {
+      "index": 50,
+      "code": "\nfunction f<T>(x: T) {}\ndeclare const x: any;\nf<string>(x);\n    ",
+      "options": null
+    },
+    {
+      "index": 51,
+      "code": "\nfunction f<T>(x: T) {}\nf<Record<string, boolean>>({});\n    ",
+      "options": null
+    },
+    {
+      "index": 52,
+      "code": "\nfunction f<T>(x: T) {}\ndeclare const x: {};\nf<Record<string, boolean>>(x);\n    ",
+      "options": null
+    },
+    {
+      "index": 53,
+      "code": "\nfunction f<T>(x: T) {}\ndeclare const x: Record<string, never>;\nf<Record<string, boolean>>(x);\n    ",
+      "options": null
+    },
+    {
+      "index": 54,
+      "code": "\nfunction f<T>(x: T) {}\ndeclare const x: any;\nf<{}>(x);\n    ",
+      "options": null
+    },
+    {
+      "index": 55,
+      "code": "\nfunction f<T>(x: T) {}\ndeclare const x: {};\nf<any>(x);\n    ",
+      "options": null
+    },
+    {
+      "index": 56,
+      "code": "\nfunction f<T>(x: T) {}\ninterface F {}\ndeclare const x: {};\nf<F>(x);\n    ",
+      "options": null
+    },
+    {
+      "index": 57,
+      "code": "\nfunction f<T>(x: T) {}\nf<number[]>([]);\n    ",
+      "options": null
+    },
+    {
+      "index": 58,
+      "code": "\nfunction f<T = number>(x: T) {}\nf(10);\n    ",
+      "options": null
+    },
+    {
+      "index": 59,
+      "code": "\nfunction f<T extends number>(x: T) {}\nf(10);\n    ",
+      "options": null
+    },
+    {
+      "index": 60,
+      "code": "\nfunction f<T extends number | string>(x: T) {}\nf(10);\n    ",
+      "options": null
+    },
+    {
+      "index": 61,
+      "code": "\nfunction f<T extends number | string>(x: T) {}\nf<number | string>(10);\n    ",
+      "options": null
+    },
+    {
+      "index": 62,
+      "code": "\nconst curried =\n  <Outer,>(outer: Outer) =>\n  <Inner,>(inner: Inner) => {};\ncurried(10)(10);\n    ",
+      "options": null
+    },
+    {
+      "index": 63,
+      "code": "\nconst curried =\n  <Outer,>(outer: Outer) =>\n  <Inner,>(inner: Inner) => {};\ncurried<10>(10)<10>(10);\n    ",
+      "options": null
+    },
+    {
+      "index": 64,
+      "code": "\ndeclare function f<T>(x: T | (() => T)): [T, (x: T) => void];\ndeclare function f<T>(): [T | undefined, (x: T | undefined) => void];\nf(10);\nf<number>();\n    ",
+      "options": null
+    },
+    {
+      "index": 65,
+      "code": "\nfunction f<T>(x: T) {}\nf<boolean | null>(true);\n    ",
+      "options": null
+    },
+    {
+      "index": 66,
+      "code": "\nclass C<T> {}\nnew C<string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 67,
+      "code": "\nclass Foo<T> {\n  constructor<T>(x: T) {}\n}\nconst foo = new Foo(10);\n    ",
+      "options": null
+    },
+    {
+      "index": 68,
+      "code": "\nfunction f<T>() {}\nf<number, number>();\n    ",
+      "options": null
+    },
+    {
+      "index": 69,
+      "code": "\nclass Foo<T> {\n  public constructor(a: any, b: any, c: any, d: any) {}\n}\ninterface Bar {\n  val: any;\n}\nlet foo = new Foo<Bar>(0, 0, 0, { val: 0 });\n    ",
+      "options": null
+    },
+    {
+      "index": 70,
+      "code": "\nfunction f<T = string>() {}\nf<any>();\n    ",
+      "options": null
+    },
+    {
+      "index": 71,
+      "code": "\nfunction f<T = any>() {}\nf<string>();\n    ",
+      "options": null
+    },
+    {
+      "index": 72,
+      "code": "\ndeclare function useState<T>(initialState: T | (() => T)): [T, (value: T) => void];\nconst [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());\n    ",
+      "options": null
+    },
+    {
+      "index": 73,
+      "code": "\ndeclare function useRef<T>(initialValue: T): { current: T };\nconst activeIndexesRef = useRef<Set<number>>(new Set());\n    ",
+      "options": null
+    },
+    {
+      "index": 74,
+      "code": "\ntype OneParam<T = any> = T;\ninterface TestInterface {\n  prop?: OneParam<string, number>;  // TypeScript error, but shouldn't panic\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 75,
+      "code": "\ntype OneParam<T = any, U = any, V = any> = T;\ninterface TestInterface {\n  prop?: OneParam<string, number>;  // TypeScript error, but shouldn't panic\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 76,
+      "code": "\ntype Data = Record<never, never>\n\ntype LocaleData<T extends Data = Data> = Record<string, T>\n\ninterface Data1 { a: string }\n\ntype Data2 = Partial<Data1>\n\ntype LocaleData2 = LocaleData<Data2>\n    ",
+      "options": null
+    },
+    {
+      "index": 77,
+      "code": "\ntype Data = Record<never, never>\n\ntype LocaleData<T extends Data = Data> = Record<string, T>\n\ninterface Data1 { a: string }\n\ntype Data2 = Partial<Data1>\n\ninterface Wrapper {\n  value: LocaleData<Data2>\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 78,
+      "code": "\n\ntype SessionDataT = Record<string, any>\ntype SessionData<T extends SessionDataT = SessionDataT> = Partial<T>;\ndeclare function useSession<T extends SessionData = SessionData>(): any;\n\n\nexport function scoped() {\n  interface SessionData {\n    userId?: string;\n  }\n\n  return useSession<SessionData>()\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 79,
+      "code": "\ninterface Foo {\n\tfoo?: string\n}\ninterface Bar extends Foo {\n\tbar?: string\n}\n\nfunction f<T = Foo>() {}\nf<Bar>();\n    ",
+      "options": null
+    },
+    {
+      "index": 80,
+      "code": "\ntype SessionDataT = Record<string, any>;\ntype H3SessionData<T extends SessionDataT = SessionDataT> = T;\ninterface SessionManager<T extends SessionDataT = SessionDataT> {\n  readonly data: H3SessionData<T>;\n}\ninterface SessionConfig {\n  password: string;\n  name: string;\n  cookie: {\n    sameSite: 'strict';\n    httpOnly: true;\n    secure: true;\n  };\n}\ninterface EventHandlerRequest {}\ndeclare class H3Event<_RequestT extends EventHandlerRequest = EventHandlerRequest> {}\ndeclare function useSession<T extends SessionDataT = SessionDataT>(\n  event: H3Event,\n  config: SessionConfig,\n): Promise<SessionManager<T>>;\n\ninterface SessionData {\n  userId?: string;\n}\n\nfunction getSessionConfig(): SessionConfig {\n  return {\n    password: '',\n    name: '',\n    cookie: {\n      sameSite: 'strict',\n      httpOnly: true,\n      secure: true,\n    },\n  };\n}\n\nasync function useAppSession(event: H3Event) {\n  const config = getSessionConfig();\n\n  return useSession<SessionData>(event, config);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 81,
+      "code": "\ntype RecordToTuple<T> = {\n  [K in keyof T]: [K, T[K]];\n}[keyof T][];\n\nclass RequestContext<\n  Values extends Record<string, unknown> | unknown = unknown,\n> {\n  constructor(\n    _iterable?: Values extends Record<string, unknown>\n      ? RecordToTuple<Partial<Values>>\n      : Iterable<readonly [string, unknown]>,\n  ) {}\n\n  set<K extends Values extends Record<string, unknown> ? keyof Values : string>(\n    _key: K,\n    _value: Values extends Record<string, unknown>\n      ? K extends keyof Values\n        ? Values[K]\n        : never\n      : unknown,\n  ): void {}\n}\n\ntype UntypedRequestContext = RequestContext;\n\nfunction acceptsUntypedContext(_context: UntypedRequestContext): void {}\n\nconst context = new RequestContext<unknown>([\n  ['instructions', 'Reply for the agent.'],\n  ['tools', {}],\n]);\n\nacceptsUntypedContext(context);\n    ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nfunction f<T = number>() {}\nf<number>();\n      ",
+      "options": null,
+      "output": [
+        "\nfunction f<T = number>() {}\nf();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\nfunction g<T = number, U = string>() {}\ng<string, string>();\n      ",
+      "options": null,
+      "output": [
+        "\nfunction g<T = number, U = string>() {}\ng<string>();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "column": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\nfunction f<T = number>(templates: TemplateStringsArray, arg: T) {}\nf<number>`${1}`;\n      ",
+      "options": null,
+      "output": [
+        "\nfunction f<T = number>(templates: TemplateStringsArray, arg: T) {}\nf`${1}`;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nclass C<T = number> {}\nfunction h(c: C<number>) {}\n      ",
+      "options": null,
+      "output": [
+        "\nclass C<T = number> {}\nfunction h(c: C) {}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\nclass C<T = number> {}\nnew C<number>();\n      ",
+      "options": null,
+      "output": [
+        "\nclass C<T = number> {}\nnew C();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nclass C<T = number> {}\nclass D extends C<number> {}\n      ",
+      "options": null,
+      "output": [
+        "\nclass C<T = number> {}\nclass D extends C {}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\ninterface I<T = number> {}\nclass Impl implements I<number> {}\n      ",
+      "options": null,
+      "output": [
+        "\ninterface I<T = number> {}\nclass Impl implements I {}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nclass Foo<T = number> {}\nconst foo = new Foo<number>();\n      ",
+      "options": null,
+      "output": [
+        "\nclass Foo<T = number> {}\nconst foo = new Foo();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\ninterface Bar<T = string> {}\nclass Foo<T = number> implements Bar<string> {}\n      ",
+      "options": null,
+      "output": [
+        "\ninterface Bar<T = string> {}\nclass Foo<T = number> implements Bar {}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nclass Bar<T = string> {}\nclass Foo<T = number> extends Bar<string> {}\n      ",
+      "options": null,
+      "output": [
+        "\nclass Bar<T = string> {}\nclass Foo<T = number> extends Bar {}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nimport { F } from './missing';\nfunction bar<T = F<string>>() {}\nbar<F<string>>();\n      ",
+      "skip": true,
+      "options": null,
+      "output": [
+        "\nimport { F } from './missing';\nfunction bar<T = F<string>>() {}\nbar();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 4,
+          "column": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\ntype DefaultE = { foo: string };\ntype T<E = DefaultE> = { box: E };\ntype G = T<DefaultE>;\ndeclare module 'bar' {\n  type DefaultE = { somethingElse: true };\n  type G = T<DefaultE>;\n}\n      ",
+      "options": null,
+      "output": [
+        "\ntype DefaultE = { foo: string };\ntype T<E = DefaultE> = { box: E };\ntype G = T;\ndeclare module 'bar' {\n  type DefaultE = { somethingElse: true };\n  type G = T<DefaultE>;\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 4,
+          "column": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\ntype A<T = Map<string, string>> = T;\ntype B = A<Map<string, string>>;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A<T = Map<string, string>> = T;\ntype B = A;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\ntype A = Map<string, string>;\ntype B<T = A> = T;\ntype C = B<A>;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = Map<string, string>;\ntype B<T = A> = T;\ntype C = B;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\ntype A = Map<string, string>;\ntype B<T = A> = T;\ntype C = B<Map<string, string>>;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = Map<string, string>;\ntype B<T = A> = T;\ntype C = B;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\ntype A = Map<string, string>;\ntype B = Map<string, string>;\ntype C<T = A> = T;\ntype D = C<B>;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = Map<string, string>;\ntype B = Map<string, string>;\ntype C<T = A> = T;\ntype D = C;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\ntype A = Map<string, string>;\ntype B = A;\ntype C = Map<string, string>;\ntype D = C;\ntype E<T = B> = T;\ntype F = E<D>;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = Map<string, string>;\ntype B = A;\ntype C = Map<string, string>;\ntype D = C;\ntype E<T = B> = T;\ntype F = E;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\ninterface Foo {}\ndeclare var Foo: {\n  new <T = string>(type: T): any;\n};\nclass Bar extends Foo<string> {}\n      ",
+      "options": null,
+      "output": [
+        "\ninterface Foo {}\ndeclare var Foo: {\n  new <T = string>(type: T): any;\n};\nclass Bar extends Foo {}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\ndeclare var Foo: {\n  new <T = string>(type: T): any;\n};\ninterface Foo {}\nclass Bar extends Foo<string> {}\n      ",
+      "options": null,
+      "output": [
+        "\ndeclare var Foo: {\n  new <T = string>(type: T): any;\n};\ninterface Foo {}\nclass Bar extends Foo {}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\nclass Foo<T> {}\ninterface Foo<T = string> {}\nclass Bar implements Foo<string> {}\n      ",
+      "options": null,
+      "output": [
+        "\nclass Foo<T> {}\ninterface Foo<T = string> {}\nclass Bar implements Foo {}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\nclass Foo<T = string> {}\nnamespace Foo {\n  export class Bar {}\n}\nclass Bar extends Foo<string> {}\n      ",
+      "options": null,
+      "output": [
+        "\nclass Foo<T = string> {}\nnamespace Foo {\n  export class Bar {}\n}\nclass Bar extends Foo {}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\nfunction Button<T = string>() {\n  return <div></div>;\n}\nconst button = <Button<string>></Button>;\n      ",
+      "options": null,
+      "tsx": true,
+      "output": [
+        "\nfunction Button<T = string>() {\n  return <div></div>;\n}\nconst button = <Button></Button>;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\nfunction Button<T = string>() {\n  return <div></div>;\n}\nconst button = <Button<string> />;\n      ",
+      "options": null,
+      "tsx": true,
+      "output": [
+        "\nfunction Button<T = string>() {\n  return <div></div>;\n}\nconst button = <Button />;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\nfunction f<T = number>(x: T) {}\nf<number>(10);\n      ",
+      "options": null,
+      "output": [
+        "\nfunction f<T = number>(x: T) {}\nf(10);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\nfunction foo<T = any>() {}\nfoo<any>();\n      ",
+      "options": null,
+      "output": [
+        "\nfunction foo<T = any>() {}\nfoo();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\ntype Foo<T> = any & T\nfunction foo<T = Foo<string>>() {}\nfoo<Foo<number>>();\n      ",
+      "options": null,
+      "output": [
+        "\ntype Foo<T> = any & T\nfunction foo<T = Foo<string>>() {}\nfoo();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\ndeclare type MessageEventHandler = ((ev: MessageEvent<any>) => any) | null;\n      ",
+      "options": null,
+      "output": [
+        "\ndeclare type MessageEventHandler = ((ev: MessageEvent) => any) | null;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 2,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "\ntype Default = Record<string, any>;\ntype Alias = Default;\nfunction f<T = Default>() {}\nf<Alias>();\n      ",
+      "options": null,
+      "output": [
+        "\ntype Default = Record<string, any>;\ntype Alias = Default;\nfunction f<T = Default>() {}\nf();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\nclass C<T, U = unknown> {\n  constructor(_value: U) {}\n}\nnew C<string, unknown>('value');\n      ",
+      "options": null,
+      "output": [
+        "\nclass C<T, U = unknown> {\n  constructor(_value: U) {}\n}\nnew C<string>('value');\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryTypeParameter",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

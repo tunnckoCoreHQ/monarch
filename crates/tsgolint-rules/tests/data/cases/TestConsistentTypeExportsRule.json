@@ -1,0 +1,527 @@
+{
+  "test": "TestConsistentTypeExportsRule",
+  "rule": "consistent-type-exports",
+  "tsconfig": "tsconfig.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "export { Foo } from 'foo';",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "export type { Type1 } from './consistent-type-exports';",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "export { value1 } from './consistent-type-exports';",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "export { value1 as \"🍎\" } from './consistent-type-exports';",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "export type { value1 } from './consistent-type-exports';",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\nconst variable = 1;\nclass Class {}\nenum Enum {}\nfunction Func() {}\nnamespace ValueNS {\n  export const x = 1;\n}\n\nexport { variable, Class, Enum, Func, ValueNS };\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\ntype Alias = 1;\ninterface IFace {}\nnamespace TypeNS {\n  export type x = 1;\n}\n\nexport type { Alias, IFace, TypeNS };\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\nconst foo = 1;\nexport type { foo };\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\nnamespace NonTypeNS {\n  export const x = 1;\n}\n\nexport { NonTypeNS };\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "export * from './unknown-module';",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "export * from './consistent-type-exports';",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "export type * from './consistent-type-exports/type-only-exports';",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "export type * from './consistent-type-exports/type-only-reexport';",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "export * from './consistent-type-exports/value-reexport';",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "export * as foo from './consistent-type-exports';",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "export type * as foo from './consistent-type-exports/type-only-exports';",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "export type * as foo from './consistent-type-exports/type-only-reexport';",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "export * as foo from './consistent-type-exports/value-reexport';",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "\nimport * as Foo from './consistent-type-exports';\ntype Foo = 1;\nexport { Foo }\n    ",
+      "options": null
+    },
+    {
+      "index": 19,
+      "code": "\nimport { Type1 } from './consistent-type-exports';\nconst Type1 = 1;\nexport { Type1 };\n    ",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "\nexport { A } from './consistent-type-exports/reexport-2-named';\n    ",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\nimport { A } from './consistent-type-exports/reexport-2-named';\nexport { A };\n    ",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\nexport { A } from './consistent-type-exports/reexport-2-namespace';\n    ",
+      "options": null
+    },
+    {
+      "index": 23,
+      "code": "\nimport { A } from './consistent-type-exports/reexport-2-namespace';\nexport { A };\n    ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "export { Type1 } from './consistent-type-exports';",
+      "options": null,
+      "output": [
+        "export type { Type1 } from './consistent-type-exports';"
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 1,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "export { Type1 as \"🍎\" } from './consistent-type-exports';",
+      "options": null,
+      "output": [
+        "export type { Type1 as \"🍎\" } from './consistent-type-exports';"
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 1,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "export { Type1, value1 } from './consistent-type-exports';",
+      "options": null,
+      "output": [
+        "export type { Type1 } from './consistent-type-exports';\nexport { value1 } from './consistent-type-exports';"
+      ],
+      "errors": [
+        {
+          "messageId": "singleExportIsType",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nexport { Type1, value1, value2 } from './consistent-type-exports';\n      ",
+      "options": null,
+      "output": [
+        "\nexport type { Type1 } from './consistent-type-exports';\nexport { value1, value2 } from './consistent-type-exports';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "singleExportIsType",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\nexport { Type1, value1, Type2, value2 } from './consistent-type-exports';\n      ",
+      "options": null,
+      "output": [
+        "\nexport type { Type1, Type2 } from './consistent-type-exports';\nexport { value1, value2 } from './consistent-type-exports';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "multipleExportsAreTypes",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "export { Type2 as Foo } from './consistent-type-exports';",
+      "options": null,
+      "output": [
+        "export type { Type2 as Foo } from './consistent-type-exports';"
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 1,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nexport { Type2 as Foo, value1 } from './consistent-type-exports';\n      ",
+      "options": null,
+      "output": [
+        "\nexport type { Type2 as Foo } from './consistent-type-exports';\nexport { value1 } from './consistent-type-exports';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "singleExportIsType",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nexport {\n  Type2 as Foo,\n  value1 as BScope,\n  value2 as CScope,\n} from './consistent-type-exports';\n      ",
+      "options": null,
+      "output": [
+        "\nexport type { Type2 as Foo } from './consistent-type-exports';\nexport { value1 as BScope, value2 as CScope } from './consistent-type-exports';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "singleExportIsType",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nimport { Type2 } from './consistent-type-exports';\nexport { Type2 };\n      ",
+      "options": null,
+      "output": [
+        "\nimport { Type2 } from './consistent-type-exports';\nexport type { Type2 };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 3,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nimport { value2, Type2 } from './consistent-type-exports';\nexport { value2, Type2 };\n      ",
+      "options": null,
+      "output": [
+        "\nimport { value2, Type2 } from './consistent-type-exports';\nexport type { Type2 };\nexport { value2 };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "singleExportIsType",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\ntype Alias = 1;\ninterface IFace {}\nnamespace TypeNS {\n  export type x = 1;\n  export const f = 1;\n}\n\nexport { Alias, IFace, TypeNS };\n      ",
+      "options": null,
+      "output": [
+        "\ntype Alias = 1;\ninterface IFace {}\nnamespace TypeNS {\n  export type x = 1;\n  export const f = 1;\n}\n\nexport type { Alias, IFace };\nexport { TypeNS };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "multipleExportsAreTypes",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\nnamespace TypeNS {\n  export interface Foo {}\n}\n\nexport { TypeNS };\n      ",
+      "options": null,
+      "output": [
+        "\nnamespace TypeNS {\n  export interface Foo {}\n}\n\nexport type { TypeNS };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 6,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\ntype T = 1;\nexport { type T, T };\n      ",
+      "options": null,
+      "output": [
+        "\ntype T = 1;\nexport type { T, T };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 3,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\ntype T = 1;\nexport { type/* */T, type     /* */T, T };\n      ",
+      "options": null,
+      "output": [
+        "\ntype T = 1;\nexport type { /* */T, /* */T, T };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 3,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\ntype T = 1;\nconst x = 1;\nexport { type T, T, x };\n      ",
+      "options": null,
+      "output": [
+        "\ntype T = 1;\nconst x = 1;\nexport type { T, T };\nexport { x };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "singleExportIsType",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\ntype T = 1;\nconst x = 1;\nexport { T, x };\n      ",
+      "options": {
+        "fixMixedExportsWithInlineTypeSpecifier": true
+      },
+      "output": [
+        "\ntype T = 1;\nconst x = 1;\nexport { type T, x };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "singleExportIsType",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\ntype T = 1;\nexport { type T, T };\n      ",
+      "options": {
+        "fixMixedExportsWithInlineTypeSpecifier": true
+      },
+      "output": [
+        "\ntype T = 1;\nexport type { T, T };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 3,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\nexport {\n  Type1,\n  Type2 as Foo,\n  type value1 as BScope,\n  value2 as CScope,\n} from './consistent-type-exports';\n      ",
+      "options": {
+        "fixMixedExportsWithInlineTypeSpecifier": false
+      },
+      "output": [
+        "\nexport type { Type1, Type2 as Foo, value1 as BScope } from './consistent-type-exports';\nexport { value2 as CScope } from './consistent-type-exports';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "multipleExportsAreTypes",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\nexport {\n  Type1,\n  Type2 as Foo,\n  type value1 as BScope,\n  value2 as CScope,\n} from './consistent-type-exports';\n      ",
+      "options": {
+        "fixMixedExportsWithInlineTypeSpecifier": true
+      },
+      "output": [
+        "\nexport {\n  type Type1,\n  type Type2 as Foo,\n  type value1 as BScope,\n  value2 as CScope,\n} from './consistent-type-exports';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "multipleExportsAreTypes",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\n        export * from './consistent-type-exports/type-only-exports';\n      ",
+      "options": null,
+      "output": [
+        "\n        export type * from './consistent-type-exports/type-only-exports';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 2,
+          "column": 9,
+          "endLine": 2,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\n        /* comment 1 */ export\n          /* comment 2 */ *\n            // comment 3\n            from './consistent-type-exports/type-only-exports';\n      ",
+      "options": null,
+      "output": [
+        "\n        /* comment 1 */ export\n          /* comment 2 */ type *\n            // comment 3\n            from './consistent-type-exports/type-only-exports';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 2,
+          "column": 25,
+          "endLine": 2,
+          "endColumn": 31,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\n        export * from './consistent-type-exports/type-only-reexport';\n      ",
+      "options": null,
+      "output": [
+        "\n        export type * from './consistent-type-exports/type-only-reexport';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 2,
+          "column": 9,
+          "endLine": 2,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\n        export * as foo from './consistent-type-exports/type-only-reexport';\n      ",
+      "options": null,
+      "output": [
+        "\n        export type * as foo from './consistent-type-exports/type-only-reexport';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 2,
+          "column": 9,
+          "endLine": 2,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\n        import type * as Foo from './consistent-type-exports';\n        type Foo = 1;\n        export { Foo };\n      ",
+      "options": null,
+      "output": [
+        "\n        import type * as Foo from './consistent-type-exports';\n        type Foo = 1;\n        export type { Foo };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 4,
+          "column": 9,
+          "endLine": 4,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\n        import { type NAME as Foo } from './consistent-type-exports';\n        export { Foo };\n      ",
+      "options": null,
+      "output": [
+        "\n        import { type NAME as Foo } from './consistent-type-exports';\n        export type { Foo };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "typeOverValue",
+          "line": 3,
+          "column": 9,
+          "endLine": 3,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

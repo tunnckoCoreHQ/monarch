@@ -1,0 +1,50 @@
+{
+  "test": "TestNoUnsafeTypeAssertionRule_ClassAssertions",
+  "rule": "no-unsafe-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nclass Foo {}\ndeclare const a: Foo;\na as Foo | number;\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nclass Foo {}\nclass Bar {}\ndeclare const a: Foo;\na as Bar;\n      ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nclass Foo {\n  hello() {}\n}\nclass Bar {}\ndeclare const a: Foo;\na as Bar;\n      ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nclass Foo {\n  hello() {}\n}\nclass Bar extends Foo {}\ndeclare const a: Bar;\na as Foo;\n      ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\nclass Foo {\n  hello() {}\n}\nclass Bar extends Foo {}\ndeclare const a: Foo;\na as Bar;\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nclass Foo {\n  hello() {}\n}\nclass Bar extends Foo {\n  world() {}\n}\ndeclare const a: Foo;\na as Bar;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 9,
+          "column": 3,
+          "endLine": 9,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

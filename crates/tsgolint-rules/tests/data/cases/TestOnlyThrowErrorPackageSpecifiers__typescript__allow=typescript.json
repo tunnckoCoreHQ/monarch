@@ -1,0 +1,30 @@
+{
+  "test": "TestOnlyThrowErrorPackageSpecifiers/typescript/allow=typescript",
+  "rule": "only-throw-error",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "import type { ErrorLike } from \"typescript\"; declare const error: ErrorLike; throw error;",
+      "options": {
+        "allow": [
+          {
+            "from": "package",
+            "name": [
+              "ErrorLike"
+            ],
+            "package": "typescript"
+          }
+        ],
+        "allowRethrowing": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      },
+      "files": {
+        "node_modules/typescript/lib/index.d.ts": "export interface ErrorLike { message: string }",
+        "node_modules/typescript/package.json": "{\"name\": \"typescript\", \"version\": \"1.0.0\", \"types\": \"lib/index.d.ts\"}"
+      }
+    }
+  ],
+  "invalid": []
+}

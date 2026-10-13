@@ -1,0 +1,187 @@
+{
+  "test": "TestNoUnsafeUnaryMinusRule",
+  "rule": "no-unsafe-unary-minus",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "+42;",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "-42;",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "-42n;",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "(a: number) => -a;",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "(a: bigint) => -a;",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "(a: number | bigint) => -a;",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "(a: any) => -a;",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "(a: 1 | 2) => -a;",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "(a: string) => +a;",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "(a: number[]) => -a[0];",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "<T,>(t: T & number) => -t;",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "(a: { x: number }) => -a.x;",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "(a: never) => -a;",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "<T extends number>(t: T) => -t;",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "(a: string) => -a;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unaryMinus",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "(a: {}) => -a;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unaryMinus",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "(a: number[]) => -a;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unaryMinus",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "-'hello';",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unaryMinus",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "-`hello`;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unaryMinus",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "(a: { x: number }) => -a;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unaryMinus",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "(a: unknown) => -a;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unaryMinus",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "(a: void) => -a;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unaryMinus",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "<T,>(t: T) => -t;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unaryMinus",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,8 @@
-# RWX CI. Checks, tests, and builds every package, TypeScript and Solidity, on every pull request
-# and every push to master. After those pass on a master push, the same run publishes nightly
-# packages, deploys the apps the push changed, maintains the release PR, and publishes the stable
-# versions when the push is the merged release PR. Dispatches run one job by hand on master:
+# RWX CI. Checks, tests, and builds every package, TypeScript, Solidity and the Rust crates, on
+# every pull request and every push to master. After those pass on a master push, the same run
+# publishes nightly packages, deploys the apps the push changed, maintains the release PR, and
+# publishes the stable versions when the push is the merged release PR. Dispatches run one job by
+# hand on master:
 # `rwx dispatch monarch-deploy-prod`, `rwx dispatch monarch-publish-prod`, and
 # `rwx dispatch monarch-socket-optimize`.
 #
@@ -23,11 +24,11 @@ on:
         app: ""
         job: ""
       status-checks:
-        - tasks: check
+        - tasks: [check, check-crates]
           name: check
-        - tasks: [test, test-solidity]
+        - tasks: [test, test-solidity, test-crates]
           name: test
-        - tasks: build
+        - tasks: [build, build-crates]
           name: build
     # Two push triggers, so each master commit gets a status for exactly the tasks it runs: the
     # merged release PR commit also publishes the stable versions. RWX reports a skipped task in a
@@ -43,11 +44,11 @@ on:
           app: ""
           job: ""
         status-checks:
-          - tasks: check
+          - tasks: [check, check-crates]
             name: check
-          - tasks: [test, test-solidity]
+          - tasks: [test, test-solidity, test-crates]
             name: test
-          - tasks: build
+          - tasks: [build, build-crates]
             name: build
           - tasks: [publish-nightly-vlt, publish-nightly-npm]
             name: publish-nightly
@@ -65,11 +66,11 @@ on:
           app: ""
           job: ""
         status-checks:
-          - tasks: check
+          - tasks: [check, check-crates]
             name: check
-          - tasks: [test, test-solidity]
+          - tasks: [test, test-solidity, test-crates]
             name: test
-          - tasks: build
+          - tasks: [build, build-crates]
             name: build
           - tasks: [publish-nightly-vlt, publish-nightly-npm]
             name: publish-nightly
@@ -184,6 +185,21 @@ aliases:
     TURBO_TELEMETRY_DISABLED: 1
     TURBO_SCM_BASE: ${{ init.affected-base }}
     AFFECTED: "${{ init.affected-base == '' ? '' : '--affected' }}"
+  # What the Rust crates read. A push that changes none of it is a cache hit for the crates tasks,
+  # so they run only when the crates change.
+  crates-filter: &crates-filter
+    - crates
+    - Cargo.toml
+    - Cargo.lock
+    - rust-toolchain.toml
+    - node_modules
+    - package.json
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+    - turbo.json
+  crates-env: &crates-env
+    TURBO_TELEMETRY_DISABLED: 1
+    CARGO_TERM_COLOR: always
 
 tasks:
   - key: code
@@ -209,6 +225,23 @@ tasks:
       curl -fsSL https://foundry.paradigm.xyz | bash
       "$HOME/.foundry/bin/foundryup" --install v1.7.1
       echo "$HOME/.foundry/bin" > "$RWX_ENV/PATH"
+
+  # The Rust toolchain of rust-toolchain.toml: 1.95 with clippy, rustfmt and wasm32-wasip1. The C
+  # compiler and make build jemalloc for the native binary.
+  - key: rust
+    use: code
+    filter: [rust-toolchain.toml]
+    run: |
+      sudo apt-get update && sudo apt-get install -y --no-install-recommends build-essential
+      curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+      "$HOME/.cargo/bin/rustup" toolchain install
+      echo "$HOME/.cargo/bin" > "$RWX_ENV/PATH"
+
+  # wasmtime runs the wasm32-wasip1 build in the e2e suite. Pinned to the version used locally.
+  - key: wasmtime
+    run: |
+      curl -fsSL https://wasmtime.dev/install.sh | bash -s -- --version v44.0.1
+      echo "$HOME/.wasmtime/bin" > "$RWX_ENV/PATH"
 
   # The standalone pnpm, as pnpm's CI docs recommend, at the version in packageManager.
   - key: pnpm
@@ -239,7 +272,7 @@ tasks:
     tool-cache: ci-check
     runner: *turbo-runner
     env: *turbo-env
-    run: pnpm exec turbo run check $AFFECTED
+    run: pnpm exec turbo run check --filter='!./crates' $AFFECTED
 
   # Every Vitest run writes JSON results, which RWX shows as test results. The ethscriptions-rescue
   # tests start anvil from Foundry.
@@ -251,7 +284,7 @@ tasks:
     env: *turbo-env
     run: |
       status=0
-      pnpm exec turbo run test --filter='!./solidity/*' $AFFECTED -- \
+      pnpm exec turbo run test --filter='!./solidity/*' --filter='!./crates' $AFFECTED -- \
         --reporter=default --reporter=json --outputFile.json=.vitest-results.json || status=$?
       for file in */*/.vitest-results.json; do
         [ -e "$file" ] && cp "$file" "$RWX_TEST_RESULTS/$(dirname "$file" | tr / -).json"
@@ -295,6 +328,36 @@ tasks:
     run: |
       forge build --root solidity/template
       pnpm exec turbo run build --filter='./packages/*' --filter='./solidity/*' $AFFECTED
+
+  # The Rust crates (tsgolint-rust): fmt and clippy, then the tests with the e2e suite on the native
+  # and the wasm build, then the release builds. Each task has the crates filter, so a push that
+  # does not touch the crates is a cache hit and the task does not run. The tool caches keep the
+  # Cargo target dir, so ts-rust compiles once per cache, not once per run.
+  - key: check-crates
+    use: [deps, rust]
+    tool-cache: ci-check-crates
+    runner: *turbo-runner
+    env: *crates-env
+    filter: *crates-filter
+    run: pnpm exec turbo run check --filter='./crates'
+
+  - key: test-crates
+    use: [deps, rust, wasmtime]
+    after: check-crates
+    tool-cache: ci-test-crates
+    runner: *turbo-runner
+    env: *crates-env
+    filter: *crates-filter
+    run: pnpm exec turbo run test --filter='./crates'
+
+  - key: build-crates
+    use: [deps, rust]
+    after: test-crates
+    tool-cache: ci-build-crates
+    runner: *turbo-runner
+    env: *crates-env
+    filter: *crates-filter
+    run: pnpm exec turbo run build --filter='./crates'
 
   # Publishes nightly versions of the packages this push changed. Each registry has its own task,
   # which builds and publishes only its packages with only its credential.

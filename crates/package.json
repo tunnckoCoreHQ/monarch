@@ -1,0 +1,18 @@
+{
+  "name": "tsgolint-rust",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A Rust port of oxc-project/tsgolint on ts-rust: the type-aware linter that oxlint runs for --type-aware and --type-check.",
+  "license": "MIT",
+  "author": "tunnckoCore",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tunnckoCoreHQ/monarch.git",
+    "directory": "crates"
+  },
+  "scripts": {
+    "build": "cargo build --release -p tsgolint-rust && cargo build --release --target wasm32-wasip1 -p tsgolint-rust",
+    "check": "cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "test": "sh scripts/test.sh"
+  }
+}

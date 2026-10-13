@@ -1,0 +1,316 @@
+{
+  "test": "TestPreferRegexpExecRule",
+  "rule": "prefer-regexp-exec",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "'something'.match();",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "'something'.match(/thing/g);",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nconst text = 'something';\nconst search = /thing/g;\ntext.match(search);\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nconst match = (s: RegExp) => 'something';\nmatch(/thing/);\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\nconst a = { match: (s: RegExp) => 'something' };\na.match(/thing/);\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\nfunction f(s: string | string[]) {\n  s.match(/e/);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "(Math.random() > 0.5 ? 'abc' : 123).match(2);",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "'212'.match(2);",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "'212'.match(+2);",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "'oNaNo'.match(NaN);",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "'Infinity contains -Infinity and +Infinity in JavaScript.'.match(Infinity);",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "'Infinity contains -Infinity and +Infinity in JavaScript.'.match(+Infinity);",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "'Infinity contains -Infinity and +Infinity in JavaScript.'.match(-Infinity);",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "'void and null'.match(null);",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\nconst matchers = ['package-lock.json', /regexp/];\nconst file = '';\nmatchers.some(matcher => !!file.match(matcher));\n    ",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "\nconst matchers = [/regexp/, 'package-lock.json'];\nconst file = '';\nmatchers.some(matcher => !!file.match(matcher));\n    ",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "\nconst matchers = [{ match: (s: RegExp) => false }];\nconst file = '';\nmatchers.some(matcher => !!file.match(matcher));\n    ",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "\nfunction test(pattern: string) {\n  'hello hello'.match(RegExp(pattern, 'g'))?.reduce(() => []);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "\nfunction test(pattern: string) {\n  'hello hello'.match(new RegExp(pattern, 'gi'))?.reduce(() => []);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 19,
+      "code": "\nfunction test(text: string, pattern: string, flags: string) {\n  text.match(new RegExp(pattern, flags));\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "\nconst matchCount = (str: string, re: RegExp) => {\n  return (str.match(re) || []).length;\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\nfunction test(str: string) {\n  str.match('[a-z');\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\nconst text = 'something';\ndeclare const search: RegExp;\ntext.match(search);\n      ",
+      "options": null
+    },
+    {
+      "index": 23,
+      "code": "\nconst text = 'something';\ndeclare const obj: { search: RegExp };\ntext.match(obj.search);\n      ",
+      "options": null
+    },
+    {
+      "index": 24,
+      "code": "\nconst text = 'something';\ndeclare function returnsRegexp(): RegExp;\ntext.match(returnsRegexp());\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "'something'.match(/thing/);",
+      "options": null,
+      "output": [
+        "/thing/.exec('something');"
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 1,
+          "column": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "'something'.match('^[a-z]+thing/?$');",
+      "options": null,
+      "output": [
+        "/^[a-z]+thing\\/?$/.exec('something');"
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 1,
+          "column": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\nconst text = 'something';\nconst search = /thing/;\ntext.match(search);\n      ",
+      "options": null,
+      "output": [
+        "\nconst text = 'something';\nconst search = /thing/;\nsearch.exec(text);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 4,
+          "column": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nconst text = 'something';\nconst search = 'thing';\ntext.match(search);\n      ",
+      "options": null,
+      "output": [
+        "\nconst text = 'something';\nconst search = 'thing';\nRegExp(search).exec(text);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 4,
+          "column": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\nfunction test(text: string, pattern: string) {\n  text.match(pattern);\n}\n      ",
+      "options": null,
+      "output": [
+        "\nfunction test(text: string, pattern: string) {\n  RegExp(pattern).exec(text);\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 3,
+          "column": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nfunction f(s: 'a' | 'b') {\n  s.match('a');\n}\n      ",
+      "options": null,
+      "output": [
+        "\nfunction f(s: 'a' | 'b') {\n  /a/.exec(s);\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 3,
+          "column": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\ntype SafeString = string & { __HTML_ESCAPED__: void };\nfunction f(s: SafeString) {\n  s.match(/thing/);\n}\n      ",
+      "options": null,
+      "output": [
+        "\ntype SafeString = string & { __HTML_ESCAPED__: void };\nfunction f(s: SafeString) {\n  /thing/.exec(s);\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 4,
+          "column": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nfunction f<T extends 'a' | 'b'>(s: T) {\n  s.match(/thing/);\n}\n      ",
+      "options": null,
+      "output": [
+        "\nfunction f<T extends 'a' | 'b'>(s: T) {\n  /thing/.exec(s);\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 3,
+          "column": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nconst text = 'something';\nconst search = new RegExp('test', '');\ntext.match(search);\n      ",
+      "options": null,
+      "output": [
+        "\nconst text = 'something';\nconst search = new RegExp('test', '');\nsearch.exec(text);\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 4,
+          "column": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nfunction test(pattern: string) {\n  'check'.match(new RegExp(pattern, undefined));\n}\n      ",
+      "options": null,
+      "output": [
+        "\nfunction test(pattern: string) {\n  new RegExp(pattern, undefined).exec('check');\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 3,
+          "column": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nfunction temp(text: string): void {\n  text.match(new RegExp(`${'hello'}`));\n  text.match(new RegExp(`${'hello'.toString()}`));\n}\n      ",
+      "options": null,
+      "output": [
+        "\nfunction temp(text: string): void {\n  new RegExp(`${'hello'}`).exec(text);\n  new RegExp(`${'hello'.toString()}`).exec(text);\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 3,
+          "column": 8,
+          "suggestions": []
+        },
+        {
+          "messageId": "regExpExecOverStringMatch",
+          "line": 4,
+          "column": 8,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

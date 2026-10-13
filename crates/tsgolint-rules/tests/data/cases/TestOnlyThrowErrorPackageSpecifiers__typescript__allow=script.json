@@ -1,0 +1,37 @@
+{
+  "test": "TestOnlyThrowErrorPackageSpecifiers/typescript/allow=script",
+  "rule": "only-throw-error",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "import type { ErrorLike } from \"typescript\"; declare const error: ErrorLike; throw error;",
+      "options": {
+        "allow": [
+          {
+            "from": "package",
+            "name": [
+              "ErrorLike"
+            ],
+            "package": "script"
+          }
+        ],
+        "allowRethrowing": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      },
+      "files": {
+        "node_modules/typescript/lib/index.d.ts": "export interface ErrorLike { message: string }",
+        "node_modules/typescript/package.json": "{\"name\": \"typescript\", \"version\": \"1.0.0\", \"types\": \"lib/index.d.ts\"}"
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "object",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

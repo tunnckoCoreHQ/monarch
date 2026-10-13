@@ -1,0 +1,37 @@
+{
+  "test": "TestOnlyThrowErrorPackageSpecifiers/@types/babel__code-frame-extra/allow=@babel/code-frame",
+  "rule": "only-throw-error",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "import type { ErrorLike } from \"@babel/code-frame-extra\"; declare const error: ErrorLike; throw error;",
+      "options": {
+        "allow": [
+          {
+            "from": "package",
+            "name": [
+              "ErrorLike"
+            ],
+            "package": "@babel/code-frame"
+          }
+        ],
+        "allowRethrowing": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      },
+      "files": {
+        "node_modules/@types/babel__code-frame-extra/package.json": "{\"name\": \"@types/babel__code-frame-extra\", \"version\": \"1.0.0\", \"types\": \"lib/index.d.ts\"}",
+        "node_modules/@types/babel__code-frame-extra/lib/index.d.ts": "export interface ErrorLike { message: string }"
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "object",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

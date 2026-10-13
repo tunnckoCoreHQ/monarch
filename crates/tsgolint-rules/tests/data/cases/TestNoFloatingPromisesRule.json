@@ -1,0 +1,3692 @@
+{
+  "test": "TestNoFloatingPromisesRule",
+  "rule": "no-floating-promises",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nasync function test() {\n  await Promise.resolve('value');\n  Promise.resolve('value').then(\n    () => {},\n    () => {},\n  );\n  Promise.resolve('value')\n    .then(() => {})\n    .catch(() => {});\n  Promise.resolve('value')\n    .then(() => {})\n    .catch(() => {})\n    .finally(() => {});\n  Promise.resolve('value').catch(() => {});\n  return Promise.resolve('value');\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nasync function test() {\n  void Promise.resolve('value');\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 2,
+      "code": "\nasync function test() {\n  await Promise.reject(new Error('message'));\n  Promise.reject(new Error('message')).then(\n    () => {},\n    () => {},\n  );\n  Promise.reject(new Error('message'))\n    .then(() => {})\n    .catch(() => {});\n  Promise.reject(new Error('message'))\n    .then(() => {})\n    .catch(() => {})\n    .finally(() => {});\n  Promise.reject(new Error('message')).catch(() => {});\n  return Promise.reject(new Error('message'));\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nasync function test() {\n  await (async () => true)();\n  (async () => true)().then(\n    () => {},\n    () => {},\n  );\n  (async () => true)()\n    .then(() => {})\n    .catch(() => {});\n  (async () => true)()\n    .then(() => {})\n    .catch(() => {})\n    .finally(() => {});\n  (async () => true)().catch(() => {});\n  return (async () => true)();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\nasync function test() {\n  async function returnsPromise() {}\n  await returnsPromise();\n  returnsPromise().then(\n    () => {},\n    () => {},\n  );\n  returnsPromise()\n    .then(() => {})\n    .catch(() => {});\n  returnsPromise()\n    .then(() => {})\n    .catch(() => {})\n    .finally(() => {});\n  returnsPromise().catch(() => {});\n  return returnsPromise();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\nasync function test() {\n  const x = Promise.resolve();\n  const y = x.then(() => {});\n  y.catch(() => {});\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\nasync function test() {\n  Math.random() > 0.5 ? Promise.resolve().catch(() => {}) : null;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\nasync function test() {\n  (Promise.resolve().catch(() => {}), 123);\n  (123,\n    Promise.resolve().then(\n      () => {},\n      () => {},\n    ));\n  (123,\n    Promise.resolve().then(\n      () => {},\n      () => {},\n    ),\n    123);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\nasync function test() {\n  void Promise.resolve().catch(() => {});\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\nasync function test() {\n  Promise.resolve().catch(() => {}) ||\n    Promise.resolve().then(\n      () => {},\n      () => {},\n    );\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\ndeclare const promiseValue: Promise<number>;\nasync function test() {\n  await promiseValue;\n  promiseValue.then(\n    () => {},\n    () => {},\n  );\n  promiseValue.then(() => {}).catch(() => {});\n  promiseValue\n    .then(() => {})\n    .catch(() => {})\n    .finally(() => {});\n  promiseValue.catch(() => {});\n  return promiseValue;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\ndeclare const promiseUnion: Promise<number> | number;\nasync function test() {\n  await promiseUnion;\n  promiseUnion.then(\n    () => {},\n    () => {},\n  );\n  promiseUnion.then(() => {}).catch(() => {});\n  promiseUnion\n    .then(() => {})\n    .catch(() => {})\n    .finally(() => {});\n  promiseUnion.catch(() => {});\n  promiseValue.finally(() => {});\n  return promiseUnion;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "\ndeclare const promiseIntersection: Promise<number> & number;\nasync function test() {\n  await promiseIntersection;\n  promiseIntersection.then(\n    () => {},\n    () => {},\n  );\n  promiseIntersection.then(() => {}).catch(() => {});\n  promiseIntersection.catch(() => {});\n  return promiseIntersection;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  await canThen;\n  canThen.then(\n    () => {},\n    () => {},\n  );\n  canThen.then(() => {}).catch(() => {});\n  canThen\n    .then(() => {})\n    .catch(() => {})\n    .finally(() => {});\n  canThen.catch(() => {});\n  return canThen;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\ndeclare const intersectionPromise: Promise<number> & number;\nasync function test() {\n  await (Math.random() > 0.5 ? numberPromise : 0);\n  await (Math.random() > 0.5 ? foo : 0);\n  await (Math.random() > 0.5 ? bar : 0);\n\n  await intersectionPromise;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "\nasync function test() {\n  class Thenable {\n    then(callback: () => void): Thenable {\n      return new Thenable();\n    }\n  }\n  const thenable = new Thenable();\n\n  await thenable;\n  thenable;\n  thenable.then(() => {});\n  return thenable;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "\nasync function test() {\n  class NonFunctionParamThenable {\n    then(param: string, param2: number): NonFunctionParamThenable {\n      return new NonFunctionParamThenable();\n    }\n  }\n  const thenable = new NonFunctionParamThenable();\n\n  await thenable;\n  thenable;\n  thenable.then('abc', 'def');\n  return thenable;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "\nasync function test() {\n  class NonFunctionThenable {\n    then: number;\n  }\n  const thenable = new NonFunctionThenable();\n\n  thenable;\n  thenable.then;\n  return thenable;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "\nasync function test() {\n  class CatchableThenable {\n    then(callback: () => void, callback: () => void): CatchableThenable {\n      return new CatchableThenable();\n    }\n  }\n  const thenable = new CatchableThenable();\n\n  await thenable;\n  return thenable;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 19,
+      "code": "\n// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/promise-polyfill/index.d.ts\n// Type definitions for promise-polyfill 6.0\n// Project: https://github.com/taylorhakes/promise-polyfill\n// Definitions by: Steve Jenkins <https://github.com/skysteve>\n//                 Daniel Cassidy <https://github.com/djcsdy>\n// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped\n\ninterface PromisePolyfillConstructor extends PromiseConstructor {\n  _immediateFn?: (handler: (() => void) | string) => void;\n}\n\ndeclare const PromisePolyfill: PromisePolyfillConstructor;\n\nasync function test() {\n  const promise = new PromisePolyfill(() => {});\n\n  await promise;\n  promise.then(\n    () => {},\n    () => {},\n  );\n  promise.then(() => {}).catch(() => {});\n  promise\n    .then(() => {})\n    .catch(() => {})\n    .finally(() => {});\n  promise.catch(() => {});\n  return promise;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "\ndeclare const returnsPromise: () => Promise<void> | null;\nasync function test() {\n  await returnsPromise?.();\n  returnsPromise()?.then(\n    () => {},\n    () => {},\n  );\n  returnsPromise()\n    ?.then(() => {})\n    ?.catch(() => {});\n  returnsPromise()?.catch(() => {});\n  return returnsPromise();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  await obj1.a?.b?.c?.();\n  await obj2.a?.b?.c();\n  await obj3.a?.b.c?.();\n  await obj4.a.b.c?.();\n  await obj5.a?.().b?.c?.();\n  await obj6?.a.b.c?.();\n\n  return callback?.();\n};\n\nvoid doSomething();\n    ",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\n        (async () => {\n          await something();\n        })();\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": true,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 23,
+      "code": "\n        (async () => {\n          something();\n        })();\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": true,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 24,
+      "code": "(async function foo() {})();",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": true,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 25,
+      "code": "\n        function foo() {\n          (async function bar() {})();\n        }\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": true,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 26,
+      "code": "\n        const foo = () =>\n          new Promise(res => {\n            (async function () {\n              await res(1);\n            })();\n          });\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": true,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 27,
+      "code": "\n        (async function () {\n          await res(1);\n        })();\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": true,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 28,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n  void (condition && myPromise());\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 29,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n  await (condition && myPromise());\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      }
+    },
+    {
+      "index": 30,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n  condition && void myPromise();\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 31,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n  condition && (await myPromise());\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      }
+    },
+    {
+      "index": 32,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  let condition = false;\n  condition && myPromise();\n  condition = true;\n  condition || myPromise();\n  condition ?? myPromise();\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      }
+    },
+    {
+      "index": 33,
+      "code": "\ndeclare const definitelyCallable: () => void;\nPromise.reject().catch(definitelyCallable);\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      }
+    },
+    {
+      "index": 34,
+      "code": "\nPromise.reject()\n  .catch(() => {})\n  .finally(() => {});\n      ",
+      "options": null
+    },
+    {
+      "index": 35,
+      "code": "\nPromise.reject()\n  .catch(() => {})\n  .finally(() => {})\n  .finally(() => {});\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      }
+    },
+    {
+      "index": 36,
+      "code": "\nPromise.reject()\n  .catch(() => {})\n  .finally(() => {})\n  .finally(() => {})\n  .finally(() => {});\n      ",
+      "options": null
+    },
+    {
+      "index": 37,
+      "code": "\nawait Promise.all([Promise.resolve(), Promise.resolve()]);\n      ",
+      "options": null
+    },
+    {
+      "index": 38,
+      "code": "\ndeclare const promiseArray: Array<Promise<unknown>>;\nvoid promiseArray;\n      ",
+      "options": null
+    },
+    {
+      "index": 39,
+      "code": "\n[1, 2, void Promise.reject(), 3];\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      }
+    },
+    {
+      "index": 40,
+      "code": "\n['I', 'am', 'just', 'an', 'array'];\n      ",
+      "options": null
+    },
+    {
+      "index": 41,
+      "code": "\ninterface SafeThenable<T> {\n  then<TResult1 = T, TResult2 = never>(\n    onfulfilled?:\n      | ((value: T) => TResult1 | SafeThenable<TResult1>)\n      | undefined\n      | null,\n    onrejected?:\n      | ((reason: any) => TResult2 | SafeThenable<TResult2>)\n      | undefined\n      | null,\n  ): SafeThenable<TResult1 | TResult2>;\n}\nlet promise: SafeThenable<number> = Promise.resolve(5);\n(0, promise);\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafeThenable"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 42,
+      "code": "\ninterface SafeThenable<T> {\n  then<TResult1 = T, TResult2 = never>(\n    onfulfilled?:\n      | ((value: T) => TResult1 | SafeThenable<TResult1>)\n      | undefined\n      | null,\n    onrejected?:\n      | ((reason: any) => TResult2 | SafeThenable<TResult2>)\n      | undefined\n      | null,\n  ): SafeThenable<TResult1 | TResult2>;\n}\nlet promise: SafeThenable<number> = Promise.resolve(5);\n0 ? promise : 3;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "name": [
+              "SafeThenable"
+            ],
+            "from": "file"
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 43,
+      "code": "\nclass SafePromise<T> extends Promise<T> {}\nlet promise: { a: SafePromise<number> } = { a: Promise.resolve(5) };\npromise.a;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 44,
+      "code": "\nclass SafePromise<T> extends Promise<T> {}\nlet promise: SafePromise<number> = Promise.resolve(5);\npromise;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 45,
+      "code": "\ntype Foo = Promise<number> & { hey?: string };\nlet promise: Foo = Promise.resolve(5);\n0 || promise;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "Foo"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 46,
+      "code": "\ntype Foo = Promise<number> & { hey?: string };\nlet promise: Foo = Promise.resolve(5);\npromise.finally();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "Foo"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 47,
+      "code": "\ninterface SafeThenable<T> {\n  then<TResult1 = T, TResult2 = never>(\n    onfulfilled?:\n      | ((value: T) => TResult1 | SafeThenable<TResult1>)\n      | undefined\n      | null,\n    onrejected?:\n      | ((reason: any) => TResult2 | SafeThenable<TResult2>)\n      | undefined\n      | null,\n  ): SafeThenable<TResult1 | TResult2>;\n}\nlet promise: () => SafeThenable<number> = () => Promise.resolve(5);\n(0, promise());\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafeThenable"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 48,
+      "code": "\ninterface SafeThenable<T> {\n  then<TResult1 = T, TResult2 = never>(\n    onfulfilled?:\n      | ((value: T) => TResult1 | SafeThenable<TResult1>)\n      | undefined\n      | null,\n    onrejected?:\n      | ((reason: any) => TResult2 | SafeThenable<TResult2>)\n      | undefined\n      | null,\n  ): SafeThenable<TResult1 | TResult2>;\n}\nlet promise: () => SafeThenable<number> = () => Promise.resolve(5);\n0 ? promise() : 3;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafeThenable"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 49,
+      "code": "\ntype Foo = Promise<number> & { hey?: string };\nlet promise: () => Foo = () => Promise.resolve(5);\npromise();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "Foo"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 50,
+      "code": "\ntype Foo = Promise<number> & { hey?: string };\nlet promise: () => Foo = async () => 5;\npromise().finally();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "Foo"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 51,
+      "code": "\nclass SafePromise<T> extends Promise<T> {}\nlet promise: () => SafePromise<number> = async () => 5;\n0 || promise();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "name": [
+              "SafePromise"
+            ],
+            "from": "file"
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 52,
+      "code": "\nclass SafePromise<T> extends Promise<T> {}\nlet promise: () => SafePromise<number> = async () => 5;\nnull ?? promise();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 53,
+      "code": "\nlet promise: () => PromiseLike<number> = () => Promise.resolve(5);\npromise();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "lib",
+            "name": [
+              "PromiseLike"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 54,
+      "code": "\ntype Foo<T> = Promise<T> & { hey?: string };\ndeclare const arrayOrPromiseTuple: Foo<unknown>[];\narrayOrPromiseTuple;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "Foo"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 55,
+      "code": "\ntype Foo<T> = Promise<T> & { hey?: string };\ndeclare const arrayOrPromiseTuple: [Foo<unknown>, 5];\narrayOrPromiseTuple;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "Foo"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 56,
+      "code": "\ntype SafePromise = Promise<number> & { __linterBrands?: string };\ndeclare const myTag: (strings: TemplateStringsArray) => SafePromise;\nmyTag`abc`;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 57,
+      "code": "\n        declare function it(...args: unknown[]): Promise<void>;\n\n        it('...', () => {});\n      ",
+      "options": {
+        "allowForKnownSafeCalls": [
+          {
+            "from": "file",
+            "name": [
+              "it"
+            ],
+            "path": "file.ts"
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 58,
+      "code": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nmyTag`abc`.catch(() => {});\n      ",
+      "options": null
+    },
+    {
+      "index": 59,
+      "code": "\ndeclare const myTag: (strings: TemplateStringsArray) => string;\nmyTag`abc`;\n      ",
+      "options": null
+    },
+    {
+      "index": 60,
+      "code": "\ndeclare let x: any;\ndeclare const promiseArray: Array<Promise<unknown>>;\nx = promiseArray;\n      ",
+      "options": null
+    },
+    {
+      "index": 61,
+      "code": "\ndeclare let x: Promise<number>;\nx = Promise.resolve(2);\n      ",
+      "options": null
+    },
+    {
+      "index": 62,
+      "code": "\ndeclare const promiseArray: Array<Promise<unknown>>;\nasync function f() {\n  return promiseArray;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 63,
+      "code": "\ndeclare const promiseArray: Array<Promise<unknown>>;\nasync function* generator() {\n  yield* promiseArray;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 64,
+      "code": "\nasync function* generator() {\n  yield Promise.resolve();\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 65,
+      "code": "\ninterface SafeThenable<T> {\n  then<TResult1 = T, TResult2 = never>(\n    onfulfilled?:\n      | ((value: T) => TResult1 | SafeThenable<TResult1>)\n      | undefined\n      | null,\n    onrejected?:\n      | ((reason: any) => TResult2 | SafeThenable<TResult2>)\n      | undefined\n      | null,\n  ): SafeThenable<TResult1 | TResult2>;\n}\nlet promise: () => SafeThenable<number> = () => Promise.resolve(5);\npromise().then(() => {});\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafeThenable"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 66,
+      "code": "\n        declare module 'abc' {\n          export function it(name: string, action: () => void): void;\n        }\n        it('...', () => {});\n      ",
+      "options": {
+        "allowForKnownSafeCalls": [
+          {
+            "from": "package",
+            "name": [
+              "it"
+            ],
+            "package": "abc"
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 67,
+      "code": "\n        declare module 'abc' {\n          export function it(name: string, action: () => void): void;\n        }\n\n        it('...', () => {});\n      ",
+      "options": {
+        "allowForKnownSafeCalls": [
+          {
+            "from": "package",
+            "name": [
+              "it"
+            ],
+            "package": "abc"
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 68,
+      "code": "\n        import { it } from 'node:test';\n\n        it('...', () => {});\n      ",
+      "skip": true,
+      "options": {
+        "allowForKnownSafeCalls": [
+          {
+            "name": [
+              "it"
+            ],
+            "package": "node:test",
+            "from": "package"
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 69,
+      "code": "\ninterface SafePromise<T> extends Promise<T> {\n  brand: 'safe';\n}\n\ndeclare const createSafePromise: () => SafePromise<string>;\ncreateSafePromise();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": true,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 70,
+      "code": "\ndeclare const createPromiseLike: () => PromiseLike<number>;\ncreatePromiseLike();\n    ",
+      "options": null
+    },
+    {
+      "index": 71,
+      "code": "\ninterface MyThenable {\n  then(onFulfilled: () => void, onRejected: () => void): MyThenable;\n}\n\ndeclare function createMyThenable(): MyThenable;\n\ncreateMyThenable();\n    ",
+      "options": null
+    },
+    {
+      "index": 72,
+      "code": "\nconst randomAsyncFunction = async () => {\n  return Promise.resolve(true);\n};\n\nrandomAsyncFunction();\n      ",
+      "options": {
+        "allowForKnownSafeCalls": [
+          "randomAsyncFunction"
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 73,
+      "code": "\nasync function myAsyncFunction() {\n  return Promise.resolve('test');\n}\n\nmyAsyncFunction();\n      ",
+      "options": {
+        "allowForKnownSafeCalls": [
+          "myAsyncFunction"
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    },
+    {
+      "index": 74,
+      "code": "\n      interface CustomNode<P> {\n        getNextNode: () => CustomNode<P>;\n      }\n\n      declare const createNode: () => {\n        getNextNode: <T>() => CustomNode<T>;\n      };\n\n      function wrapNode<T>(getNode: () => CustomNode<T>) {\n        return getNode;\n      }\n\n      (async () => {\n        wrapNode(() => {\n          const node = createNode();\n\n          return wrapNode<typeof node.getNextNode<any>>(node.getNextNode);\n        });\n      })().catch(() => {});\n    ",
+      "options": null
+    },
+    {
+      "index": 75,
+      "code": "\ninterface SafePromise<T> extends Promise<T> {\n  __brand: string;\n}\ntype BrandedSafePromise = SafePromise<number> & { foo: 'bar' };\ndeclare function getPromise(): BrandedSafePromise;\ngetPromise();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nasync function test() {\n  Promise.resolve('value');\n  Promise.resolve('value').then(() => {});\n  Promise.resolve('value').catch();\n  Promise.resolve('value').finally();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  void Promise.resolve('value');\n  Promise.resolve('value').then(() => {});\n  Promise.resolve('value').catch();\n  Promise.resolve('value').finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  await Promise.resolve('value');\n  Promise.resolve('value').then(() => {});\n  Promise.resolve('value').catch();\n  Promise.resolve('value').finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  Promise.resolve('value');\n  void Promise.resolve('value').then(() => {});\n  Promise.resolve('value').catch();\n  Promise.resolve('value').finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  Promise.resolve('value');\n  await Promise.resolve('value').then(() => {});\n  Promise.resolve('value').catch();\n  Promise.resolve('value').finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  Promise.resolve('value');\n  Promise.resolve('value').then(() => {});\n  void Promise.resolve('value').catch();\n  Promise.resolve('value').finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  Promise.resolve('value');\n  Promise.resolve('value').then(() => {});\n  await Promise.resolve('value').catch();\n  Promise.resolve('value').finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  Promise.resolve('value');\n  Promise.resolve('value').then(() => {});\n  Promise.resolve('value').catch();\n  void Promise.resolve('value').finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  Promise.resolve('value');\n  Promise.resolve('value').then(() => {});\n  Promise.resolve('value').catch();\n  await Promise.resolve('value').finally();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 11,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  void obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  await obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 12,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  void obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  await obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 13,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  void obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  await obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 14,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  void obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  await obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 15,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  void obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  await obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 16,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  void obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  await obj6?.a.b.c?.();\n\n  callback?.();\n};\n\ndoSomething();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 18,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  void callback?.();\n};\n\ndoSomething();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  await callback?.();\n};\n\ndoSomething();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 21,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\nvoid doSomething();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst doSomething = async (\n  obj1: { a?: { b?: { c?: () => Promise<void> } } },\n  obj2: { a?: { b?: { c: () => Promise<void> } } },\n  obj3: { a?: { b: { c?: () => Promise<void> } } },\n  obj4: { a: { b: { c?: () => Promise<void> } } },\n  obj5: { a?: () => { b?: { c?: () => Promise<void> } } },\n  obj6?: { a: { b: { c?: () => Promise<void> } } },\n  callback?: () => Promise<void>,\n): Promise<void> => {\n  obj1.a?.b?.c?.();\n  obj2.a?.b?.c();\n  obj3.a?.b.c?.();\n  obj4.a.b.c?.();\n  obj5.a?.().b?.c?.();\n  obj6?.a.b.c?.();\n\n  callback?.();\n};\n\nawait doSomething();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nmyTag`abc`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nvoid myTag`abc`;\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nawait myTag`abc`;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nmyTag`abc`.then(() => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nvoid myTag`abc`.then(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nawait myTag`abc`.then(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nmyTag`abc`.finally(() => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nvoid myTag`abc`.finally(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const myTag: (strings: TemplateStringsArray) => Promise<void>;\nawait myTag`abc`.finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nasync function test() {\n  Promise.resolve('value');\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  void Promise.resolve('value');\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  await Promise.resolve('value');\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nasync function test() {\n  Promise.reject(new Error('message'));\n  Promise.reject(new Error('message')).then(() => {});\n  Promise.reject(new Error('message')).catch();\n  Promise.reject(new Error('message')).finally();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  void Promise.reject(new Error('message'));\n  Promise.reject(new Error('message')).then(() => {});\n  Promise.reject(new Error('message')).catch();\n  Promise.reject(new Error('message')).finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  await Promise.reject(new Error('message'));\n  Promise.reject(new Error('message')).then(() => {});\n  Promise.reject(new Error('message')).catch();\n  Promise.reject(new Error('message')).finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  Promise.reject(new Error('message'));\n  void Promise.reject(new Error('message')).then(() => {});\n  Promise.reject(new Error('message')).catch();\n  Promise.reject(new Error('message')).finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  Promise.reject(new Error('message'));\n  await Promise.reject(new Error('message')).then(() => {});\n  Promise.reject(new Error('message')).catch();\n  Promise.reject(new Error('message')).finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  Promise.reject(new Error('message'));\n  Promise.reject(new Error('message')).then(() => {});\n  void Promise.reject(new Error('message')).catch();\n  Promise.reject(new Error('message')).finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  Promise.reject(new Error('message'));\n  Promise.reject(new Error('message')).then(() => {});\n  await Promise.reject(new Error('message')).catch();\n  Promise.reject(new Error('message')).finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  Promise.reject(new Error('message'));\n  Promise.reject(new Error('message')).then(() => {});\n  Promise.reject(new Error('message')).catch();\n  void Promise.reject(new Error('message')).finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  Promise.reject(new Error('message'));\n  Promise.reject(new Error('message')).then(() => {});\n  Promise.reject(new Error('message')).catch();\n  await Promise.reject(new Error('message')).finally();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nasync function test() {\n  (async () => true)();\n  (async () => true)().then(() => {});\n  (async () => true)().catch();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  void (async () => true)();\n  (async () => true)().then(() => {});\n  (async () => true)().catch();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  await (async () => true)();\n  (async () => true)().then(() => {});\n  (async () => true)().catch();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  (async () => true)();\n  void (async () => true)().then(() => {});\n  (async () => true)().catch();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  (async () => true)();\n  await (async () => true)().then(() => {});\n  (async () => true)().catch();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  (async () => true)();\n  (async () => true)().then(() => {});\n  void (async () => true)().catch();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  (async () => true)();\n  (async () => true)().then(() => {});\n  await (async () => true)().catch();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nasync function test() {\n  async function returnsPromise() {}\n\n  returnsPromise();\n  returnsPromise().then(() => {});\n  returnsPromise().catch();\n  returnsPromise().finally();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  async function returnsPromise() {}\n\n  void returnsPromise();\n  returnsPromise().then(() => {});\n  returnsPromise().catch();\n  returnsPromise().finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  async function returnsPromise() {}\n\n  await returnsPromise();\n  returnsPromise().then(() => {});\n  returnsPromise().catch();\n  returnsPromise().finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  async function returnsPromise() {}\n\n  returnsPromise();\n  void returnsPromise().then(() => {});\n  returnsPromise().catch();\n  returnsPromise().finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  async function returnsPromise() {}\n\n  returnsPromise();\n  await returnsPromise().then(() => {});\n  returnsPromise().catch();\n  returnsPromise().finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  async function returnsPromise() {}\n\n  returnsPromise();\n  returnsPromise().then(() => {});\n  void returnsPromise().catch();\n  returnsPromise().finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  async function returnsPromise() {}\n\n  returnsPromise();\n  returnsPromise().then(() => {});\n  await returnsPromise().catch();\n  returnsPromise().finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 8,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  async function returnsPromise() {}\n\n  returnsPromise();\n  returnsPromise().then(() => {});\n  returnsPromise().catch();\n  void returnsPromise().finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  async function returnsPromise() {}\n\n  returnsPromise();\n  returnsPromise().then(() => {});\n  returnsPromise().catch();\n  await returnsPromise().finally();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nasync function test() {\n  Math.random() > 0.5 ? Promise.resolve() : null;\n  Math.random() > 0.5 ? null : Promise.resolve();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "column": 25,
+          "endLine": 3,
+          "endColumn": 42,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  void (Math.random() > 0.5 ? Promise.resolve() : null);\n  Math.random() > 0.5 ? null : Promise.resolve();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  await (Math.random() > 0.5 ? Promise.resolve() : null);\n  Math.random() > 0.5 ? null : Promise.resolve();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "column": 32,
+          "endLine": 4,
+          "endColumn": 49,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  Math.random() > 0.5 ? Promise.resolve() : null;\n  void (Math.random() > 0.5 ? null : Promise.resolve());\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  Math.random() > 0.5 ? Promise.resolve() : null;\n  await (Math.random() > 0.5 ? null : Promise.resolve());\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nasync function test() {\n  (Promise.resolve(), 123);\n  (123, Promise.resolve());\n  (123, Promise.resolve(), 123);\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "column": 4,
+          "endLine": 3,
+          "endColumn": 21,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  void (Promise.resolve(), 123);\n  (123, Promise.resolve());\n  (123, Promise.resolve(), 123);\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  await (Promise.resolve(), 123);\n  (123, Promise.resolve());\n  (123, Promise.resolve(), 123);\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "column": 9,
+          "endLine": 4,
+          "endColumn": 26,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  (Promise.resolve(), 123);\n  void (123, Promise.resolve());\n  (123, Promise.resolve(), 123);\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  (Promise.resolve(), 123);\n  await (123, Promise.resolve());\n  (123, Promise.resolve(), 123);\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "column": 9,
+          "endLine": 5,
+          "endColumn": 26,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  (Promise.resolve(), 123);\n  (123, Promise.resolve());\n  void (123, Promise.resolve(), 123);\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  (Promise.resolve(), 123);\n  (123, Promise.resolve());\n  await (123, Promise.resolve(), 123);\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\nasync function test() {\n  void Promise.resolve();\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 3,
+          "column": 8,
+          "endLine": 3,
+          "endColumn": 25,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  await Promise.resolve();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\nasync function test() {\n  const promise = new Promise((resolve, reject) => resolve('value'));\n  promise;\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  const promise = new Promise((resolve, reject) => resolve('value'));\n  await promise;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\nasync function returnsPromise() {\n  return 'value';\n}\nvoid returnsPromise();\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function returnsPromise() {\n  return 'value';\n}\nawait returnsPromise();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\nasync function returnsPromise() {\n  return 'value';\n}\nvoid /* ... */ returnsPromise();\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function returnsPromise() {\n  return 'value';\n}\nawait /* ... */ returnsPromise();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\nasync function returnsPromise() {\n  return 'value';\n}\n(1, returnsPromise());\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function returnsPromise() {\n  return 'value';\n}\nawait (1, returnsPromise());\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\nasync function returnsPromise() {\n  return 'value';\n}\nbool ? returnsPromise() : null;\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function returnsPromise() {\n  return 'value';\n}\nawait (bool ? returnsPromise() : null);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\nasync function test() {\n  const obj = { foo: Promise.resolve() };\n  obj.foo;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  const obj = { foo: Promise.resolve() };\n  void obj.foo;\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  const obj = { foo: Promise.resolve() };\n  await obj.foo;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\nasync function test() {\n  new Promise(resolve => resolve());\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  void new Promise(resolve => resolve());\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  await new Promise(resolve => resolve());\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\ndeclare const promiseValue: Promise<number>;\n\nasync function test() {\n  promiseValue;\n  promiseValue.then(() => {});\n  promiseValue.catch();\n  promiseValue.finally();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseValue: Promise<number>;\n\nasync function test() {\n  void promiseValue;\n  promiseValue.then(() => {});\n  promiseValue.catch();\n  promiseValue.finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseValue: Promise<number>;\n\nasync function test() {\n  await promiseValue;\n  promiseValue.then(() => {});\n  promiseValue.catch();\n  promiseValue.finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseValue: Promise<number>;\n\nasync function test() {\n  promiseValue;\n  void promiseValue.then(() => {});\n  promiseValue.catch();\n  promiseValue.finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseValue: Promise<number>;\n\nasync function test() {\n  promiseValue;\n  await promiseValue.then(() => {});\n  promiseValue.catch();\n  promiseValue.finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseValue: Promise<number>;\n\nasync function test() {\n  promiseValue;\n  promiseValue.then(() => {});\n  void promiseValue.catch();\n  promiseValue.finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseValue: Promise<number>;\n\nasync function test() {\n  promiseValue;\n  promiseValue.then(() => {});\n  await promiseValue.catch();\n  promiseValue.finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 8,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseValue: Promise<number>;\n\nasync function test() {\n  promiseValue;\n  promiseValue.then(() => {});\n  promiseValue.catch();\n  void promiseValue.finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseValue: Promise<number>;\n\nasync function test() {\n  promiseValue;\n  promiseValue.then(() => {});\n  promiseValue.catch();\n  await promiseValue.finally();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\ndeclare const promiseUnion: Promise<number> | number;\n\nasync function test() {\n  promiseUnion;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseUnion: Promise<number> | number;\n\nasync function test() {\n  void promiseUnion;\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseUnion: Promise<number> | number;\n\nasync function test() {\n  await promiseUnion;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\ndeclare const promiseIntersection: Promise<number> & number;\n\nasync function test() {\n  promiseIntersection;\n  promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n\nasync function test() {\n  void promiseIntersection;\n  promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n\nasync function test() {\n  await promiseIntersection;\n  promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n\nasync function test() {\n  promiseIntersection;\n  void promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n\nasync function test() {\n  promiseIntersection;\n  await promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n\nasync function test() {\n  promiseIntersection;\n  promiseIntersection.then(() => {});\n  void promiseIntersection.catch();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n\nasync function test() {\n  promiseIntersection;\n  promiseIntersection.then(() => {});\n  await promiseIntersection.catch();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  canThen;\n  canThen.then(() => {});\n  canThen.catch();\n  canThen.finally();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  void canThen;\n  canThen.then(() => {});\n  canThen.catch();\n  canThen.finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  await canThen;\n  canThen.then(() => {});\n  canThen.catch();\n  canThen.finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  canThen;\n  void canThen.then(() => {});\n  canThen.catch();\n  canThen.finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  canThen;\n  await canThen.then(() => {});\n  canThen.catch();\n  canThen.finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 8,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  canThen;\n  canThen.then(() => {});\n  void canThen.catch();\n  canThen.finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  canThen;\n  canThen.then(() => {});\n  await canThen.catch();\n  canThen.finally();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 9,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  canThen;\n  canThen.then(() => {});\n  canThen.catch();\n  void canThen.finally();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  class CanThen extends Promise<number> {}\n  const canThen: CanThen = Foo.resolve(2);\n\n  canThen;\n  canThen.then(() => {});\n  canThen.catch();\n  await canThen.finally();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\nasync function test() {\n  class CatchableThenable {\n    then(callback: () => void, callback: () => void): CatchableThenable {\n      return new CatchableThenable();\n    }\n  }\n  const thenable = new CatchableThenable();\n\n  thenable;\n  thenable.then(() => {});\n}\n      ",
+      "options": {
+        "checkThenables": true,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 10,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  class CatchableThenable {\n    then(callback: () => void, callback: () => void): CatchableThenable {\n      return new CatchableThenable();\n    }\n  }\n  const thenable = new CatchableThenable();\n\n  void thenable;\n  thenable.then(() => {});\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  class CatchableThenable {\n    then(callback: () => void, callback: () => void): CatchableThenable {\n      return new CatchableThenable();\n    }\n  }\n  const thenable = new CatchableThenable();\n\n  await thenable;\n  thenable.then(() => {});\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 11,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function test() {\n  class CatchableThenable {\n    then(callback: () => void, callback: () => void): CatchableThenable {\n      return new CatchableThenable();\n    }\n  }\n  const thenable = new CatchableThenable();\n\n  thenable;\n  void thenable.then(() => {});\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function test() {\n  class CatchableThenable {\n    then(callback: () => void, callback: () => void): CatchableThenable {\n      return new CatchableThenable();\n    }\n  }\n  const thenable = new CatchableThenable();\n\n  thenable;\n  await thenable.then(() => {});\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\n// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/promise-polyfill/index.d.ts\n// Type definitions for promise-polyfill 6.0\n// Project: https://github.com/taylorhakes/promise-polyfill\n// Definitions by: Steve Jenkins <https://github.com/skysteve>\n//                 Daniel Cassidy <https://github.com/djcsdy>\n// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped\n\ninterface PromisePolyfillConstructor extends PromiseConstructor {\n  _immediateFn?: (handler: (() => void) | string) => void;\n}\n\ndeclare const PromisePolyfill: PromisePolyfillConstructor;\n\nasync function test() {\n  const promise = new PromisePolyfill(() => {});\n\n  promise;\n  promise.then(() => {});\n  promise.catch();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 18,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/promise-polyfill/index.d.ts\n// Type definitions for promise-polyfill 6.0\n// Project: https://github.com/taylorhakes/promise-polyfill\n// Definitions by: Steve Jenkins <https://github.com/skysteve>\n//                 Daniel Cassidy <https://github.com/djcsdy>\n// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped\n\ninterface PromisePolyfillConstructor extends PromiseConstructor {\n  _immediateFn?: (handler: (() => void) | string) => void;\n}\n\ndeclare const PromisePolyfill: PromisePolyfillConstructor;\n\nasync function test() {\n  const promise = new PromisePolyfill(() => {});\n\n  void promise;\n  promise.then(() => {});\n  promise.catch();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/promise-polyfill/index.d.ts\n// Type definitions for promise-polyfill 6.0\n// Project: https://github.com/taylorhakes/promise-polyfill\n// Definitions by: Steve Jenkins <https://github.com/skysteve>\n//                 Daniel Cassidy <https://github.com/djcsdy>\n// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped\n\ninterface PromisePolyfillConstructor extends PromiseConstructor {\n  _immediateFn?: (handler: (() => void) | string) => void;\n}\n\ndeclare const PromisePolyfill: PromisePolyfillConstructor;\n\nasync function test() {\n  const promise = new PromisePolyfill(() => {});\n\n  await promise;\n  promise.then(() => {});\n  promise.catch();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 19,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/promise-polyfill/index.d.ts\n// Type definitions for promise-polyfill 6.0\n// Project: https://github.com/taylorhakes/promise-polyfill\n// Definitions by: Steve Jenkins <https://github.com/skysteve>\n//                 Daniel Cassidy <https://github.com/djcsdy>\n// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped\n\ninterface PromisePolyfillConstructor extends PromiseConstructor {\n  _immediateFn?: (handler: (() => void) | string) => void;\n}\n\ndeclare const PromisePolyfill: PromisePolyfillConstructor;\n\nasync function test() {\n  const promise = new PromisePolyfill(() => {});\n\n  promise;\n  void promise.then(() => {});\n  promise.catch();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/promise-polyfill/index.d.ts\n// Type definitions for promise-polyfill 6.0\n// Project: https://github.com/taylorhakes/promise-polyfill\n// Definitions by: Steve Jenkins <https://github.com/skysteve>\n//                 Daniel Cassidy <https://github.com/djcsdy>\n// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped\n\ninterface PromisePolyfillConstructor extends PromiseConstructor {\n  _immediateFn?: (handler: (() => void) | string) => void;\n}\n\ndeclare const PromisePolyfill: PromisePolyfillConstructor;\n\nasync function test() {\n  const promise = new PromisePolyfill(() => {});\n\n  promise;\n  await promise.then(() => {});\n  promise.catch();\n}\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 20,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/promise-polyfill/index.d.ts\n// Type definitions for promise-polyfill 6.0\n// Project: https://github.com/taylorhakes/promise-polyfill\n// Definitions by: Steve Jenkins <https://github.com/skysteve>\n//                 Daniel Cassidy <https://github.com/djcsdy>\n// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped\n\ninterface PromisePolyfillConstructor extends PromiseConstructor {\n  _immediateFn?: (handler: (() => void) | string) => void;\n}\n\ndeclare const PromisePolyfill: PromisePolyfillConstructor;\n\nasync function test() {\n  const promise = new PromisePolyfill(() => {});\n\n  promise;\n  promise.then(() => {});\n  void promise.catch();\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n// https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/promise-polyfill/index.d.ts\n// Type definitions for promise-polyfill 6.0\n// Project: https://github.com/taylorhakes/promise-polyfill\n// Definitions by: Steve Jenkins <https://github.com/skysteve>\n//                 Daniel Cassidy <https://github.com/djcsdy>\n// Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped\n\ninterface PromisePolyfillConstructor extends PromiseConstructor {\n  _immediateFn?: (handler: (() => void) | string) => void;\n}\n\ndeclare const PromisePolyfill: PromisePolyfillConstructor;\n\nasync function test() {\n  const promise = new PromisePolyfill(() => {});\n\n  promise;\n  promise.then(() => {});\n  await promise.catch();\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\n        (async () => {\n          await something();\n        })();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        void (async () => {\n          await something();\n        })();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        await (async () => {\n          await something();\n        })();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\n        (async () => {\n          something();\n        })();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        void (async () => {\n          something();\n        })();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        await (async () => {\n          something();\n        })();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "(async function foo() {})();",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 1,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "void (async function foo() {})();"
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "await (async function foo() {})();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\n        function foo() {\n          (async function bar() {})();\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        function foo() {\n          void (async function bar() {})();\n        }\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        function foo() {\n          await (async function bar() {})();\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "code": "\n        const foo = () =>\n          new Promise(res => {\n            (async function () {\n              await res(1);\n            })();\n          });\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        const foo = () =>\n          new Promise(res => {\n            void (async function () {\n              await res(1);\n            })();\n          });\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        const foo = () =>\n          new Promise(res => {\n            await (async function () {\n              await res(1);\n            })();\n          });\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "code": "\n        (async function () {\n          await res(1);\n        })();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        void (async function () {\n          await res(1);\n        })();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        await (async function () {\n          await res(1);\n        })();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "code": "\n        (async function () {\n          Promise.resolve();\n        })();\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": true,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        (async function () {\n          void Promise.resolve();\n        })();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        (async function () {\n          await Promise.resolve();\n        })();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "code": "\ndeclare const promiseIntersection: Promise<number> & number;\n(async function () {\n  promiseIntersection;\n  promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n  promiseIntersection.finally();\n})();\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": true,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n(async function () {\n  void promiseIntersection;\n  promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n  promiseIntersection.finally();\n})();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n(async function () {\n  await promiseIntersection;\n  promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n  promiseIntersection.finally();\n})();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n(async function () {\n  promiseIntersection;\n  void promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n  promiseIntersection.finally();\n})();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n(async function () {\n  promiseIntersection;\n  await promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n  promiseIntersection.finally();\n})();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n(async function () {\n  promiseIntersection;\n  promiseIntersection.then(() => {});\n  void promiseIntersection.catch();\n  promiseIntersection.finally();\n})();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n(async function () {\n  promiseIntersection;\n  promiseIntersection.then(() => {});\n  await promiseIntersection.catch();\n  promiseIntersection.finally();\n})();\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingVoid",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n(async function () {\n  promiseIntersection;\n  promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n  void promiseIntersection.finally();\n})();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const promiseIntersection: Promise<number> & number;\n(async function () {\n  promiseIntersection;\n  promiseIntersection.then(() => {});\n  promiseIntersection.catch();\n  await promiseIntersection.finally();\n})();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n\n  void condition || myPromise();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n\n  void (void condition || myPromise());\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n\n  await (void condition || myPromise());\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n\n  (await condition) && myPromise();\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n\n  await ((await condition) && myPromise());\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n\n  condition && myPromise();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n\n  void (condition && myPromise());\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = true;\n\n  await (condition && myPromise());\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = false;\n\n  condition || myPromise();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = false;\n\n  void (condition || myPromise());\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = false;\n\n  await (condition || myPromise());\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = null;\n\n  condition ?? myPromise();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = null;\n\n  void (condition ?? myPromise());\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = null;\n\n  await (condition ?? myPromise());\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "code": "\nasync function foo() {\n  const myPromise = Promise.resolve(true);\n  let condition = true;\n  condition && myPromise;\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function foo() {\n  const myPromise = Promise.resolve(true);\n  let condition = true;\n  await (condition && myPromise);\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "code": "\nasync function foo() {\n  const myPromise = Promise.resolve(true);\n  let condition = false;\n  condition || myPromise;\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function foo() {\n  const myPromise = Promise.resolve(true);\n  let condition = false;\n  await (condition || myPromise);\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "code": "\nasync function foo() {\n  const myPromise = Promise.resolve(true);\n  let condition = null;\n  condition ?? myPromise;\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function foo() {\n  const myPromise = Promise.resolve(true);\n  let condition = null;\n  await (condition ?? myPromise);\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "code": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = false;\n\n  condition || condition || myPromise();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = false;\n\n  void (condition || condition || myPromise());\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nasync function foo() {\n  const myPromise = async () => void 0;\n  const condition = false;\n\n  await (condition || condition || myPromise());\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "code": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingUselessRejectionHandlerVoid",
+          "line": 4,
+          "column": 1,
+          "endLine": 4,
+          "endColumn": 44,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nvoid Promise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nawait Promise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandlerVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nvoid Promise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nawait Promise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandlerVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nvoid Promise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nawait Promise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandlerVoid",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nvoid Promise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nawait Promise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandlerVoid",
+          "line": 10,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nvoid Promise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nawait Promise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandlerVoid",
+          "line": 11,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nvoid Promise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nawait Promise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandlerVoid",
+          "line": 12,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nvoid Promise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nawait Promise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandlerVoid",
+          "line": 13,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nvoid Promise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nawait Promise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "code": "\nPromise.reject() || 3;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid (Promise.reject() || 3);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait (Promise.reject() || 3);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "code": "\nvoid Promise.resolve().then(() => {}, undefined);\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.resolve().then(() => {}, undefined);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "code": "\ndeclare const maybeCallable: string | (() => void);\nPromise.resolve().then(() => {}, maybeCallable);\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\nawait Promise.resolve().then(() => {}, maybeCallable);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "code": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nawait Promise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nawait Promise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nawait Promise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nawait Promise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 10,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nawait Promise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 11,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nawait Promise.resolve().catch(null);\nPromise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 12,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nawait Promise.resolve().catch(3);\nPromise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "floatingUselessRejectionHandler",
+          "line": 13,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const maybeCallable: string | (() => void);\ndeclare const definitelyCallable: () => void;\nPromise.resolve().then(() => {}, undefined);\nPromise.resolve().then(() => {}, null);\nPromise.resolve().then(() => {}, 3);\nPromise.resolve().then(() => {}, maybeCallable);\nPromise.resolve().then(() => {}, definitelyCallable);\n\nPromise.resolve().catch(undefined);\nPromise.resolve().catch(null);\nPromise.resolve().catch(3);\nawait Promise.resolve().catch(maybeCallable);\nPromise.resolve().catch(definitelyCallable);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "code": "\nPromise.reject() || 3;\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait (Promise.reject() || 3);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "code": "\nPromise.reject().finally(() => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "column": 1,
+          "endLine": 2,
+          "endColumn": 35,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid Promise.reject().finally(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject().finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "code": "\nPromise.reject()\n  .finally(() => {})\n  .finally(() => {});\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floating",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject()\n  .finally(() => {})\n  .finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "code": "\nPromise.reject()\n  .finally(() => {})\n  .finally(() => {})\n  .finally(() => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid Promise.reject()\n  .finally(() => {})\n  .finally(() => {})\n  .finally(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject()\n  .finally(() => {})\n  .finally(() => {})\n  .finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "code": "\nPromise.reject()\n  .then(() => {})\n  .finally(() => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid Promise.reject()\n  .then(() => {})\n  .finally(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject()\n  .then(() => {})\n  .finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "code": "\ndeclare const returnsPromise: () => Promise<void> | null;\nreturnsPromise()?.finally(() => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const returnsPromise: () => Promise<void> | null;\nvoid returnsPromise()?.finally(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const returnsPromise: () => Promise<void> | null;\nawait returnsPromise()?.finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "code": "\nconst promiseIntersection: Promise<number> & number;\npromiseIntersection.finally(() => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst promiseIntersection: Promise<number> & number;\nvoid promiseIntersection.finally(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst promiseIntersection: Promise<number> & number;\nawait promiseIntersection.finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "code": "\n(Promise.resolve().finally(() => {}), 123);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid (Promise.resolve().finally(() => {}), 123);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait (Promise.resolve().finally(() => {}), 123);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "code": "\n(async () => true)().finally();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid (async () => true)().finally();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait (async () => true)().finally();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "code": "\nPromise.reject(new Error('message')).finally(() => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid Promise.reject(new Error('message')).finally(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject(new Error('message')).finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "code": "\nfunction _<T, S extends Array<T | Promise<T>>>(\n  maybePromiseArray: S | undefined,\n): void {\n  maybePromiseArray?.[0];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nfunction _<T, S extends Array<T | Promise<T>>>(\n  maybePromiseArray: S | undefined,\n): void {\n  void maybePromiseArray?.[0];\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nfunction _<T, S extends Array<T | Promise<T>>>(\n  maybePromiseArray: S | undefined,\n): void {\n  await maybePromiseArray?.[0];\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "code": "\n[1, 2, 3].map(() => Promise.reject());\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 2,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 59,
+      "code": "\ndeclare const array: unknown[];\narray.map(() => Promise.reject());\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 60,
+      "code": "\ndeclare const promiseArray: Array<Promise<unknown>>;\nvoid promiseArray;\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArray",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 61,
+      "code": "\ndeclare const promiseArray: Array<Promise<unknown>>;\nasync function f() {\n  await promiseArray;\n}\n      ",
+      "options": {
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArray",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 62,
+      "code": "\n[1, 2, Promise.reject(), 3];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 2,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 63,
+      "code": "\n[1, 2, Promise.reject().catch(() => {}), 3];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 2,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 64,
+      "code": "\nconst data = ['test'];\ndata.map(async () => {\n  await new Promise((_res, rej) => setTimeout(rej, 1000));\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 65,
+      "code": "\nfunction _<T, S extends Array<T | Array<T | Promise<T>>>>(\n  maybePromiseArrayArray: S | undefined,\n): void {\n  maybePromiseArrayArray?.[0];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 66,
+      "code": "\nfunction f<T extends Array<Promise<number>>>(a: T): void {\n  a;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 67,
+      "code": "\ndeclare const a: Array<Promise<number>> | undefined;\na;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 68,
+      "code": "\nfunction f<T extends Array<Promise<number>>>(a: T | undefined): void {\n  a;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 69,
+      "code": "\n[Promise.reject()] as const;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 2,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 70,
+      "code": "\ndeclare function cursed(): [Promise<number>, Promise<string>];\ncursed();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 71,
+      "code": "\n[\n  'Type Argument number ',\n  1,\n  'is not',\n  Promise.resolve(),\n  'but it still is flagged',\n] as const;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 2,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 72,
+      "code": "\n        declare const arrayOrPromiseTuple:\n          | Array<number>\n          | [number, number, Promise<unknown>, string];\n        arrayOrPromiseTuple;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 73,
+      "code": "\n        declare const okArrayOrPromiseArray: Array<number> | Array<Promise<unknown>>;\n        okArrayOrPromiseArray;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 74,
+      "code": "\ninterface UnsafeThenable<T> {\n  then<TResult1 = T, TResult2 = never>(\n    onfulfilled?:\n      | ((value: T) => TResult1 | UnsafeThenable<TResult1>)\n      | undefined\n      | null,\n    onrejected?:\n      | ((reason: any) => TResult2 | UnsafeThenable<TResult2>)\n      | undefined\n      | null,\n  ): UnsafeThenable<TResult1 | TResult2>;\n}\nlet promise: UnsafeThenable<number> = Promise.resolve(5);\npromise;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafeThenable"
+            ]
+          }
+        ],
+        "checkThenables": true,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 15,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ninterface UnsafeThenable<T> {\n  then<TResult1 = T, TResult2 = never>(\n    onfulfilled?:\n      | ((value: T) => TResult1 | UnsafeThenable<TResult1>)\n      | undefined\n      | null,\n    onrejected?:\n      | ((reason: any) => TResult2 | UnsafeThenable<TResult2>)\n      | undefined\n      | null,\n  ): UnsafeThenable<TResult1 | TResult2>;\n}\nlet promise: UnsafeThenable<number> = Promise.resolve(5);\nvoid promise;\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ninterface UnsafeThenable<T> {\n  then<TResult1 = T, TResult2 = never>(\n    onfulfilled?:\n      | ((value: T) => TResult1 | UnsafeThenable<TResult1>)\n      | undefined\n      | null,\n    onrejected?:\n      | ((reason: any) => TResult2 | UnsafeThenable<TResult2>)\n      | undefined\n      | null,\n  ): UnsafeThenable<TResult1 | TResult2>;\n}\nlet promise: UnsafeThenable<number> = Promise.resolve(5);\nawait promise;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 75,
+      "code": "\nclass SafePromise<T> extends Promise<T> {}\nlet promise: SafePromise<number> = Promise.resolve(5);\npromise.catch();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nclass SafePromise<T> extends Promise<T> {}\nlet promise: SafePromise<number> = Promise.resolve(5);\nvoid promise.catch();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nclass SafePromise<T> extends Promise<T> {}\nlet promise: SafePromise<number> = Promise.resolve(5);\nawait promise.catch();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 76,
+      "code": "\nclass UnsafePromise<T> extends Promise<T> {}\nlet promise: () => UnsafePromise<number> = async () => 5;\npromise().finally();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nclass UnsafePromise<T> extends Promise<T> {}\nlet promise: () => UnsafePromise<number> = async () => 5;\nvoid promise().finally();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nclass UnsafePromise<T> extends Promise<T> {}\nlet promise: () => UnsafePromise<number> = async () => 5;\nawait promise().finally();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 77,
+      "code": "\ntype UnsafePromise = Promise<number> & { hey?: string };\nlet promise: UnsafePromise = Promise.resolve(5);\n0 ? promise.catch() : 2;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ntype UnsafePromise = Promise<number> & { hey?: string };\nlet promise: UnsafePromise = Promise.resolve(5);\nvoid (0 ? promise.catch() : 2);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ntype UnsafePromise = Promise<number> & { hey?: string };\nlet promise: UnsafePromise = Promise.resolve(5);\nawait (0 ? promise.catch() : 2);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 78,
+      "code": "\ntype UnsafePromise = Promise<number> & { hey?: string };\nlet promise: () => UnsafePromise = async () => 5;\nnull ?? promise().catch();\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ntype UnsafePromise = Promise<number> & { hey?: string };\nlet promise: () => UnsafePromise = async () => 5;\nvoid (null ?? promise().catch());\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ntype UnsafePromise = Promise<number> & { hey?: string };\nlet promise: () => UnsafePromise = async () => 5;\nawait (null ?? promise().catch());\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 79,
+      "code": "\ntype Foo<T> = Promise<T> & { hey?: string };\ndeclare const arrayOrPromiseTuple: Foo<unknown>[];\narrayOrPromiseTuple;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "Bar"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 80,
+      "code": "\ntype SafePromise = Promise<number> & { hey?: string };\nlet foo: SafePromise = Promise.resolve(1);\nlet bar = [Promise.resolve(2), foo];\nbar;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "SafePromise"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 81,
+      "code": "\ntype Foo<T> = Promise<T> & { hey?: string };\ndeclare const arrayOrPromiseTuple: [Foo<unknown>, 5];\narrayOrPromiseTuple;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "Bar"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingPromiseArrayVoid",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 82,
+      "code": "\ntype SafePromise = Promise<number> & { __linterBrands?: string };\ndeclare const myTag: (strings: TemplateStringsArray) => SafePromise;\nmyTag`abc`;\n      ",
+      "options": {
+        "allowForKnownSafePromises": [
+          {
+            "from": "file",
+            "name": [
+              "Foo"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ntype SafePromise = Promise<number> & { __linterBrands?: string };\ndeclare const myTag: (strings: TemplateStringsArray) => SafePromise;\nvoid myTag`abc`;\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ntype SafePromise = Promise<number> & { __linterBrands?: string };\ndeclare const myTag: (strings: TemplateStringsArray) => SafePromise;\nawait myTag`abc`;\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 83,
+      "code": "\n        declare function unsafe(...args: unknown[]): Promise<void>;\n\n        unsafe('...', () => {});\n      ",
+      "options": {
+        "allowForKnownSafeCalls": [
+          {
+            "from": "file",
+            "name": [
+              "it"
+            ],
+            "path": "tests/fixtures/file.ts"
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        declare function unsafe(...args: unknown[]): Promise<void>;\n\n        void unsafe('...', () => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        declare function unsafe(...args: unknown[]): Promise<void>;\n\n        await unsafe('...', () => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 84,
+      "code": "\n        declare function it(...args: unknown[]): Promise<void>;\n\n        it('...', () => {}).then(() => {});\n      ",
+      "options": {
+        "allowForKnownSafeCalls": [
+          {
+            "name": [
+              "it"
+            ],
+            "path": "tests/fixtures/file.ts",
+            "from": "file"
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        declare function it(...args: unknown[]): Promise<void>;\n\n        void it('...', () => {}).then(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        declare function it(...args: unknown[]): Promise<void>;\n\n        await it('...', () => {}).then(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 85,
+      "code": "\n        declare function it(...args: unknown[]): Promise<void>;\n\n        it('...', () => {}).finally(() => {});\n      ",
+      "options": {
+        "allowForKnownSafeCalls": [
+          {
+            "path": "tests/fixtures/file.ts",
+            "from": "file",
+            "name": [
+              "it"
+            ]
+          }
+        ],
+        "checkThenables": false,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        declare function it(...args: unknown[]): Promise<void>;\n\n        void it('...', () => {}).finally(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        declare function it(...args: unknown[]): Promise<void>;\n\n        await it('...', () => {}).finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 86,
+      "code": "\ndeclare const createPromise: () => PromiseLike<number>;\ncreatePromise();\n      ",
+      "options": {
+        "checkThenables": true,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const createPromise: () => PromiseLike<number>;\nvoid createPromise();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const createPromise: () => PromiseLike<number>;\nawait createPromise();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 87,
+      "code": "\ninterface MyThenable {\n  then(onFulfilled: () => void, onRejected: () => void): MyThenable;\n}\n\ndeclare function createMyThenable(): MyThenable;\n\ncreateMyThenable();\n      ",
+      "options": {
+        "checkThenables": true,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 8,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ninterface MyThenable {\n  then(onFulfilled: () => void, onRejected: () => void): MyThenable;\n}\n\ndeclare function createMyThenable(): MyThenable;\n\nvoid createMyThenable();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ninterface MyThenable {\n  then(onFulfilled: () => void, onRejected: () => void): MyThenable;\n}\n\ndeclare function createMyThenable(): MyThenable;\n\nawait createMyThenable();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 88,
+      "code": "\ndeclare const createPromise: () => Promise<number>;\ncreatePromise();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const createPromise: () => Promise<number>;\nvoid createPromise();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const createPromise: () => Promise<number>;\nawait createPromise();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 89,
+      "code": "\nclass MyPromise<T> extends Promise<T> {}\ndeclare const createMyPromise: () => MyPromise<number>;\ncreateMyPromise();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nclass MyPromise<T> extends Promise<T> {}\ndeclare const createMyPromise: () => MyPromise<number>;\nvoid createMyPromise();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nclass MyPromise<T> extends Promise<T> {}\ndeclare const createMyPromise: () => MyPromise<number>;\nawait createMyPromise();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 90,
+      "code": "\nclass MyPromise<T> extends Promise<T> {\n  additional: string;\n}\ndeclare const createMyPromise: () => MyPromise<number>;\ncreateMyPromise();\n      ",
+      "options": {
+        "checkThenables": true,
+        "ignoreIIFE": false,
+        "ignoreVoid": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nclass MyPromise<T> extends Promise<T> {\n  additional: string;\n}\ndeclare const createMyPromise: () => MyPromise<number>;\nvoid createMyPromise();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nclass MyPromise<T> extends Promise<T> {\n  additional: string;\n}\ndeclare const createMyPromise: () => MyPromise<number>;\nawait createMyPromise();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 91,
+      "code": "\ndeclare const x: any;\nfunction* generator(): Generator<number, void, Promise<number>> {\n  yield x;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const x: any;\nfunction* generator(): Generator<number, void, Promise<number>> {\n  void (yield x);\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const x: any;\nfunction* generator(): Generator<number, void, Promise<number>> {\n  await (yield x);\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 92,
+      "code": "\ndeclare const x: Generator<number, Promise<number>, void>;\nfunction* generator(): Generator<number, void, void> {\n  yield* x;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\ndeclare const x: Generator<number, Promise<number>, void>;\nfunction* generator(): Generator<number, void, void> {\n  void (yield* x);\n}\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\ndeclare const x: Generator<number, Promise<number>, void>;\nfunction* generator(): Generator<number, void, void> {\n  await (yield* x);\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 93,
+      "code": "\nconst value = {};\nvalue as Promise<number>;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 3,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nconst value = {};\nvoid (value as Promise<number>);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nconst value = {};\nawait (value as Promise<number>);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 94,
+      "code": "\n({}) as Promise<number> & number;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid (({}) as Promise<number> & number);\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait (({}) as Promise<number> & number);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 95,
+      "code": "\n({}) as Promise<number> & { yolo?: string };\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid (({}) as Promise<number> & { yolo?: string });\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait (({}) as Promise<number> & { yolo?: string });\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 96,
+      "code": "\n<Promise<number>>{};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "line": 2,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid (<Promise<number>>{});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait (<Promise<number>>{});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 97,
+      "code": "\nPromise.reject('foo').then();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid Promise.reject('foo').then();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject('foo').then();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 98,
+      "code": "\nPromise.reject('foo').finally();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid Promise.reject('foo').finally();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject('foo').finally();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 99,
+      "code": "\nPromise.reject('foo').finally(...[], () => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid Promise.reject('foo').finally(...[], () => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject('foo').finally(...[], () => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 100,
+      "code": "\nPromise.reject('foo').then(...[], () => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid Promise.reject('foo').then(...[], () => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject('foo').then(...[], () => {});\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 101,
+      "code": "\n        interface CustomNode<P> {\n          getNextNode: () => CustomNode<P>;\n        }\n\n        declare const createNode: () => {\n          getNextNode: <T>() => CustomNode<T>;\n        };\n\n        function wrapNode<T>(getNode: () => CustomNode<T>) {\n          return getNode;\n        }\n\n        (async () => {\n          wrapNode(() => {\n            const node = createNode();\n\n            return wrapNode<typeof node.getNextNode<any>>(node.getNextNode);\n          });\n        })();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingVoid",
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\n        interface CustomNode<P> {\n          getNextNode: () => CustomNode<P>;\n        }\n\n        declare const createNode: () => {\n          getNextNode: <T>() => CustomNode<T>;\n        };\n\n        function wrapNode<T>(getNode: () => CustomNode<T>) {\n          return getNode;\n        }\n\n        void (async () => {\n          wrapNode(() => {\n            const node = createNode();\n\n            return wrapNode<typeof node.getNextNode<any>>(node.getNextNode);\n          });\n        })();\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\n        interface CustomNode<P> {\n          getNextNode: () => CustomNode<P>;\n        }\n\n        declare const createNode: () => {\n          getNextNode: <T>() => CustomNode<T>;\n        };\n\n        function wrapNode<T>(getNode: () => CustomNode<T>) {\n          return getNode;\n        }\n\n        await (async () => {\n          wrapNode(() => {\n            const node = createNode();\n\n            return wrapNode<typeof node.getNextNode<any>>(node.getNextNode);\n          });\n        })();\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 102,
+      "code": "\nPromise.reject().catch(undefined).finally(() => {});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "floatingUselessRejectionHandlerVoid",
+          "line": 2,
+          "column": 1,
+          "endLine": 2,
+          "endColumn": 52,
+          "suggestions": [
+            {
+              "messageId": "floatingFixVoid",
+              "output": "\nvoid Promise.reject().catch(undefined).finally(() => {});\n      "
+            },
+            {
+              "messageId": "floatingFixAwait",
+              "output": "\nawait Promise.reject().catch(undefined).finally(() => {});\n      "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

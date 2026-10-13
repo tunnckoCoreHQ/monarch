@@ -1,0 +1,366 @@
+{
+  "test": "TestRequireAwaitRuleEslintBase",
+  "rule": "require-await",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nasync function foo() {\n  await doSomething();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\n(async function () {\n  await doSomething();\n});\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nasync () => {\n  await doSomething();\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "async () => await doSomething();",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\n({\n  async foo() {\n    await doSomething();\n  },\n});\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\nclass A {\n  async foo() {\n    await doSomething();\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\n(class {\n  async foo() {\n    await doSomething();\n  }\n});\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\nasync function foo() {\n  await (async () => {\n    await doSomething();\n  });\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "async function foo() {}",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "async () => {};",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\nfunction foo() {\n  doSomething();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\nasync function foo() {\n  for await (x of xs);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "await foo();",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "\nfor await (let num of asyncIterable) {\n  console.log(num);\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\n        async function* run() {\n          await new Promise(resolve => setTimeout(resolve, 100));\n          yield 'Hello';\n          console.log('World');\n        }\n      ",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "async function* run() {}",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "const foo = async function* () {};",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\n        async function foo() {\n          doSomething();\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        function foo() {\n          doSomething();\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\n        (async function () {\n          doSomething();\n        });\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        (function () {\n          doSomething();\n        });\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\n        async () => {\n          doSomething();\n        };\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        () => {\n          doSomething();\n        };\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "async () => doSomething();",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "() => doSomething();"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\n        ({\n          async foo() {\n            doSomething();\n          },\n        });\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        ({\n          foo() {\n            doSomething();\n          },\n        });\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\n        class A {\n          async foo() {\n            doSomething();\n          }\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        class A {\n          foo() {\n            doSomething();\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\n        class A {\n          public async foo() {\n            doSomething();\n          }\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        class A {\n          public foo() {\n            doSomething();\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\n        (class {\n          async foo() {\n            doSomething();\n          }\n        });\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        (class {\n          foo() {\n            doSomething();\n          }\n        });\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\n        (class {\n          async ''() {\n            doSomething();\n          }\n        });\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        (class {\n          ''() {\n            doSomething();\n          }\n        });\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\n        async function foo() {\n          async () => {\n            await doSomething();\n          };\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        function foo() {\n          async () => {\n            await doSomething();\n          };\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\n        async function foo() {\n          await (async () => {\n            doSomething();\n          });\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        async function foo() {\n          await (() => {\n            doSomething();\n          });\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\n        const obj = {\n          async: async function foo() {\n            bar();\n          },\n        };\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        const obj = {\n          async: function foo() {\n            bar();\n          },\n        };\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\n        async    /* test */ function foo() {\n          doSomething();\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        /* test */ function foo() {\n          doSomething();\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\n        class A {\n          a = 0\n          async [b]() {\n            return 0;\n          }\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        class A {\n          a = 0\n          ;[b]() {\n            return 0;\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\n        foo\n        async () => {\n          return 0;\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        foo\n        ;() => {\n          return 0;\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\n        class A {\n          foo() {}\n          async [bar]() {\n            baz;\n          }\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAwait",
+          "suggestions": [
+            {
+              "messageId": "removeAsync",
+              "output": "\n        class A {\n          foo() {}\n          [bar]() {\n            baz;\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

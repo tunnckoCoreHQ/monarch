@@ -23,6 +23,7 @@ export default defineConfig({
     "**/*generated*",
     "**/skills/**",
     "**/solidity/**",
+    "crates/**",
   ],
   options: { typeAware: true, typeCheck: true },
   rules: {

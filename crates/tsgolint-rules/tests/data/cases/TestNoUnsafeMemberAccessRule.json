@@ -1,0 +1,435 @@
+{
+  "test": "TestNoUnsafeMemberAccessRule",
+  "rule": "no-unsafe-member-access",
+  "tsconfig": "tsconfig.noImplicitThis.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nfunction foo(x: { a: number }, y: any) {\n  x[y++];\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nfunction foo(x: { a: number }) {\n  x.a;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nfunction foo(x?: { a: number }) {\n  x?.a;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nfunction foo(x: { a: number }) {\n  x['a'];\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\nfunction foo(x?: { a: number }) {\n  x?.['a'];\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\nfunction foo(x: { a: number }, y: string) {\n  x[y];\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\nfunction foo(x?: { a: number }, y: string) {\n  x?.[y];\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\nfunction foo(x: string[]) {\n  x[1];\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\nclass B implements FG.A {}\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\ninterface B extends FG.A {}\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\nclass B implements F.S.T.A {}\n    ",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\ninterface B extends F.S.T.A {}\n    ",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "\nfunction foo(x?: { a: number }) {\n  x?.a;\n}\n      ",
+      "options": {
+        "allowOptionalChaining": true
+      }
+    },
+    {
+      "index": 13,
+      "code": "\nfunction foo(x?: { a: number }, y: string) {\n  x?.[y];\n}\n      ",
+      "options": {
+        "allowOptionalChaining": true
+      }
+    },
+    {
+      "index": 14,
+      "code": "\nfunction foo(x: { a: number }, y: 'a') {\n  x?.[y];\n}\n      ",
+      "options": {
+        "allowOptionalChaining": true
+      }
+    },
+    {
+      "index": 15,
+      "code": "\nfunction foo(x: { a: number }, y: NotKnown) {\n  x?.[y];\n}\n      ",
+      "options": {
+        "allowOptionalChaining": true
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nfunction foo(x: any) {\n  x.a;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 3,
+          "column": 5,
+          "endColumn": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\nfunction foo(x: any) {\n  x.a.b.c.d.e.f.g;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 3,
+          "column": 5,
+          "endColumn": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\nfunction foo(x: { a: any }) {\n  x.a.b.c.d.e.f.g;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 3,
+          "column": 7,
+          "endColumn": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nfunction foo(x: any) {\n  x['a'];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 3,
+          "column": 5,
+          "endColumn": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\nfunction foo(x: any) {\n  x['a']['b']['c'];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 3,
+          "column": 5,
+          "endColumn": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nlet value: NotKnown;\n\nvalue.property;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 4,
+          "column": 7,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nfunction foo(x: { a: number }, y: any) {\n  x[y];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeComputedMemberAccess",
+          "line": 3,
+          "column": 5,
+          "endColumn": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nfunction foo(x?: { a: number }, y: any) {\n  x?.[y];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeComputedMemberAccess",
+          "line": 3,
+          "column": 7,
+          "endColumn": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nfunction foo(x: { a: number }, y: any) {\n  x[(y += 1)];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeComputedMemberAccess",
+          "line": 3,
+          "column": 5,
+          "endColumn": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nfunction foo(x: { a: number }, y: any) {\n  x[1 as any];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeComputedMemberAccess",
+          "line": 3,
+          "column": 5,
+          "endColumn": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nfunction foo(x: { a: number }, y: any) {\n  x[y()];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeComputedMemberAccess",
+          "line": 3,
+          "column": 5,
+          "endColumn": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\nfunction foo(x: string[], y: any) {\n  x[y];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeComputedMemberAccess",
+          "line": 3,
+          "column": 5,
+          "endColumn": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\nfunction foo(x: { a: number }, y: NotKnown) {\n  x[y];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeComputedMemberAccess",
+          "line": 3,
+          "column": 5,
+          "endColumn": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\nconst methods = {\n  methodA() {\n    return this.methodB()\n  },\n  methodB() {\n    const getProperty = () => Math.random() > 0.5 ? 'methodB' : 'methodC'\n    return this[getProperty()]()\n  },\n  methodC() {\n    return true\n  },\n  methodD() {\n    return (this?.methodA)?.()\n  }\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeThisMemberExpression",
+          "line": 4,
+          "column": 17,
+          "endColumn": 24,
+          "suggestions": []
+        },
+        {
+          "messageId": "unsafeThisMemberExpression",
+          "line": 8,
+          "column": 17,
+          "endColumn": 30,
+          "suggestions": []
+        },
+        {
+          "messageId": "unsafeThisMemberExpression",
+          "line": 14,
+          "column": 19,
+          "endColumn": 26,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\nclass C {\n  getObs$: any;\n  getPopularDepartments(): void {\n    this.getObs$.pipe().subscribe(res => {\n      log(res);\n    });\n  }\n}\nfunction log(arg: unknown) {}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 5,
+          "column": 25,
+          "endColumn": 34,
+          "suggestions": []
+        },
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 5,
+          "column": 18,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\nlet value: any;\n\nvalue?.middle.inner;\n      ",
+      "options": {
+        "allowOptionalChaining": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 4,
+          "column": 15,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\nlet value: any;\n\nvalue?.outer.middle.inner;\n      ",
+      "options": {
+        "allowOptionalChaining": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 4,
+          "column": 14,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\nlet value: any;\n\nvalue.outer?.middle.inner;\n      ",
+      "options": {
+        "allowOptionalChaining": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 4,
+          "column": 21,
+          "endColumn": 26,
+          "suggestions": []
+        },
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 4,
+          "column": 7,
+          "endColumn": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\nlet value: any;\n\nvalue.outer.middle?.inner;\n      ",
+      "options": {
+        "allowOptionalChaining": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeMemberExpression",
+          "line": 4,
+          "column": 7,
+          "endColumn": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\nfunction foo(x: { a: number }, y: NotKnown) {\n  x[y];\n}\n      ",
+      "options": {
+        "allowOptionalChaining": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeComputedMemberAccess",
+          "line": 3,
+          "column": 5,
+          "endColumn": 6,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

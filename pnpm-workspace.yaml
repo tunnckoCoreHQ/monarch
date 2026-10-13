@@ -3,6 +3,9 @@ packages:
   - "chrome-extensions/*"
   - "packages/*"
   - "solidity/*"
+  - "crates"
+  - "crates/tsgolint-rules/tests/data"
+  - "crates/tsgolint-rust/e2e"
 
 allowBuilds:
   esbuild: true
@@ -64,6 +67,7 @@ catalogs:
     valibot: ^1.5.0
     '@standard-schema/spec': ^1.1.0
     badgen: 3.3.2
+    fast-glob: ^3.3.3
   types:
     "@cloudflare/workers-types": 5.20260928.1
     "@types/bun": ^1.4.2

@@ -1,0 +1,19 @@
+{
+  "TestNoRedundantTypeConstituentsRule/invalid-26": {
+    "reason": "Union member order of bigint literals. tsgolint prints `1n | -1n`, we print `-1n | 1n`. tsgolint's typescript-go `CompareTypes` (internal/checker/utilities.go:392) has no BigIntLiteral case and orders bigint literals by type id; ts-rust's `compare_types` (checker/utilities_p1.rs:1067) orders them by value, as newer TypeScript does, so `(-1n | 1n)` keeps -1n first.",
+    "result": {
+      "diagnostics": [
+        {
+          "messageId": "literalOverridden",
+          "line": 1,
+          "column": 10,
+          "endLine": 1,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ],
+      "outputs": [],
+      "snapshot": "Diagnostic 1: literalOverridden (1:10 - 1:19)\nMessage: -1n | 1n is overridden by bigint in this union type.\n   1 | type T = (-1n | 1n) | bigint;\n     |          ~~~~~~~~~~"
+    }
+  }
+}

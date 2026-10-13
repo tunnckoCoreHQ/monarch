@@ -1,0 +1,82 @@
+{
+  "test": "TestNoUnsafeTypeAssertionRule_ObjectAssertions",
+  "rule": "no-unsafe-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\n// additional properties should be allowed\nexport const foo = { bar: 1, bazz: 1 } as {\n  bar: number;\n};\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const a: { hello: string } & { world: string };\na as { hello: string };\n      ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const a: { hello: any };\na as { hello: unknown };\n      ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const a: { hello: string };\na as { hello?: string };\n      ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare const a: { hello: string };\na satisfies Record<string, string> as { hello?: string };\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nvar foo = {} as {\n  bar: number;\n  bas: string;\n};\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 2,
+          "column": 14,
+          "endLine": 5,
+          "endColumn": 2,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const a: { hello: string };\na satisfies Record<string, string> as { hello: string; world: string };\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 36,
+          "endLine": 3,
+          "endColumn": 71,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const a: { hello?: string };\na as { hello: string };\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 23,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

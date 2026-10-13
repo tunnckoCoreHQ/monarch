@@ -1,0 +1,263 @@
+{
+  "test": "TestRemoveAwaitStatementBoundary",
+  "rule": "await-thenable",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "export {};\nfoo()\nawait {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nfoo()\n;({});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "export {};\nfoo()\nawait function() {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nfoo()\n;(function() {});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "export {};\nfoo()\nawait async function named() {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nfoo()\n;(async function named() {});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "export {};\nfoo()\nawait class {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nfoo()\n;(class {});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "export {};\nfoo()\nawait (1);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nfoo()\n;(1);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "export {};\nfoo()\nawait // comment\n {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nfoo()\n;// comment\n ({});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "export {};\nconst x = {}\nawait {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nconst x = {}\n;({});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "export {};\nfoo(); // comment\nawait {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nfoo(); // comment\n({});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "export {};\nasync function test() { foo()\nawait {}; }",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nasync function test() { foo()\n;({}); }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "export {};\nasync function test() { return\nawait {}; }",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nasync function test() { return\n;({}); }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "export {};\nif (true) foo()\nawait {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nif (true) foo()\n;({});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "export {};\nswitch (x) { case 1: foo()\nawait {}; }",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nswitch (x) { case 1: foo()\n;({}); }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "export {};\nif (true) await {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nif (true) ({});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "export {};\nwhile (false) await {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nwhile (false) ({});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "export {};\nlabel: await {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "export {};\nlabel: ({});"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

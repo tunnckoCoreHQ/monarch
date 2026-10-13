@@ -1,0 +1,39 @@
+[package]
+name = "tsgolint-rust"
+description = "A Rust port of oxc-project/tsgolint: the type-aware linter that oxlint runs for --type-aware and --type-check."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "tsgolint"
+path = "src/main.rs"
+
+[dependencies]
+tsgolint-core.workspace = true
+tsgolint-rules.workspace = true
+goport_core.workspace = true
+goport_util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rustc-hash.workspace = true
+# The local time zone of the OXC_LOG=debug log lines (Go `log` prints local
+# time). goport_core already builds this exact version.
+jiff = { version = "=0.2.37", default-features = false, features = ["std"] }
+
+# Raises SIGPIPE when stdout's reader has gone, as Go does (src/stdout.rs).
+# goport_core already builds this exact version.
+[target.'cfg(unix)'.dependencies]
+signal-hook = "=0.4.4"
+
+# Native builds use jemalloc as the global allocator (src/main.rs), as
+# ts-rust's own binaries do, and turn on goport_core's `jemalloc` feature
+# with it. goport_core refuses that feature on wasm; Cargo only enables
+# features of a target-specific dependency when it builds for that target.
+[target.'cfg(all(not(target_family = "wasm"), not(windows)))'.dependencies]
+goport_core = { workspace = true, features = ["jemalloc"] }
+tikv-jemallocator = "=0.7.0"
+
+[lints]
+workspace = true

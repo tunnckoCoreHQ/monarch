@@ -1,0 +1,482 @@
+{
+  "test": "TestNoArrayDelete",
+  "rule": "no-array-delete",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\n      declare const obj: { a: 1; b: 2 };\n      delete obj.a;\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\n      declare const obj: { a: 1; b: 2 };\n      delete obj['a'];\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\n      declare const arr: { a: 1; b: 2 }[][][][];\n      delete arr[0][0][0][0].a;\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\n      declare const maybeArray: any;\n      delete maybeArray[0];\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\n      declare const maybeArray: unknown;\n      delete maybeArray[0];\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\n      declare function getObject<T extends { a: 1; b: 2 }>(): T;\n      delete getObject().a;\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\n      declare function getObject<T extends number>(): { a: T; b: 2 };\n      delete getObject().a;\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\n      declare const test: never;\n      delete test[0];\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\n      delete console.log();\n    ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\n        declare const arr: number[];\n        delete arr[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: number[];\n         arr.splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\n        declare const arr: number[];\n        declare const key: number;\n        delete arr[key];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 4,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: number[];\n        declare const key: number;\n         arr.splice(key, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\n        declare const arr: number[];\n\n        enum Keys {\n          A,\n          B,\n        }\n\n        delete arr[Keys.A];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 9,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: number[];\n\n        enum Keys {\n          A,\n          B,\n        }\n\n         arr.splice(Keys.A, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\n        declare const arr: number[];\n        declare function doWork(): void;\n        delete arr[(doWork(), 1)];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 4,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: number[];\n        declare function doWork(): void;\n         arr.splice((doWork(), 1), 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\n        declare const arr: Array<number>;\n        delete arr[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: Array<number>;\n         arr.splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "delete [1, 2, 3][0];",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 1,
+          "column": 1,
+          "endColumn": 7,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": " [1, 2, 3].splice(0, 1);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\n        declare const arr: unknown[];\n        delete arr[Math.random() ? 0 : 1];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: unknown[];\n         arr.splice(Math.random() ? 0 : 1, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\n        declare const arr: number[] | string[] | boolean[];\n        delete arr[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: number[] | string[] | boolean[];\n         arr.splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\n        declare const arr: number[] & unknown;\n        delete arr[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: number[] & unknown;\n         arr.splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\n        declare const arr: (number | string)[];\n        delete arr[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: (number | string)[];\n         arr.splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\n        declare const obj: { a: { b: { c: number[] } } };\n        delete obj.a.b.c[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const obj: { a: { b: { c: number[] } } };\n         obj.a.b.c.splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\n        declare function getArray<T extends number[]>(): T;\n        delete getArray()[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare function getArray<T extends number[]>(): T;\n         getArray().splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\n        declare function getArray<T extends number>(): T[];\n        delete getArray()[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare function getArray<T extends number>(): T[];\n         getArray().splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\n        function deleteFromArray(a: number[]) {\n          delete a[0];\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 11,
+          "endColumn": 17,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        function deleteFromArray(a: number[]) {\n           a.splice(0, 1);\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\n        function deleteFromArray<T extends number>(a: T[]) {\n          delete a[0];\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 11,
+          "endColumn": 17,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        function deleteFromArray<T extends number>(a: T[]) {\n           a.splice(0, 1);\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\n        function deleteFromArray<T extends number[]>(a: T) {\n          delete a[0];\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 11,
+          "endColumn": 17,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        function deleteFromArray<T extends number[]>(a: T) {\n           a.splice(0, 1);\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\n        declare const tuple: [number, string];\n        delete tuple[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const tuple: [number, string];\n         tuple.splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\n        declare const a: number[];\n        declare const b: number;\n\n        delete [...a, ...a][b];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const a: number[];\n        declare const b: number;\n\n         [...a, ...a].splice(b, 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\n        declare const a: number[];\n        declare const b: number;\n\n        // before expression\n        delete /** multi\n        line */ a[((\n        // single-line\n        b /* inline */ /* another-inline */ )\n        ) /* another-one */ ] /* before semicolon */; /* after semicolon */\n        // after expression\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const a: number[];\n        declare const b: number;\n\n        // before expression\n         /** multi\n        line */ a.splice(((\n        // single-line\n        b /* inline */ /* another-inline */ )\n        ) /* another-one */ , 1) /* before semicolon */; /* after semicolon */\n        // after expression\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\n        declare const a: number[];\n        declare const b: number;\n\n        delete ((a[((b))]));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const a: number[];\n        declare const b: number;\n\n         ((a.splice(((b)), 1)));\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\n        declare const a: number[];\n        declare const b: number;\n\n        delete a[(b + 1) * (b + 2)];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const a: number[];\n        declare const b: number;\n\n         a.splice((b + 1) * (b + 2), 1);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\n        declare const arr: string & Array<number>;\n        delete arr[0];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "noArrayDelete",
+          "line": 3,
+          "column": 9,
+          "endColumn": 15,
+          "suggestions": [
+            {
+              "messageId": "useSplice",
+              "output": "\n        declare const arr: string & Array<number>;\n         arr.splice(0, 1);\n      "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "test": "TestRemoveAwaitTrivia",
+  "rule": "await-thenable",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "async function test() { for await /* comment */ (const value of [1]) {} }",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "forAwaitOfNonAsyncIterable",
+          "suggestions": [
+            {
+              "messageId": "convertToOrdinaryFor",
+              "output": "async function test() { for /* comment */ (const value of [1]) {} }"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "declare const disposable: Disposable; async function test() { await /* comment */ using d = disposable; }",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "awaitUsingOfNonAsyncDisposable",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "declare const disposable: Disposable; async function test() { /* comment */ using d = disposable; }"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

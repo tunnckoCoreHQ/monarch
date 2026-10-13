@@ -1,0 +1,1452 @@
+{
+  "test": "TestNoConfusingVoidExpression",
+  "rule": "no-confusing-void-expression",
+  "tsconfig": "tsconfig.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "() => Math.random();",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "console.log('foo');",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "foo && console.log(foo);",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "foo || console.log(foo);",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "foo ? console.log(true) : console.log(false);",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "console?.log('foo');",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\n        () => console.log('foo');\n      ",
+      "options": {
+        "ignoreArrowShorthand": true,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 7,
+      "code": "\n        foo => foo && console.log(foo);\n      ",
+      "options": {
+        "ignoreArrowShorthand": true,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 8,
+      "code": "\n        foo => foo || console.log(foo);\n      ",
+      "options": {
+        "ignoreArrowShorthand": true,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 9,
+      "code": "\n        foo => (foo ? console.log(true) : console.log(false));\n      ",
+      "options": {
+        "ignoreArrowShorthand": true,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 10,
+      "code": "\n        !void console.log('foo');\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 11,
+      "code": "\n        +void (foo && console.log(foo));\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 12,
+      "code": "\n        -void (foo || console.log(foo));\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 13,
+      "code": "\n        () => void ((foo && void console.log(true)) || console.log(false));\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 14,
+      "code": "\n        const x = void (foo ? console.log(true) : console.log(false));\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 15,
+      "code": "\n        !(foo && void console.log(foo));\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 16,
+      "code": "\n        !!(foo || void console.log(foo));\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 17,
+      "code": "\n        const x = (foo && void console.log(true)) || void console.log(false);\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 18,
+      "code": "\n        () => (foo ? void console.log(true) : void console.log(false));\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 19,
+      "code": "\n        return void console.log('foo');\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      }
+    },
+    {
+      "index": 20,
+      "code": "\nfunction cool(input: string) {\n  return console.log(input), input;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\nfunction cool(input: string) {\n  return input, console.log(input), input;\n}\n      ",
+      "skip": true,
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\nfunction test(): void {\n  return console.log('bar');\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 23,
+      "code": "\nconst test = (): void => {\n  return console.log('bar');\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 24,
+      "code": "\nconst test = (): void => console.log('bar');\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 25,
+      "code": "\nfunction test(): void {\n  {\n    return console.log('foo');\n  }\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 26,
+      "code": "\nconst obj = {\n  test(): void {\n    return console.log('foo');\n  },\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 27,
+      "code": "\nclass Foo {\n  test(): void {\n    return console.log('foo');\n  }\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 28,
+      "code": "\nfunction test() {\n  function nestedTest(): void {\n    return console.log('foo');\n  }\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 29,
+      "code": "\ntype Foo = () => void;\nconst test = (() => console.log()) as Foo;\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 30,
+      "code": "\ntype Foo = {\n  foo: () => void;\n};\nconst test: Foo = {\n  foo: () => console.log(),\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 31,
+      "code": "\nconst test = {\n  foo: () => console.log(),\n} as {\n  foo: () => void;\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 32,
+      "code": "\nconst test: {\n  foo: () => void;\n} = {\n  foo: () => console.log(),\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 33,
+      "code": "\ntype Foo = {\n  foo: { bar: () => void };\n};\n\nconst test = {\n  foo: { bar: () => console.log() },\n} as Foo;\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 34,
+      "code": "\ntype Foo = {\n  foo: { bar: () => void };\n};\n\nconst test: Foo = {\n  foo: { bar: () => console.log() },\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 35,
+      "code": "\ntype MethodType = () => void;\n\nclass App {\n  private method: MethodType = () => console.log();\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 36,
+      "code": "\ninterface Foo {\n  foo: () => void;\n}\n\nfunction bar(): Foo {\n  return {\n    foo: () => console.log(),\n  };\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 37,
+      "code": "\ntype Foo = () => () => () => void;\nconst x: Foo = () => () => () => console.log();\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 38,
+      "code": "\ntype Foo = {\n  foo: () => void;\n};\n\nconst test = {\n  foo: () => console.log(),\n} as Foo;\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 39,
+      "code": "\ntype Foo = () => void;\nconst test: Foo = () => console.log('foo');\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 40,
+      "code": "\ninterface Props {\n  onEvent: () => void\n}\n\ndeclare function Component(props: Props): any;\n\n<Component onEvent={() => console.log()} />;\n\t\t\t",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "tsx": true
+    },
+    {
+      "index": 41,
+      "code": "\ndeclare function foo(arg: () => void): void;\nfoo(() => console.log());\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 42,
+      "code": "\ndeclare function foo(arg: (() => void) | (() => string)): void;\nfoo(() => console.log());\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 43,
+      "code": "\ndeclare function foo(arg: (() => void) | (() => string) | string): void;\nfoo(() => console.log());\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 44,
+      "code": "\ndeclare function foo(arg: () => void | string): void;\nfoo(() => console.log());\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 45,
+      "code": "\ndeclare function foo(options: { cb: () => void }): void;\nfoo({ cb: () => console.log() });\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 46,
+      "code": "\nconst obj = {\n  foo: { bar: () => console.log() },\n} as {\n  foo: { bar: () => void };\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 47,
+      "code": "\nfunction test(): void & void {\n  return console.log('foo');\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 48,
+      "code": "\ntype Foo = void;\n\ndeclare function foo(): Foo;\n\nfunction test(): Foo {\n  return foo();\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 49,
+      "code": "\ntype Foo = void;\nconst test = (): Foo => console.log('err');\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 50,
+      "code": "\nconst test: () => any = (): void => console.log();\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 51,
+      "code": "\nfunction test(): void | string {\n  return console.log('bar');\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    },
+    {
+      "index": 52,
+      "code": "\nexport function makeDate(): Date;\nexport function makeDate(m: number): void;\nexport function makeDate(m?: number): Date | void {\n  if (m !== undefined) {\n    return console.log('123');\n  }\n  return new Date();\n}\n\ndeclare const test: (cb: () => void) => void;\n\ntest((() => {\n  return console.log('123');\n}) as typeof makeDate | (() => string));\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\n        const x = console.log('foo');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 19,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\n        const x = console?.log('foo');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 19,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\n        console.error(console.log('foo'));\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 23,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\n        [console.log('foo')];\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\n        ({ x: console.log('foo') });\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\n        void console.log('foo');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 14,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\n        console.log('foo') ? true : false;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\n        (console.log('foo') && true) || false;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\n        (cond && console.log('ok')) || console.log('error');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\n        !console.log('foo');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "column": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nfunction notcool(input: string) {\n  return input, console.log(input);\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExpr",
+          "line": 3,
+          "column": 17,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "() => console.log('foo');",
+      "options": null,
+      "output": [
+        "() =>{  console.log('foo'); };"
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 1,
+          "column": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "foo => foo && console.log(foo);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 1,
+          "column": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "(foo: undefined) => foo && console.log(foo);",
+      "options": null,
+      "output": [
+        "(foo: undefined) =>{  foo && console.log(foo); };"
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 1,
+          "column": 28,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "foo => foo || console.log(foo);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 1,
+          "column": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "(foo: undefined) => foo || console.log(foo);",
+      "options": null,
+      "output": [
+        "(foo: undefined) =>{  foo || console.log(foo); };"
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 1,
+          "column": 28,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "(foo: void) => foo || console.log(foo);",
+      "options": null,
+      "output": [
+        "(foo: void) =>{  foo || console.log(foo); };"
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 1,
+          "column": 23,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "foo => (foo ? console.log(true) : console.log(false));",
+      "options": null,
+      "output": [
+        "foo =>{ foo ? console.log(true) : console.log(false); };"
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 1,
+          "column": 15,
+          "suggestions": []
+        },
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 1,
+          "column": 35,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\n        function f() {\n          return console.log('foo');\n          console.log('bar');\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        function f() {\n           console.log('foo');; return;\n          console.log('bar');\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturn",
+          "line": 3,
+          "column": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\n        function f() {\n          console.log('foo')\n          return ['bar', 'baz'].forEach(console.log)\n          console.log('quux')\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        function f() {\n          console.log('foo')\n          ; ['bar', 'baz'].forEach(console.log); return;\n          console.log('quux')\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturn",
+          "line": 4,
+          "column": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\n        function f() {\n          console.log('foo');\n          return console.log('bar');\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        function f() {\n          console.log('foo');\n           console.log('bar');\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 4,
+          "column": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\n        function f() {\n          console.log('foo')\n          return ['bar', 'baz'].forEach(console.log)\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        function f() {\n          console.log('foo')\n          ; ['bar', 'baz'].forEach(console.log)\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 4,
+          "column": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\n        const f = () => {\n          if (cond) {\n            return console.error('foo');\n          }\n          console.log('bar');\n        };\n      ",
+      "options": null,
+      "output": [
+        "\n        const f = () => {\n          if (cond) {\n             console.error('foo');; return;\n          }\n          console.log('bar');\n        };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturn",
+          "line": 4,
+          "column": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\n        const f = function () {\n          if (cond) return console.error('foo');\n          console.log('bar');\n        };\n      ",
+      "options": null,
+      "output": [
+        "\n        const f = function () {\n          if (cond) {  console.error('foo');; return; }\n          console.log('bar');\n        };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturn",
+          "line": 3,
+          "column": 28,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\n        const f = function () {\n          let num = 1;\n          return num ? console.log('foo') : num;\n        };\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 4,
+          "column": 24,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\n        const f = function () {\n          let undef = undefined;\n          return undef ? console.log('foo') : undef;\n        };\n      ",
+      "options": null,
+      "output": [
+        "\n        const f = function () {\n          let undef = undefined;\n           undef ? console.log('foo') : undef;\n        };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 4,
+          "column": 26,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\n        const f = function () {\n          let num = 1;\n          return num || console.log('foo');\n        };\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 4,
+          "column": 25,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "\n        const f = function () {\n          let bar = void 0;\n          return bar || console.log('foo');\n        };\n      ",
+      "options": null,
+      "output": [
+        "\n        const f = function () {\n          let bar = void 0;\n           bar || console.log('foo');\n        };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 4,
+          "column": 25,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\n        let num = 1;\n        const foo = () => (num ? console.log('foo') : num);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 34,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "code": "\n        let bar = void 0;\n        const foo = () => (bar ? console.log('foo') : bar);\n      ",
+      "options": null,
+      "output": [
+        "\n        let bar = void 0;\n        const foo = () =>{ bar ? console.log('foo') : bar; };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 34,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "code": "return console.log('foo');",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      },
+      "output": [
+        "return void console.log('foo');"
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnWrapVoid",
+          "line": 1,
+          "column": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "code": "console.error(console.log('foo'));",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprWrapVoid",
+          "line": 1,
+          "column": 15,
+          "suggestions": [
+            {
+              "messageId": "voidExprWrapVoid",
+              "output": "console.error(void console.log('foo'));"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "code": "console.log('foo') ? true : false;",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprWrapVoid",
+          "line": 1,
+          "column": 1,
+          "suggestions": [
+            {
+              "messageId": "voidExprWrapVoid",
+              "output": "void console.log('foo') ? true : false;"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "code": "const x = foo ?? console.log('foo');",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprWrapVoid",
+          "line": 1,
+          "column": 18,
+          "suggestions": [
+            {
+              "messageId": "voidExprWrapVoid",
+              "output": "const x = foo ?? void console.log('foo');"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "code": "foo => foo || console.log(foo);",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      },
+      "output": [
+        "foo => foo || void console.log(foo);"
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrowWrapVoid",
+          "line": 1,
+          "column": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "code": "!!console.log('foo');",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": true,
+        "ignoreVoidReturningFunctions": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprWrapVoid",
+          "line": 1,
+          "column": 3,
+          "suggestions": [
+            {
+              "messageId": "voidExprWrapVoid",
+              "output": "!!void console.log('foo');"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "code": "\nfunction test() {\n  return console.log('foo');\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nfunction test() {\n   console.log('foo');\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 3,
+          "column": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "code": "const test = () => console.log('foo');",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "const test = () =>{  console.log('foo'); };"
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 1,
+          "column": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "code": "\nconst test = () => {\n  return console.log('foo');\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nconst test = () => {\n   console.log('foo');\n};\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 3,
+          "column": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "code": "\nfunction foo(): void {\n  const bar = () => {\n    return console.log();\n  };\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nfunction foo(): void {\n  const bar = () => {\n     console.log();\n  };\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 4,
+          "column": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "code": "\n        (): any => console.log('foo');\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\n        (): any =>{  console.log('foo'); };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 2,
+          "column": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "code": "\n        (): unknown => console.log('foo');\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\n        (): unknown =>{  console.log('foo'); };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 2,
+          "column": 24,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "code": "\nfunction test(): void {\n  () => () => console.log();\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nfunction test(): void {\n  () => () =>{  console.log(); };\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "code": "\ntype Foo = any;\n(): Foo => console.log();\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\ntype Foo = any;\n(): Foo =>{  console.log(); };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "code": "\ntype Foo = unknown;\n(): Foo => console.log();\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\ntype Foo = unknown;\n(): Foo =>{  console.log(); };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "code": "\nfunction test(): any {\n  () => () => console.log();\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nfunction test(): any {\n  () => () =>{  console.log(); };\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "code": "\nfunction test(): unknown {\n  return console.log();\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nfunction test(): unknown {\n   console.log();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 3,
+          "column": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "code": "\nfunction test(): any {\n  return console.log();\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nfunction test(): any {\n   console.log();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 3,
+          "column": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "code": "\ntype Foo = () => any;\n(): Foo => () => console.log();\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\ntype Foo = () => any;\n(): Foo => () =>{  console.log(); };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "code": "\ntype Foo = () => unknown;\n(): Foo => () => console.log();\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\ntype Foo = () => unknown;\n(): Foo => () =>{  console.log(); };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "code": "\ntype Foo = () => any;\nconst test: Foo = () => console.log();\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\ntype Foo = () => any;\nconst test: Foo = () =>{  console.log(); };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 25,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "code": "\ntype Foo = () => unknown;\nconst test: Foo = () => console.log();\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\ntype Foo = () => unknown;\nconst test: Foo = () =>{  console.log(); };\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprArrow",
+          "line": 3,
+          "column": 25,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "code": "\ntype Foo = () => void;\n\nconst foo: Foo = function () {\n  function bar() {\n    return console.log();\n  }\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\ntype Foo = () => void;\n\nconst foo: Foo = function () {\n  function bar() {\n     console.log();\n  }\n};\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 6,
+          "column": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "code": "\nconst foo = function () {\n  function bar() {\n    return console.log();\n  }\n};\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nconst foo = function () {\n  function bar() {\n     console.log();\n  }\n};\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 4,
+          "column": 12,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "code": "\nreturn console.log('foo');\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\n{  console.log('foo');; return; }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturn",
+          "line": 2,
+          "column": 8,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "code": "\nfunction test(): void;\nfunction test(arg: string): any;\nfunction test(arg?: string): any | void {\n  if (arg) {\n    return arg;\n  }\n  return console.log();\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nfunction test(): void;\nfunction test(arg: string): any;\nfunction test(arg?: string): any | void {\n  if (arg) {\n    return arg;\n  }\n   console.log();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 8,
+          "column": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "code": "\nfunction test(arg: string): any;\nfunction test(): void;\nfunction test(arg?: string): any | void {\n  if (arg) {\n    return arg;\n  }\n  return console.log();\n}\n      ",
+      "options": {
+        "ignoreArrowShorthand": false,
+        "ignoreVoidOperator": false,
+        "ignoreVoidReturningFunctions": true
+      },
+      "output": [
+        "\nfunction test(arg: string): any;\nfunction test(): void;\nfunction test(arg?: string): any | void {\n  if (arg) {\n    return arg;\n  }\n   console.log();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "invalidVoidExprReturnLast",
+          "line": 8,
+          "column": 10,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

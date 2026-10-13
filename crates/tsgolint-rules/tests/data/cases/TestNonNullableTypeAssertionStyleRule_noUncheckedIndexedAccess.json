@@ -1,0 +1,53 @@
+{
+  "test": "TestNonNullableTypeAssertionStyleRule_noUncheckedIndexedAccess",
+  "rule": "non-nullable-type-assertion-style",
+  "tsconfig": "tsconfig.noUncheckedIndexedAccess.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nfunction first<T>(array: ArrayLike<T>): T | null {\n  return array.length > 0 ? (array[0] as T) : null;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nfunction first<T extends string | null>(array: ArrayLike<T>): T | null {\n  return array.length > 0 ? (array[0] as T) : null;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nfunction first<T extends string | undefined>(array: ArrayLike<T>): T | null {\n  return array.length > 0 ? (array[0] as T) : null;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nfunction first<T extends string | null | undefined>(\n  array: ArrayLike<T>,\n): T | null {\n  return array.length > 0 ? (array[0] as T) : null;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\ntype A = 'a' | 'A';\ntype B = 'b' | 'B';\nfunction first<T extends A | B | null>(array: ArrayLike<T>): T | null {\n  return array.length > 0 ? (array[0] as T) : null;\n}\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nfunction first<T extends string | number>(array: ArrayLike<T>): T | null {\n  return array.length > 0 ? (array[0] as T) : null;\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "preferNonNullAssertion",
+          "line": 3,
+          "column": 30,
+          "suggestions": [
+            {
+              "messageId": "preferNonNullAssertion",
+              "output": "\nfunction first<T extends string | number>(array: ArrayLike<T>): T | null {\n  return array.length > 0 ? (array[0]!) : null;\n}\n        "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

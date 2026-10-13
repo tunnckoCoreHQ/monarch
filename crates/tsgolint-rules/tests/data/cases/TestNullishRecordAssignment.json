@@ -1,0 +1,232 @@
+{
+  "test": "TestNullishRecordAssignment",
+  "rule": "no-unnecessary-condition",
+  "tsconfig": "tsconfig.noUncheckedIndexedAccess.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  opts.perplexity ?? {};\n  if (opts.perplexity === undefined) {\n    opts.perplexity = {};\n  }\n}\n",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  (opts.perplexity) ??= {};\n  opts['other'] ??= {};\n}\n",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\ninterface Options {\n  [key: string]: object;\n}\nfunction test(opts: Options) {\n  opts.perplexity ??= {};\n}\n",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nclass Options {\n  [key: string]: object;\n  initialize() {\n    this.perplexity ??= {};\n  }\n}\n",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\nfunction test(opts: Record<string, object> | Record<string, number>) {\n  opts.perplexity ??= {};\n}\n",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\nfunction test(opts: { [key: `foo${string}`]: object }) {\n  opts.fooBar ??= {};\n}\n",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\nfunction test(opts: Record<Lowercase<string>, object>) {\n  opts.foo ??= {};\n}\n",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\nfunction test(opts: { [key: `foo${string}`]: object }) {\n  opts['fooBar'] ??= {};\n}\n",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\nfunction test(opts: { [key: `foo${string}`]: object }, key: `foo${string}`) {\n  opts[key] ??= {};\n}\n",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\nfunction test(opts: Record<string, object>, key: 'foo' | 'bar') {\n  opts[key] ??= {};\n}\n",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  if (opts.perplexity) {\n    opts.perplexity ?? {};\n  }\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  opts.perplexity = {};\n  opts.perplexity ?? {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\nfunction test(opts: Record<string, object> & { perplexity: object }) {\n  opts.perplexity ??= {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nfunction test<T extends Record<string, object> & { perplexity: object }>(opts: T) {\n  opts.perplexity ??= {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\nfunction test(opts: Record<'perplexity', object>) {\n  opts.perplexity ??= {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  opts.perplexity ??= {};\n}\n",
+      "options": null,
+      "tsconfig": "tsconfig.json",
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  if (opts.perplexity) {\n    opts.perplexity ??= {};\n  }\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  opts.perplexity ??= {};\n  opts.perplexity ??= {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  opts.perplexity = {};\n  (opts.perplexity) ??= {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nfunction test(opts: { [key: `foo${string}`]: object }) {\n  opts.fooBar ??= {};\n  opts.fooBar ??= {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nfunction test(opts: { [key: `foo${string}`]: object }) {\n  opts['fooBar'] ??= {};\n  opts['fooBar'] ??= {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  if (opts['foo']) {\n    opts['foo'] ??= {};\n  }\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\nfunction test(opts: Record<string, object>) {\n  opts.foo ??= {};\n  opts['foo'] ??= {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\nfunction test(opts: { foo: object; bar: object }, key: 'foo' | 'bar') {\n  opts[key] ??= {};\n}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "neverNullish",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

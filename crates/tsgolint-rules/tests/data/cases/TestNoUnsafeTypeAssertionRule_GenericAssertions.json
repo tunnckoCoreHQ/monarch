@@ -1,0 +1,306 @@
+{
+  "test": "TestNoUnsafeTypeAssertionRule_GenericAssertions",
+  "rule": "no-unsafe-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\ntype Obj = { foo: string };\nfunction func<T extends Obj>(a: T) {\n  const b = a as T;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nfunction parameterExtendsOtherParameter<T extends string | number, V extends T>(\n  x: T,\n  y: V,\n) {\n  y as T;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nfunction parameterExtendsUnconstrainedParameter<T, V extends T>(x: T, y: V) {\n  y as T;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nfunction unconstrainedToUnknown<T>(x: T) {\n  x as unknown;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\nfunction stringToWider<T extends string>(x: T) {\n  x as number | string; // allowed\n}\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ntype Obj = { foo: string };\nfunction func<T extends Obj>() {\n  const myObj = { foo: 'hi' } as T;\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertionAssignableToConstraint",
+          "line": 4,
+          "column": 31,
+          "endLine": 4,
+          "endColumn": 35,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ntype Obj = { foo: string };\nfunction func<T extends Obj>() {\n  const o: Obj = { foo: 'hi' };\n  const myObj = o as T;\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertionAssignableToConstraint",
+          "line": 5,
+          "column": 19,
+          "endLine": 5,
+          "endColumn": 23,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\nexport function myfunc<CustomObjectT extends string>(\n  input: number,\n): CustomObjectT {\n  const newCustomObject = input as CustomObjectT;\n  return newCustomObject;\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 5,
+          "column": 33,
+          "endLine": 5,
+          "endColumn": 49,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nfunction unknownConstraint<T extends unknown>(x: T, y: string) {\n  y as T; // banned; generic arbitrary subtype\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertionAssignableToConstraint",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\nfunction unconstrained<T>(x: T, y: string) {\n  y as T;\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToUnconstrainedTypeAssertion",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\n// constraint of any functions like constraint of `unknown`\n// (even the TS error message has this verbiage)\nfunction anyConstraint<T extends any>(x: T, y: string) {\n  y as T; // banned; generic arbitrary subtype\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertionAssignableToConstraint",
+          "line": 5,
+          "column": 5,
+          "endLine": 5,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nfunction constraintWiderThanUncastType<T extends string | number>(\n  x: T,\n  y: string,\n) {\n  y as T; // banned; assignable to constraint\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertionAssignableToConstraint",
+          "line": 6,
+          "column": 5,
+          "endLine": 6,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nfunction constraintEqualUncastType<T extends string>(x: T, y: string) {\n  y as T; // banned; assignable to constraint\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertionAssignableToConstraint",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nfunction constraintNarrowerThanUncastType<T extends string>(\n  x: T,\n  y: string | number,\n) {\n  y as T; // banned; *not* assignable to constraint\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 6,
+          "column": 5,
+          "endLine": 6,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nfunction assertFromAny<T extends string | number>(x: T, y: any) {\n  y as T; // banned; just an `any` complaint. Not a generic subtype.\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeOfAnyTypeAssertion",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nfunction parameterExtendsOtherParameter<T extends string | number, V extends T>(\n  x: T,\n  y: V,\n) {\n  x as V; // banned; assignable to constraint\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertionAssignableToConstraint",
+          "line": 6,
+          "column": 5,
+          "endLine": 6,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\nfunction parameterExtendsUnconstrainedParameter<T, V extends T>(x: T, y: V) {\n  x as V; // banned; unconstrained arbitrary type\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToUnconstrainedTypeAssertion",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\nfunction twoUnconstrained<T, V>(x: T, y: V) {\n  y as T;\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToUnconstrainedTypeAssertion",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\nfunction toNarrower<T>(x: T, y: string) {\n  x as string; // banned; ordinary 'string' narrower than 'T'.\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 14,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\nfunction unconstrainedToAny<T>(x: T) {\n  x as any;\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\nfunction stringToAny<T extends string>(x: T) {\n  x as any;\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\nfunction stringToNarrower<T extends string>(x: T) {\n  x as 'a' | 'b';\n}\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 5,
+          "endLine": 3,
+          "endColumn": 17,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

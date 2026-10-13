@@ -1,0 +1,178 @@
+{
+  "test": "TestRemoveAwaitUpstream",
+  "rule": "await-thenable",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "const test = async () => await { a: 1 };",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "const test = async () => ({ a: 1 });"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "const test = async () => await { a: 1 }.a;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "const test = async () => ({ a: 1 }.a);"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "const test = async () => await ({ a: 1 });",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "const test = async () => ({ a: 1 });"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "const test = async () => (await { a: 1 });",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "const test = async () => ({ a: 1 });"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare const cond: boolean;\nconst test = async () => (cond ? await { a: 1 } : 2);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "\ndeclare const cond: boolean;\nconst test = async () => (cond ? { a: 1 } : 2);\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "const test = async () => await /* comment */ 1;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "const test = async () => /* comment */ 1;"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "const test = async () => await /* comment */ { a: 1 };",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "const test = async () => /* comment */ ({ a: 1 });"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nasync function test() {\n  await { a: 1 };\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "\nasync function test() {\n  ({ a: 1 });\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nasync function test() {\n  await function () {};\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "\nasync function test() {\n  (function () {});\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nasync function test() {\n  await class {};\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "\nasync function test() {\n  (class {});\n}\n      "
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

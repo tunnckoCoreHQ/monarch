@@ -1,0 +1,131 @@
+{
+  "test": "TestNoUnsafeTypeAssertionRule_AnyAssertions",
+  "rule": "no-unsafe-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const _any_: any;\n_any_ as any;\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const _any_: any;\n_any_ as unknown;\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const _any_: any;\n_any_ as string;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeOfAnyTypeAssertion",
+          "line": 3,
+          "column": 7,
+          "endLine": 3,
+          "endColumn": 16,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const _unknown_: unknown;\n_unknown_ as any;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 3,
+          "column": 11,
+          "endLine": 3,
+          "endColumn": 17,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const _any_: any;\n_any_ as Function;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeOfAnyTypeAssertion",
+          "line": 3,
+          "column": 7,
+          "endLine": 3,
+          "endColumn": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const _any_: any;\n_any_ as never;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeOfAnyTypeAssertion",
+          "line": 3,
+          "column": 7,
+          "endLine": 3,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\n'foo' as any;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 2,
+          "column": 7,
+          "endLine": 2,
+          "endColumn": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nconst bar = foo as number;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeOfAnyTypeAssertion",
+          "line": 2,
+          "column": 17,
+          "endLine": 2,
+          "endColumn": 26,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nconst bar = 'foo' as errorType;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 2,
+          "column": 19,
+          "endLine": 2,
+          "endColumn": 31,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,104 @@
+{
+  "test": "TestNoUnsafeTypeAssertionRule_ArrayAssertions",
+  "rule": "no-unsafe-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const a: string[];\na as (string | number)[];\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const a: number[];\na as unknown[];\n      ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const a: { hello: 'world'; foo: 'bar' }[];\na as { hello: 'world' }[];\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const a: (string | number)[];\na as string[];\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 14,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const a: any[];\na as number[];\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeOfAnyTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 14,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const a: number[];\na as any[];\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const a: unknown[];\na as number[];\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 14,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare const a: number[];\na as never[];\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 13,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

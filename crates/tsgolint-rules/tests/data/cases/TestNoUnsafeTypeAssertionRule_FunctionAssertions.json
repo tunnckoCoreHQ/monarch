@@ -1,0 +1,67 @@
+{
+  "test": "TestNoUnsafeTypeAssertionRule_FunctionAssertions",
+  "rule": "no-unsafe-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const _function_: Function;\n_function_ as Function;\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const _function_: Function;\n_function_ as unknown;\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const _function_: Function;\n_function_ as () => void;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 12,
+          "endLine": 3,
+          "endColumn": 25,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const _function_: Function;\n_function_ as any;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 3,
+          "column": 12,
+          "endLine": 3,
+          "endColumn": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const _function_: Function;\n_function_ as never;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 12,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

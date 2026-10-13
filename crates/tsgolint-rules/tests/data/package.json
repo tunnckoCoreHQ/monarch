@@ -1,0 +1,15 @@
+{
+  "name": "tsgolint-rust-rule-fixtures",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Resolves @types/node for fixtures/tsconfig.includeTypes.json. The version is the one tsgolint's snapshots were made with, so it stays pinned and out of the catalog.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tunnckoCoreHQ/monarch.git",
+    "directory": "crates/tsgolint-rules/tests/data"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.2"
+  }
+}

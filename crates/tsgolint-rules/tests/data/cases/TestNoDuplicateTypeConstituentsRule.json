@@ -1,0 +1,963 @@
+{
+  "test": "TestNoDuplicateTypeConstituentsRule",
+  "rule": "no-duplicate-type-constituents",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "type T = 1 | 2;",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "type T = 1 | '1';",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "type T = true & boolean;",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "type T = null | undefined;",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "type T = any | unknown;",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "type T = { a: string } | { b: string };",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "type T = { a: string; b: number } | { b: number; a: string };",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "type T = { a: string | number };",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "type T = Set<string> | Set<number>;",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "type T = Class<string> | Class<number>;",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "type T = string[] | number[];",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "type T = string[][] | string[];",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "type T = [1, 2, 3] | [1, 2, 4];",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "type T = [1, 2, 3] | [1, 2, 3, 4];",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "type T = 'A' | string[];",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "type T = (() => string) | (() => void);",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "type T = () => string | void;",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "type T = () => null | undefined;",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "type T = (arg: string | number) => void;",
+      "options": null
+    },
+    {
+      "index": 19,
+      "code": "type T = A | A;",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype T = A | B;\n      ",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\ntype A = 'A';\ntype B = 'B';\nconst a: A | B = 'A';\n      ",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype T = A | /* comment */ B;\n      ",
+      "options": null
+    },
+    {
+      "index": 23,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype T = 'A' | 'B';\n      ",
+      "options": null
+    },
+    {
+      "index": 24,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype C = 'C';\ntype T = A | B | C;\n      ",
+      "options": null
+    },
+    {
+      "index": 25,
+      "code": "type T = readonly string[] | string[];",
+      "options": null
+    },
+    {
+      "index": 26,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype C = 'C';\ntype D = 'D';\ntype T = (A | B) | (C | D);\n      ",
+      "options": null
+    },
+    {
+      "index": 27,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype T = (A | B) | (A & B);\n      ",
+      "options": null
+    },
+    {
+      "index": 28,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype T = Record<string, A | B>;\n      ",
+      "options": null
+    },
+    {
+      "index": 29,
+      "code": "type T = A | A;",
+      "options": {
+        "ignoreIntersections": false,
+        "ignoreUnions": true
+      }
+    },
+    {
+      "index": 30,
+      "code": "type T = A & A;",
+      "options": {
+        "ignoreIntersections": true,
+        "ignoreUnions": false
+      }
+    },
+    {
+      "index": 31,
+      "code": "type T = Class<string> | Class<string>;",
+      "options": null
+    },
+    {
+      "index": 32,
+      "code": "type T = A | A | string;",
+      "options": null
+    },
+    {
+      "index": 33,
+      "code": "(a: string | undefined) => {};",
+      "options": null
+    },
+    {
+      "index": 34,
+      "code": "export class A { constructor(readonly name?: string | undefined) {} }",
+      "options": null
+    },
+    {
+      "index": 35,
+      "code": "class A { constructor(public name?: string | undefined) {} }",
+      "options": null
+    },
+    {
+      "index": 36,
+      "code": "class A { constructor(protected name?: string | undefined) {} }",
+      "options": null
+    },
+    {
+      "index": 37,
+      "code": "class A { constructor(private name?: string | undefined) {} }",
+      "options": null
+    },
+    {
+      "index": 38,
+      "code": "\ntype U = undefined;\nclass A { constructor(private readonly name?: string | U) {} }\n",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "type T = 1 | 1;",
+      "options": null,
+      "output": [
+        "type T = 1  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "type T = true & true;",
+      "options": null,
+      "output": [
+        "type T = true  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "type T = null | null;",
+      "options": null,
+      "output": [
+        "type T = null  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "type T = any | any;",
+      "options": null,
+      "output": [
+        "type T = any  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "type T = { a: string | string };",
+      "options": null,
+      "output": [
+        "type T = { a: string   };"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "type T = { a: string } | { a: string };",
+      "skip": true,
+      "options": null,
+      "output": [
+        "type T = { a: string }  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "type T = { a: string; b: number } | { a: string; b: number };",
+      "skip": true,
+      "options": null,
+      "output": [
+        "type T = { a: string; b: number }  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "type T = Set<string> | Set<string>;",
+      "options": null,
+      "output": [
+        "type T = Set<string>  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\ntype IsArray<T> = T extends any[] ? true : false;\ntype ActuallyDuplicated = IsArray<number> | IsArray<string>;\n      ",
+      "options": null,
+      "output": [
+        "\ntype IsArray<T> = T extends any[] ? true : false;\ntype ActuallyDuplicated = IsArray<number>  ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "type T = string[] | string[];",
+      "options": null,
+      "output": [
+        "type T = string[]  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "type T = string[][] | string[][];",
+      "options": null,
+      "output": [
+        "type T = string[][]  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "type T = [1, 2, 3] | [1, 2, 3];",
+      "options": null,
+      "output": [
+        "type T = [1, 2, 3]  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "type T = () => string | string;",
+      "options": null,
+      "output": [
+        "type T = () => string  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "type T = () => null | null;",
+      "options": null,
+      "output": [
+        "type T = () => null  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "type T = (arg: string | string) => void;",
+      "options": null,
+      "output": [
+        "type T = (arg: string  ) => void;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "type T = 'A' | 'A';",
+      "options": null,
+      "output": [
+        "type T = 'A'  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\ntype A = 'A';\ntype T = A | A;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype T = A  ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\ntype A = 'A';\nconst a: A | A = 'A';\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\nconst a: A   = 'A';\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\ntype A = 'A';\ntype T = A | /* comment */ A;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype T = A  /* comment */ ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\ntype A1 = 'A';\ntype A2 = 'A';\ntype A3 = 'A';\ntype T = A1 | A2 | A3;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A1 = 'A';\ntype A2 = 'A';\ntype A3 = 'A';\ntype T = A1    ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        },
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype T = A | B | A;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype B = 'B';\ntype T = A | B  ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype T = A | B | A | B;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype B = 'B';\ntype T = A | B    ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        },
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype T = A | B | A | A;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype B = 'B';\ntype T = A | B    ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        },
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype C = 'C';\ntype T = A | B | A | C;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype B = 'B';\ntype C = 'C';\ntype T = A | B   | C;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype T = (A | B) | (A | B);\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype B = 'B';\ntype T = (A | B)  ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\ntype A = 'A';\ntype T = A | (A | A);\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype T = A  ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype C = 'C';\ntype D = 'D';\ntype F = (A | B) | (A | B) | ((C | D) & (A | B)) | (A | B);\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype B = 'B';\ntype C = 'C';\ntype D = 'D';\ntype F = (A | B)   | ((C | D) & (A | B))  ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        },
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "\ntype A = 'A';\ntype B = 'B';\ntype C = (A | B) | A | B | (A | B);\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype B = 'B';\ntype C = (A | B)      ;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        },
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        },
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "type A = (number | string) | number | string;",
+      "options": null,
+      "output": [
+        "type A = (number | string)    ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        },
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "code": "type A = (number | (string | null)) | (string | (null | number));",
+      "options": null,
+      "output": [
+        "type A = (number | (string | null))  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "code": "type A = (number & string) & number & string;",
+      "options": null,
+      "output": [
+        "type A = (number & string)    ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        },
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "code": "type A = number & string & (number & string);",
+      "options": null,
+      "output": [
+        "type A = number & string & (  string);",
+        "type A = number & string  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        },
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "code": "\ntype A = 'A';\ntype T = Record<string, A | A>;\n      ",
+      "options": null,
+      "output": [
+        "\ntype A = 'A';\ntype T = Record<string, A  >;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "code": "type T = A | A | string | string;",
+      "options": null,
+      "output": [
+        "type T = A | A | string  ;"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "code": "(a?: string | undefined) => {};",
+      "options": null,
+      "output": [
+        "(a?: string  ) => {};"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "code": "\n        type T = undefined;\n        (arg?: T | string) => {};\n      ",
+      "options": null,
+      "output": [
+        "\n        type T = undefined;\n        (arg?:   string) => {};\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "code": "\n        interface F {\n          (a?: string | undefined): void;\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        interface F {\n          (a?: string  ): void;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "code": "type fn = new (a?: string | undefined) => void;",
+      "options": null,
+      "output": [
+        "type fn = new (a?: string  ) => void;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "code": "function f(a?: string | undefined) {}",
+      "options": null,
+      "output": [
+        "function f(a?: string  ) {}"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "code": "f = function (a?: string | undefined) {};",
+      "options": null,
+      "output": [
+        "f = function (a?: string  ) {};"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "code": "declare function f(a?: string | undefined): void;",
+      "options": null,
+      "output": [
+        "declare function f(a?: string  ): void;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "code": "\n        declare class bb {\n          f(a?: string | undefined): void;\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        declare class bb {\n          f(a?: string  ): void;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "code": "\n        interface ee {\n          f(a?: string | undefined): void;\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        interface ee {\n          f(a?: string  ): void;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "code": "\n        interface ee {\n          new (a?: string | undefined): void;\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        interface ee {\n          new (a?: string  ): void;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "code": "type fn = (a?: string | undefined) => void;",
+      "options": null,
+      "output": [
+        "type fn = (a?: string  ) => void;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "code": "type fn = (a?: string | (undefined | number)) => void;",
+      "options": null,
+      "output": [
+        "type fn = (a?: string | (  number)) => void;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "code": "type fn = (a?: (undefined | number) | string) => void;",
+      "options": null,
+      "output": [
+        "type fn = (a?: (  number) | string) => void;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "code": "\n        abstract class cc {\n          abstract f(a?: string | undefined): void;\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        abstract class cc {\n          abstract f(a?: string  ): void;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "code": "class A { constructor(name?: string | undefined) {} }",
+      "options": null,
+      "output": [
+        "class A { constructor(name?: string  ) {} }"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessary",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "code": "class A { constructor(readonly name?: string | string | undefined) {} }",
+      "options": null,
+      "output": [
+        "class A { constructor(readonly name?: string   | undefined) {} }"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "code": "class A { constructor(readonly name?: string | undefined | undefined) {} }",
+      "options": null,
+      "output": [
+        "class A { constructor(readonly name?: string | undefined  ) {} }"
+      ],
+      "errors": [
+        {
+          "messageId": "duplicate",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

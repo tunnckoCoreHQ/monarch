@@ -1,0 +1,201 @@
+{
+  "test": "TestRelatedGetterSetterPairs",
+  "rule": "related-getter-setter-pairs",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\ninterface Example {\n  get value(): string;\n  set value(newValue: string);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\ninterface Example {\n  get value(): string | undefined;\n  set value();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\ninterface Example {\n  get value(): string | undefined;\n  set value(newValue: string, invalid: string);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\ninterface Example {\n  get value(): string;\n  set value(newValue: string | undefined);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\ninterface Example {\n  get value(): number;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\ninterface Example {\n  get value(): number;\n  set value();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\ninterface Example {\n  set value(newValue: string);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\ninterface Example {\n  set value();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\ntype Example = {\n  get value();\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\ntype Example = {\n  set value();\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\nclass Example {\n  get value() {\n    return '';\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\nclass Example {\n  get value() {\n    return '';\n  }\n  set value() {}\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "\nclass Example {\n  get value() {\n    return '';\n  }\n  set value(param) {}\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "\nclass Example {\n  get value() {\n    return '';\n  }\n  set value(param: number) {}\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\nclass Example {\n  set value() {}\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "\ntype Example = {\n  get value(): number;\n  set value(newValue: number);\n};\n    ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ninterface Example {\n  get value(): string | undefined;\n  set value(newValue: string);\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "mismatch",
+          "line": 3,
+          "column": 16,
+          "endLine": 3,
+          "endColumn": 34,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ninterface Example {\n  get value(): number;\n  set value(newValue: string);\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "mismatch",
+          "line": 3,
+          "column": 16,
+          "endLine": 3,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ntype Example = {\n  get value(): number;\n  set value(newValue: string);\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "mismatch",
+          "line": 3,
+          "column": 16,
+          "endLine": 3,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nclass Example {\n  get value(): boolean {\n    return true;\n  }\n  set value(newValue: string) {}\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "mismatch",
+          "line": 3,
+          "column": 16,
+          "endLine": 3,
+          "endColumn": 23,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\ntype GetType = { a: string; b: string };\n\ndeclare class Foo {\n  get a(): GetType;\n\n  set a(x: { c: string });\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "mismatch",
+          "line": 5,
+          "column": 12,
+          "endLine": 5,
+          "endColumn": 19,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\ntype GetType = { a: string; b: string };\n\ntype SetTypeUnused = { c: string };\n\ndeclare class Foo {\n  get a(): GetType;\n\n  set a(x: { c: string });\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "mismatch",
+          "line": 7,
+          "column": 12,
+          "endLine": 7,
+          "endColumn": 19,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\ntype GetType = { a: string; b: string };\n\ntype SetType = { c: string };\n\ndeclare class Foo {\n  get a(): GetType;\n\n  set a(x: SetType);\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "mismatch",
+          "line": 7,
+          "column": 12,
+          "endLine": 7,
+          "endColumn": 19,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

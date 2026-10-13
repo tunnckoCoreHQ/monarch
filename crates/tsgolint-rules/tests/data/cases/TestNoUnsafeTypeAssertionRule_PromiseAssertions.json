@@ -1,0 +1,125 @@
+{
+  "test": "TestNoUnsafeTypeAssertionRule_PromiseAssertions",
+  "rule": "no-unsafe-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const a: Promise<string>;\na as Promise<string | number>;\n      ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const a: Promise<number>;\na as Promise<unknown>;\n      ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const a: Promise<{ hello: 'world'; foo: 'bar' }>;\na as Promise<{ hello: 'world' }>;\n      ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const a: Promise<string>;\na as Promise<string> | string;\n      ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const a: Promise<string | number>;\na as Promise<string>;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 21,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const a: Promise<any>;\na as Promise<number>;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeOfAnyTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 21,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const a: Promise<number>;\na as Promise<any>;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 18,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const a: Promise<number[]>;\na as Promise<any[]>;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeToAnyTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare const a: Promise<unknown>;\na as Promise<number>;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 21,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\ndeclare const a: Promise<number>;\na as Promise<never>;\n        ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeTypeAssertion",
+          "line": 3,
+          "column": 3,
+          "endLine": 3,
+          "endColumn": 20,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

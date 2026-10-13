@@ -1,0 +1,37 @@
+{
+  "test": "TestOnlyThrowErrorPackageSpecifiers/semver/allow=s.mver",
+  "rule": "only-throw-error",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "import type { ErrorLike } from \"semver\"; declare const error: ErrorLike; throw error;",
+      "options": {
+        "allow": [
+          {
+            "name": [
+              "ErrorLike"
+            ],
+            "package": "s.mver",
+            "from": "package"
+          }
+        ],
+        "allowRethrowing": false,
+        "allowThrowingAny": false,
+        "allowThrowingUnknown": false
+      },
+      "files": {
+        "node_modules/semver/package.json": "{\"name\": \"semver\", \"version\": \"1.0.0\", \"types\": \"lib/index.d.ts\"}",
+        "node_modules/semver/lib/index.d.ts": "export interface ErrorLike { message: string }"
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "object",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

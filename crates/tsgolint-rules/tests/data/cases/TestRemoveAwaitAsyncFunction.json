@@ -1,0 +1,93 @@
+{
+  "test": "TestRemoveAwaitAsyncFunction",
+  "rule": "await-thenable",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "await async function() {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "(async function() {});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "await async function named() {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "(async function named() {});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "await async /* comment */ function() {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "(async /* comment */ function() {});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "(await async function() {});",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "(async function() {});"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "const test = async () => await async function() {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "await",
+          "suggestions": [
+            {
+              "messageId": "removeAwait",
+              "output": "const test = async () => async function() {};"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

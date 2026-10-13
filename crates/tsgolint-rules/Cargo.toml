@@ -1,0 +1,33 @@
+[package]
+name = "tsgolint-rules"
+description = "The type-aware lint rules of tsgolint-rust."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tsgolint-core.workspace = true
+goport_core.workspace = true
+goport_util.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rustc-hash.workspace = true
+smallvec.workspace = true
+# ECMAScript regular expressions (tsgolint uses regexp2 in ECMAScript mode).
+regress = "0.12"
+# dot-notation `allowPattern` (Go `regexp`, RE2 syntax).
+regex = "1"
+
+[dev-dependencies]
+libtest-mimic.workspace = true
+
+# Runs tsgolint's rule test cases (tests/data/cases) against its snapshots
+# (tests/data/snapshots). See tests/rules/main.rs.
+[[test]]
+name = "rules"
+path = "tests/rules/main.rs"
+harness = false
+
+[lints]
+workspace = true

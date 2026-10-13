@@ -1,0 +1,148 @@
+{
+  "test": "TestNoUnnecessaryTypeAssertionAsyncFunctionFix",
+  "rule": "no-unnecessary-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "<number>async function() {}.length;",
+      "options": null,
+      "output": [
+        "(async function() {}.length);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "<number>async function named() {}.length;",
+      "options": null,
+      "output": [
+        "(async function named() {}.length);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "<number>async function*() {}.length;",
+      "options": null,
+      "output": [
+        "(async function*() {}.length);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "<number>async /* comment */ function() {}.length;",
+      "options": null,
+      "output": [
+        "(async /* comment */ function() {}.length);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "const length = () => <number>async function() {}.length;",
+      "options": null,
+      "output": [
+        "const length = () => async function() {}.length;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "<number>(async function() {}.length);",
+      "options": null,
+      "output": [
+        "(async function() {}.length);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "const length = <number>async function() {}.length;",
+      "options": null,
+      "output": [
+        "const length = async function() {}.length;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "declare const async: { length: number };\n<number>async.length;",
+      "options": null,
+      "output": [
+        "declare const async: { length: number };\nasync.length;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "(<number>async function() {}.length);",
+      "options": null,
+      "output": [
+        "(async function() {}.length);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "declare const async: number;\n<number>async\nfunction named() {}",
+      "options": null,
+      "output": [
+        "declare const async: number;\nasync\nfunction named() {}"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

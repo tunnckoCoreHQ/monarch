@@ -1,0 +1,12 @@
+Got tsconfig for file composite/a/src/in-a.ts: composite/a/tsconfig.json
+Got tsconfig for file composite/shared/s.ts: composite/b/tsconfig.json
+Got tsconfig for file disable/sub/d.ts: disable/tsconfig.json
+Got tsconfig for file ext/b.ts: <none>
+Got tsconfig for file ext/src/a.ts: ext/tsconfig.json
+Got tsconfig for file js-beside/x.ts: js-beside/jsconfig.json
+Got tsconfig for file js-nearest/sub/y.ts: js-nearest/tsconfig.json
+Got tsconfig for file levels/extra/e.ts: levels/leaf2/tsconfig.json
+Got tsconfig for file levels/src/f.ts: levels/leaf1/tsconfig.json
+Got tsconfig for file missing-ref/src/m.ts: missing-ref/real/tsconfig.json
+Got tsconfig for file node-modules/node_modules/pkg/z.ts: <none>
+Got tsconfig for file node-modules/src/n.ts: node-modules/tsconfig.json

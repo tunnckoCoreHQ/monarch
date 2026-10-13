@@ -1,0 +1,1527 @@
+{
+  "test": "TestRestrictTemplateExpressionsRule",
+  "rule": "restrict-template-expressions",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\n      const msg = `arg = ${'foo'}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\n      const arg = 'foo';\n      const msg = `arg = ${arg}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\n      const arg = 'foo';\n      const msg = `arg = ${arg || 'default'}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\n      function test<T extends string>(arg: T) {\n        return `arg = ${arg}`;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\n      function test<T extends string & { _kind: 'MyBrandedString' }>(arg: T) {\n        return `arg = ${arg}`;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\n      tag`arg = ${null}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\n      const arg = {};\n      tag`arg = ${arg}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\n        const arg = 123;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 8,
+      "code": "\n        const arg = 123;\n        const msg = `arg = ${arg || 'default'}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 9,
+      "code": "\n        const arg = 123n;\n        const msg = `arg = ${arg || 'default'}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 10,
+      "code": "\n        function test<T extends number>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 11,
+      "code": "\n        function test<T extends number & { _kind: 'MyBrandedNumber' }>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 12,
+      "code": "\n        function test<T extends bigint>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 13,
+      "code": "\n        function test<T extends string | number>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 14,
+      "code": "\n        const arg = true;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 15,
+      "code": "\n        const arg = true;\n        const msg = `arg = ${arg || 'default'}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 16,
+      "code": "\n        function test<T extends boolean>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 17,
+      "code": "\n        function test<T extends string | boolean>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ],
+            "from": "lib"
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 18,
+      "code": "\n        const arg = [];\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": true,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 19,
+      "code": "\n        const arg = [];\n        const msg = `arg = ${arg || 'default'}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": true,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 20,
+      "code": "\n        function test<T extends string[]>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": true,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 21,
+      "code": "\n        declare const arg: [number, string];\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": true,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 22,
+      "code": "\n        const arg = [1, 'a'] as const;\n        const msg = `arg = ${arg || 'default'}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": true,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 23,
+      "code": "\n        function test<T extends [string, string]>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": true,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 24,
+      "code": "\n        declare const arg: [number | undefined, string];\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ],
+            "from": "lib"
+          }
+        ],
+        "allowAny": true,
+        "allowArray": true,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 25,
+      "code": "\n        const arg: any = 123;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 26,
+      "code": "\n        const arg: any = undefined;\n        const msg = `arg = ${arg || 'some-default'}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 27,
+      "code": "\n        const user = JSON.parse('{ \"name\": \"foo\" }');\n        const msg = `arg = ${user.name}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 28,
+      "code": "\n        const user = JSON.parse('{ \"name\": \"foo\" }');\n        const msg = `arg = ${user.name || 'the user with no name'}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 29,
+      "code": "\n        const arg = null;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 30,
+      "code": "\n        declare const arg: string | null | undefined;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ],
+            "from": "lib"
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 31,
+      "code": "\n        function test<T extends null | undefined>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 32,
+      "code": "\n        function test<T extends string | null>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 33,
+      "code": "\n        const arg = new RegExp('foo');\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ],
+            "from": "lib"
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 34,
+      "code": "\n        const arg = /foo/;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ],
+            "from": "lib"
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 35,
+      "code": "\n        declare const arg: string | RegExp;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 36,
+      "code": "\n        function test<T extends RegExp>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 37,
+      "code": "\n        function test<T extends string | RegExp>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 38,
+      "code": "\n        declare const value: never;\n        const stringy = `${value}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": true,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 39,
+      "code": "\n        const arg = 'hello';\n        const msg = typeof arg === 'string' ? arg : `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": true,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 40,
+      "code": "\n        function test(arg: 'one' | 'two') {\n          switch (arg) {\n            case 'one':\n              return 1;\n            case 'two':\n              return 2;\n            default:\n              throw new Error(`Unrecognized arg: ${arg}`);\n          }\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ],
+            "from": "lib"
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": true,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 41,
+      "code": "\n        // more variants may be added to Foo in the future\n        type Foo = { type: 'a'; value: number };\n\n        function checkFoosAreMatching(foo1: Foo, foo2: Foo) {\n          if (foo1.type !== foo2.type) {\n            // since Foo currently only has one variant, this code is never run, and `foo1.type` has type `never`.\n            throw new Error(`expected ${foo1.type}, found ${foo2.type}`);\n          }\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": true,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 42,
+      "code": "\n        type All = string | number | boolean | null | undefined | RegExp | never;\n        function test<T extends All>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": true,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 43,
+      "code": "const msg = `arg = ${Promise.resolve()}`;",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Promise"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 44,
+      "code": "\n        class Base {}\n        class Derived extends Base {}\n        const value = new Derived();\n        const msg = `${value}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "file",
+            "name": [
+              "Base"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 45,
+      "code": "\n        class Base {}\n        class Derived extends Base {}\n        class DerivedTwice extends Derived {}\n        const value = new DerivedTwice();\n        const msg = `${value}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "file",
+            "name": [
+              "Base"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 46,
+      "code": "\n        interface Base {\n          value: string;\n        }\n        interface Derived extends Base {\n          extra: number;\n        }\n        declare const value: Derived;\n        const msg = `${value}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "name": [
+              "Base"
+            ],
+            "from": "file"
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      }
+    },
+    {
+      "index": 47,
+      "code": "const msg = `arg = ${new Error()}`;",
+      "options": null
+    },
+    {
+      "index": 48,
+      "code": "const msg = `arg = ${false}`;",
+      "options": null
+    },
+    {
+      "index": 49,
+      "code": "const msg = `arg = ${null}`;",
+      "options": null
+    },
+    {
+      "index": 50,
+      "code": "const msg = `arg = ${undefined}`;",
+      "options": null
+    },
+    {
+      "index": 51,
+      "code": "const msg = `arg = ${123}`;",
+      "options": null
+    },
+    {
+      "index": 52,
+      "code": "const msg = `arg = ${'abc'}`;",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\n        const msg = `arg = ${123}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": false,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 2,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\n        const msg = `arg = ${false}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": false,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 2,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\n        const msg = `arg = ${null}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": false,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 2,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\n        declare const arg: number[];\n        const msg = `arg = ${arg}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\n        const msg = `arg = ${[, 2]}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": true,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": false,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 2,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "const msg = `arg = ${Promise.resolve()}`;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "const msg = `arg = ${new Error()}`;",
+      "options": {
+        "allow": [],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\n        declare const arg: [number | undefined, string];\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": true,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": false,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\n        declare const arg: number;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": false,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\n        declare const arg: boolean;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": false,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\n        const arg = {};\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\n        declare const arg: { a: string } & { b: string };\n        const msg = `arg = ${arg}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\n        function test<T extends {}>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 27,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\n        function test<TWithNoConstraint>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": false,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 27,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\n        function test(arg: any) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ],
+            "from": "lib"
+          }
+        ],
+        "allowAny": false,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 27,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\n        const arg = new RegExp('foo');\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\n        const arg = /foo/;\n        const msg = `arg = ${arg}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": false
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\n        declare const value: never;\n        const stringy = `${value}`;\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 28,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\n        function test<T extends any>(arg: T) {\n          return `arg = ${arg}`;\n        }\n      ",
+      "options": {
+        "allow": [
+          {
+            "from": "lib",
+            "name": [
+              "Error",
+              "URL",
+              "URLSearchParams"
+            ]
+          }
+        ],
+        "allowAny": true,
+        "allowArray": false,
+        "allowBoolean": true,
+        "allowNever": false,
+        "allowNullish": true,
+        "allowNumber": true,
+        "allowRegExp": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "invalidType",
+          "line": 3,
+          "column": 27,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

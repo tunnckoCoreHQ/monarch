@@ -1,0 +1,723 @@
+{
+  "test": "TestPromiseFunctionAsyncRule",
+  "rule": "promise-function-async",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nconst nonAsyncNonPromiseArrowFunction = (n: number) => n;\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nfunction nonAsyncNonPromiseFunctionDeclaration(n: number) {\n  return n;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nconst asyncPromiseFunctionExpressionA = async function (p: Promise<void>) {\n  return p;\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nconst asyncPromiseFunctionExpressionB = async function () {\n  return new Promise<void>();\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\nclass Test {\n  public nonAsyncNonPromiseArrowFunction = (n: number) => n;\n  public nonAsyncNonPromiseMethod() {\n    return 0;\n  }\n\n  public async asyncPromiseMethodA(p: Promise<void>) {\n    return p;\n  }\n\n  public async asyncPromiseMethodB() {\n    return new Promise<void>();\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\nclass InvalidAsyncModifiers {\n  public constructor() {\n    return new Promise<void>();\n  }\n  public get asyncGetter() {\n    return new Promise<void>();\n  }\n  public set asyncGetter(p: Promise<void>) {\n    return p;\n  }\n  public get asyncGetterFunc() {\n    return async () => new Promise<void>();\n  }\n  public set asyncGetterFunc(p: () => Promise<void>) {\n    return p;\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\nconst invalidAsyncModifiers = {\n  get asyncGetter() {\n    return new Promise<void>();\n  },\n  set asyncGetter(p: Promise<void>) {\n    return p;\n  },\n  get asyncGetterFunc() {\n    return async () => new Promise<void>();\n  },\n  set asyncGetterFunc(p: () => Promise<void>) {\n    return p;\n  },\n};\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\n      export function valid(n: number) {\n        return n;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\n      export default function invalid(n: number) {\n        return n;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\n      class Foo {\n        constructor() {}\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\nclass Foo {\n  async catch<T>(arg: Promise<T>) {\n    return arg;\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\nfunction returnsAny(): any {\n  return 0;\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      }
+    },
+    {
+      "index": 12,
+      "code": "\nfunction returnsUnknown(): unknown {\n  return 0;\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      }
+    },
+    {
+      "index": 13,
+      "code": "\ninterface ReadableStream {}\ninterface Options {\n  stream: ReadableStream;\n}\n\ntype Return = ReadableStream | Promise<void>;\nconst foo = (options: Options): Return => {\n  return options.stream ? asStream(options) : asPromise(options);\n};\n      ",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\nfunction foo(): Promise<string> | boolean {\n  return Math.random() > 0.5 ? Promise.resolve('value') : false;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "\nabstract class Test {\n  abstract test1(): Promise<number>;\n\n  // abstract method with body is always an error but it still parses into valid AST\n  abstract test2(): Promise<number> {\n    return Promise.resolve(1);\n  }\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "\nfunction promiseInUnionWithExplicitReturnType(\n  p: boolean,\n): Promise<number> | number {\n  return p ? Promise.resolve(5) : 5;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "\nfunction explicitReturnWithPromiseInUnion(): Promise<number> | number {\n  return 5;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "\nasync function asyncFunctionReturningUnion(p: boolean) {\n  return p ? Promise.resolve(5) : 5;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 19,
+      "code": "\nfunction overloadingThatCanReturnPromise(): Promise<number>;\nfunction overloadingThatCanReturnPromise(a: boolean): number;\nfunction overloadingThatCanReturnPromise(\n  a?: boolean,\n): Promise<number> | number {\n  return Promise.resolve(5);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "\nfunction overloadingThatCanReturnPromise(a: boolean): number;\nfunction overloadingThatCanReturnPromise(): Promise<number>;\nfunction overloadingThatCanReturnPromise(\n  a?: boolean,\n): Promise<number> | number {\n  return Promise.resolve(5);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\nfunction a(): Promise<void>;\nfunction a(x: boolean): void;\nfunction a(x?: boolean) {\n  if (x == null) return Promise.reject(new Error());\n  throw new Error();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\nfunction overloadingThatIncludeUnknown(): number;\nfunction overloadingThatIncludeUnknown(a: boolean): unknown;\nfunction overloadingThatIncludeUnknown(a?: boolean): unknown | number {\n  return Promise.resolve(5);\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      }
+    },
+    {
+      "index": 23,
+      "code": "\nfunction overloadingThatIncludeAny(): number;\nfunction overloadingThatIncludeAny(a: boolean): any;\nfunction overloadingThatIncludeAny(a?: boolean): any | number {\n  return Promise.resolve(5);\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nfunction returnsAny(): any {\n  return 0;\n}\n      ",
+      "options": {
+        "allowAny": false,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\nfunction returnsUnknown(): unknown {\n  return 0;\n}\n      ",
+      "options": {
+        "allowAny": false,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\nconst nonAsyncPromiseFunctionExpressionA = function (p: Promise<void>) {\n  return p;\n};\n      ",
+      "options": null,
+      "output": [
+        "\nconst nonAsyncPromiseFunctionExpressionA =  async function (p: Promise<void>) {\n  return p;\n};\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nconst nonAsyncPromiseFunctionExpressionB = function () {\n  return new Promise<void>();\n};\n      ",
+      "options": null,
+      "output": [
+        "\nconst nonAsyncPromiseFunctionExpressionB =  async function () {\n  return new Promise<void>();\n};\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\nfunction nonAsyncPromiseFunctionDeclarationA(p: Promise<void>) {\n  return p;\n}\n      ",
+      "options": null,
+      "output": [
+        "\n async function nonAsyncPromiseFunctionDeclarationA(p: Promise<void>) {\n  return p;\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nfunction nonAsyncPromiseFunctionDeclarationB() {\n  return new Promise<void>();\n}\n      ",
+      "options": null,
+      "output": [
+        "\n async function nonAsyncPromiseFunctionDeclarationB() {\n  return new Promise<void>();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nexport function nonAsyncExportedPromiseFunction() {\n  return new Promise<void>();\n}\n      ",
+      "options": null,
+      "output": [
+        "\nexport async function nonAsyncExportedPromiseFunction() {\n  return new Promise<void>();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nexport default function nonAsyncDefaultExportedPromiseFunction() {\n  return new Promise<void>();\n}\n      ",
+      "options": null,
+      "output": [
+        "\nexport default async function nonAsyncDefaultExportedPromiseFunction() {\n  return new Promise<void>();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nconst nonAsyncPromiseArrowFunctionA = (p: Promise<void>) => p;\n      ",
+      "options": null,
+      "output": [
+        "\nconst nonAsyncPromiseArrowFunctionA =  async (p: Promise<void>) => p;\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nconst nonAsyncPromiseArrowFunctionB = () => new Promise<void>();\n      ",
+      "options": null,
+      "output": [
+        "\nconst nonAsyncPromiseArrowFunctionB =  async () => new Promise<void>();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nconst functions = {\n  nonAsyncPromiseMethod() {\n    return Promise.resolve(1);\n  },\n};\n      ",
+      "options": null,
+      "output": [
+        "\nconst functions = {\n   async nonAsyncPromiseMethod() {\n    return Promise.resolve(1);\n  },\n};\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\nclass Test {\n  public nonAsyncPromiseMethodA(p: Promise<void>) {\n    return p;\n  }\n\n  public static nonAsyncPromiseMethodB() {\n    return new Promise<void>();\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nclass Test {\n  public  async nonAsyncPromiseMethodA(p: Promise<void>) {\n    return p;\n  }\n\n  public static  async nonAsyncPromiseMethodB() {\n    return new Promise<void>();\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 3,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\nconst nonAsyncPromiseFunctionExpression = function (p: Promise<void>) {\n  return p;\n};\n\nfunction nonAsyncPromiseFunctionDeclaration(p: Promise<void>) {\n  return p;\n}\n\nconst nonAsyncPromiseArrowFunction = (p: Promise<void>) => p;\n\nclass Test {\n  public nonAsyncPromiseMethod(p: Promise<void>) {\n    return p;\n  }\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "checkArrowFunctions": false,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      },
+      "output": [
+        "\nconst nonAsyncPromiseFunctionExpression =  async function (p: Promise<void>) {\n  return p;\n};\n\n async function nonAsyncPromiseFunctionDeclaration(p: Promise<void>) {\n  return p;\n}\n\nconst nonAsyncPromiseArrowFunction = (p: Promise<void>) => p;\n\nclass Test {\n  public  async nonAsyncPromiseMethod(p: Promise<void>) {\n    return p;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 2,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 6,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\nconst nonAsyncPromiseFunctionExpression = function (p: Promise<void>) {\n  return p;\n};\n\nfunction nonAsyncPromiseFunctionDeclaration(p: Promise<void>) {\n  return p;\n}\n\nconst nonAsyncPromiseArrowFunction = (p: Promise<void>) => p;\n\nclass Test {\n  public nonAsyncPromiseMethod(p: Promise<void>) {\n    return p;\n  }\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": false,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      },
+      "output": [
+        "\nconst nonAsyncPromiseFunctionExpression =  async function (p: Promise<void>) {\n  return p;\n};\n\nfunction nonAsyncPromiseFunctionDeclaration(p: Promise<void>) {\n  return p;\n}\n\nconst nonAsyncPromiseArrowFunction =  async (p: Promise<void>) => p;\n\nclass Test {\n  public  async nonAsyncPromiseMethod(p: Promise<void>) {\n    return p;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 2,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 10,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\nconst nonAsyncPromiseFunctionExpression = function (p: Promise<void>) {\n  return p;\n};\n\nfunction nonAsyncPromiseFunctionDeclaration(p: Promise<void>) {\n  return p;\n}\n\nconst nonAsyncPromiseArrowFunction = (p: Promise<void>) => p;\n\nclass Test {\n  public nonAsyncPromiseMethod(p: Promise<void>) {\n    return p;\n  }\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": false,
+        "checkMethodDeclarations": true
+      },
+      "output": [
+        "\nconst nonAsyncPromiseFunctionExpression = function (p: Promise<void>) {\n  return p;\n};\n\n async function nonAsyncPromiseFunctionDeclaration(p: Promise<void>) {\n  return p;\n}\n\nconst nonAsyncPromiseArrowFunction =  async (p: Promise<void>) => p;\n\nclass Test {\n  public  async nonAsyncPromiseMethod(p: Promise<void>) {\n    return p;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 6,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 10,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\nconst nonAsyncPromiseFunctionExpression = function (p: Promise<void>) {\n  return p;\n};\n\nfunction nonAsyncPromiseFunctionDeclaration(p: Promise<void>) {\n  return p;\n}\n\nconst nonAsyncPromiseArrowFunction = (p: Promise<void>) => p;\n\nclass Test {\n  public nonAsyncPromiseMethod(p: Promise<void>) {\n    return p;\n  }\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": false
+      },
+      "output": [
+        "\nconst nonAsyncPromiseFunctionExpression =  async function (p: Promise<void>) {\n  return p;\n};\n\n async function nonAsyncPromiseFunctionDeclaration(p: Promise<void>) {\n  return p;\n}\n\nconst nonAsyncPromiseArrowFunction =  async (p: Promise<void>) => p;\n\nclass Test {\n  public nonAsyncPromiseMethod(p: Promise<void>) {\n    return p;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 2,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 6,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\nclass PromiseType {}\n\nconst returnAllowedType = () => new PromiseType();\n      ",
+      "options": {
+        "allowAny": true,
+        "allowedPromiseNames": [
+          "PromiseType"
+        ],
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      },
+      "output": [
+        "\nclass PromiseType {}\n\nconst returnAllowedType =  async () => new PromiseType();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\ninterface SPromise<T> extends Promise<T> {}\nfunction foo(): Promise<string> | SPromise<boolean> {\n  return Math.random() > 0.5\n    ? Promise.resolve('value')\n    : Promise.resolve(false);\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "allowedPromiseNames": [
+          "SPromise"
+        ],
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      },
+      "output": [
+        "\ninterface SPromise<T> extends Promise<T> {}\n async function foo(): Promise<string> | SPromise<boolean> {\n  return Math.random() > 0.5\n    ? Promise.resolve('value')\n    : Promise.resolve(false);\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\nclass Test {\n  @decorator\n  public test() {\n    return Promise.resolve(123);\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nclass Test {\n  @decorator\n  public  async test() {\n    return Promise.resolve(123);\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\nclass Test {\n  @decorator(async () => {})\n  static protected[(1)]() {\n    return Promise.resolve(1);\n  }\n  public'bar'() {\n    return Promise.resolve(2);\n  }\n  private['baz']() {\n    return Promise.resolve(3);\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nclass Test {\n  @decorator(async () => {})\n  static protected async [(1)]() {\n    return Promise.resolve(1);\n  }\n  public async 'bar'() {\n    return Promise.resolve(2);\n  }\n  private async ['baz']() {\n    return Promise.resolve(3);\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 7,
+          "column": 3,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 10,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\nclass Foo {\n  catch() {\n    return Promise.resolve(1);\n  }\n\n  public default() {\n    return Promise.resolve(2);\n  }\n\n  @decorator\n  private case<T>() {\n    return Promise.resolve(3);\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nclass Foo {\n   async catch() {\n    return Promise.resolve(1);\n  }\n\n  public  async default() {\n    return Promise.resolve(2);\n  }\n\n  @decorator\n  private  async case<T>() {\n    return Promise.resolve(3);\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 7,
+          "column": 3,
+          "suggestions": []
+        },
+        {
+          "messageId": "missingAsync",
+          "line": 11,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\nconst foo = {\n  catch() {\n    return Promise.resolve(1);\n  },\n};\n      ",
+      "options": null,
+      "output": [
+        "\nconst foo = {\n   async catch() {\n    return Promise.resolve(1);\n  },\n};\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\nfunction promiseInUnionWithoutExplicitReturnType(p: boolean) {\n  return p ? Promise.resolve(5) : 5;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAsyncHybridReturn",
+          "suggestions": [
+            {
+              "messageId": "missingAsyncHybridReturnSuggestion",
+              "output": "\n async function promiseInUnionWithoutExplicitReturnType(p: boolean) {\n  return p ? Promise.resolve(5) : 5;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\nexport function exportedPromiseInUnionWithoutExplicitReturnType(p: boolean) {\n  return p ? Promise.resolve(5) : 5;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAsyncHybridReturn",
+          "suggestions": [
+            {
+              "messageId": "missingAsyncHybridReturnSuggestion",
+              "output": "\nexport async function exportedPromiseInUnionWithoutExplicitReturnType(p: boolean) {\n  return p ? Promise.resolve(5) : 5;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\nfunction test1(): 'one' | Promise<'one'>;\nfunction test1(a: number): Promise<number>;\nfunction test1(a?: number) {\n  if (a) {\n    return Promise.resolve(a);\n  }\n\n  return Math.random() > 0.5 ? 'one' : Promise.resolve('one');\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAsyncHybridReturn",
+          "suggestions": [
+            {
+              "messageId": "missingAsyncHybridReturnSuggestion",
+              "output": "\nfunction test1(): 'one' | Promise<'one'>;\nfunction test1(a: number): Promise<number>;\n async function test1(a?: number) {\n  if (a) {\n    return Promise.resolve(a);\n  }\n\n  return Math.random() > 0.5 ? 'one' : Promise.resolve('one');\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\nclass PromiseType {\n  s?: string;\n}\n\nfunction promiseInUnionWithoutExplicitReturnType(p: boolean) {\n  return p ? new PromiseType() : 5;\n}\n      ",
+      "options": {
+        "allowAny": true,
+        "allowedPromiseNames": [
+          "PromiseType"
+        ],
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAsyncHybridReturn",
+          "suggestions": [
+            {
+              "messageId": "missingAsyncHybridReturnSuggestion",
+              "output": "\nclass PromiseType {\n  s?: string;\n}\n\n async function promiseInUnionWithoutExplicitReturnType(p: boolean) {\n  return p ? new PromiseType() : 5;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\nfunction overloadingThatCanReturnPromise(): Promise<number>;\nfunction overloadingThatCanReturnPromise(a: boolean): Promise<string>;\nfunction overloadingThatCanReturnPromise(\n  a?: boolean,\n): Promise<number | string> {\n  return Promise.resolve(5);\n}\n      ",
+      "options": null,
+      "output": [
+        "\nfunction overloadingThatCanReturnPromise(): Promise<number>;\nfunction overloadingThatCanReturnPromise(a: boolean): Promise<string>;\n async function overloadingThatCanReturnPromise(\n  a?: boolean,\n): Promise<number | string> {\n  return Promise.resolve(5);\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "\nfunction overloadingThatIncludeAny(): number;\nfunction overloadingThatIncludeAny(a: boolean): any;\nfunction overloadingThatIncludeAny(a?: boolean): any | number {\n  return Promise.resolve(5);\n}\n      ",
+      "options": {
+        "allowAny": false,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\nfunction overloadingThatIncludeUnknown(): number;\nfunction overloadingThatIncludeUnknown(a: boolean): unknown;\nfunction overloadingThatIncludeUnknown(a?: boolean): unknown | number {\n  return Promise.resolve(5);\n}\n      ",
+      "options": {
+        "allowAny": false,
+        "checkArrowFunctions": true,
+        "checkFunctionDeclarations": true,
+        "checkFunctionExpressions": true,
+        "checkMethodDeclarations": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "missingAsync",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,261 @@
+{
+  "test": "TestNoUnnecessaryTypeAssertionUpstreamReporting",
+  "rule": "no-unnecessary-type-assertion",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "const value = (1 + 2) as (number);",
+      "options": {
+        "checkLiteralConstAssertions": false,
+        "typesToIgnore": [
+          "number"
+        ]
+      }
+    },
+    {
+      "index": 1,
+      "code": "const value = <(number)>(1 + 2);",
+      "options": {
+        "checkLiteralConstAssertions": false,
+        "typesToIgnore": [
+          "number"
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "code": "const value = (1 + 2) as (/*keep*/ number);",
+      "options": {
+        "checkLiteralConstAssertions": false,
+        "typesToIgnore": [
+          "number"
+        ]
+      }
+    },
+    {
+      "index": 3,
+      "code": "const value = <(/*keep*/ number)>(1 + 2);",
+      "options": {
+        "checkLiteralConstAssertions": false,
+        "typesToIgnore": [
+          "number"
+        ]
+      }
+    },
+    {
+      "index": 4,
+      "code": "const value = (1 + 2) as /*before*/ (/*inside*/ number /*after*/);",
+      "options": {
+        "checkLiteralConstAssertions": false,
+        "typesToIgnore": [
+          "number"
+        ]
+      }
+    },
+    {
+      "index": 5,
+      "code": "const value = (1 + 2) as /*keep*/ number;",
+      "options": {
+        "checkLiteralConstAssertions": false,
+        "typesToIgnore": [
+          "number"
+        ]
+      }
+    },
+    {
+      "index": 6,
+      "code": "const value = </*keep*/ number>(1 + 2);",
+      "options": {
+        "checkLiteralConstAssertions": false,
+        "typesToIgnore": [
+          "number"
+        ]
+      }
+    },
+    {
+      "index": 7,
+      "code": "let value: string; (value)!.length;",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "function narrow(value: string | undefined) {\n  value = ((value!));\n  return value.length;\n }",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "type ValuePath = 'values' | `values.${string}`;\ndeclare function apply(paths: ValuePath[]): void;\nexport function update(ids: string[]) {\n  apply(ids.map(id => `values.${id}` as ValuePath));\n}",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "declare const items: string[] | undefined;\nconst counts = items?.reduce((acc, item) => {\n  acc[item] = (acc[item] ?? 0) + 1;\n  return acc;\n}, {} as Record<string, number>);",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "const value = (3 as 3);",
+      "options": null,
+      "output": [
+        "const value = (3);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "line": 1,
+          "column": 16,
+          "endLine": 1,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "const foo = 3 as 3;",
+      "options": null,
+      "output": [
+        "const foo = 3;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "line": 1,
+          "column": 13,
+          "endLine": 1,
+          "endColumn": 19,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "const foo = <3>3;",
+      "options": null,
+      "output": [
+        "const foo = 3;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "line": 1,
+          "column": 13,
+          "endLine": 1,
+          "endColumn": 17,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "const s = 'x';\nconst t = s!;",
+      "options": null,
+      "output": [
+        "const s = 'x';\nconst t = s;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "line": 2,
+          "column": 11,
+          "endLine": 2,
+          "endColumn": 13,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "const foo = (3 + 5) /*before*/ as /*after*/ number;",
+      "options": null,
+      "output": [
+        "const foo = (3 + 5) /*before*/;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "line": 1,
+          "column": 13,
+          "endLine": 1,
+          "endColumn": 51,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "<number>{ lol: 32 as number }.lol;",
+      "options": null,
+      "output": [
+        "({ lol: 32 as number }.lol);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 34,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "<number>function Fun() {}.length;",
+      "options": null,
+      "output": [
+        "(function Fun() {}.length);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 33,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "<number>class Clazz {}.length;",
+      "options": null,
+      "output": [
+        "(class Clazz {}.length);"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "line": 1,
+          "column": 1,
+          "endLine": 1,
+          "endColumn": 30,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "const foo = () => <number>{ lol: 123 as number }.lol + 54321;",
+      "options": null,
+      "output": [
+        "const foo = () => ({ lol: 123 as number }.lol) + 54321;"
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryAssertion",
+          "line": 1,
+          "column": 19,
+          "endLine": 1,
+          "endColumn": 53,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

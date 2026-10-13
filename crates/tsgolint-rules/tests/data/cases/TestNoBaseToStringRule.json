@@ -1,0 +1,2569 @@
+{
+  "test": "TestNoBaseToStringRule",
+  "rule": "no-base-to-string",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "`${''}`;",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "`${'text'}`;",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "`${true}`;",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "`${false}`;",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "`${1}`;",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "`${1n}`;",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "`${[]}`;",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "`${/regex/}`;",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "`${__dirname === 'foobar'}`;",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "`${{}.constructor()}`;",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "`${() => {}}`;",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "`${function() {}}`;",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "'' + '';",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "'' + 'text';",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "'' + true;",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "'' + false;",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "'' + 1;",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "'' + 1n;",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "'' + [];",
+      "options": null
+    },
+    {
+      "index": 19,
+      "code": "'' + /regex/;",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "'' + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "'' + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "'' + (() => {});",
+      "options": null
+    },
+    {
+      "index": 23,
+      "code": "'' + (function() {});",
+      "options": null
+    },
+    {
+      "index": 24,
+      "code": "'text' + '';",
+      "options": null
+    },
+    {
+      "index": 25,
+      "code": "'text' + 'text';",
+      "options": null
+    },
+    {
+      "index": 26,
+      "code": "'text' + true;",
+      "options": null
+    },
+    {
+      "index": 27,
+      "code": "'text' + false;",
+      "options": null
+    },
+    {
+      "index": 28,
+      "code": "'text' + 1;",
+      "options": null
+    },
+    {
+      "index": 29,
+      "code": "'text' + 1n;",
+      "options": null
+    },
+    {
+      "index": 30,
+      "code": "'text' + [];",
+      "options": null
+    },
+    {
+      "index": 31,
+      "code": "'text' + /regex/;",
+      "options": null
+    },
+    {
+      "index": 32,
+      "code": "'text' + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 33,
+      "code": "'text' + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 34,
+      "code": "'text' + (() => {});",
+      "options": null
+    },
+    {
+      "index": 35,
+      "code": "'text' + (function() {});",
+      "options": null
+    },
+    {
+      "index": 36,
+      "code": "true + '';",
+      "options": null
+    },
+    {
+      "index": 37,
+      "code": "true + 'text';",
+      "options": null
+    },
+    {
+      "index": 38,
+      "code": "true + true;",
+      "options": null
+    },
+    {
+      "index": 39,
+      "code": "true + false;",
+      "options": null
+    },
+    {
+      "index": 40,
+      "code": "true + 1;",
+      "options": null
+    },
+    {
+      "index": 41,
+      "code": "true + 1n;",
+      "options": null
+    },
+    {
+      "index": 42,
+      "code": "true + [];",
+      "options": null
+    },
+    {
+      "index": 43,
+      "code": "true + /regex/;",
+      "options": null
+    },
+    {
+      "index": 44,
+      "code": "true + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 45,
+      "code": "true + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 46,
+      "code": "true + (() => {});",
+      "options": null
+    },
+    {
+      "index": 47,
+      "code": "true + (function() {});",
+      "options": null
+    },
+    {
+      "index": 48,
+      "code": "false + '';",
+      "options": null
+    },
+    {
+      "index": 49,
+      "code": "false + 'text';",
+      "options": null
+    },
+    {
+      "index": 50,
+      "code": "false + true;",
+      "options": null
+    },
+    {
+      "index": 51,
+      "code": "false + false;",
+      "options": null
+    },
+    {
+      "index": 52,
+      "code": "false + 1;",
+      "options": null
+    },
+    {
+      "index": 53,
+      "code": "false + 1n;",
+      "options": null
+    },
+    {
+      "index": 54,
+      "code": "false + [];",
+      "options": null
+    },
+    {
+      "index": 55,
+      "code": "false + /regex/;",
+      "options": null
+    },
+    {
+      "index": 56,
+      "code": "false + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 57,
+      "code": "false + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 58,
+      "code": "false + (() => {});",
+      "options": null
+    },
+    {
+      "index": 59,
+      "code": "false + (function() {});",
+      "options": null
+    },
+    {
+      "index": 60,
+      "code": "1 + '';",
+      "options": null
+    },
+    {
+      "index": 61,
+      "code": "1 + 'text';",
+      "options": null
+    },
+    {
+      "index": 62,
+      "code": "1 + true;",
+      "options": null
+    },
+    {
+      "index": 63,
+      "code": "1 + false;",
+      "options": null
+    },
+    {
+      "index": 64,
+      "code": "1 + 1;",
+      "options": null
+    },
+    {
+      "index": 65,
+      "code": "1 + 1n;",
+      "options": null
+    },
+    {
+      "index": 66,
+      "code": "1 + [];",
+      "options": null
+    },
+    {
+      "index": 67,
+      "code": "1 + /regex/;",
+      "options": null
+    },
+    {
+      "index": 68,
+      "code": "1 + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 69,
+      "code": "1 + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 70,
+      "code": "1 + (() => {});",
+      "options": null
+    },
+    {
+      "index": 71,
+      "code": "1 + (function() {});",
+      "options": null
+    },
+    {
+      "index": 72,
+      "code": "1n + '';",
+      "options": null
+    },
+    {
+      "index": 73,
+      "code": "1n + 'text';",
+      "options": null
+    },
+    {
+      "index": 74,
+      "code": "1n + true;",
+      "options": null
+    },
+    {
+      "index": 75,
+      "code": "1n + false;",
+      "options": null
+    },
+    {
+      "index": 76,
+      "code": "1n + 1;",
+      "options": null
+    },
+    {
+      "index": 77,
+      "code": "1n + 1n;",
+      "options": null
+    },
+    {
+      "index": 78,
+      "code": "1n + [];",
+      "options": null
+    },
+    {
+      "index": 79,
+      "code": "1n + /regex/;",
+      "options": null
+    },
+    {
+      "index": 80,
+      "code": "1n + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 81,
+      "code": "1n + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 82,
+      "code": "1n + (() => {});",
+      "options": null
+    },
+    {
+      "index": 83,
+      "code": "1n + (function() {});",
+      "options": null
+    },
+    {
+      "index": 84,
+      "code": "[] + '';",
+      "options": null
+    },
+    {
+      "index": 85,
+      "code": "[] + 'text';",
+      "options": null
+    },
+    {
+      "index": 86,
+      "code": "[] + true;",
+      "options": null
+    },
+    {
+      "index": 87,
+      "code": "[] + false;",
+      "options": null
+    },
+    {
+      "index": 88,
+      "code": "[] + 1;",
+      "options": null
+    },
+    {
+      "index": 89,
+      "code": "[] + 1n;",
+      "options": null
+    },
+    {
+      "index": 90,
+      "code": "[] + [];",
+      "options": null
+    },
+    {
+      "index": 91,
+      "code": "[] + /regex/;",
+      "options": null
+    },
+    {
+      "index": 92,
+      "code": "[] + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 93,
+      "code": "[] + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 94,
+      "code": "[] + (() => {});",
+      "options": null
+    },
+    {
+      "index": 95,
+      "code": "[] + (function() {});",
+      "options": null
+    },
+    {
+      "index": 96,
+      "code": "/regex/ + '';",
+      "options": null
+    },
+    {
+      "index": 97,
+      "code": "/regex/ + 'text';",
+      "options": null
+    },
+    {
+      "index": 98,
+      "code": "/regex/ + true;",
+      "options": null
+    },
+    {
+      "index": 99,
+      "code": "/regex/ + false;",
+      "options": null
+    },
+    {
+      "index": 100,
+      "code": "/regex/ + 1;",
+      "options": null
+    },
+    {
+      "index": 101,
+      "code": "/regex/ + 1n;",
+      "options": null
+    },
+    {
+      "index": 102,
+      "code": "/regex/ + [];",
+      "options": null
+    },
+    {
+      "index": 103,
+      "code": "/regex/ + /regex/;",
+      "options": null
+    },
+    {
+      "index": 104,
+      "code": "/regex/ + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 105,
+      "code": "/regex/ + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 106,
+      "code": "/regex/ + (() => {});",
+      "options": null
+    },
+    {
+      "index": 107,
+      "code": "/regex/ + (function() {});",
+      "options": null
+    },
+    {
+      "index": 108,
+      "code": "(__dirname === 'foobar') + '';",
+      "options": null
+    },
+    {
+      "index": 109,
+      "code": "(__dirname === 'foobar') + 'text';",
+      "options": null
+    },
+    {
+      "index": 110,
+      "code": "(__dirname === 'foobar') + true;",
+      "options": null
+    },
+    {
+      "index": 111,
+      "code": "(__dirname === 'foobar') + false;",
+      "options": null
+    },
+    {
+      "index": 112,
+      "code": "(__dirname === 'foobar') + 1;",
+      "options": null
+    },
+    {
+      "index": 113,
+      "code": "(__dirname === 'foobar') + 1n;",
+      "options": null
+    },
+    {
+      "index": 114,
+      "code": "(__dirname === 'foobar') + [];",
+      "options": null
+    },
+    {
+      "index": 115,
+      "code": "(__dirname === 'foobar') + /regex/;",
+      "options": null
+    },
+    {
+      "index": 116,
+      "code": "(__dirname === 'foobar') + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 117,
+      "code": "(__dirname === 'foobar') + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 118,
+      "code": "(__dirname === 'foobar') + (() => {});",
+      "options": null
+    },
+    {
+      "index": 119,
+      "code": "(__dirname === 'foobar') + (function() {});",
+      "options": null
+    },
+    {
+      "index": 120,
+      "code": "({}.constructor()) + '';",
+      "options": null
+    },
+    {
+      "index": 121,
+      "code": "({}.constructor()) + 'text';",
+      "options": null
+    },
+    {
+      "index": 122,
+      "code": "({}.constructor()) + true;",
+      "options": null
+    },
+    {
+      "index": 123,
+      "code": "({}.constructor()) + false;",
+      "options": null
+    },
+    {
+      "index": 124,
+      "code": "({}.constructor()) + 1;",
+      "options": null
+    },
+    {
+      "index": 125,
+      "code": "({}.constructor()) + 1n;",
+      "options": null
+    },
+    {
+      "index": 126,
+      "code": "({}.constructor()) + [];",
+      "options": null
+    },
+    {
+      "index": 127,
+      "code": "({}.constructor()) + /regex/;",
+      "options": null
+    },
+    {
+      "index": 128,
+      "code": "({}.constructor()) + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 129,
+      "code": "({}.constructor()) + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 130,
+      "code": "({}.constructor()) + (() => {});",
+      "options": null
+    },
+    {
+      "index": 131,
+      "code": "({}.constructor()) + (function() {});",
+      "options": null
+    },
+    {
+      "index": 132,
+      "code": "(() => {}) + '';",
+      "options": null
+    },
+    {
+      "index": 133,
+      "code": "(() => {}) + 'text';",
+      "options": null
+    },
+    {
+      "index": 134,
+      "code": "(() => {}) + true;",
+      "options": null
+    },
+    {
+      "index": 135,
+      "code": "(() => {}) + false;",
+      "options": null
+    },
+    {
+      "index": 136,
+      "code": "(() => {}) + 1;",
+      "options": null
+    },
+    {
+      "index": 137,
+      "code": "(() => {}) + 1n;",
+      "options": null
+    },
+    {
+      "index": 138,
+      "code": "(() => {}) + [];",
+      "options": null
+    },
+    {
+      "index": 139,
+      "code": "(() => {}) + /regex/;",
+      "options": null
+    },
+    {
+      "index": 140,
+      "code": "(() => {}) + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 141,
+      "code": "(() => {}) + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 142,
+      "code": "(() => {}) + (() => {});",
+      "options": null
+    },
+    {
+      "index": 143,
+      "code": "(() => {}) + (function() {});",
+      "options": null
+    },
+    {
+      "index": 144,
+      "code": "(function() {}) + '';",
+      "options": null
+    },
+    {
+      "index": 145,
+      "code": "(function() {}) + 'text';",
+      "options": null
+    },
+    {
+      "index": 146,
+      "code": "(function() {}) + true;",
+      "options": null
+    },
+    {
+      "index": 147,
+      "code": "(function() {}) + false;",
+      "options": null
+    },
+    {
+      "index": 148,
+      "code": "(function() {}) + 1;",
+      "options": null
+    },
+    {
+      "index": 149,
+      "code": "(function() {}) + 1n;",
+      "options": null
+    },
+    {
+      "index": 150,
+      "code": "(function() {}) + [];",
+      "options": null
+    },
+    {
+      "index": 151,
+      "code": "(function() {}) + /regex/;",
+      "options": null
+    },
+    {
+      "index": 152,
+      "code": "(function() {}) + (__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 153,
+      "code": "(function() {}) + ({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 154,
+      "code": "(function() {}) + (() => {});",
+      "options": null
+    },
+    {
+      "index": 155,
+      "code": "(function() {}) + (function() {});",
+      "options": null
+    },
+    {
+      "index": 156,
+      "code": "''.toString();",
+      "options": null
+    },
+    {
+      "index": 157,
+      "code": "'text'.toString();",
+      "options": null
+    },
+    {
+      "index": 158,
+      "code": "true.toString();",
+      "options": null
+    },
+    {
+      "index": 159,
+      "code": "false.toString();",
+      "options": null
+    },
+    {
+      "index": 160,
+      "code": "(1).toString();",
+      "options": null
+    },
+    {
+      "index": 161,
+      "code": "1n.toString();",
+      "options": null
+    },
+    {
+      "index": 162,
+      "code": "[].toString();",
+      "options": null
+    },
+    {
+      "index": 163,
+      "code": "/regex/.toString();",
+      "options": null
+    },
+    {
+      "index": 164,
+      "code": "(__dirname === 'foobar').toString();",
+      "options": null
+    },
+    {
+      "index": 165,
+      "code": "({}.constructor()).toString();",
+      "options": null
+    },
+    {
+      "index": 166,
+      "code": "(() => {}).toString();",
+      "options": null
+    },
+    {
+      "index": 167,
+      "code": "(function() {}).toString();",
+      "options": null
+    },
+    {
+      "index": 168,
+      "code": "\n        let value = '';\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 169,
+      "code": "\n        let value = 'text';\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 170,
+      "code": "\n        let value = true;\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 171,
+      "code": "\n        let value = false;\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 172,
+      "code": "\n        let value = 1;\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 173,
+      "code": "\n        let value = 1n;\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 174,
+      "code": "\n        let value = [];\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 175,
+      "code": "\n        let value = /regex/;\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 176,
+      "code": "\n        let value = __dirname === 'foobar';\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 177,
+      "code": "\n        let value = {}.constructor();\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 178,
+      "code": "\n        let value = () => {};\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 179,
+      "code": "\n        let value = function() {};\n        value.toString();\n        let text = `${value}`;\n",
+      "options": null
+    },
+    {
+      "index": 180,
+      "code": "String('');",
+      "options": null
+    },
+    {
+      "index": 181,
+      "code": "String('text');",
+      "options": null
+    },
+    {
+      "index": 182,
+      "code": "String(true);",
+      "options": null
+    },
+    {
+      "index": 183,
+      "code": "String(false);",
+      "options": null
+    },
+    {
+      "index": 184,
+      "code": "String(1);",
+      "options": null
+    },
+    {
+      "index": 185,
+      "code": "String(1n);",
+      "options": null
+    },
+    {
+      "index": 186,
+      "code": "String([]);",
+      "options": null
+    },
+    {
+      "index": 187,
+      "code": "String(/regex/);",
+      "options": null
+    },
+    {
+      "index": 188,
+      "code": "String(__dirname === 'foobar');",
+      "options": null
+    },
+    {
+      "index": 189,
+      "code": "String({}.constructor());",
+      "options": null
+    },
+    {
+      "index": 190,
+      "code": "String(() => {});",
+      "options": null
+    },
+    {
+      "index": 191,
+      "code": "String(function() {});",
+      "options": null
+    },
+    {
+      "index": 192,
+      "code": "\nfunction someFunction() {}\nsomeFunction.toString();\nlet text = `${someFunction}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 193,
+      "code": "\nfunction someFunction() {}\nsomeFunction.toLocaleString();\nlet text = `${someFunction}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 194,
+      "code": "unknownObject.toString();",
+      "options": null
+    },
+    {
+      "index": 195,
+      "code": "unknownObject.toLocaleString();",
+      "options": null
+    },
+    {
+      "index": 196,
+      "code": "unknownObject.someOtherMethod();",
+      "options": null
+    },
+    {
+      "index": 197,
+      "code": "\nclass CustomToString {\n  toString() {\n    return 'Hello, world!';\n  }\n}\n'' + new CustomToString();\n    ",
+      "options": null
+    },
+    {
+      "index": 198,
+      "code": "\nclass Foo {\n  toString(): string;\n  toString(options: { verbose: boolean }): string;\n  toString(options?: { verbose: boolean }) {\n    return 'Hello, world!';\n  }\n}\n'' + new Foo();\n    ",
+      "options": null
+    },
+    {
+      "index": 199,
+      "code": "\nclass Foo {\n  valueOf() {\n    return 1;\n  }\n}\n'' + new Foo();\n    ",
+      "options": null
+    },
+    {
+      "index": 200,
+      "code": "\nconst literalWithToString = {\n  toString: () => 'Hello, world!',\n};\n'' + literalWithToString;\n    ",
+      "options": null
+    },
+    {
+      "index": 201,
+      "code": "\nconst printer = (inVar: string | number | boolean) => {\n  inVar.toString();\n};\nprinter('');\nprinter(1);\nprinter(true);\n    ",
+      "options": null
+    },
+    {
+      "index": 202,
+      "code": "\nconst printer = (inVar: string | number | boolean) => {\n  inVar.toLocaleString();\n};\nprinter('');\nprinter(1);\nprinter(true);\n    ",
+      "options": null
+    },
+    {
+      "index": 203,
+      "code": "let _ = {} * {};",
+      "options": null
+    },
+    {
+      "index": 204,
+      "code": "let _ = {} / {};",
+      "options": null
+    },
+    {
+      "index": 205,
+      "code": "let _ = ({} *= {});",
+      "options": null
+    },
+    {
+      "index": 206,
+      "code": "let _ = ({} /= {});",
+      "options": null
+    },
+    {
+      "index": 207,
+      "code": "let _ = ({} = {});",
+      "options": null
+    },
+    {
+      "index": 208,
+      "code": "let _ = {} == {};",
+      "options": null
+    },
+    {
+      "index": 209,
+      "code": "let _ = {} === {};",
+      "options": null
+    },
+    {
+      "index": 210,
+      "code": "let _ = {} in {};",
+      "options": null
+    },
+    {
+      "index": 211,
+      "code": "let _ = {} & {};",
+      "options": null
+    },
+    {
+      "index": 212,
+      "code": "let _ = {} ^ {};",
+      "options": null
+    },
+    {
+      "index": 213,
+      "code": "let _ = {} << {};",
+      "options": null
+    },
+    {
+      "index": 214,
+      "code": "let _ = {} >> {};",
+      "options": null
+    },
+    {
+      "index": 215,
+      "code": "\nfunction tag() {}\ntag`${{}}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 216,
+      "code": "\n      function tag() {}\n      tag`${{}}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 217,
+      "code": "\n      interface Brand {}\n      function test(v: string & Brand): string {\n        return `${v}`;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 218,
+      "code": "'' += new Error();",
+      "options": null
+    },
+    {
+      "index": 219,
+      "code": "'' += new URL();",
+      "options": null
+    },
+    {
+      "index": 220,
+      "code": "'' += new URLSearchParams();",
+      "options": null
+    },
+    {
+      "index": 221,
+      "code": "\nNumber(1);\n    ",
+      "options": null
+    },
+    {
+      "index": 222,
+      "code": "String(/regex/);",
+      "options": {
+        "checkUnknown": false,
+        "ignoredTypeNames": [
+          "RegExp"
+        ]
+      }
+    },
+    {
+      "index": 223,
+      "code": "\ntype Foo = { a: string } | { b: string };\ndeclare const foo: Foo;\nString(foo);\n      ",
+      "options": {
+        "checkUnknown": false,
+        "ignoredTypeNames": [
+          "Foo"
+        ]
+      }
+    },
+    {
+      "index": 224,
+      "code": "\nfunction String(value) {\n  return value;\n}\ndeclare const myValue: object;\nString(myValue);\n",
+      "skip": true,
+      "options": null
+    },
+    {
+      "index": 225,
+      "code": "\nimport { String } from 'foo';\nString({});\n    ",
+      "options": null
+    },
+    {
+      "index": 226,
+      "code": "\ndeclare module 'guid' {\n  export function toString(id: number): string;\n  export function toString(id: number, format: string): string;\n}\nimport * as GUID from 'guid';\nGUID.toString(123);\n    ",
+      "options": null
+    },
+    {
+      "index": 227,
+      "code": "\n['foo', 'bar'].join('');\n    ",
+      "options": null
+    },
+    {
+      "index": 228,
+      "code": "\n([{ foo: 'foo' }, 'bar'] as string[]).join('');\n    ",
+      "options": null
+    },
+    {
+      "index": 229,
+      "code": "\nfunction foo<T extends string>(array: T[]) {\n  return array.join();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 230,
+      "code": "\nclass Foo {\n  toString() {\n    return '';\n  }\n}\n[new Foo()].join();\n    ",
+      "options": null
+    },
+    {
+      "index": 231,
+      "code": "\nclass Foo {\n  join() {}\n}\nconst foo = new Foo();\nfoo.join();\n    ",
+      "options": null
+    },
+    {
+      "index": 232,
+      "code": "\ndeclare const array: string[];\narray.join('');\n    ",
+      "options": null
+    },
+    {
+      "index": 233,
+      "code": "\nclass Foo {\n  foo: string;\n}\ndeclare const array: (string & Foo)[];\narray.join('');\n    ",
+      "options": null
+    },
+    {
+      "index": 234,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const array: (string & Foo)[] | (string & Bar)[];\narray.join('');\n    ",
+      "options": null
+    },
+    {
+      "index": 235,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const array: (string & Foo)[] & (string & Bar)[];\narray.join('');\n    ",
+      "options": null
+    },
+    {
+      "index": 236,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const tuple: [string & Foo, string & Bar];\ntuple.join('');\n    ",
+      "options": null
+    },
+    {
+      "index": 237,
+      "code": "\nclass Foo {\n  foo: string;\n}\ndeclare const tuple: [string] & [Foo];\ntuple.join('');\n    ",
+      "options": null
+    },
+    {
+      "index": 238,
+      "code": "\nString(['foo', 'bar']);\n    ",
+      "options": null
+    },
+    {
+      "index": 239,
+      "code": "\nString([{ foo: 'foo' }, 'bar'] as string[]);\n    ",
+      "options": null
+    },
+    {
+      "index": 240,
+      "code": "\nfunction foo<T extends string>(array: T[]) {\n  return String(array);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 241,
+      "code": "\nclass Foo {\n  toString() {\n    return '';\n  }\n}\nString([new Foo()]);\n    ",
+      "options": null
+    },
+    {
+      "index": 242,
+      "code": "\ndeclare const array: string[];\nString(array);\n    ",
+      "options": null
+    },
+    {
+      "index": 243,
+      "code": "\nclass Foo {\n  foo: string;\n}\ndeclare const array: (string & Foo)[];\nString(array);\n    ",
+      "options": null
+    },
+    {
+      "index": 244,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const array: (string & Foo)[] | (string & Bar)[];\nString(array);\n    ",
+      "options": null
+    },
+    {
+      "index": 245,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const array: (string & Foo)[] & (string & Bar)[];\nString(array);\n    ",
+      "options": null
+    },
+    {
+      "index": 246,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const tuple: [string & Foo, string & Bar];\nString(tuple);\n    ",
+      "options": null
+    },
+    {
+      "index": 247,
+      "code": "\nclass Foo {\n  foo: string;\n}\ndeclare const tuple: [string] & [Foo];\nString(tuple);\n    ",
+      "options": null
+    },
+    {
+      "index": 248,
+      "code": "\n['foo', 'bar'].toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 249,
+      "code": "\n([{ foo: 'foo' }, 'bar'] as string[]).toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 250,
+      "code": "\nfunction foo<T extends string>(array: T[]) {\n  return array.toString();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 251,
+      "code": "\nclass Foo {\n  toString() {\n    return '';\n  }\n}\n[new Foo()].toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 252,
+      "code": "\ndeclare const array: string[];\narray.toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 253,
+      "code": "\nclass Foo {\n  foo: string;\n}\ndeclare const array: (string & Foo)[];\narray.toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 254,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const array: (string & Foo)[] | (string & Bar)[];\narray.toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 255,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const array: (string & Foo)[] & (string & Bar)[];\narray.toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 256,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const tuple: [string & Foo, string & Bar];\ntuple.toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 257,
+      "code": "\nclass Foo {\n  foo: string;\n}\ndeclare const tuple: [string] & [Foo];\ntuple.toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 258,
+      "code": "\n`${['foo', 'bar']}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 259,
+      "code": "\n`${[{ foo: 'foo' }, 'bar'] as string[]}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 260,
+      "code": "\nfunction foo<T extends string>(array: T[]) {\n  return `${array}`;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 261,
+      "code": "\nclass Foo {\n  toString() {\n    return '';\n  }\n}\n`${[new Foo()]}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 262,
+      "code": "\ndeclare const array: string[];\n`${array}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 263,
+      "code": "\nclass Foo {\n  foo: string;\n}\ndeclare const array: (string & Foo)[];\n`${array}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 264,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const array: (string & Foo)[] | (string & Bar)[];\n`${array}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 265,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const array: (string & Foo)[] & (string & Bar)[];\n`${array}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 266,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const tuple: [string & Foo, string & Bar];\n`${tuple}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 267,
+      "code": "\nclass Foo {\n  foo: string;\n}\ndeclare const tuple: [string] & [Foo];\n`${tuple}`;\n    ",
+      "options": null
+    },
+    {
+      "index": 268,
+      "code": "\nlet objects = [{}, {}];\nString(...objects);\n    ",
+      "options": null
+    },
+    {
+      "index": 269,
+      "code": "\ntype Constructable<Entity> = abstract new (...args: any[]) => Entity;\n\ninterface GuildChannel {\n  toString(): `<#${string}>`;\n}\n\ndeclare const foo: Constructable<GuildChannel & { bar: 1 }>;\nclass ExtendedGuildChannel extends foo {}\ndeclare const bb: ExtendedGuildChannel;\nbb.toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 270,
+      "code": "\ntype Constructable<Entity> = abstract new (...args: any[]) => Entity;\n\ninterface GuildChannel {\n  toString(): `<#${string}>`;\n}\n\ndeclare const foo: Constructable<{ bar: 1 } & GuildChannel>;\nclass ExtendedGuildChannel extends foo {}\ndeclare const bb: ExtendedGuildChannel;\nbb.toString();\n    ",
+      "options": null
+    },
+    {
+      "index": 271,
+      "code": "\ntype Value = string | Value[];\ndeclare const v: Value;\n\nString(v);\n    ",
+      "options": null
+    },
+    {
+      "index": 272,
+      "code": "\ntype Value = (string | Value)[];\ndeclare const v: Value;\n\nString(v);\n    ",
+      "options": null
+    },
+    {
+      "index": 273,
+      "code": "\ntype Value = Value[];\ndeclare const v: Value;\n\nString(v);\n    ",
+      "options": null
+    },
+    {
+      "index": 274,
+      "code": "\ntype Value = [Value];\ndeclare const v: Value;\n\nString(v);\n    ",
+      "options": null
+    },
+    {
+      "index": 275,
+      "code": "\ndeclare const v: ('foo' | 'bar')[][];\nString(v);\n    ",
+      "options": null
+    },
+    {
+      "index": 276,
+      "code": "declare const x: unknown;\n`${x})`;\n",
+      "options": null
+    },
+    {
+      "index": 277,
+      "code": "declare const x: unknown;\nx.toString();\n",
+      "options": null
+    },
+    {
+      "index": 278,
+      "code": "declare const x: unknown;\nx.toLocaleString();\n",
+      "options": null
+    },
+    {
+      "index": 279,
+      "code": "declare const x: unknown;\n'' + x;\n",
+      "options": null
+    },
+    {
+      "index": 280,
+      "code": "declare const x: unknown;\nString(x);\n",
+      "options": null
+    },
+    {
+      "index": 281,
+      "code": "declare const x: unknown;\n'' += x;\n",
+      "options": null
+    },
+    {
+      "index": 282,
+      "code": "function foo<T>(x: T) {\n  String(x);\n}\n",
+      "options": null
+    },
+    {
+      "index": 283,
+      "code": "declare const x: any;\n`${x})`;\n",
+      "options": null
+    },
+    {
+      "index": 284,
+      "code": "declare const x: any;\nx.toString();\n",
+      "options": null
+    },
+    {
+      "index": 285,
+      "code": "declare const x: any;\nx.toLocaleString();\n",
+      "options": null
+    },
+    {
+      "index": 286,
+      "code": "declare const x: any;\n'' + x;\n",
+      "options": null
+    },
+    {
+      "index": 287,
+      "code": "declare const x: any;\nString(x);\n",
+      "options": null
+    },
+    {
+      "index": 288,
+      "code": "declare const x: any;\n'' += x;\n",
+      "options": null
+    },
+    {
+      "index": 289,
+      "code": "\nclass Foo extends Error {}\nlet x = new Foo();\nx.toString();",
+      "options": null
+    },
+    {
+      "index": 290,
+      "code": "\nclass Foo<T> extends Error {}\nlet x = new Foo();\nx.toString();",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\ndeclare const x: unknown;\n`${x})`;\n      ",
+      "options": {
+        "checkUnknown": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ndeclare const x: unknown;\nx.toString();\n      ",
+      "options": {
+        "checkUnknown": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ndeclare const x: unknown;\nx.toLocaleString();\n      ",
+      "options": {
+        "checkUnknown": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\ndeclare const x: unknown;\n'' + x;\n      ",
+      "options": {
+        "checkUnknown": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\ndeclare const x: unknown;\nString(x);\n      ",
+      "options": {
+        "checkUnknown": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\ndeclare const x: unknown;\n'' += x;\n      ",
+      "options": {
+        "checkUnknown": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nfunction foo<T>(x: T) {\n  String(x);\n}\n      ",
+      "options": {
+        "checkUnknown": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "`${{}})`;",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "({}).toString();",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "({}).toLocaleString();",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "'' + {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "String({});",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "'' += {};",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\n        let someObjectOrString = Math.random() ? { a: true } : 'text';\n        someObjectOrString.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\n        let someObjectOrString = Math.random() ? { a: true } : 'text';\n        someObjectOrString.toLocaleString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\n        let someObjectOrString = Math.random() ? { a: true } : 'text';\n        someObjectOrString + '';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\n        let someObjectOrObject = Math.random() ? { a: true, b: true } : { a: true };\n        someObjectOrObject.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\n        let someObjectOrObject = Math.random() ? { a: true, b: true } : { a: true };\n        someObjectOrObject.toLocaleString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\n        let someObjectOrObject = Math.random() ? { a: true, b: true } : { a: true };\n        someObjectOrObject + '';\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\n        interface A {}\n        interface B {}\n        function test(intersection: A & B): string {\n          return `${intersection}`;\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\nclass Foo {\n  foo: string;\n}\ndeclare const foo: string | Foo;\n`${foo}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const foo: Bar | Foo;\n`${foo}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\nclass Foo {\n  foo: string;\n}\nclass Bar {\n  bar: string;\n}\ndeclare const foo: Bar & Foo;\n`${foo}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\n        [{}, {}].join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\n        const array = [{}, {}];\n        array.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\n        class A {\n          a: string;\n        }\n        [new A(), 'str'].join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: (string | Foo)[];\n        array.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: (string & Foo) | (string | Foo)[];\n        array.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        class Bar {\n          bar: string;\n        }\n        declare const array: Foo[] & Bar[];\n        array.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: string[] | Foo[];\n        array.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [string, Foo];\n        tuple.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo, Foo];\n        tuple.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo | string, string];\n        tuple.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [string, string] | [Foo, Foo];\n        tuple.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo, string] & [Foo, Foo];\n        tuple.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "code": "\n        const array = ['string', { foo: 'bar' }];\n        array.join('');\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "code": "\n        type Bar = Record<string, string>;\n        function foo<T extends string | Bar>(array: T[]) {\n          return array.join();\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "code": "\n        String([{}, {}]);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "code": "\n        const array = [{}, {}];\n        String(array);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "code": "\n        class A {\n          a: string;\n        }\n        String([new A(), 'str']);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: (string | Foo)[];\n        String(array);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: (string & Foo) | (string | Foo)[];\n        String(array);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        class Bar {\n          bar: string;\n        }\n        declare const array: Foo[] & Bar[];\n        String(array);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: string[] | Foo[];\n        String(array);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [string, Foo];\n        String(tuple);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 45,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo, Foo];\n        String(tuple);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 46,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo | string, string];\n        String(tuple);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 47,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [string, string] | [Foo, Foo];\n        String(tuple);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 48,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo, string] & [Foo, Foo];\n        String(tuple);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 49,
+      "code": "\n        const array = ['string', { foo: 'bar' }];\n        String(array);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 50,
+      "code": "\n        type Bar = Record<string, string>;\n        function foo<T extends string | Bar>(array: T[]) {\n          return String(array);\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 51,
+      "code": "\n        [{}, {}].toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 52,
+      "code": "\n        const array = [{}, {}];\n        array.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 53,
+      "code": "\n        class A {\n          a: string;\n        }\n        [new A(), 'str'].toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 54,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: (string | Foo)[];\n        array.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 55,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: (string & Foo) | (string | Foo)[];\n        array.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 56,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        class Bar {\n          bar: string;\n        }\n        declare const array: Foo[] & Bar[];\n        array.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 57,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: string[] | Foo[];\n        array.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 58,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [string, Foo];\n        tuple.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 59,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo, Foo];\n        tuple.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 60,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo | string, string];\n        tuple.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 61,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [string, string] | [Foo, Foo];\n        tuple.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 62,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo, string] & [Foo, Foo];\n        tuple.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 63,
+      "code": "\n        const array = ['string', { foo: 'bar' }];\n        array.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 64,
+      "code": "\n        type Bar = Record<string, string>;\n        function foo<T extends string | Bar>(array: T[]) {\n          return array.toString();\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 65,
+      "code": "\n        `${[{}, {}]}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 66,
+      "code": "\n        const array = [{}, {}];\n        `${array}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 67,
+      "code": "\n        class A {\n          a: string;\n        }\n        `${[new A(), 'str']}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 68,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: (string | Foo)[];\n        `${array}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 69,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: (string & Foo) | (string | Foo)[];\n        `${array}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 70,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        class Bar {\n          bar: string;\n        }\n        declare const array: Foo[] & Bar[];\n        `${array}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 71,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const array: string[] | Foo[];\n        `${array}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 72,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [string, Foo];\n        `${tuple}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 73,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo, Foo];\n        `${tuple}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 74,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo | string, string];\n        `${tuple}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 75,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [string, string] | [Foo, Foo];\n        `${tuple}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 76,
+      "code": "\n        class Foo {\n          foo: string;\n        }\n        declare const tuple: [Foo, string] & [Foo, Foo];\n        `${tuple}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 77,
+      "code": "\n        const array = ['string', { foo: 'bar' }];\n        `${array}`;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 78,
+      "code": "\n        type Bar = Record<string, string>;\n        function foo<T extends string | Bar>(array: T[]) {\n          return `${array}`;\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 79,
+      "code": "\n        type Bar = Record<string, string>;\n        function foo<T extends string | Bar>(array: T[]) {\n          array[0].toString();\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 80,
+      "code": "\n        type Bar = Record<string, string>;\n        function foo<T extends string | Bar>(value: T) {\n          value.toString();\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 81,
+      "code": "\ntype Bar = Record<string, string>;\ndeclare const foo: Bar | string;\nfoo.toString();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 82,
+      "code": "\n        type Bar = Record<string, string>;\n        function foo<T extends string | Bar>(array: T[]) {\n          return array;\n        }\n        foo([{ foo: 'foo' }]).join();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 83,
+      "code": "\n        type Bar = Record<string, string>;\n        function foo<T extends string | Bar>(array: T[]) {\n          return array;\n        }\n        foo([{ foo: 'foo' }, 'bar']).join();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 84,
+      "code": "\ntype Value = { foo: string } | Value[];\ndeclare const v: Value;\n\nString(v);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 85,
+      "code": "\ntype Value = ({ foo: string } | Value)[];\ndeclare const v: Value;\n\nString(v);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 86,
+      "code": "\ntype Value = [{ foo: string }, Value];\ndeclare const v: Value;\n\nString(v);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 87,
+      "code": "\ntype Mapped = { [K in 'toString']: () => string };\ndeclare const x: Mapped;\n'' + x;\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 88,
+      "code": "\ndeclare const v: { foo: string }[][];\nv.join();\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseArrayJoin",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 89,
+      "code": "\ntype Leaf = { kind: string };\n\ntype BinaryExpression = [Leaf | Expression];\ntype UnaryExpression = [Leaf | Expression];\ntype UpdateExpression = [Leaf | Expression];\ntype CallExpression = [Leaf | Expression];\ntype MemberExpression = [Leaf | Expression];\ntype OptionalMemberExpression = [Leaf | Expression];\ntype OptionalCallExpression = [Leaf | Expression];\ntype AssignmentExpression = [Leaf | Expression];\ntype ConditionalExpression = [Leaf | Expression];\ntype SequenceExpression = [Leaf | Expression];\ntype TSAsExpression = [Leaf | Expression];\n\ntype Expression =\n  | BinaryExpression\n  | UnaryExpression\n  | UpdateExpression\n  | CallExpression\n  | MemberExpression\n  | OptionalMemberExpression\n  | OptionalCallExpression\n  | AssignmentExpression\n  | ConditionalExpression\n  | SequenceExpression\n  | TSAsExpression;\n\ndeclare const node: Expression;\n\nthrow new Error(`Fail: ${node}`);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "baseToString",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

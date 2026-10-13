@@ -1,0 +1,189 @@
+{
+  "test": "TestNoUnnecessaryQualifierRule",
+  "rule": "no-unnecessary-qualifier",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nnamespace X {\n  export type T = number;\n}\n\nnamespace Y {\n  export const x: X.T = 3;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nnamespace A {}\nnamespace A.B {\n  export type Z = 1;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nenum A {\n  X,\n  Y,\n}\n\nenum B {\n  Z = A.X,\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nnamespace X {\n  export type T = number;\n  namespace Y {\n    type T = string;\n    const x: X.T = 0;\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "const x: A.B = 3;",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\nnamespace X {\n  const z = X.y;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\nenum Foo {\n  One,\n}\n\nnamespace Foo {\n  export function bar() {\n    return Foo.One;\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\nnamespace Foo {\n  export enum Foo {\n    One,\n  }\n}\n\nnamespace Foo {\n  export function bar() {\n    return Foo.One;\n  }\n}\n    ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nnamespace A {\n  export type B = number;\n  const x: A.B = 3;\n}\n      ",
+      "options": null,
+      "output": [
+        "\nnamespace A {\n  export type B = number;\n  const x: B = 3;\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\nnamespace A {\n  export const x = 3;\n  export const y = A.x;\n}\n      ",
+      "options": null,
+      "output": [
+        "\nnamespace A {\n  export const x = 3;\n  export const y = x;\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\nnamespace A {\n  export type T = number;\n  export namespace B {\n    const x: A.T = 3;\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nnamespace A {\n  export type T = number;\n  export namespace B {\n    const x: T = 3;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nnamespace A {\n  export namespace B {\n    export type T = number;\n    const x: A.B.T = 3;\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nnamespace A {\n  export namespace B {\n    export type T = number;\n    const x: T = 3;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\nnamespace A {\n  export namespace B.C {\n    export type D = number;\n    const x: A.B.C.D = 3;\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nnamespace A {\n  export namespace B.C {\n    export type D = number;\n    const x: D = 3;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nnamespace Outer {\n  export type T = number;\n  export namespace A.B {}\n  const x: Outer.T = 3;\n}\n      ",
+      "options": null,
+      "output": [
+        "\nnamespace Outer {\n  export type T = number;\n  export namespace A.B {}\n  const x: T = 3;\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nnamespace A {\n  export namespace B {\n    export const x = 3;\n    const y = A.B.x;\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nnamespace A {\n  export namespace B {\n    export const x = 3;\n    const y = x;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nenum A {\n  B,\n  C = A.B,\n}\n      ",
+      "options": null,
+      "output": [
+        "\nenum A {\n  B,\n  C = B,\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nnamespace Foo {\n  export enum A {\n    B,\n    C = Foo.A.B,\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nnamespace Foo {\n  export enum A {\n    B,\n    C = B,\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\nimport * as Foo from './foo';\ndeclare module './foo' {\n  const x: Foo.T = 3;\n}\n      ",
+      "options": null,
+      "output": [
+        "\nimport * as Foo from './foo';\ndeclare module './foo' {\n  const x: T = 3;\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "unnecessaryQualifier",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

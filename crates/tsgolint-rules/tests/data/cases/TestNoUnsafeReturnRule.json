@@ -1,0 +1,611 @@
+{
+  "test": "TestNoUnsafeReturnRule",
+  "rule": "no-unsafe-return",
+  "tsconfig": "tsconfig.noImplicitThis.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nfunction foo() {\n  return;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nfunction foo() {\n  return 1;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nfunction foo() {\n  return '';\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nfunction foo() {\n  return true;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\nfunction foo() {\n  return [];\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "\nfunction foo(): any {\n  return {} as any;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "\ndeclare function foo(arg: () => any): void;\nfoo((): any => 'foo' as any);\n    ",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\ndeclare function foo(arg: null | (() => any)): void;\nfoo((): any => 'foo' as any);\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\nfunction foo(): any[] {\n  return [] as any[];\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\nfunction foo(): Set<any> {\n  return new Set<any>();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\nasync function foo(): Promise<any> {\n  return Promise.resolve({} as any);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\nasync function foo(): Promise<any> {\n  return {} as any;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "\nfunction foo(): object {\n  return Promise.resolve({} as any);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "\nfunction foo(): ReadonlySet<number> {\n  return new Set<any>();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\nfunction foo(): Set<number> {\n  return new Set([1]);\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "\n      type Foo<T = number> = { prop: T };\n      function foo(): Foo {\n        return { prop: 1 } as Foo<number>;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "\n      type Foo = { prop: any };\n      function foo(): Foo {\n        return { prop: '' } as Foo;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "\n      function fn<T extends any>(x: T) {\n        return x;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 18,
+      "code": "\n      function fn<T extends any>(x: T): unknown {\n        return x as any;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 19,
+      "code": "\n      function fn<T extends any>(x: T): unknown[] {\n        return x as any[];\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 20,
+      "code": "\n      function fn<T extends any>(x: T): Set<unknown> {\n        return x as Set<any>;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 21,
+      "code": "\n      async function fn<T extends any>(x: T): Promise<unknown> {\n        return x as any;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 22,
+      "code": "\n      function fn<T extends any>(x: T): Promise<unknown> {\n        return Promise.resolve(x as any);\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 23,
+      "code": "\n      function test(): Map<string, string> {\n        return new Map();\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 24,
+      "code": "\n      function foo(): any {\n        return [] as any[];\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 25,
+      "code": "\n      function foo(): unknown {\n        return [] as any[];\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 26,
+      "code": "\n      declare const value: Promise<any>;\n      function foo() {\n        return value;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 27,
+      "code": "const foo: (() => void) | undefined = () => 1;",
+      "options": null
+    },
+    {
+      "index": 28,
+      "code": "\n      class Foo {\n        public foo(): this {\n          return this;\n        }\n\n        protected then(resolve: () => void): void {\n          resolve();\n        }\n      }\n    ",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nfunction foo() {\n  return 1 as any;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\nfunction foo() {\n  return Object.create(null);\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\nconst foo = () => {\n  return 1 as any;\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "const foo = () => Object.create(null);",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "\nfunction foo() {\n  return [] as any[];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "\nfunction foo() {\n  return [] as Array<any>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\nfunction foo() {\n  return [] as readonly any[];\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\nfunction foo() {\n  return [] as Readonly<any[]>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\nconst foo = () => {\n  return [] as any[];\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "const foo = () => [] as any[];",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\nfunction foo(): Set<string> {\n  return new Set<any>();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturnAssignment",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "\nfunction foo(): Map<string, string> {\n  return new Map<string, any>();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturnAssignment",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "\nfunction foo(): Set<string[]> {\n  return new Set<any[]>();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturnAssignment",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\nfunction foo(): Set<Set<Set<string>>> {\n  return new Set<Set<Set<any>>>();\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturnAssignment",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\ntype Fn = () => Set<string>;\nconst foo1: Fn = () => new Set<any>();\nconst foo2: Fn = function test() {\n  return new Set<any>();\n};\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturnAssignment",
+          "line": 3,
+          "suggestions": []
+        },
+        {
+          "messageId": "unsafeReturnAssignment",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\ntype Fn = () => Set<string>;\nfunction receiver(arg: Fn) {}\nreceiver(() => new Set<any>());\nreceiver(function test() {\n  return new Set<any>();\n});\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturnAssignment",
+          "line": 4,
+          "suggestions": []
+        },
+        {
+          "messageId": "unsafeReturnAssignment",
+          "line": 6,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\nfunction foo() {\n  return this;\n}\n\nfunction bar() {\n  return () => this;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturnThis",
+          "line": 3,
+          "column": 3,
+          "endColumn": 9,
+          "suggestions": []
+        },
+        {
+          "messageId": "unsafeReturnThis",
+          "line": 7,
+          "column": 13,
+          "endColumn": 15,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\ndeclare function foo(arg: null | (() => any)): void;\nfoo(() => 'foo' as any);\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 8,
+          "endColumn": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\nlet value: NotKnown;\n\nfunction example() {\n  return value;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 5,
+          "column": 3,
+          "endColumn": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "\ndeclare const value: any;\nasync function foo() {\n  return value;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 4,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\ndeclare const value: Promise<any>;\nasync function foo(): Promise<number> {\n  return value;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 4,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\nasync function foo(arg: number) {\n  return arg as Promise<any>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\nfunction foo(): Promise<any> {\n  return {} as any;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\nfunction foo(): Promise<object> {\n  return {} as any;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\nasync function foo(): Promise<object> {\n  return Promise.resolve<any>({});\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\nasync function foo(): Promise<object> {\n  return Promise.resolve<Promise<Promise<any>>>({} as Promise<any>);\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\nasync function foo(): Promise<object> {\n  return {} as Promise<Promise<Promise<Promise<any>>>>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "\nasync function foo() {\n  return {} as Promise<Promise<Promise<Promise<any>>>>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\nasync function foo() {\n  return {} as Promise<any> | Promise<object>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "code": "\nasync function foo() {\n  return {} as Promise<any | object>;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "code": "\nasync function foo() {\n  return {} as Promise<any> & { __brand: 'any' };\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 3,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "code": "\ninterface Alias<T> extends Promise<any> {\n  foo: 'bar';\n}\n\ndeclare const value: Alias<number>;\nasync function foo() {\n  return value;\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturn",
+          "line": 8,
+          "column": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "code": "\nimport type { Fn } from 'return-types';\nconst foo: Fn = () => new Set<any>();\n      ",
+      "options": null,
+      "files": {
+        "node_modules/return-types/package.json": "{\n  \"name\": \"return-types\",\n  \"version\": \"1.0.0\",\n  \"types\": \"index.d.ts\"\n}",
+        "node_modules/return-types/index.d.ts": "export type Fn = () => Set<string>;"
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unsafeReturnAssignment",
+          "line": 3,
+          "column": 20,
+          "endColumn": 22,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

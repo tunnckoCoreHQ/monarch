@@ -1,0 +1,62 @@
+[workspace]
+members = [
+    "crates/tsgolint-core",
+    "crates/tsgolint-rules",
+    "crates/tsgolint-rust",
+    "crates/tsgolint-compare",
+]
+resolver = "3"
+
+[workspace.package]
+version = "7.0.2003"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/tunnckoCoreHQ/monarch"
+rust-version = "1.95"
+publish = false
+
+[workspace.dependencies]
+# tsc-rs: the Rust port of TypeScript 7 (typescript-go). goport_core is the
+# compiler below the language service: scanner, parser, binder, checker and
+# program. The fork's `tsgolint-rust-upstream` branch is upstream ts-rust
+# plus four patches: the flow node cache on 32-bit targets, and three wasm
+# memory changes. Only native builds of tsgolint-rust turn on goport_core's
+# `jemalloc` feature, because jemalloc is their global allocator.
+goport_core = { git = "https://github.com/tunnckoCore/ts-rust", rev = "e21a51bc63dd6bbbc60065e5caed911f1d36f2fc", default-features = false }
+goport_util = { git = "https://github.com/tunnckoCore/ts-rust", rev = "e21a51bc63dd6bbbc60065e5caed911f1d36f2fc" }
+
+tsgolint-core = { path = "crates/tsgolint-core" }
+tsgolint-rules = { path = "crates/tsgolint-rules" }
+
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+rustc-hash = "2"
+smallvec = "1"
+libtest-mimic = "0.8"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+# Our crates build fast and incremental; ts-rust and the other dependencies are
+# optimized even in dev and test builds, because the checker is slow without
+# optimizations and the rule tests create thousands of programs.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+opt-level = 3
+debug = false
+
+# Fat LTO with one codegen unit, as ts-rust's own `goport` profile: the
+# checker inlines across goport_core's modules and into our rules. Against
+# no LTO it lints 15% to 20% faster, against thin LTO 5% to 10% (h3, hono,
+# t3web-chat); a clean build takes about 8 minutes and 4.5 GB instead of 4.5
+# minutes and 2.9 GB. Panics still unwind: a rule panic must reach the
+# loading thread (exit code 2).
+[profile.release]
+debug = false
+lto = "fat"
+codegen-units = 1

@@ -1,0 +1,71 @@
+{
+  "test": "TestUnboundMethodSpecBoundBindings",
+  "rule": "unbound-method",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\nfunction sort({ compare }: Intl.Collator, values: string[]) {\n  values.sort(compare);\n}\n",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nfunction sort({ compare }: Intl.Collator = new Intl.Collator()) {\n  ['a', 'b'].sort(compare);\n}\n",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\nlet compare: Intl.Collator['compare'];\n({ compare } = new Intl.Collator());\n",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\nfor (const { compare } of [new Intl.Collator()]) {\n  ['a', 'b'].sort(compare);\n}\n",
+      "options": null
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\nfunction sort({ resolvedOptions }: Intl.Collator) {}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unboundWithoutThisAnnotation",
+          "line": 2,
+          "column": 17,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\ninterface Collator { compare(a: string, b: string): number; }\nfunction sort({ compare }: Collator = new Intl.Collator()) {}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unboundWithoutThisAnnotation",
+          "line": 3,
+          "column": 17,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\ninterface CustomCollator { compare(a: string, b: string): number; }\nfunction sort({ compare }: Intl.Collator | CustomCollator) {}\n",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "unboundWithoutThisAnnotation",
+          "line": 3,
+          "column": 17,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

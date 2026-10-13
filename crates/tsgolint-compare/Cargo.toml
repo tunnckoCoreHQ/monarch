@@ -1,0 +1,16 @@
+[package]
+name = "tsgolint-compare"
+description = "Runs the Go tsgolint and tsgolint-rust on the same headless payload and compares their output."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+
+[dev-dependencies]
+tsgolint-rules.workspace = true
+
+[lints]
+workspace = true

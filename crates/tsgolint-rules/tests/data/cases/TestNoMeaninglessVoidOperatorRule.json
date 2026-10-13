@@ -1,0 +1,191 @@
+{
+  "test": "TestNoMeaninglessVoidOperatorRule",
+  "rule": "no-meaningless-void-operator",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "\n(() => {})();\n\nfunction foo() {}\nfoo(); // nothing to discard\n\nfunction bar(x: number) {\n  void x;\n  return 2;\n}\nvoid bar(); // discarding a number\n    ",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\nfunction bar(x: never) {\n  void x;\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "declare let x: number; void (x = 1);",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "declare let x: number; () => void (x = 1);",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "declare let x: number; void (x += 1);",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "declare let x: number; declare let y: number; void (x = y = 1);",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "declare let x: string; declare function getValue(): string; void (x = getValue());",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "declare const obj: { prop: number }; void (obj.prop = 1);",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "declare let x: number; declare let y: number; void ((x = 1), (y = 2));",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "declare let x: undefined; () => void (((x = undefined)));",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "declare let x: void; declare function fn(): void; void (x = fn());",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "declare let x: undefined; void (x ??= undefined);",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "declare let x: undefined; void ((x = undefined) as undefined);",
+      "options": null
+    },
+    {
+      "index": 13,
+      "code": "declare let x: undefined; void (<undefined>(x = undefined));",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "declare let x: undefined; void ((x = undefined) satisfies undefined);",
+      "options": null
+    },
+    {
+      "index": 15,
+      "code": "declare let x: undefined; void ((x = undefined), (x = undefined));",
+      "options": null
+    },
+    {
+      "index": 16,
+      "code": "declare let x: undefined; void ((x = undefined)!, ((x = undefined) as undefined));",
+      "options": null
+    },
+    {
+      "index": 17,
+      "code": "declare let x: undefined; void ((x = undefined)!);",
+      "options": {
+        "checkNever": true
+      }
+    },
+    {
+      "index": 18,
+      "code": "declare let x: never; declare function fail(): never; void (x = fail());",
+      "options": {
+        "checkNever": true
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "void (() => {})();",
+      "options": null,
+      "output": [
+        " (() => {})();"
+      ],
+      "errors": [
+        {
+          "messageId": "meaninglessVoidOperator",
+          "line": 1,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\nfunction foo() {}\nvoid foo();\n      ",
+      "options": null,
+      "output": [
+        "\nfunction foo() {}\n foo();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "meaninglessVoidOperator",
+          "line": 3,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\nfunction bar(x: never) {\n  void x;\n}\n      ",
+      "options": {
+        "checkNever": true
+      },
+      "output": [],
+      "errors": [
+        {
+          "messageId": "meaninglessVoidOperator",
+          "line": 3,
+          "column": 3,
+          "suggestions": [
+            {
+              "messageId": "removeVoid",
+              "output": "\nfunction bar(x: never) {\n   x;\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "\nconst foo = (() => {}) as (() => void) | undefined;\nvoid foo?.();\n      ",
+      "options": null,
+      "output": [
+        "\nconst foo = (() => {}) as (() => void) | undefined;\n foo?.();\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "meaninglessVoidOperator",
+          "line": 3,
+          "column": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "declare let x: undefined; declare function fn(): void; void ((x = undefined), fn());",
+      "options": null,
+      "output": [
+        "declare let x: undefined; declare function fn(): void;  ((x = undefined), fn());"
+      ],
+      "errors": [
+        {
+          "messageId": "meaninglessVoidOperator",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

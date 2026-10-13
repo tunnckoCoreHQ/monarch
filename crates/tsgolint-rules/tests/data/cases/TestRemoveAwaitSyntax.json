@@ -1,0 +1,106 @@
+{
+  "test": "TestRemoveAwaitSyntax",
+  "rule": "return-await",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "const test = async () => await { a: 1 };",
+      "options": null,
+      "output": [
+        "const test = async () => ({ a: 1 });"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "const test = async () => await { a: 1 }.a;",
+      "options": null,
+      "output": [
+        "const test = async () => ({ a: 1 }.a);"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "const test = async () => await ({ a: 1 });",
+      "options": null,
+      "output": [
+        "const test = async () => ({ a: 1 });"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "const test = async () => (await { a: 1 });",
+      "options": null,
+      "output": [
+        "const test = async () => ({ a: 1 });"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "const test = async () => (true ? await { a: 1 } : 2);",
+      "options": null,
+      "output": [
+        "const test = async () => (true ? { a: 1 } : 2);"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "const test = async () => await /* comment */ 1;",
+      "options": null,
+      "output": [
+        "const test = async () => /* comment */ 1;"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "const test = async () => await /* comment */ { a: 1 };",
+      "options": null,
+      "output": [
+        "const test = async () => /* comment */ ({ a: 1 });"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}

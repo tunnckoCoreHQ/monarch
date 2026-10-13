@@ -1,0 +1,1085 @@
+{
+  "test": "TestReturnAwait",
+  "rule": "return-await",
+  "tsconfig": "tsconfig.minimal.json",
+  "valid": [
+    {
+      "index": 0,
+      "code": "return;",
+      "options": null
+    },
+    {
+      "index": 1,
+      "code": "\n      function test() {\n        return;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 2,
+      "code": "\n      function test() {\n        return 1;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 3,
+      "code": "\n      async function test() {\n        return;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 4,
+      "code": "\n      async function test() {\n        return 1;\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 5,
+      "code": "const test = () => 1;",
+      "options": null
+    },
+    {
+      "index": 6,
+      "code": "const test = async () => 1;",
+      "options": null
+    },
+    {
+      "index": 7,
+      "code": "\n      async function test() {\n        return Promise.resolve(1);\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 8,
+      "code": "\n      async function test() {\n        try {\n          return await Promise.resolve(1);\n        } catch (e) {\n          return await Promise.resolve(2);\n        } finally {\n          console.log('cleanup');\n        }\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 9,
+      "code": "\nconst fn = (): any => null;\nasync function test() {\n  return await fn();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 10,
+      "code": "\nconst fn = (): unknown => null;\nasync function test() {\n  return await fn();\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 11,
+      "code": "\nasync function test(unknownParam: unknown) {\n  try {\n    return await unknownParam;\n  } finally {\n    console.log('In finally block');\n  }\n}\n    ",
+      "options": null
+    },
+    {
+      "index": 12,
+      "code": "\n        async function test() {\n          if (Math.random() < 0.33) {\n            return await Promise.resolve(1);\n          } else if (Math.random() < 0.5) {\n            return Promise.resolve(2);\n          }\n\n          try {\n          } catch (e) {\n            return await Promise.resolve(3);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      ",
+      "options": "error-handling-correctness-only"
+    },
+    {
+      "index": 13,
+      "code": "\n      async function test() {\n        try {\n          const one = await Promise.resolve(1);\n          return one;\n        } catch (e) {\n          const two = await Promise.resolve(2);\n          return two;\n        } finally {\n          console.log('cleanup');\n        }\n      }\n    ",
+      "options": null
+    },
+    {
+      "index": 14,
+      "code": "\n        function test() {\n          return 1;\n        }\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 15,
+      "code": "\n        async function test() {\n          return 1;\n        }\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 16,
+      "code": "const test = () => 1;",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 17,
+      "code": "const test = async () => 1;",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 18,
+      "code": "\n        async function test() {\n          return Promise.resolve(1);\n        }\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 19,
+      "code": "\n        async function test() {\n          try {\n            return await Promise.resolve(1);\n          } catch (e) {\n            return await Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 20,
+      "code": "\n        async function test() {\n          try {\n            throw 'foo';\n          } catch (e) {\n            return Promise.resolve(1);\n          }\n        }\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 21,
+      "code": "\n        async function test() {\n          try {\n            throw 'foo';\n          } catch (e) {\n            throw 'foo2';\n          } finally {\n            return Promise.resolve(1);\n          }\n        }\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 22,
+      "code": "\n        async function test() {\n          try {\n            const one = await Promise.resolve(1);\n            return one;\n          } catch (e) {\n            const two = await Promise.resolve(2);\n            return two;\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 23,
+      "code": "\n        async function test() {\n          return Promise.resolve(1);\n        }\n      ",
+      "options": "never"
+    },
+    {
+      "index": 24,
+      "code": "const test = async () => Promise.resolve(1);",
+      "options": "never"
+    },
+    {
+      "index": 25,
+      "code": "\n        async function test() {\n          try {\n            return Promise.resolve(1);\n          } catch (e) {\n            return Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      ",
+      "options": "never"
+    },
+    {
+      "index": 26,
+      "code": "\n        async function test() {\n          return await Promise.resolve(1);\n        }\n      ",
+      "options": "always"
+    },
+    {
+      "index": 27,
+      "code": "const test = async () => await Promise.resolve(1);",
+      "options": "always"
+    },
+    {
+      "index": 28,
+      "code": "const f = (): Promise<number> => Promise.resolve(1);",
+      "options": "always"
+    },
+    {
+      "index": 29,
+      "code": "const f = (): Promise<number> => Promise.resolve(1);",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 30,
+      "code": "const f = (): Promise<number> => Promise.resolve(1);",
+      "options": "error-handling-correctness-only"
+    },
+    {
+      "index": 31,
+      "code": "\n        async function test() {\n          try {\n            return await Promise.resolve(1);\n          } catch (e) {\n            return await Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      ",
+      "options": "always"
+    },
+    {
+      "index": 32,
+      "code": "\n        declare function foo(): Promise<boolean>;\n\n        function bar(baz: boolean): Promise<boolean> | boolean {\n          if (baz) {\n            return true;\n          } else {\n            return foo();\n          }\n        }\n      ",
+      "options": "always"
+    },
+    {
+      "index": 33,
+      "code": "\n        async function test(): Promise<string> {\n          const res = await Promise.resolve('{}');\n          try {\n            return JSON.parse(res);\n          } catch (error) {\n            return res;\n          }\n        }\n      ",
+      "options": null
+    },
+    {
+      "index": 34,
+      "code": "\n        async function test() {\n          const res = await Promise.resolve('{}');\n          try {\n            async function nested() {\n              return Promise.resolve('ok');\n            }\n            return await nested();\n          } catch (error) {\n            return Promise.resolve('error');\n          }\n        }\n      ",
+      "options": null
+    },
+    {
+      "index": 35,
+      "code": "\nasync function f() {\n  try {\n  } catch {\n    try {\n    } catch {\n      return Promise.reject();\n    }\n  }\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 36,
+      "code": "\nasync function f() {\n  try {\n  } finally {\n    try {\n    } catch {\n      return Promise.reject();\n    }\n  }\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 37,
+      "code": "\nasync function f() {\n  try {\n  } finally {\n    try {\n    } finally {\n      try {\n      } catch {\n        return Promise.reject();\n      }\n    }\n  }\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 38,
+      "code": "\ndeclare const bleh: any;\nasync function f() {\n  using something = bleh;\n  return await Promise.resolve(2);\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 39,
+      "code": "\ndeclare const bleh: any;\nasync function f() {\n  await using something = bleh;\n  return await Promise.resolve(2);\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 40,
+      "code": "\ndeclare const bleh: any;\nasync function f() {\n  using something = bleh;\n  {\n    return await Promise.resolve(2);\n  }\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 41,
+      "code": "\ndeclare const bleh: any;\nasync function f() {\n  return Promise.resolve(2);\n  using something = bleh;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 42,
+      "code": "\ndeclare const bleh: any;\nasync function f() {\n  return await Promise.resolve(2);\n  using something = bleh;\n}\n      ",
+      "options": "always"
+    },
+    {
+      "index": 43,
+      "code": "\ndeclare function asyncFn(): Promise<unknown>;\nasync function returnAwait() {\n  using _ = {\n    [Symbol.dispose]: () => {\n      console.log('dispose');\n    },\n  };\n\n  return await asyncFn();\n}\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 44,
+      "code": "\ndeclare function asyncFn(): Promise<unknown>;\nasync function outerFunction() {\n  using _ = {\n    [Symbol.dispose]: () => {\n      console.log('dispose');\n    },\n  };\n\n  async function innerFunction() {\n    return asyncFn();\n  }\n}\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 45,
+      "code": "\ndeclare function asyncFn(): Promise<unknown>;\nasync function outerFunction() {\n  using _ = {\n    [Symbol.dispose]: () => {\n      console.log('dispose');\n    },\n  };\n\n  const innerFunction = async () => asyncFn();\n}\n      ",
+      "options": "in-try-catch"
+    },
+    {
+      "index": 46,
+      "code": "\nusing foo = 1 as any;\nreturn Promise.resolve(42);\n      ",
+      "options": null
+    },
+    {
+      "index": 47,
+      "code": "\n{\n  using foo = 1 as any;\n  return Promise.resolve(42);\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 48,
+      "code": "\nasync function wrapper<T>(value: T) {\n  return await value;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 49,
+      "code": "\nasync function wrapper<T extends unknown>(value: T) {\n  return await value;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 50,
+      "code": "\nasync function wrapper<T extends any>(value: T) {\n  return await value;\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 51,
+      "code": "\nclass C<T> {\n  async wrapper<T>(value: T) {\n    return await value;\n  }\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 52,
+      "code": "\nclass C<R> {\n  async wrapper<T extends R>(value: T) {\n    return await value;\n  }\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 53,
+      "code": "\nclass C<R extends unknown> {\n  async wrapper<T extends R>(value: T) {\n    return await value;\n  }\n}\n      ",
+      "options": null
+    },
+    {
+      "index": 54,
+      "code": "const example = () => Promise.resolve();",
+      "options": "always"
+    }
+  ],
+  "invalid": [
+    {
+      "index": 0,
+      "code": "\n        async function test() {\n          return await 1;\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        async function test() {\n          return 1;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "code": "\n        async function test() {\n          const foo = 1;\n          return await { foo };\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        async function test() {\n          const foo = 1;\n          return { foo };\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "code": "\n        async function test() {\n          const foo = 1;\n          return await foo;\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        async function test() {\n          const foo = 1;\n          return foo;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "code": "const test = async () => await 1;",
+      "options": null,
+      "output": [
+        "const test = async () => 1;"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "code": "const test = async () => await /* comment */ 1;",
+      "options": null,
+      "output": [
+        "const test = async () => /* comment */ 1;"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "code": "const test = async () => await Promise.resolve(1);",
+      "options": null,
+      "output": [
+        "const test = async () => Promise.resolve(1);"
+      ],
+      "errors": [
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "code": "\n        async function test() {\n          try {\n            return Promise.resolve(1);\n          } catch (e) {\n            return Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      ",
+      "options": "error-handling-correctness-only",
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        async function test() {\n          try {\n            return await Promise.resolve(1);\n          } catch (e) {\n            return Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        async function test() {\n          try {\n            return Promise.resolve(1);\n          } catch (e) {\n            return await Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "code": "\n        async function test() {\n          try {\n            return Promise.resolve(1);\n          } catch (e) {\n            return Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      ",
+      "options": "always",
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        async function test() {\n          try {\n            return await Promise.resolve(1);\n          } catch (e) {\n            return Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        async function test() {\n          try {\n            return Promise.resolve(1);\n          } catch (e) {\n            return await Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "code": "\n        async function test() {\n          try {\n            return Promise.resolve(1);\n          } catch (e) {\n            return Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      ",
+      "options": "in-try-catch",
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        async function test() {\n          try {\n            return await Promise.resolve(1);\n          } catch (e) {\n            return Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        async function test() {\n          try {\n            return Promise.resolve(1);\n          } catch (e) {\n            return await Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "code": "\n        async function test() {\n          return await Promise.resolve(1);\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        async function test() {\n          return Promise.resolve(1);\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 10,
+      "code": "\n        async function test() {\n          return await 1;\n        }\n      ",
+      "options": "in-try-catch",
+      "output": [
+        "\n        async function test() {\n          return 1;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 11,
+      "code": "const test = async () => await 1;",
+      "options": "in-try-catch",
+      "output": [
+        "const test = async () => 1;"
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 12,
+      "code": "const test = async () => await Promise.resolve(1);",
+      "options": "in-try-catch",
+      "output": [
+        "const test = async () => Promise.resolve(1);"
+      ],
+      "errors": [
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 13,
+      "code": "\n        async function test() {\n          return await Promise.resolve(1);\n        }\n      ",
+      "options": "in-try-catch",
+      "output": [
+        "\n        async function test() {\n          return Promise.resolve(1);\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 14,
+      "code": "\n        async function test() {\n          return await 1;\n        }\n      ",
+      "options": "never",
+      "output": [
+        "\n        async function test() {\n          return 1;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 15,
+      "code": "\n        async function test() {\n          try {\n            return await Promise.resolve(1);\n          } catch (e) {\n            return await Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      ",
+      "options": "never",
+      "output": [],
+      "errors": [
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 4,
+          "suggestions": [
+            {
+              "messageId": "disallowedPromiseAwaitSuggestion",
+              "output": "\n        async function test() {\n          try {\n            return Promise.resolve(1);\n          } catch (e) {\n            return await Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      "
+            }
+          ]
+        },
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 6,
+          "suggestions": [
+            {
+              "messageId": "disallowedPromiseAwaitSuggestion",
+              "output": "\n        async function test() {\n          try {\n            return await Promise.resolve(1);\n          } catch (e) {\n            return Promise.resolve(2);\n          } finally {\n            console.log('cleanup');\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 16,
+      "code": "\n        async function test() {\n          return await Promise.resolve(1);\n        }\n      ",
+      "options": "never",
+      "output": [
+        "\n        async function test() {\n          return Promise.resolve(1);\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 17,
+      "code": "\n        async function test() {\n          return await 1;\n        }\n      ",
+      "options": "always",
+      "output": [
+        "\n        async function test() {\n          return 1;\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 18,
+      "code": "\n        async function test() {\n          return Promise.resolve(1);\n        }\n      ",
+      "options": "always",
+      "output": [
+        "\n        async function test() {\n          return await Promise.resolve(1);\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 19,
+      "code": "const test = async () => Promise.resolve(1);",
+      "options": "always",
+      "output": [
+        "const test = async () => await Promise.resolve(1);"
+      ],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 1,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 20,
+      "code": "\nasync function foo() {}\nasync function bar() {}\nasync function baz() {}\nasync function qux() {}\nasync function buzz() {\n  return (await foo()) ? bar() : baz();\n}\n      ",
+      "options": "always",
+      "output": [
+        "\nasync function foo() {}\nasync function bar() {}\nasync function baz() {}\nasync function qux() {}\nasync function buzz() {\n  return (await foo()) ? await bar() : await baz();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 7,
+          "suggestions": []
+        },
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 21,
+      "code": "\nasync function foo() {}\nasync function bar() {}\nasync function baz() {}\nasync function qux() {}\nasync function buzz() {\n  return (await foo())\n    ? (\n      bar ? bar() : baz()\n    ) : baz ? baz() : bar();\n}\n      ",
+      "options": "always",
+      "output": [
+        "\nasync function foo() {}\nasync function bar() {}\nasync function baz() {}\nasync function qux() {}\nasync function buzz() {\n  return (await foo())\n    ? (\n      bar ? await bar() : await baz()\n    ) : baz ? await baz() : await bar();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 10,
+          "suggestions": []
+        },
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 10,
+          "suggestions": []
+        },
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 9,
+          "suggestions": []
+        },
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 9,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 22,
+      "code": "\nasync function foo() {}\nasync function bar() {}\nasync function buzz() {\n  return (await foo()) ? await 1 : bar();\n}\n      ",
+      "options": "always",
+      "output": [
+        "\nasync function foo() {}\nasync function bar() {}\nasync function buzz() {\n  return (await foo()) ? 1 : await bar();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 5,
+          "suggestions": []
+        },
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 23,
+      "code": "\nasync function foo() {}\nasync function bar() {}\nasync function baz() {}\nconst buzz = async () => ((await foo()) ? bar() : baz());\n      ",
+      "options": "always",
+      "output": [
+        "\nasync function foo() {}\nasync function bar() {}\nasync function baz() {}\nconst buzz = async () => ((await foo()) ? await bar() : await baz());\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 5,
+          "suggestions": []
+        },
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 5,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 24,
+      "code": "\nasync function foo() {}\nasync function bar() {}\nconst buzz = async () => ((await foo()) ? await 1 : bar());\n      ",
+      "options": "always",
+      "output": [
+        "\nasync function foo() {}\nasync function bar() {}\nconst buzz = async () => ((await foo()) ? 1 : await bar());\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 4,
+          "suggestions": []
+        },
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 25,
+      "code": "\nasync function test<T>(): Promise<T> {\n  const res = await fetch('...');\n  try {\n    return res.json() as Promise<T>;\n  } catch (err) {\n    throw Error('Request Failed.');\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\nasync function test<T>(): Promise<T> {\n  const res = await fetch('...');\n  try {\n    return await (res.json() as Promise<T>);\n  } catch (err) {\n    throw Error('Request Failed.');\n  }\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 26,
+      "code": "\n        async function test() {\n          try {\n            const callback1 = function () {};\n            const callback2 = async function () {};\n            function callback3() {}\n            async function callback4() {}\n            const callback5 = () => {};\n            const callback6 = async () => {};\n            return Promise.resolve('try');\n          } finally {\n            return Promise.resolve('finally');\n          }\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 10,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        async function test() {\n          try {\n            const callback1 = function () {};\n            const callback2 = async function () {};\n            function callback3() {}\n            async function callback4() {}\n            const callback5 = () => {};\n            const callback6 = async () => {};\n            return await Promise.resolve('try');\n          } finally {\n            return Promise.resolve('finally');\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 27,
+      "code": "\n        async function bar() {}\n        async function foo() {\n          try {\n            return undefined || bar();\n          } catch {}\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        async function bar() {}\n        async function foo() {\n          try {\n            return await (undefined || bar());\n          } catch {}\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 28,
+      "code": "\n        async function bar() {}\n        async function foo() {\n          try {\n            return bar() || undefined || bar();\n          } catch {}\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        async function bar() {}\n        async function foo() {\n          try {\n            return await (bar() || undefined || bar());\n          } catch {}\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 29,
+      "code": "\nasync function bar() {}\nasync function func1() {\n  try {\n    return null ?? bar();\n  } catch {}\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\nasync function bar() {}\nasync function func1() {\n  try {\n    return await (null ?? bar());\n  } catch {}\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 30,
+      "code": "\nasync function bar() {}\nasync function func2() {\n  try {\n    return 1 && bar();\n  } catch {}\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 5,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\nasync function bar() {}\nasync function func2() {\n  try {\n    return await (1 && bar());\n  } catch {}\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 31,
+      "code": "\nconst foo = {\n  bar: async function () {},\n};\nasync function func3() {\n  try {\n    return foo.bar();\n  } catch {}\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\nconst foo = {\n  bar: async function () {},\n};\nasync function func3() {\n  try {\n    return await foo.bar();\n  } catch {}\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 32,
+      "code": "\n        class X {\n          async bar() {\n            return;\n          }\n          async func2() {\n            try {\n              return this.bar();\n            } catch {}\n          }\n        }\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 8,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\n        class X {\n          async bar() {\n            return;\n          }\n          async func2() {\n            try {\n              return await this.bar();\n            } catch {}\n          }\n        }\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 33,
+      "code": "\n        async function test() {\n          const res = await Promise.resolve('{}');\n          try {\n            async function nested() {\n              return Promise.resolve('ok');\n            }\n            return await nested();\n          } catch (error) {\n            return await Promise.resolve('error');\n          }\n        }\n      ",
+      "options": null,
+      "output": [
+        "\n        async function test() {\n          const res = await Promise.resolve('{}');\n          try {\n            async function nested() {\n              return Promise.resolve('ok');\n            }\n            return await nested();\n          } catch (error) {\n            return Promise.resolve('error');\n          }\n        }\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 34,
+      "code": "\nasync function f() {\n  try {\n    try {\n    } finally {\n      // affects error handling of outer catch\n      return Promise.reject();\n    }\n  } catch {}\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\nasync function f() {\n  try {\n    try {\n    } finally {\n      // affects error handling of outer catch\n      return await Promise.reject();\n    }\n  } catch {}\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 35,
+      "code": "\nasync function f() {\n  try {\n    try {\n    } catch {\n      // affects error handling of outer catch\n      return Promise.reject();\n    }\n  } catch {}\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\nasync function f() {\n  try {\n    try {\n    } catch {\n      // affects error handling of outer catch\n      return await Promise.reject();\n    }\n  } catch {}\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 36,
+      "code": "\nasync function f() {\n  try {\n  } catch {\n    try {\n    } finally {\n      try {\n      } catch {\n        return Promise.reject();\n      }\n    }\n  } finally {\n  }\n}\n      ",
+      "options": null,
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 9,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\nasync function f() {\n  try {\n  } catch {\n    try {\n    } finally {\n      try {\n      } catch {\n        return await Promise.reject();\n      }\n    }\n  } finally {\n  }\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 37,
+      "code": "\ndeclare const bleh: any;\nasync function f() {\n  if (cond) {\n    using something = bleh;\n    if (anotherCondition) {\n      return Promise.resolve(2);\n    }\n  }\n}\n      ",
+      "options": "always",
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\ndeclare const bleh: any;\nasync function f() {\n  if (cond) {\n    using something = bleh;\n    if (anotherCondition) {\n      return await Promise.resolve(2);\n    }\n  }\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 38,
+      "code": "\ndeclare const bleh: any;\nasync function f() {\n  if (cond) {\n    await using something = bleh;\n    if (anotherCondition) {\n      return Promise.resolve(2);\n    }\n  }\n}\n      ",
+      "options": "always",
+      "output": [],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 7,
+          "suggestions": [
+            {
+              "messageId": "requiredPromiseAwaitSuggestion",
+              "output": "\ndeclare const bleh: any;\nasync function f() {\n  if (cond) {\n    await using something = bleh;\n    if (anotherCondition) {\n      return await Promise.resolve(2);\n    }\n  }\n}\n      "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "index": 39,
+      "code": "\ndeclare const bleh: any;\nasync function f() {\n  if (cond) {\n    using something = bleh;\n  } else if (anotherCondition) {\n    return Promise.resolve(2);\n  }\n}\n      ",
+      "options": "always",
+      "output": [
+        "\ndeclare const bleh: any;\nasync function f() {\n  if (cond) {\n    using something = bleh;\n  } else if (anotherCondition) {\n    return await Promise.resolve(2);\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "requiredPromiseAwait",
+          "line": 7,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 40,
+      "code": "\ndeclare function asyncFn(): Promise<unknown>;\nasync function outerFunction() {\n  using _ = {\n    [Symbol.dispose]: () => {\n      console.log('dispose');\n    },\n  };\n\n  async function innerFunction() {\n    return await asyncFn();\n  }\n}\n      ",
+      "options": "in-try-catch",
+      "output": [
+        "\ndeclare function asyncFn(): Promise<unknown>;\nasync function outerFunction() {\n  using _ = {\n    [Symbol.dispose]: () => {\n      console.log('dispose');\n    },\n  };\n\n  async function innerFunction() {\n    return asyncFn();\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 11,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 41,
+      "code": "\ndeclare function asyncFn(): Promise<unknown>;\nasync function outerFunction() {\n  using _ = {\n    [Symbol.dispose]: () => {\n      console.log('dispose');\n    },\n  };\n\n  const innerFunction = async () => await asyncFn();\n}\n      ",
+      "options": "in-try-catch",
+      "output": [
+        "\ndeclare function asyncFn(): Promise<unknown>;\nasync function outerFunction() {\n  using _ = {\n    [Symbol.dispose]: () => {\n      console.log('dispose');\n    },\n  };\n\n  const innerFunction = async () => asyncFn();\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "disallowedPromiseAwait",
+          "line": 10,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 42,
+      "code": "\nasync function wrapper<T extends number>(value: T) {\n  return await value;\n}\n      ",
+      "options": null,
+      "output": [
+        "\nasync function wrapper<T extends number>(value: T) {\n  return value;\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 3,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 43,
+      "code": "\nclass C<T> {\n  async wrapper<T extends string>(value: T) {\n    return await value;\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nclass C<T> {\n  async wrapper<T extends string>(value: T) {\n    return value;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    },
+    {
+      "index": 44,
+      "code": "\nclass C<R extends number> {\n  async wrapper<T extends R>(value: T) {\n    return await value;\n  }\n}\n      ",
+      "options": null,
+      "output": [
+        "\nclass C<R extends number> {\n  async wrapper<T extends R>(value: T) {\n    return value;\n  }\n}\n      "
+      ],
+      "errors": [
+        {
+          "messageId": "nonPromiseAwait",
+          "line": 4,
+          "suggestions": []
+        }
+      ]
+    }
+  ]
+}
