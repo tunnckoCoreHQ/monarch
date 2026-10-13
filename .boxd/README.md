@@ -28,13 +28,15 @@ curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell
 curl -fsSL https://foundry.paradigm.xyz | bash
 cat >> ~/.profile <<'EOF'
 export PNPM_HOME="$HOME/.local/share/pnpm"
-export PATH="$HOME/.cargo/bin:$PNPM_HOME/bin:$HOME/.local/share/fnm:$HOME/.foundry/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$HOME/.wasmtime/bin:$PNPM_HOME/bin:$HOME/.local/share/fnm:$HOME/.foundry/bin:$PATH"
 eval "$(fnm env)"
 EOF
 source ~/.profile
 foundryup --install v1.7.1
 curl -sSf https://sh.rustup.rs | sh -s -- -y --profile default --no-modify-path
 rustup target add wasm32-wasip1
+# the crates' e2e suite runs the wasm32-wasip1 build under wasmtime, the version RWX pins
+curl -fsSL https://wasmtime.dev/install.sh | bash -s -- --version v44.0.1
 
 mkdir -p ~/work && cd ~/work
 git clone https://github.com/tunnckoCoreHQ/monarch.git && cd monarch
