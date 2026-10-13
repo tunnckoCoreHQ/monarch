@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.json",
+  // Node runs these files directly (demo.ts, scripts/, worker/dev.ts), so imports name the .ts file.
+  "compilerOptions": { "allowImportingTsExtensions": true },
+  "include": ["**/*.ts"]
+}

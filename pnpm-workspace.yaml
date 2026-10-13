@@ -5,8 +5,10 @@ packages:
   - "solidity/*"
 
 allowBuilds:
+  '@mongodb-js/zstd': false
   esbuild: true
   msgpackr-extract: true
+  node-liblzma: false
   sharp: true
   workerd: true
 
@@ -64,6 +66,12 @@ catalogs:
     valibot: ^1.5.0
     '@standard-schema/spec': ^1.1.0
     badgen: 3.3.2
+    just-bash: ^3.6.0
+    rolldown: ^1.2.13
+    '@bjorn3/browser_wasi_shim': ^0.4.2
+    workerd: 1.20260930.2
+    # The Prettier version oxfmt 0.71.0 bundles; vfs-toolchain formats non-native languages with it.
+    prettier: 3.9.9
   types:
     "@cloudflare/workers-types": 5.20260928.1
     "@types/bun": ^1.4.2

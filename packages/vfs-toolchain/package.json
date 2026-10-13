@@ -1,0 +1,29 @@
+{
+  "name": "vfs-toolchain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lint, format, and build TypeScript on a just-bash in-memory filesystem with the oxc toolchain",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tunnckoCoreHQ/monarch.git",
+    "directory": "packages/vfs-toolchain"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "check": "ultracite fix --type-aware --type-check",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bjorn3/browser_wasi_shim": "catalog:",
+    "just-bash": "catalog:",
+    "prettier": "catalog:"
+  },
+  "devDependencies": {
+    "rolldown": "catalog:",
+    "ultracite": "catalog:",
+    "workerd": "catalog:"
+  }
+}
