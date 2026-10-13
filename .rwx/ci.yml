@@ -186,7 +186,8 @@ aliases:
     TURBO_SCM_BASE: ${{ init.affected-base }}
     AFFECTED: "${{ init.affected-base == '' ? '' : '--affected' }}"
   # What the Rust crates read. A push that changes none of it is a cache hit for the crates tasks,
-  # so they run only when the crates change.
+  # so they run only when the crates change. pnpm exec verifies the install first, and the install
+  # reads the patches.
   crates-filter: &crates-filter
     - crates
     - Cargo.toml
@@ -197,6 +198,7 @@ aliases:
     - pnpm-lock.yaml
     - pnpm-workspace.yaml
     - turbo.json
+    - patches
   crates-env: &crates-env
     TURBO_TELEMETRY_DISABLED: 1
     CARGO_TERM_COLOR: always
