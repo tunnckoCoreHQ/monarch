@@ -28,11 +28,13 @@ curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell
 curl -fsSL https://foundry.paradigm.xyz | bash
 cat >> ~/.profile <<'EOF'
 export PNPM_HOME="$HOME/.local/share/pnpm"
-export PATH="$PNPM_HOME/bin:$HOME/.local/share/fnm:$HOME/.foundry/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PNPM_HOME/bin:$HOME/.local/share/fnm:$HOME/.foundry/bin:$PATH"
 eval "$(fnm env)"
 EOF
 source ~/.profile
 foundryup --install v1.7.1
+curl -sSf https://sh.rustup.rs | sh -s -- -y --profile default --no-modify-path
+rustup target add wasm32-wasip1
 
 mkdir -p ~/work && cd ~/work
 git clone https://github.com/tunnckoCoreHQ/monarch.git && cd monarch
