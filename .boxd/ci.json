@@ -1,6 +1,6 @@
 {
   "tunnckoCoreHQ/monarch": {
-    "snapshot": "monarch-master",
+    "snapshot": "monarch-ci",
     "workdir": "/home/boxd/work/monarch",
     "on": {
       "push": ["master"],

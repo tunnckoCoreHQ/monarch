@@ -53,7 +53,7 @@ exit
 Back on the laptop, save the first snapshot:
 
 ```sh
-boxd snapshots save monarch-ci monarch-master
+boxd snapshots save monarch-ci monarch-ci
 ```
 
 Then put the two files on the machine and start the automation. It stays on `monarch-ci`, which suspends and then hibernates between events. boxd wakes it when GitHub sends one.
@@ -81,7 +81,7 @@ boxd machine exec monarch-ci -- 'cd /home/boxd/ci && run ci.run.ts'
 boxd machine exec monarch-ci -- run jobs             # the automation and its state
 boxd machine exec monarch-ci -- run logs <id> -f     # its live log, one line per step
 boxd machine list                                    # run machines are named ci-<sha>-<n>
-boxd snapshots list                                  # monarch-master, a new version per green master run
+boxd snapshots list                                  # monarch-ci, a new version per green master run
 ```
 
 On GitHub, the Details link of a `monarch-ci/*` check opens the check's own page. It shows the step table, the failing step's last 80 lines, and the machine to connect to. There is no link to anything outside GitHub.
