@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How always-on agents work (Lee Robinson): summary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+:root { --fg: #fff; --muted: #8b8b8b; --line: #262626; --soft: #111; --accent: #a78bfa; --mono: "JetBrains Mono", ui-monospace, monospace; }
+* { box-sizing: border-box; }
+html { background: #000; color: var(--fg); scroll-padding-top: 24px; }
+body { margin: 0; font: 17px/1.7 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+main { max-width: 760px; margin: 0 auto; padding: 40px 20px 96px; }
+nav.top { font: 13px/1.5 var(--mono); color: var(--muted); margin-bottom: 32px; }
+nav.top a { color: var(--fg); }
+h1, h2, h3, h4 { font-family: var(--mono); font-weight: 700; line-height: 1.3; margin: 2.2em 0 .6em; scroll-margin-top: 24px; }
+h1 { font-size: 28px; margin-top: 0; }
+h2 { font-size: 22px; padding-top: 1.2em; border-top: 1px solid var(--line); }
+h3 { font-size: 18px; }
+h4 { font-size: 16px; }
+.md { color: var(--muted); font-weight: 400; }
+.anchor { color: var(--muted); text-decoration: none; margin-left: .35em; opacity: .45; vertical-align: middle; }
+.anchor svg { width: .8em; height: .8em; }
+h1:hover .anchor, h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus { opacity: 1; color: var(--accent); }
+p, ul, ol, table, pre, blockquote { margin: 0 0 1.1em; }
+a { color: var(--accent); text-underline-offset: 3px; }
+ul { list-style: none; padding-left: 1.6em; }
+ul > li::before { content: "-"; font-family: var(--mono); color: var(--muted); margin-left: -1.3em; width: 1.3em; display: inline-block; }
+ol { padding-left: 1.8em; }
+ol > li::marker { font-family: var(--mono); color: var(--muted); }
+li { margin: .3em 0; }
+li > ul, li > ol { margin: .3em 0; }
+code { font: .86em var(--mono); background: var(--soft); border: 1px solid var(--line); border-radius: 4px; padding: .1em .35em; }
+pre { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
+pre code { border: 0; padding: 0; background: none; font-size: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { font-family: var(--mono); font-size: 13px; background: var(--soft); }
+blockquote { border-left: 3px solid var(--line); margin-left: 0; padding-left: 1em; color: var(--muted); }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+<nav class="top">summary · <a href="notes.html">full notes</a></nav>
+<h1 id="how-always-on-agents-work-lee-robinson-summary"><span class="md"># </span>How always-on agents work (Lee Robinson): summary<a class="anchor" href="#how-always-on-agents-work-lee-robinson-summary" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h1>
+<p>A 45-minute lecture by Lee Robinson (formerly Cursor, now SpaceX) on how SpaceX built "Grok Bot", an always-on agent. Full notes are in <a href="notes.html">notes.md</a>.</p>
+<h2 id="the-idea"><span class="md">## </span>The idea<a class="anchor" href="#the-idea" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>The students' week-one agent is a model calling tools in a loop. Lee calls it very powerful, but "you close your laptop and the process stops." An always-on agent keeps the same loop and builds a system around it:</p>
+<ul>
+<li>It runs on a server and survives restarts and crashes.</li>
+<li>It has its own Linux computer in the cloud.</li>
+<li>It builds a memory of how you work.</li>
+<li>Slack, email, meetings, and routines can wake it, not only your typing.</li>
+<li>Like a colleague, it "knows when to be quiet."</li>
+</ul>
+<p>The goal is agents that work for weeks or months. Lee says it feels like texting a friend who does real work for you.</p>
+<h2 id="why-now"><span class="md">## </span>Why now<a class="anchor" href="#why-now" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>Models can follow instructions for hours or days. They hand work to sub-agents with fresh context. They call tools reliably, and Lee says hallucination is "kind of a solved problem mostly." They use computers by clicking, so sites with no API still work. They search files well. They learn skills by being shown. Auto review, a separate model checking commands, now does better than a tired human approving hundreds of shell commands.</p>
+<h2 id="how-it-is-built"><span class="md">## </span>How it is built<a class="anchor" href="#how-it-is-built" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<ul>
+<li>Server and computer both sleep by default. A trigger loads the agent's state on the server. The Firecracker VM starts only if a tool needs it. Lee says there are "not enough computers in the world" to run them all the time.</li>
+<li>A router deduplicates wake-ups, and the agent decides if anything is worth telling you.</li>
+<li>The agent loop lives on the server, not the VM. Then you can rebuild the VM (for example for a zero-day patch) without downtime, and ship agent code without App Store reviews.</li>
+<li>Durable workflows (Temporal) let a crashed task resume at step three instead of replaying steps one and two.</li>
+<li>Your own message interrupts the running turn. Everything else queues, and quick bursts of messages batch into one turn.</li>
+</ul>
+<h2 id="the-harness"><span class="md">## </span>The harness<a class="anchor" href="#the-harness" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<ul>
+<li>One tool, "send to user", is the only link between server and client. Any new client needs just that tool. The client renders rich UI for 1Password sign-ins, payments, email drafts, and reactions.</li>
+<li>Only tool names go in the prompt. The model reads details from a file when needed ("tool search tool").</li>
+<li>The agent climbs from cheap to expensive: what it knows, then an API, web search, its browser, the full desktop, and asking you last.</li>
+<li>The main agent stays sparse and hands heavy work to helpers. Each helper is a durable workflow. "This is how you get to a product that feels like it has infinite context."</li>
+<li>Give heavy shell patterns a dedicated tool. Write errors that tell the agent what to do next. Treat email and webhook text as untrusted. Ask before irreversible actions.</li>
+</ul>
+<h2 id="context-engineering"><span class="md">## </span>Context engineering<a class="anchor" href="#context-engineering" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<ul>
+<li>Keep the prompt start static and in a fixed order so the cache hits. Hash each section. OpenClaw's cache misses showed how costly this gets for always-on use.</li>
+<li>Warm the cache when the user starts typing.</li>
+<li>Compact right after a long session while the cache is still warm (10 to 60 minutes), so you come back to a cheap summary.</li>
+<li>Long outputs go to files, and screenshots go to helpers.</li>
+<li>Memory has layers: always-included user facts, ranked important facts, dated logs, short-lived scratch notes, and everything else searchable in files.</li>
+</ul>
+<h2 id="where-it-is-going"><span class="md">## </span>Where it is going<a class="anchor" href="#where-it-is-going" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<ul>
+<li>Every failure becomes an eval. Teams fix the harness daily and train new models on the evals every few months.</li>
+<li>"Delete the product." Today's models are the worst they will ever be, so build as little as possible.</li>
+<li>Open problems: evaluating month-long agents when models ship monthly, memory, security, knowing when to speak, and token efficiency.</li>
+<li>Every product will need durable workflows, sandboxes, memory, skills, connectors, voice, payments, identity, and evals, the way every 2005 web app needed a server, a database, and CRUD.</li>
+</ul>
+<h2 id="takeaways"><span class="md">## </span>Takeaways<a class="anchor" href="#takeaways" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<ol type="1">
+<li>Architecture decisions compound. Lee still reads the code he ships.</li>
+<li>Build your own always-on agent from the week-one loop.</li>
+<li>Learn how LLMs work, the way a web developer learns databases.</li>
+</ol>
+</main>
+</body>
+</html>

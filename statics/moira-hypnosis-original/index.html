@@ -1,0 +1,125 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><title>Moira Hypnosis</title><style>*,html{margin:0;padding:0}body{width:100%;height:100%;background-color:#001;overflow:hidden}body .container{width:100vw;height:100dvh;display:flex;align-items:center;justify-content:center}
+</style></head><body><div class="container"><canvas id="moira-canvas"></canvas></div>
+    <script type="module">
+      const __MOIRA_LOADER =async(a,t)=>{let i,$,d="ethscriptions",o=`https://api.${d}.com`,r="content",c=t||[`/${d}/{id}/${r}`,`/${d}/{id}/data`,`/api/${d}/{id}/${r}`,`/api/${d}/{id}/data`,`/v2/${d}/{id}/${r}`,`/v2/${d}/{id}/data`,`https://calldata.dev/${d}/{id}/${r}`,`${o}/${d}/{id}/${r}`,`${o}/${d}/{id}/data`,`${o}/api/${d}/{id}/${r}`,`${o}/api/${d}/{id}/data`];for(const t of c){try{i=await import(t.replace("{id}",a)),$=t}catch{}if(i)break}if(i)return i;throw new Error("cannot load")};
+
+      const __MOIRA_LOAD = async (t) => {
+        return __MOIRA_LOADER(t, ['https://api.ethscriptions.com/api/ethscriptions/{id}/data']);
+      }
+      const __MOIRA_OPT = {
+        "address":"0xAAAC07F94A127fD76E61fbeA1019cCe759225002",
+        "chars":[".","5","3","6","8",",","6","8","1","7","_"],
+        "color":"oklch(76.42% 0.3763228393177631 3)",
+        "seed":0.9743648538289698,
+        // importEthscription: __MOIRA_LOAD,
+        // canvasOptions: {canvas: document.querySelector("#moira-canvas")},
+        // sketch: (await __MOIRA_LOAD(`0x9e48663a8a451508c4968e85a45903727fcf81168ba745cf4d2f6ddb3e475b16`)).default,
+        // moira: (await __MOIRA_LOAD(`0x734dcf30eb1a5af5ab5dceb697aa21aa726ff76056e87d47e20dddc51831f52e`)).default
+      }
+
+
+      async function loadMoiraForAddress(i) {
+        const e = {
+            sketchId:
+              "0x9e48663a8a451508c4968e85a45903727fcf81168ba745cf4d2f6ddb3e475b16",
+            moiraId:
+              "0x734dcf30eb1a5af5ab5dceb697aa21aa726ff76056e87d47e20dddc51831f52e",
+            ...i,
+          },
+          a = await e.importEthscription(e.sketchId);
+        (await e.importEthscription(e.moiraId)).default(
+          a.default,
+          e.chars,
+          `${e.color}`,
+          {
+            seed: () => e.seed,
+            padding: 0.03,
+            importEthscription: e.importEthscription,
+            canvasOptions: {
+              ...(navigator.userAgent.match(
+                /Android|webOS|iPhone|iPad|iPod|BlackBerry|WPDesktop|IEMobile|Opera Mini/i,
+              )
+                ? e.mobileDimensions || { dimensions: [1200, 1200] }
+                : e.desktopDimensions || { dimensions: [770, 770] }),
+              scaleToView: !0,
+              scaleToFit: !0,
+              canvas: e.el || document.querySelector("#moira-canvas"),
+            },
+          },
+        );
+      }
+
+
+      // const __MOIRA_FN = async (t,o,i,{gridSize:a,bgColor:n,fontWeight:r,simplexHash:l,canvasOptions:s,padding:_pp,importEthscription:f,seed:c}={})=>{if(!t||!o||!i)throw new Error("required args");const d=l||"0xbf30523b5fbf36d0a5db4679782d73e6a0b4f169d679fe504629c09217a6356d",h=await __MOIRA_LOAD(d);if(!h)throw new Error("failed to load simplex");const p=h.createNoise3D(c);a=a||24,t((()=>{const t=1/(2*a);return({context:l,width:s,height:f,playhead:c})=>{l.clearRect(0,0,s,f),l.fillStyle=n||"#001",l.fillRect(0,0,s,f);const d=Math.sin(2*c*Math.PI),h=(_pp??.15)*f,x=(f-2*h)/a;for(let n=0;n<=a;n++)for(let c=0;c<=a;c++){const b=p(n*t,c*t,d),u=Math.floor(e(b,-1,1,0,o.length-1)),g=[e(n,0,a,h,s-h),e(c,0,a,h,f-h)];l.font=`${r||400} ${.75*x}px 'monospace'`,l.textAlign="center",l.textBaseline="middle",l.fillStyle=i,l.fillText(o[u],g[0],g[1])}}}),{animate:!0,duration:8,scaleToView:!0,scaleToFit:!0,fps:60,...s, canvas: document.querySelector("#moira-canvas")})};function e(t,e,o,i,a){return Math.abs(e-o)<Number.EPSILON?i:(t-e)/(o-e)*(a-i)+i}
+
+      // await __MOIRA_FN(__MOIRA_OPT.sketch, __MOIRA_OPT.chars, __MOIRA_OPT)
+
+
+      // // await __MOIRA_LOAD('/moira-basic.js', ['{id}'])
+
+      // // __MOIRA_FN(sketch, __MOIRA_OPT.chars, __MOIRA_OPT)
+
+      // // const __MOIRA_OPT = {
+      // //   s: `0x9e48663a8a451508c4968e85a45903727fcf81168ba745cf4d2f6ddb3e475b16`,
+      // //   m: `0x734dcf30eb1a5af5ab5dceb697aa21aa726ff76056e87d47e20dddc51831f52e`,
+      // //   l: __MOIRA_LOAD,
+      // //   ...globalThis.__MOIRA_OPT,
+      // // };
+
+      // // __MOIRA_OPT.s = (await __MOIRA_OPT.l(__MOIRA_OPT.s)).default;
+      // // // __MOIRA_OPT.m = (await __MOIRA_OPT.l(__MOIRA_OPT.m)).default;
+
+      // __MOIRA_OPT.moira(__MOIRA_OPT.sketch, __MOIRA_OPT.chars, {
+      //   seed: () => __MOIRA_OPT.seed,
+      //   padding: 0.03,
+      //   importEthscription: __MOIRA_LOAD,
+      //   canvasOptions: {
+      //     ...(navigator.userAgent.match(
+      //       /Android|webOS|iPhone|iPad|iPod|BlackBerry|WPDesktop|IEMobile|Opera Mini/i,
+      //     )
+      //       ? { dimensions: [1200, 1200] }
+      //       :{ dimensions: [770, 770] }),
+      //     canvas: document.querySelector("#moira-canvas"),
+      //   },
+      // })
+
+      // console.log('sssss', __MOIRA_OPT)
+
+
+
+      // (await e.importEthscription(e.moiraId)).default(
+      //   a.default,
+      //   e.chars,
+      //   `${e.color}`,
+      //   {
+      //     seed: () => e.seed,
+      //     padding: 0.03,
+      //     importEthscription: e.importEthscription,
+      //     canvasOptions: {
+      //       ...(navigator.userAgent.match(
+      //         /Android|webOS|iPhone|iPad|iPod|BlackBerry|WPDesktop|IEMobile|Opera Mini/i,
+      //       )
+      //         ? e.mobileDimensions || { dimensions: [1200, 1200] }
+      //         : e.desktopDimensions || { dimensions: [770, 770] }),
+      //       scaleToView: !0,
+      //       scaleToFit: !0,
+      //       canvas: e.el || document.querySelector("#moira-canvas"),
+      //     },
+      //   },
+      // );
+
+      // t({
+      //   ___MOIRA_OPTS___,
+      //   importEthscription: a,
+      //   desktopDimensions: {},
+      //   mobileDimensions: {
+      //     dimensions: [
+      //       e.searchParams.get("m1") || 1080,
+      //       e.searchParams.get("m2") || 2e3,
+      //     ],
+      //   },
+      // });
+    </script>
+    <!-- <script src="/moira-loader.js" type="module"></script> -->
+  </body>
+</html>

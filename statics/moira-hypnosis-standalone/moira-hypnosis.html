@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Moira Hypnosis</title>
+    <style>
+      *,
+      html {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        width: 100%;
+        height: 100%;
+        background-color: #001;
+        overflow: hidden;
+      }
+
+      body .container {
+        width: 100vw;
+        height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <canvas id="moira-canvas"></canvas>
+    </div>
+    <script type="module">
+      async function sha256(e,t){const o=await crypto.subtle.digest(t||"SHA-256","string"==typeof e?(new TextEncoder).encode(e):e);return Array.from(new Uint8Array(o)).map((e=>e.toString(16).padStart(2,"0"))).join("")}async function genFakeAddress(){return`0x${(await sha256(Math.floor(Date.now()*performance.now()*Math.random())+""+crypto.randomUUID())).slice(0,40)}`}function generateMoira(e,t){if("string"!=typeof e)throw new Error("addr must be set");let o;for(;void 0===o||o<.1||o>.45;)o=Math.random();const r=`oklch(76.42% ${o} ${Math.floor(360*Math.random())})`,a={symbols:["~",">","@","!","$","^","&","*","(","?","<",";","&","=","+"],arrows:["↑","↗","→","↘","↓","↙","←","↖"],circles:["¤","✳","●","◔","○","◕","◐","◑","◒"],emojis:["🚀","😍","😅","z","🥳","😭","🩷","😢","😈","👀","🥹"],squares:["◧","◪","■","◪","□","◩","⬒","◨","⬓","⬕"],address:e.slice(0,15).split("").reverse(),moons:["🌙","🌖","🌚","🌙","🌗","🌘","w","🌒","🌓","🌔"],letters:["0","a",";","A","q",".","C","o","D","w","G"],timestamp:function(){let e=(Math.floor(Date.now()/1e3)+"").split("").reverse();return e=[".",...e],e[5]=",",e[e.length-1]="_",e}()}[function(e){let t=0;for(let o=0;o<e.length;++o)t+=e[o][1];const o=Math.random()*t;t=0;for(let r=0;r<e.length-1;++r)if(t+=e[r][1],t>=o)return e[r][0];return e[e.length-1][0]}(t||[["symbols",100],["arrows",300],["circles",350],["emojis",500],["squares",550],["address",790],["moons",1010],["letters",2450],["timestamp",4e3]])];let s=Math.floor(Number(e)/1e30);return s=s>1e18?s-1e18:s,{address:e,chars:a,color:r,seed:s/1e18}}async function loadMoiraForAddress(e){const t={sketchId:"0x9e48663a8a451508c4968e85a45903727fcf81168ba745cf4d2f6ddb3e475b16",moiraId:"0x734dcf30eb1a5af5ab5dceb697aa21aa726ff76056e87d47e20dddc51831f52e",...e},o=await t.importEthscription(t.sketchId);(await t.importEthscription(t.moiraId)).default(o.default,t.chars,`${t.color}`,{seed:()=>t.seed,padding:.03,importEthscription:t.importEthscription,canvasOptions:{...navigator.userAgent.match(/Android|webOS|iPhone|iPad|iPod|BlackBerry|WPDesktop|IEMobile|Opera Mini/i)?t.mobileDimensions||{dimensions:[1200,1200]}:t.desktopDimensions||{dimensions:[770,770]},scaleToView:!0,scaleToFit:!0,canvas:t.el||document.querySelector("#moira-canvas")}})}
+
+      const importEthscription = (id) =>
+        import(`https://api.ethscriptions.com/v2/ethscriptions/${id}/data`);
+
+      const result = generateMoira(await genFakeAddress());
+
+      await loadMoiraForAddress({ ...result, importEthscription });
+    </script>
+  </body>
+</html>

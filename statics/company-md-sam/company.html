@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>company.md · One-person company prompt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #fbfaf7;
+      --ink: #1c1b19;
+      --body: #3a3833;
+      --muted: #a8a49b;
+      --accent: #d9603f;
+      --line: #e7e4dd;
+      --chip: #f3efe7;
+      --sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--body);
+      font: 16px/1.7 var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 72px 24px 96px;
+    }
+
+    h1, h2 {
+      color: var(--ink);
+      font-family: var(--mono);
+      letter-spacing: -0.02em;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 40px;
+      line-height: 1.15;
+    }
+
+    h2 {
+      margin: 48px 0 12px;
+      font-size: 20px;
+    }
+
+    h1::before { content: "# "; color: var(--accent); }
+    h2::before { content: "## "; color: var(--accent); }
+
+    p { margin: 0 0 14px; }
+
+    strong { color: var(--ink); font-weight: 600; }
+    strong::before, strong::after { content: "**"; color: var(--muted); font-weight: 400; }
+
+    em { color: var(--muted); }
+    em::before, em::after { content: "_"; }
+
+    ul, ol { margin: 0 0 14px; padding-left: 28px; }
+    li { margin: 4px 0; padding-left: 4px; }
+    ul li::marker { content: "-  "; color: var(--accent); font-family: var(--mono); }
+    ol li::marker { color: var(--accent); font-family: var(--mono); }
+
+    code {
+      padding: 1px 6px;
+      font: 0.86em var(--mono);
+      color: var(--accent);
+      background: var(--chip);
+      border-radius: 4px;
+    }
+
+    table {
+      margin: 0 0 14px;
+      border-collapse: collapse;
+      font: 14px var(--mono);
+    }
+
+    th {
+      padding: 6px 16px;
+      color: var(--ink);
+      text-align: left;
+      border: 1px solid var(--line);
+      background: var(--chip);
+    }
+
+    hr {
+      margin: 56px 0 24px;
+      border: 0;
+      text-align: center;
+    }
+
+    hr::before { content: "---"; color: var(--muted); font-family: var(--mono); }
+
+    .credits { font-size: 13px; color: var(--muted); }
+    .credits li::marker { color: var(--muted); }
+
+    h1, h2 { scroll-margin-top: 24px; }
+
+    .anchor {
+      display: inline-block;
+      width: 0.7em;
+      height: 0.7em;
+      margin-left: 0.4em;
+      vertical-align: 0.05em;
+      background: var(--muted);
+      opacity: 0.35;
+      -webkit-mask: var(--link-icon) center / contain no-repeat;
+      mask: var(--link-icon) center / contain no-repeat;
+      transition: opacity 0.15s;
+      --link-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E");
+    }
+
+    h1:hover .anchor, h2:hover .anchor, .anchor:focus { opacity: 1; background: var(--accent); }
+
+    .copy {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 14px;
+      font: 500 13px var(--mono);
+      color: var(--ink);
+      background: var(--chip);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .copy:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+  <button class="copy" type="button">Copy markdown</button>
+
+  <main>
+    <h1 id="openai-ceo">OpenAI CEO<a class="anchor" href="#openai-ceo" aria-label="Link to OpenAI CEO"></a></h1>
+
+    <p><strong>Sam Altman</strong> · GPT-6 Sol &amp; one-person companies</p>
+
+    <p><em>Research note · Altman-inspired one-person company prompt · GPT-6 Sol</em></p>
+
+    <h2 id="goal">Goal<a class="anchor" href="#goal" aria-label="Link to Goal"></a></h2>
+
+    <p>Run <code>{{COMPANY}}</code> as one founder plus a graph of agents, not one long chat. Every function becomes a node with an owner, an output, and a check. Leave the outputs, <code>company.md</code>, and a weekly report so another session can pick it up. Stop when the week's checks pass or the agreed limit is reached.</p>
+
+    <h2 id="role">Role<a class="anchor" href="#role" aria-label="Link to Role"></a></h2>
+
+    <p>Act as the operator that designs, runs, and maintains this company graph. The founder sets direction and approves money, hiring, and anything public. You plan, route, and merge; give bounded work to subagents. Record every decision that changes the graph.</p>
+
+    <h2 id="principles">Principles<a class="anchor" href="#principles" aria-label="Link to Principles"></a></h2>
+
+    <p>Built around Sam Altman's one-person billion-dollar company idea:</p>
+
+    <ul>
+      <li>One person owns the decisions; agents own the work.</li>
+      <li>Every function needs a measurable output, not a job title.</li>
+      <li>Automate the repeated work first.</li>
+      <li>Add a node only when a function has its own goal and check.</li>
+    </ul>
+
+    <p>The graph setup below is my adaptation for running that company with GPT-6 Sol. [1, 2]</p>
+
+    <h2 id="inputs">Inputs<a class="anchor" href="#inputs" aria-label="Link to Inputs"></a></h2>
+
+    <ul>
+      <li>Company: <code>{{COMPANY}}</code></li>
+      <li>Product and customer: <code>{{PRODUCT}}</code></li>
+      <li>Weekly goals: <code>{{GOALS}}</code></li>
+      <li>Tools and accounts: <code>{{TOOLS}}</code></li>
+      <li>Spend limit: <code>{{BUDGET}}</code></li>
+      <li>Run limit: <code>{{LIMIT}}</code></li>
+    </ul>
+
+    <p>Fill these fields before starting. If a missing detail changes the outcome, ask the founder one focused question.</p>
+
+    <h2 id="layer-1-functions">Layer 1: Functions<a class="anchor" href="#layer-1-functions" aria-label="Link to Layer 1: Functions"></a></h2>
+
+    <p>Map the company into nodes before any work starts. A node is one function: one input, one output, one check.</p>
+
+    <ul>
+      <li>Typical nodes: research, build, support, content, sales, finance.</li>
+      <li>Draw an edge only when a node consumes another node's output.</li>
+      <li>Mark nodes with no edge between them as parallel.</li>
+    </ul>
+
+    <p>Write nodes, edges, and checks into <code>company.md</code> and pause for approval.</p>
+
+    <h2 id="layer-2-agents">Layer 2: Agents<a class="anchor" href="#layer-2-agents" aria-label="Link to Layer 2: Agents"></a></h2>
+
+    <p>Run each node as its own subagent with only the context it needs:</p>
+
+    <ol>
+      <li>Pass the node spec, its inputs, and its check.</li>
+      <li>Produce that node's output only.</li>
+      <li>Run the check against the saved output.</li>
+      <li>Return the output path, verdict, and evidence.</li>
+    </ol>
+
+    <p>Keep node specs reusable as the company grows.</p>
+
+    <h2 id="layer-3-code-nodes">Layer 3: Code nodes<a class="anchor" href="#layer-3-code-nodes" aria-label="Link to Layer 3: Code nodes"></a></h2>
+
+    <p>If a step has exactly one correct answer (invoice totals, dedupe leads, sort tickets, count signups), write it as code, not as a model call. A model call is for judgment only.</p>
+
+    <ul>
+      <li>List every code node in <code>company.md</code>.</li>
+      <li>Never route bookkeeping through a subagent.</li>
+    </ul>
+
+    <p>If a required tool is unavailable, name the blocker and keep the other nodes running.</p>
+
+    <h2 id="layer-4-permissions">Layer 4: Permissions<a class="anchor" href="#layer-4-permissions" aria-label="Link to Layer 4: Permissions"></a></h2>
+
+    <p>Check the active permissions before running the graph. Keep actions inside <code>{{TOOLS}}</code> and <code>{{BUDGET}}</code>. Configure tool rules when enforcement is required; prose alone is not a boundary.</p>
+
+    <ul>
+      <li>Ask the founder before spending, publishing, or emailing a customer.</li>
+      <li>Never let two nodes write to the same file or account.</li>
+      <li>Keep a recoverable version before any bulk change.</li>
+    </ul>
+
+    <h2 id="layer-5-gates">Layer 5: Gates<a class="anchor" href="#layer-5-gates" aria-label="Link to Layer 5: Gates"></a></h2>
+
+    <p>Put a gate on every edge that carries risky work. Open it on evidence: deterministic checks first, then the node's report, the model's confidence last.</p>
+
+    <p>Save <code>checks.md</code> with a row for each goal:</p>
+
+    <table>
+      <thead>
+        <tr><th>node</th><th>goal</th><th>verdict</th><th>evidence</th></tr>
+      </thead>
+    </table>
+
+    <p>Use pass, fail, or unresolved. Link the actual output. Leave missing evidence visible.</p>
+
+    <h2 id="layer-6-return-paths">Layer 6: Return paths<a class="anchor" href="#layer-6-return-paths" aria-label="Link to Layer 6: Return paths"></a></h2>
+
+    <p>Build two return paths.</p>
+
+    <ul>
+      <li><strong>Correction edge:</strong> a failed gate sends the unit back to the node that made it, with the reason, the evidence, and the scope "fix this node only". Cap it at three attempts.</li>
+      <li><strong>Learning edge:</strong> after the founder accepts a result, write the rule it proves into <code>company.md</code> so next week starts from it.</li>
+    </ul>
+
+    <h2 id="layer-7-weekly-review">Layer 7: Weekly review<a class="anchor" href="#layer-7-weekly-review" aria-label="Link to Layer 7: Weekly review"></a></h2>
+
+    <p>Before execution, turn <code>{{GOALS}}</code> into a checklist. Each item must point to observable evidence.</p>
+
+    <ul>
+      <li>Every node's output exists and can be opened.</li>
+      <li>Every gate ran against the saved version.</li>
+      <li>Spend stayed inside <code>{{BUDGET}}</code>.</li>
+      <li><code>company.md</code> matches the nodes that actually ran.</li>
+    </ul>
+
+    <p>If a limit or blocker stops the run, return a partial status with the exact nodes left.</p>
+
+    <h2 id="execution-loop">Execution loop<a class="anchor" href="#execution-loop" aria-label="Link to Execution loop"></a></h2>
+
+    <ol>
+      <li>Read <code>company.md</code> and pick the next ready nodes.</li>
+      <li>Run independent nodes in parallel.</li>
+      <li>Pass every output through its gate.</li>
+      <li>Return failed units, never the whole batch.</li>
+      <li>Merge accepted outputs in code.</li>
+      <li>Continue until completion, a blocker, or <code>{{LIMIT}}</code>.</li>
+    </ol>
+
+    <p>Do not weaken a gate to obtain a pass.</p>
+
+    <h2 id="handoff">Handoff<a class="anchor" href="#handoff" aria-label="Link to Handoff"></a></h2>
+
+    <p>After each stage, update <code>progress.md</code>:</p>
+
+    <ul>
+      <li><strong>Company:</strong> nodes done, running, and blocked.</li>
+      <li><strong>Outputs:</strong> exact paths to the current saved files.</li>
+      <li><strong>Decisions:</strong> what changed in <code>company.md</code> and why.</li>
+      <li><strong>Founder queue:</strong> approvals waiting on a human.</li>
+      <li><strong>Next action:</strong> the next ready node.</li>
+    </ul>
+
+    <p>On resumption, read <code>company.md</code> and <code>progress.md</code> first, then continue from the recorded next node.</p>
+
+    <h2 id="delivery">Delivery<a class="anchor" href="#delivery" aria-label="Link to Delivery"></a></h2>
+
+    <p>Return the week's outputs, <code>company.md</code>, <code>checks.md</code>, and <code>progress.md</code>. State what shipped, what passed, and what waits on the founder. Save the graph as a reusable template after review. Report measured revenue or usage only when available; do not infer results from the prompt.</p>
+
+    <hr>
+
+    <div class="credits">
+      <p>Prompt by @hanakoxbt. Inspired by Sam Altman's one-person billion-dollar company idea [1]; graph adaptation from my agent-layers guide [2].</p>
+
+      <ol>
+        <li>Sam Altman, 2024 remarks on the first one-person billion-dollar company</li>
+        <li>agent-layers.vercel.app</li>
+      </ol>
+
+      <p>Original wording and workflow adaptation by @hanakoxbt. Not written or endorsed by Sam Altman.</p>
+    </div>
+  </main>
+
+  <script type="text/markdown" id="markdown">
+# OpenAI CEO
+
+**Sam Altman** · GPT-6 Sol & one-person companies
+
+_Research note · Altman-inspired one-person company prompt · GPT-6 Sol_
+
+## Goal
+
+Run {{COMPANY}} as one founder plus a graph of agents, not one long chat. Every function becomes a node with an owner, an output, and a check. Leave the outputs, company.md, and a weekly report so another session can pick it up. Stop when the week's checks pass or the agreed limit is reached.
+
+## Role
+
+Act as the operator that designs, runs, and maintains this company graph. The founder sets direction and approves money, hiring, and anything public. You plan, route, and merge; give bounded work to subagents. Record every decision that changes the graph.
+
+## Principles
+
+Built around Sam Altman's one-person billion-dollar company idea:
+
+- One person owns the decisions; agents own the work.
+- Every function needs a measurable output, not a job title.
+- Automate the repeated work first.
+- Add a node only when a function has its own goal and check.
+
+The graph setup below is my adaptation for running that company with GPT-6 Sol. [1, 2]
+
+## Inputs
+
+- Company: {{COMPANY}}
+- Product and customer: {{PRODUCT}}
+- Weekly goals: {{GOALS}}
+- Tools and accounts: {{TOOLS}}
+- Spend limit: {{BUDGET}}
+- Run limit: {{LIMIT}}
+
+Fill these fields before starting. If a missing detail changes the outcome, ask the founder one focused question.
+
+## Layer 1: Functions
+
+Map the company into nodes before any work starts. A node is one function: one input, one output, one check.
+
+- Typical nodes: research, build, support, content, sales, finance.
+- Draw an edge only when a node consumes another node's output.
+- Mark nodes with no edge between them as parallel.
+
+Write nodes, edges, and checks into company.md and pause for approval.
+
+## Layer 2: Agents
+
+Run each node as its own subagent with only the context it needs:
+
+1. Pass the node spec, its inputs, and its check.
+2. Produce that node's output only.
+3. Run the check against the saved output.
+4. Return the output path, verdict, and evidence.
+
+Keep node specs reusable as the company grows.
+
+## Layer 3: Code nodes
+
+If a step has exactly one correct answer (invoice totals, dedupe leads, sort tickets, count signups), write it as code, not as a model call. A model call is for judgment only.
+
+- List every code node in company.md.
+- Never route bookkeeping through a subagent.
+
+If a required tool is unavailable, name the blocker and keep the other nodes running.
+
+## Layer 4: Permissions
+
+Check the active permissions before running the graph. Keep actions inside {{TOOLS}} and {{BUDGET}}. Configure tool rules when enforcement is required; prose alone is not a boundary.
+
+- Ask the founder before spending, publishing, or emailing a customer.
+- Never let two nodes write to the same file or account.
+- Keep a recoverable version before any bulk change.
+
+## Layer 5: Gates
+
+Put a gate on every edge that carries risky work. Open it on evidence: deterministic checks first, then the node's report, the model's confidence last.
+
+Save checks.md with a row for each goal:
+
+| node | goal | verdict | evidence |
+| ---- | ---- | ------- | -------- |
+
+Use pass, fail, or unresolved. Link the actual output. Leave missing evidence visible.
+
+## Layer 6: Return paths
+
+Build two return paths.
+
+- **Correction edge:** a failed gate sends the unit back to the node that made it, with the reason, the evidence, and the scope "fix this node only". Cap it at three attempts.
+- **Learning edge:** after the founder accepts a result, write the rule it proves into company.md so next week starts from it.
+
+## Layer 7: Weekly review
+
+Before execution, turn {{GOALS}} into a checklist. Each item must point to observable evidence.
+
+- Every node's output exists and can be opened.
+- Every gate ran against the saved version.
+- Spend stayed inside {{BUDGET}}.
+- company.md matches the nodes that actually ran.
+
+If a limit or blocker stops the run, return a partial status with the exact nodes left.
+
+## Execution loop
+
+1. Read company.md and pick the next ready nodes.
+2. Run independent nodes in parallel.
+3. Pass every output through its gate.
+4. Return failed units, never the whole batch.
+5. Merge accepted outputs in code.
+6. Continue until completion, a blocker, or {{LIMIT}}.
+
+Do not weaken a gate to obtain a pass.
+
+## Handoff
+
+After each stage, update progress.md:
+
+- **Company:** nodes done, running, and blocked.
+- **Outputs:** exact paths to the current saved files.
+- **Decisions:** what changed in company.md and why.
+- **Founder queue:** approvals waiting on a human.
+- **Next action:** the next ready node.
+
+On resumption, read company.md and progress.md first, then continue from the recorded next node.
+
+## Delivery
+
+Return the week's outputs, company.md, checks.md, and progress.md. State what shipped, what passed, and what waits on the founder. Save the graph as a reusable template after review. Report measured revenue or usage only when available; do not infer results from the prompt.
+
+---
+
+Prompt by @hanakoxbt. Inspired by Sam Altman's one-person billion-dollar company idea [1]; graph adaptation from my agent-layers guide [2].
+
+1. Sam Altman, 2024 remarks on the first one-person billion-dollar company
+2. agent-layers.vercel.app
+
+Original wording and workflow adaptation by @hanakoxbt. Not written or endorsed by Sam Altman.
+  </script>
+
+  <script>
+    const button = document.querySelector(".copy");
+    const markdown = document.getElementById("markdown").textContent.trim() + "\n";
+
+    function copyWithTextarea(text) {
+      const area = document.createElement("textarea");
+      area.value = text;
+      document.body.append(area);
+      area.select();
+      const copied = document.execCommand("copy");
+      area.remove();
+      return copied;
+    }
+
+    button.addEventListener("click", async () => {
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(markdown);
+        copied = true;
+      } catch {
+        copied = copyWithTextarea(markdown);
+      }
+      button.textContent = copied ? "Copied" : "Copy failed";
+      setTimeout(() => (button.textContent = "Copy markdown"), 1500);
+    });
+  </script>
+</body>
+</html>

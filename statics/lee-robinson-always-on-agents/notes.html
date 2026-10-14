@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How always-on agents work (Lee Robinson): full notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+:root { --fg: #fff; --muted: #8b8b8b; --line: #262626; --soft: #111; --accent: #a78bfa; --mono: "JetBrains Mono", ui-monospace, monospace; }
+* { box-sizing: border-box; }
+html { background: #000; color: var(--fg); scroll-padding-top: 24px; }
+body { margin: 0; font: 17px/1.7 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+main { max-width: 760px; margin: 0 auto; padding: 40px 20px 96px; }
+nav.top { font: 13px/1.5 var(--mono); color: var(--muted); margin-bottom: 32px; }
+nav.top a { color: var(--fg); }
+h1, h2, h3, h4 { font-family: var(--mono); font-weight: 700; line-height: 1.3; margin: 2.2em 0 .6em; scroll-margin-top: 24px; }
+h1 { font-size: 28px; margin-top: 0; }
+h2 { font-size: 22px; padding-top: 1.2em; border-top: 1px solid var(--line); }
+h3 { font-size: 18px; }
+h4 { font-size: 16px; }
+.md { color: var(--muted); font-weight: 400; }
+.anchor { color: var(--muted); text-decoration: none; margin-left: .35em; opacity: .45; vertical-align: middle; }
+.anchor svg { width: .8em; height: .8em; }
+h1:hover .anchor, h2:hover .anchor, h3:hover .anchor, h4:hover .anchor, .anchor:focus { opacity: 1; color: var(--accent); }
+p, ul, ol, table, pre, blockquote { margin: 0 0 1.1em; }
+a { color: var(--accent); text-underline-offset: 3px; }
+ul { list-style: none; padding-left: 1.6em; }
+ul > li::before { content: "-"; font-family: var(--mono); color: var(--muted); margin-left: -1.3em; width: 1.3em; display: inline-block; }
+ol { padding-left: 1.8em; }
+ol > li::marker { font-family: var(--mono); color: var(--muted); }
+li { margin: .3em 0; }
+li > ul, li > ol { margin: .3em 0; }
+code { font: .86em var(--mono); background: var(--soft); border: 1px solid var(--line); border-radius: 4px; padding: .1em .35em; }
+pre { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; line-height: 1.5; }
+pre code { border: 0; padding: 0; background: none; font-size: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { font-family: var(--mono); font-size: 13px; background: var(--soft); }
+blockquote { border-left: 3px solid var(--line); margin-left: 0; padding-left: 1em; color: var(--muted); }
+strong { font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+<nav class="top"><a href="index.html">summary</a> · full notes</nav>
+<h1 id="how-always-on-agents-work-lee-robinson-full-notes"><span class="md"># </span>How always-on agents work (Lee Robinson): full notes<a class="anchor" href="#how-always-on-agents-work-lee-robinson-full-notes" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h1>
+<p>Source is the video <code>lee-robinson-how-alwayson-agents-work-CXXgkndDFiCXCSab.mp4</code> (45:17). It is a lecture in a course where students built a minimal agent loop in "week one" and studied harnesses the week before. Lee Robinson worked at Cursor and now works at SpaceX on "Grok Bot", an always-on agent product. He says up front that some of what he shows is still in progress at SpaceX. The recording stops before the Q&amp;A.</p>
+<p>These notes follow what Lee says, taken from a whisper.cpp transcript of the audio. Timestamps point into the video. Short version: <a href="index.html">summary.md</a>.</p>
+<h2 id="opening-from-the-week-one-loop-to-an-always-on-agent-0000"><span class="md">## </span>Opening: from the week-one loop to an always-on agent (00:00)<a class="anchor" href="#opening-from-the-week-one-loop-to-an-always-on-agent-0000" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>The class built a simple harness: a model that calls tools in a loop. Lee says that alone is "very powerful" and unlocks a lot of what models can do. Its drawback is that "you close your laptop and the process stops."</p>
+<p>The talk is about taking that same idea and extending it into an always-on agent. He lists what changes:</p>
+<ul>
+<li>It runs on a server in the cloud. You can close your computer, it can restart, and it survives crashes.</li>
+<li>It has its own computer. Not your laptop, but a Linux machine in the cloud with a desktop, files, a browser, "maybe some 3D apps".</li>
+<li>It saves files on that machine, understands your progress over time, and builds up a memory of how you work with it.</li>
+<li>It behaves more like a colleague than a terminal harness. A terminal harness answers every message. This agent "doesn't always immediately send you a message. It knows when to be quiet." It may work in the background and only come back when there is an important update.</li>
+<li>Things other than your typing can trigger it: a Slack message, an email, some other event.</li>
+<li>The hope is that it works over very long periods: "not just hours or days, but maybe even weeks or months." That needs a different architecture.</li>
+</ul>
+<p>He promises to go "decently in depth" on how SpaceX built the architecture and the harness, and how they made the system proactive and persistent and good at following instructions.</p>
+<h2 id="part-1-how-we-got-here-0234"><span class="md">## </span>Part 1. How we got here (02:34)<a class="anchor" href="#part-1-how-we-got-here-0234" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>Lee sees four eras of developers working with AI so far:</p>
+<ol type="1">
+<li>Copying code out of ChatGPT into your editor. "Feels like decades ago at this point, but it was really only a few years ago."</li>
+<li>Agents in the terminal. Models got good enough for the simple harness from the previous lecture. They edit files and run shell commands. This "really took off" because the model could now do proactive work for you.</li>
+<li>Coding agents got dedicated apps. People ran many agents in parallel, some in the cloud. But you were still the bottleneck. You reviewed every command, made sure every shell command was right, and stayed in the loop on everything.</li>
+<li>Now, always-on agents. They run "ambiently in the background", with their own computer and memory. They learn new skills on the job and keep working after you go to bed or do other work.</li>
+</ol>
+<h3 id="from-approving-to-steering-0407"><span class="md">### </span>From approving to steering (04:07)<a class="anchor" href="#from-approving-to-steering-0407" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Before, you prompted an agent and waited, prompted and waited, and approved or rejected each shell command. Now you steer it. You say "go check this thread" and right after "oh, by the way, actually do that on Thursday." Older models got confused when you interrupted them with a new command. Current models parse it the way a friend parses you rambling, and they understand the two messages are related.</p>
+<p>When you ask it to send an email or a Slack message, extra safety checks run. Many companies call this "auto review": a separate AI model checks every command that runs. Lee says that, funnily enough, this is more secure than a human approving each command, because of the fatigue of watching hundreds of shell commands. "If you did a blind test" between the model checking commands and a human checking them, "most of the time the model is actually doing a better job. Kind of paradoxically."</p>
+<h3 id="simpler-interface-0533"><span class="md">### </span>Simpler interface (05:33)<a class="anchor" href="#simpler-interface-0533" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>As models got better, the interface got much simpler. SpaceX calls its always-on agent a "bot". Many similar products are appearing and gaining traction. His reason: "Everyone knows how to text." Working with AI now feels like texting a friend who can do real work for you. It is no longer Q&amp;A. You hand it longer tasks, the way you would hand them to a coworker.</p>
+<h2 id="part-2-what-changed-in-the-models-0613"><span class="md">## </span>Part 2. What changed in the models (06:13)<a class="anchor" href="#part-2-what-changed-in-the-models-0613" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>Lee goes over six changes and says there are more.</p>
+<ol type="1">
+<li>Long instruction following. Over the past one or two years, models got much better at following instructions over long periods without getting confused or making mistakes. With the right compression and compaction, they can now run "for hours or days" with confidence.</li>
+<li>Sub-agents. A model's working memory fills up eventually. If it can hand work to helpers with a fresh working memory, that "effectively can give it an unlimited context". The helper does the work that is expensive in tokens or tool calls, then reports back to the main agent.</li>
+<li>Tool use. A few years ago models "basically couldn't call tools very well, and they would hallucinate all the time." Lee: "You don't really hear people talk about hallucinations anymore because it's kind of a solved problem mostly." And you can give them powerful tools, the way you would onboard a new person: shell and files, a full Linux computer, making demo videos.</li>
+<li>Computer use. Models click around a screen like a human, and they keep getting better at it. That means "any SaaS product or any website that didn't expose an API or an MCP server" can be used autonomously by the bot.</li>
+<li>Information in files. You can store everything in files because models are very good at recalling and searching them.</li>
+<li>Learning by being shown. You show the bot how to do some work, and it turns that into skills, memories, or routines it can reuse.</li>
+</ol>
+<h3 id="everything-in-files-0829"><span class="md">### </span>Everything in files (08:29)<a class="anchor" href="#everything-in-files-0829" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee walks through what the files look like under the hood, as a simplified example:</p>
+<ul>
+<li>A profile, your understanding of the user. It goes into every prompt. His example: you like lowercase text in messages, so every message must follow that.</li>
+<li>A working log, built up as you work together. "Just like if you were working with a colleague and they were writing down notes every day of the work that they've done." If you ask "what did I do last week?", it looks it up. Models are very good at Linux and shell commands, so they grep and search these files well.</li>
+<li>Skills. You take your knowledge of a task and encode it in a markdown file: the exact process and what makes it succeed or fail. There is a whole ecosystem of companies and developers writing skills, for example how to send a good email or build a good API. Grok Bot has plugins: for any tool you want to use, you install a plugin that brings skills or servers.</li>
+<li>Routines. Like cron jobs, a prompt that runs on a schedule.</li>
+</ul>
+<p>His summary: "Basically, everything is computer."</p>
+<h2 id="part-3-inside-an-always-on-agent-1004"><span class="md">## </span>Part 3. Inside an always-on agent (10:04)<a class="anchor" href="#part-3-inside-an-always-on-agent-1004" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<h3 id="asleep-by-default-1012"><span class="md">### </span>Asleep by default (10:12)<a class="anchor" href="#asleep-by-default-1012" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>At rest, both the server process and the agent's computer are asleep. A message from you or some other trigger starts the agent. Starting means loading all of the agent's state, on a server. If the agent decides it needs the computer, for example to use the browser or click around, it starts the computer too. When it is done, it puts both back to sleep.</p>
+<p>Why this matters: running these computers all the time would be expensive, and "there's not enough computers in the world to just have those computers running all of the time for everyone." It would also mean a lot of server usage. So the state (conversation logs, memories, routines) is saved to a database.</p>
+<h3 id="what-wakes-it-up-1113"><span class="md">### </span>What wakes it up (11:13)<a class="anchor" href="#what-wakes-it-up-1113" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>You can prompt it directly. Lee finds the other triggers more interesting: things running in the background that decide when to reach your bot.</p>
+<ul>
+<li>Someone pings you on Slack, and the bot lives in Slack.</li>
+<li>A phone call or a meeting. Lee: it is "increasingly common now at SpaceX" for employees to send their bot to a meeting they could have attended, to take notes and report back. "Kind of funny."</li>
+<li>A routine, or background work that took hours or days, comes back with a summary.</li>
+</ul>
+<p>A router deduplicates these and decides how to put them into the conversation. Then the agent applies a heuristic: should it bother the user about this? Not everything is important. A coworker who came to you every time they made progress ("hey, check it out, I made progress") would be annoying. You probably want a status update maybe once a day, depending on the task.</p>
+<h3 id="the-agents-computer-1218"><span class="md">### </span>The agent's computer (12:18)<a class="anchor" href="#the-agents-computer-1218" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>The Linux box is a Firecracker virtual machine. Firecracker makes it easy to snapshot the machine, shut it down, and start it back up.</p>
+<ul>
+<li>It has files. You can connect to it, get a live view, and control it yourself.</li>
+<li>It runs commands. That is good for shell commands you do not want on your own laptop. They run in a separate environment that is secured and locked down.</li>
+<li>It has Chrome. It can also give each bot its own virtual desktop, so if you run five or ten bots and each needs a browser, each gets its own screen.</li>
+</ul>
+<p>This is shared infrastructure that the bots call on.</p>
+<h3 id="three-parts-1315"><span class="md">### </span>Three parts (13:15)<a class="anchor" href="#three-parts-1315" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Triggers come in on the left: apps, Slack messages, emails. The server is in the middle. The computer is on the right, for files and commands.</p>
+<p>On the server, incoming commands go into a queue. The queue calls the agent loop, "which is what you covered last week. This is a model calling tools in a loop." When it shuts down, it saves state to the database and storage. Lee finds it interesting that there is one small piece, and all these abstractions are built on top of it. Give it helpful tools, connect it to many services, and you get a powerful product.</p>
+<h3 id="why-the-agent-runs-on-the-server-1405"><span class="md">### </span>Why the agent runs on the server (14:05)<a class="anchor" href="#why-the-agent-runs-on-the-server-1405" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Thin client, thick server is common practice. Computing has swung back and forth between the two over the years. His reasons:</p>
+<ul>
+<li>Updating agent code. "It would kind of suck if you had to push an App Store update just to get that code out", compared with pushing server updates quickly.</li>
+<li>Heavy computation, like transcription or image generation, is probably faster on a server than on the device.</li>
+<li>There are well-known ways to scale servers, especially with variable traffic and variable growth.</li>
+<li>The most critical one: if the agent loop ran on the virtual machine, you could not shut down the VM independently of the agent. So save everything on the server and you can always rebuild the VM. Example: a critical zero-day Linux update for the VM. You rebuild the VM without blowing away the whole agent loop and without downtime.</li>
+</ul>
+<h3 id="when-you-hit-send-1525"><span class="md">### </span>When you hit send (15:25)<a class="anchor" href="#when-you-hit-send-1525" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee says this part is "a little in the weeds" and glosses over it. He points to distributed systems, strong versus eventual consistency, as "fun topics to get into".</p>
+<ul>
+<li>You send a message and the client acknowledges it immediately.</li>
+<li>During the turn, the model calls tools in a loop and saves to the database.</li>
+<li>Clients subscribe to the server and listen for a signal that something changed. When they get one, they fetch the latest information from the server.</li>
+<li>Some deduplication ensures that retries do not show the same message several times.</li>
+</ul>
+<h3 id="durable-workflows-versus-job-queues-1617"><span class="md">### </span>Durable workflows versus job queues (16:17)<a class="anchor" href="#durable-workflows-versus-job-queues-1617" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee calls this the key infrastructure piece. You ask your agent to do a complicated task, and it moves through step one, two, three. Then an infrastructure problem crashes it. With a normal queue, the restart replays steps one, two, and three, which "could be pretty problematic." With a durable workflow, retrying is safe, and after a failure it "picks right up on step three."</p>
+<p>This is "kind of a solved problem in some ways" in distributed systems. SpaceX uses the open-source tool Temporal so it does not have to rebuild this complicated machinery from scratch. You still have to run the infrastructure for it.</p>
+<h3 id="priorities-for-new-messages-1720"><span class="md">### </span>Priorities for new messages (17:20)<a class="anchor" href="#priorities-for-new-messages-1720" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Messages have different priorities. Lee messaging his own bot is different from a group chat, a Slack thread, or a background routine.</p>
+<ul>
+<li>If he says "actually, change the date for this event", the agent loop should stop. His message takes priority over everything else.</li>
+<li>Everything else goes to the back of the line.</li>
+<li>If the agent gets three or four messages very quickly, it batches them into one turn. "You can figure out whatever heuristic you want there."</li>
+<li>Then it processes one turn at a time.</li>
+</ul>
+<h2 id="part-4-the-harness-1806"><span class="md">## </span>Part 4. The harness (18:06)<a class="anchor" href="#part-4-the-harness-1806" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>This part takes the basic harness from last week and adds new tools and concepts.</p>
+<h3 id="one-tool-between-client-and-server-1820"><span class="md">### </span>One tool between client and server (18:20)<a class="anchor" href="#one-tool-between-client-and-server-1820" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee calls this the biggest difference between Grok Bot's harness and probably other products like it. In their thin-client, thick-server design, only one tool communicates between client and server: "send to user." It is architecturally simple. "The client is just texting the server in some ways." The heavy tools live on the server: running shell commands, reading files, calling a cloud agent, recording your screen, making demos.</p>
+<p>This has worked well because every new client (mobile app, desktop app, email, Slack) needs just this one tool.</p>
+<h3 id="rich-ui-on-the-client-1915"><span class="md">### </span>Rich UI on the client (19:15)<a class="anchor" href="#rich-ui-on-the-client-1915" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Even with one tool, the client decides how to display each result in the most useful, interactive way.</p>
+<ul>
+<li>If the user is trying to log into something, the client shows a dedicated sign-in form and connects to tools like 1Password.</li>
+<li>For payments, it calls services like Stripe Link or X Money.</li>
+<li>For things you cannot reverse, like sending an email or a Slack message, it may ask you to edit and approve a draft first.</li>
+<li>Sometimes it just leaves an emoji reaction if no message is needed.</li>
+</ul>
+<h3 id="dynamic-tool-discovery-1959"><span class="md">### </span>Dynamic tool discovery (19:59)<a class="anchor" href="#dynamic-tool-discovery-1959" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Every model has a context window, its working memory, limited in tokens. Each tool has a name, a schema, and other details. Install connectors for Google Drive, Gmail, YouTube, and other services that use MCP servers, and much of the window is full before any work starts. That leaves less room for the actual conversation.</p>
+<p>A trick many popular harnesses now use is called "dynamic context", or by others the "tool search tool" ("which is a fun name"). Only the tool names go into every message. When the model wants a tool, it reads the details from a file. "It's kind of files in a file system all the way down." This saves context, cost, and usage. "Just better for everybody in general."</p>
+<h3 id="cheapest-option-first-2129"><span class="md">### </span>Cheapest option first (21:29)<a class="anchor" href="#cheapest-option-first-2129" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>The principle is to try the cheapest or most reliable option first and work up the ladder:</p>
+<ol type="1">
+<li>What the bot already knows from the conversation history.</li>
+<li>A plugin, MCP server, or API, for example pulling your banking data from Plaid.</li>
+<li>A web search ("what was the score of the Cubs game last night?").</li>
+<li>The computer's browser, doing searches there.</li>
+<li>The entire desktop: run scripts, run commands, build things on the Linux machine.</li>
+<li>Only if all of those fail, ask the user for input or approval.</li>
+</ol>
+<p>This is what makes it feel like a colleague. "They're not going to bug you for all these different things, ideally. They're going to try a lot of these options first."</p>
+<h3 id="reading-the-computers-screen-2237"><span class="md">### </span>Reading the computer's screen (22:37)<a class="anchor" href="#reading-the-computers-screen-2237" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>The agent has three ways to get information from the machine. It can take a screenshot, but there are more efficient ways. It can read the page's HTML. It can read the accessibility tree, which cuts token usage and helps find the buttons, links, and elements to click. If none of that works, it clicks on pixels, for example for modals and dialogs. The worst case is to go back to the user, for a two-factor code or a CAPTCHA.</p>
+<h3 id="main-agent-and-helpers-2329"><span class="md">### </span>Main agent and helpers (23:29)<a class="anchor" href="#main-agent-and-helpers-2329" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>The main agent is your orchestrator. Keep its conversation "as sparse as possible", because it can call many helpers, and the helpers are sub-agents. Hand a helper a lot of shell commands or expensive tool calls, and none of that work bloats the main agent's context. Only the result comes back.</p>
+<p>"This is how you get to a product that feels like it has infinite context." Infinite context is not real, and every model has a limit. But with these workarounds, especially when models are trained to use them, you do not feel the limit and you do not feel the quality drop as the conversation goes on.</p>
+<ul>
+<li>Each helper has different skills, and each helper is its own durable workflow. If the video helper crashes or uses too much memory, it restarts and continues without losing progress.</li>
+<li>The main agent is like a coworker managing your to-do list. You can check on a helper, send it a message, or stop the helpers.</li>
+<li>Much of this copies "the ideal way you would scale a team of engineers working on a very complicated problem."</li>
+</ul>
+<h3 id="lessons-from-building-the-tools-2512"><span class="md">### </span>Lessons from building the tools (25:12)<a class="anchor" href="#lessons-from-building-the-tools-2512" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<ul>
+<li>Do not add or remove tools during turns. This ties into prompt caching.</li>
+<li>Long tool descriptions and schemas take up context, which is bad for price and usage. There are many optimizations to trim them.</li>
+<li>People say a harness can have just one tool, running shell commands. That is true, and you can model a lot that way. But if the model spends 90% of its time running shell commands for one thing, a dedicated tool can be more efficient. It is also easier to read for the people reviewing how the product works.</li>
+<li>Error messages. For humans, good errors say what failed and what to do next, like "click on this link". "Turns out that's also very helpful for agents." There is developer experience in designing error messages for agents too.</li>
+</ul>
+<h3 id="security-2628"><span class="md">### </span>Security (26:28)<a class="anchor" href="#security-2628" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>When you trust bots to work over long periods, you need to trust them with your information and with how they operate.</p>
+<ul>
+<li>Even though the agent works on its own machine and does not pollute yours, you still want a model to review every shell command before it runs: auto review.</li>
+<li>Untrusted input, like a phishing email in your inbox or a webhook, must not reach the model as if it were a user instruction. "There's plenty of work to do here in the industry" to protect against prompt injection.</li>
+<li>For actions you cannot reverse, like sending emails, ask the user first.</li>
+<li>Build workflows into the product that keep passwords and similar secrets out of the model conversation.</li>
+</ul>
+<h2 id="part-5-context-engineering-2724"><span class="md">## </span>Part 5. Context engineering (27:24)<a class="anchor" href="#part-5-context-engineering-2724" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>Lee says context engineering is "also known as harness engineering. I feel like it's kind of the same thing, they've evolved over time." The question is how to minimize the context a harness uses, for efficiency, cost, and other reasons.</p>
+<h3 id="prompt-caching-2746"><span class="md">### </span>Prompt caching (27:46)<a class="anchor" href="#prompt-caching-2746" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>With any coding agent or other agent, most tokens should be cached tokens. You send a conversation, add one message, and resend the whole conversation. Model pricing gives large discounts on cached tokens, and you want to stay in the cache window as long as possible. So keep the tool definitions, system prompt, and similar parts as static as possible between calls. Then only the newest message at the bottom is the uncached delta you pay full price for. "There's a whole art and science to this."</p>
+<h3 id="keep-the-main-context-small-2846"><span class="md">### </span>Keep the main context small (28:46)<a class="anchor" href="#keep-the-main-context-small-2846" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>The main agent is the one you have a "very, very, very long conversation with." It compacts or summarizes its context many times, sometimes without you noticing. So keep its context small:</p>
+<ul>
+<li>Put any very long output in a file instead of the context. Agents are very good at reading files, the same way they read a skill or a memory.</li>
+<li>Delegate screenshots and other expensive work to a helper, so it does not touch the main context.</li>
+<li>Keep "gardening": trim and remove unnecessary content as you go, both for cost and for recall and model quality.</li>
+</ul>
+<h3 id="a-cache-miss-is-a-bug-2952"><span class="md">### </span>A cache miss is a bug (29:52)<a class="anchor" href="#a-cache-miss-is-a-bug-2952" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee goes back to January of the talk's year, when OpenClaw got popular and people used it inside model providers' subscription plans. That was a new usage pattern providers had not seen, and the harness was not tuned for it. There were many cache misses, which is a real problem when agents run all the time. Many fixes followed to keep the prompt cache as much as possible.</p>
+<p>Tricks:</p>
+<ul>
+<li>Keep everything in the prompt in a fixed order. Even when you deploy a change to test a new system prompt section or add a tool, you can hash each section and keep the order fixed. Example: an A/B test that adds a prompt piece must not change the prompt order for everyone else. "Otherwise you just busted the cache."</li>
+<li>When you open the chat and start typing, the server prepares the prompt early to warm the cache, "almost like if you're on a website and you go to hover on a link, it can go and prefetch the next page."</li>
+</ul>
+<p>"There's tons and tons of little engineering optimizations that compound", both in token usage and in how smart the models stay over long periods.</p>
+<h3 id="compaction-3131"><span class="md">### </span>Compaction (31:31)<a class="anchor" href="#compaction-3131" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Working over long periods means getting very good at compaction or summarization. Say the model has a 200,000-token context window. Eventually it has to summarize, and "all compression is lossy." You need an algorithm that compresses without losing important details. "I'm sure there's entire PhDs just for this problem."</p>
+<p>The trick SpaceX uses: you go back and forth with your bot past 100,000 tokens, then you go do something else. Providers have a cache window when the cache is still warm, "maybe it's 10 minutes, maybe it's 60 minutes." While the cache is still warm, do the compaction right away, because it is much cheaper on the long conversation. When the user comes back 30 minutes later, they start from the summary, which is much cheaper to continue. There is still a lot of work to make summarization high quality.</p>
+<h3 id="memory-layers-3250"><span class="md">### </span>Memory layers (32:50)<a class="anchor" href="#memory-layers-3250" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee thinks about memory in layers:</p>
+<ul>
+<li>Facts about the user that must be in every message. Back to lowercase: if one message suddenly had uppercase letters while you are "going full Sam Altman style", that would be weird.</li>
+<li>Other facts and prompts worth including, chosen by an algorithm that decides which are most important. Ideally there is "garbage collection" of facts. He compares it to the brain: a fact matters now because it is relevant to today's conversation, and "you're probably not thinking about a soccer match right now."</li>
+<li>Dated logs of your past conversation history.</li>
+<li>Scratchpad notes: small things you are working on right now, meant to be ephemeral. They may matter for the next 30 minutes or an hour and then go away.</li>
+<li>Everything else is found through files. "This is the magic of files, of the models being good at running commands. They can always just go look stuff up, and they're actually very good at doing that."</li>
+</ul>
+<h2 id="part-6-where-this-is-going-3426"><span class="md">## </span>Part 6. Where this is going (34:26)<a class="anchor" href="#part-6-where-this-is-going-3426" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<h3 id="training-the-model-for-the-product-3430"><span class="md">### </span>Training the model for the product (34:30)<a class="anchor" href="#training-the-model-for-the-product-3430" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee gives a short refresher on training an LLM:</p>
+<ul>
+<li>Pre-training: the model learns a general understanding of the world from large amounts of internet text or private data.</li>
+<li>Supervised fine-tuning (SFT): you teach the model to behave a certain way, as a chat assistant or as an agent.</li>
+<li>Reinforcement learning: "kind of like teaching the model how to play games and get better at those games."</li>
+</ul>
+<p>For always-on agents, SFT shows the model examples of the harness so it learns the available tools. RL makes it better at following instructions, picking the right skill out of hundreds, and clicking the right spots in a browser.</p>
+<p>Serving matters too, not only training. The main agent you talk to should have very low latency and reply right away. You can tune harness and inference for that. But when a helper works for a very long time, "the difference between 10 minutes and 12 minutes is kind of negligible." That lets you optimize each one differently.</p>
+<h3 id="the-flywheel-3605"><span class="md">### </span>The flywheel (36:05)<a class="anchor" href="#the-flywheel-3605" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<ul>
+<li>Inner loop. Your agent gets something wrong, for example it calls a tool it was not supposed to. That becomes an eval. The team fixes the harness, the bug, the prompt, or the inference, confirms the fix in the evals, and ships. Product teams do this "every single day".</li>
+<li>Outer loop. Every month or few months you train new models. Ideally they learn from these bugs and failures and climb the evals you care about. You drop the new version into the product and check that it improves.</li>
+<li>New models bring capability jumps, and people use the product in new ways. Lee's example: there has not been much training data on bots in group chats. "This is kind of an emergent thing." He mentions Moltbook and "the Hugging Face incident" as cases where it went badly. Models need training to behave well in multi-agent systems where bots talk to each other.</li>
+</ul>
+<h3 id="delete-the-product-3744"><span class="md">### </span>Delete the product (37:44)<a class="anchor" href="#delete-the-product-3744" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>A principle at Cursor and now at SpaceX. "You kind of have to internalize and assume that the models today are the worst they'll ever be." In six months you might need to completely rebuild the UI. Most of this talk would have been very different six months ago, and definitely a year ago, because the team learned so much about building harnesses and context engineering. The strategy is to build for the next model generation: build as little as possible and keep a very simple interface that lets the models think and act for you.</p>
+<h3 id="next-6-to-12-months-3832"><span class="md">### </span>Next 6 to 12 months (38:32)<a class="anchor" href="#next-6-to-12-months-3832" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee calls these "decently safe bets":</p>
+<ul>
+<li>Today bots work for a few hours, maybe a day on hard tasks. Soon they may work for weeks or months. That raises questions about how to train and evaluate them.</li>
+<li>Models will get much better at recalling past information from conversations. Research is trying many approaches: different algorithms, and different data representations ("maybe it's a graph, maybe it's files, maybe something else").</li>
+<li>Ideally you give a digital colleague "literally all the tools" you would give a new human hire. Organizations are still warming up to that.</li>
+<li>Interfaces may get even simpler. Some people will want speech-to-speech, "maybe they'll have their Jony Ive device that is hopefully really cool" and talk to it all day.</li>
+<li>Models and products will get very good at learning skills on the job and encoding them in files, instructions, and skills, turning raw intelligence into something useful for your task.</li>
+<li>People and companies will get much better at writing down their bespoke processes so agents can use them.</li>
+</ul>
+<h3 id="open-problems-4020"><span class="md">### </span>Open problems (40:20)<a class="anchor" href="#open-problems-4020" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee offers these as ideas to research:</p>
+<ul>
+<li>Evaluating agents that run for a month when models ship every month. You cannot fully confirm a model behaves as expected over a month. Either evals get better, or models ship more slowly. He thinks the industry has to solve this in the next six months.</li>
+<li>Memory, and the algorithms behind it.</li>
+<li>Security: building a secure harness and secure infrastructure so agents cannot be taken over by bad actors.</li>
+<li>When the agent stays silent and when it bothers you. "I don't think that we have it perfect yet." Example: "Hey, I saw that you missed class yesterday, I took the notes, here's the thing." Maybe helpful, maybe annoying. Finding the balance is still open.</li>
+<li>Token efficiency. "A pretty safe bet" is that a year from now far more tokens will flow through the world, so optimizing inference, models, and harnesses to use fewer tokens will matter a lot.</li>
+</ul>
+<h3 id="the-new-building-blocks-4203"><span class="md">### </span>The new building blocks (42:03)<a class="anchor" href="#the-new-building-blocks-4203" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<p>Lee credits a post on X by Alex from OpenRouter. People said every AI app today looks the same: a sidebar, an agent, a chat box. Alex's answer: in 2005 everyone built the same thing too, a server, a database, and a CRUD interface. This is the new normal. Every new product will have an agentic side, or it will become "a headless piece of data for another agent to use."</p>
+<p>The pieces from this talk are the new building blocks: durable workflows, sandboxes and cloud computers, memory, skills, connectors to other services, voice, payments, identity, evals. "Each one of those boxes is like multiple billions of dollars of VC capital, probably trillions." There are about 20 startups for each, and they all have to integrate with harnesses.</p>
+<h2 id="takeaways-4320"><span class="md">## </span>Takeaways (43:20)<a class="anchor" href="#takeaways-4320" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<ul>
+<li>System design and architecture matter more than ever, because those decisions compound. Lee is "still pro looking at code" and still reads the code he ships, mainly to understand the architecture. "It's crazy how much that's changed in just a couple years."</li>
+<li>Build your own version. Apply today's ideas to your week-one harness. He guesses an "open Grok Bot" already exists on GitHub, and you could add a GUI, a sandbox, a VM, and more.</li>
+<li>Learn how LLMs work. You do not need deep ML or the science side. It is like knowing how databases work when you build a web app. Many product and harness decisions are shaped by the models, and an intuition for them puts you in a good position for any role.</li>
+</ul>
+<h2 id="lessons-worth-keeping"><span class="md">## </span>Lessons worth keeping<a class="anchor" href="#lessons-worth-keeping" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>My own extraction of what applies beyond Grok Bot.</p>
+<h3 id="architecture"><span class="md">### </span>Architecture<a class="anchor" href="#architecture" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<ul>
+<li>Keep the agent loop small and build everything else around it: triggers, a queue, a state store, a sandbox, channels.</li>
+<li>Keep all state on the server and treat the VM as disposable, so you can patch, rebuild, or sleep it without touching the agent.</li>
+<li>Use durable workflows for agent steps. Replaying finished steps after a crash wastes money and can repeat side effects.</li>
+<li>Make retries safe with deduplication. Clients listen for "something changed" and fetch from the server.</li>
+<li>Process one turn at a time per conversation. The owner's message preempts. Everything else queues and gets batched.</li>
+<li>Sleep whatever is idle. Always-on is only affordable when idle costs close to nothing.</li>
+</ul>
+<h3 id="harness-and-tools"><span class="md">### </span>Harness and tools<a class="anchor" href="#harness-and-tools" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<ul>
+<li>Give the agent one tool for talking to the user. Silence becomes the default, and new clients are cheap to add.</li>
+<li>Let the client render purpose-built UI for logins, payments, and irreversible sends, so secrets stay out of the model.</li>
+<li>Load tool names up front and tool details on demand.</li>
+<li>Climb from cheap to expensive, and ask the human last.</li>
+<li>For screens, use the accessibility tree before HTML, HTML before screenshots, and screenshots before pixel clicks.</li>
+<li>Keep tools fixed during a conversation. Write errors that tell the agent what to do next.</li>
+<li>If one shell pattern takes most of the agent's time, give it a dedicated tool.</li>
+</ul>
+<h3 id="context-and-cost"><span class="md">### </span>Context and cost<a class="anchor" href="#context-and-cost" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<ul>
+<li>The cache is the budget. Static content goes first in a fixed order. Hash sections. Treat a miss as a bug.</li>
+<li>Warm the cache when the user starts typing.</li>
+<li>Compact while the cache is still warm, not when the user returns.</li>
+<li>Keep the main context small. Long outputs go to files, and expensive work goes to helpers.</li>
+<li>Layer memory: always-on user facts, ranked important facts, dated logs, short-lived scratch notes, and searchable files for the rest.</li>
+</ul>
+<h3 id="safety"><span class="md">### </span>Safety<a class="anchor" href="#safety" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<ul>
+<li>Model-based auto review beats a tired human approving hundreds of commands.</li>
+<li>Treat email and webhook text as untrusted, never as instructions.</li>
+<li>Ask before irreversible actions, and run the agent on its own locked-down machine.</li>
+</ul>
+<h3 id="strategy"><span class="md">### </span>Strategy<a class="anchor" href="#strategy" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h3>
+<ul>
+<li>Assume models get better within six months, and build as little as possible around them.</li>
+<li>Every failure becomes an eval. Evals drive daily harness fixes and the next training run.</li>
+<li>Tune latency per role: a fast main agent and slower, reliable helpers.</li>
+</ul>
+<h2 id="appendix-details-shown-only-on-the-slides"><span class="md">## </span>Appendix: details shown only on the slides<a class="anchor" href="#appendix-details-shown-only-on-the-slides" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>Lee did not say these out loud, but the slides showed them:</p>
+<ul>
+<li>The agent process stops after 2 idle minutes. The VM goes to sleep a few minutes after the last activity, never mid-turn. Files sync to cloud storage, and memory and disk are saved as a snapshot.</li>
+<li>The VM is "one per user" and runs a Debian container kept alive by a supervisor.</li>
+<li>Every client update has a sequence number. Apps apply updates in order and reload from the database if one is missing.</li>
+<li>Each tool's description and schema stays under 4,000 characters. An example error reads: "The computer is asleep. Use Shell or Read to wake it, then try again."</li>
+<li>If auto review blocks an action, you get an approval request. No answer in 15 seconds means blocked. New routines need your OK.</li>
+<li>If a deploy changes a tool description, running conversations get a note instead of the new text.</li>
+<li>The profile holds up to 100 facts in 4,000 characters. The 30 most relevant recent log entries go into the prompt. A pass after each turn adds and replaces facts, and it can only remove facts it was shown. Each agent writes to its own file, and all your agents share the facts about you.</li>
+<li>Compaction is skipped if background work is about to wake the agent anyway. The agent's last few messages are kept word for word.</li>
+</ul>
+<h2 id="names-in-the-transcript"><span class="md">## </span>Names in the transcript<a class="anchor" href="#names-in-the-transcript" aria-label="Link to this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></a></h2>
+<p>The transcript is automatic, so a few names are my best reading of the audio: "open claw" is OpenClaw, "multbook" is likely Moltbook, "Johnny I've device" is a Jony Ive device, and "temporal" is Temporal.</p>
+</main>
+</body>
+</html>
