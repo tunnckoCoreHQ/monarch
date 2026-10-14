@@ -6,7 +6,7 @@
   "scripts": {
     "apps:deploy:prod": "rwx dispatch monarch-deploy-prod --ref master --wait",
     "changeset": "changeset",
-    "check": "ultracite fix --type-aware --type-check AGENTS.md LICENSE.md package.json tsconfig.json turbo.json oxfmt.config.ts oxlint.config.ts scripts .changeset .depot .github .rwx .zed",
+    "check": "ultracite fix --type-aware --type-check AGENTS.md LICENSE.md package.json tsconfig.json turbo.json oxfmt.config.ts oxlint.config.ts scripts .changeset .depot .github .rwx-disabled .zed",
     "packages:publish": "bash scripts/publish-prod.sh",
     "packages:version": "pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile && turbo run check test --filter='!./solidity/*' && GITHUB_TOKEN=\"${GITHUB_TOKEN:-$(gh auth token)}\" changeset version",
     "prepare": "case \"${CI:-}\" in \"\"|0|false|FALSE|no) git config core.hooksPath .githooks ;; esac",
