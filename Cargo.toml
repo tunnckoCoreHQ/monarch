@@ -18,12 +18,12 @@ publish = false
 [workspace.dependencies]
 # tsc-rs: the Rust port of TypeScript 7 (typescript-go). goport_core is the
 # compiler below the language service: scanner, parser, binder, checker and
-# program. The fork's `tsgolint-rust-upstream` branch is upstream ts-rust
-# plus four patches: the flow node cache on 32-bit targets, and three wasm
-# memory changes. Only native builds of tsgolint-rust turn on goport_core's
-# `jemalloc` feature, because jemalloc is their global allocator.
-goport_core = { git = "https://github.com/tunnckoCore/ts-rust", rev = "e21a51bc63dd6bbbc60065e5caed911f1d36f2fc", default-features = false }
-goport_util = { git = "https://github.com/tunnckoCore/ts-rust", rev = "e21a51bc63dd6bbbc60065e5caed911f1d36f2fc" }
+# program. It follows upstream ts-rust's `main`; Cargo.lock pins the commit,
+# and `cargo update -p goport_core -p goport_util` moves it. Only native
+# builds of tsgolint-rust turn on goport_core's `jemalloc` feature, because
+# jemalloc is their global allocator.
+goport_core = { git = "https://github.com/pingdotgg/ts-rust", branch = "main", default-features = false }
+goport_util = { git = "https://github.com/pingdotgg/ts-rust", branch = "main" }
 
 tsgolint-core = { path = "crates/tsgolint-core" }
 tsgolint-rules = { path = "crates/tsgolint-rules" }

@@ -68,4 +68,4 @@ Each tsconfig becomes one ts-rust program. ts-rust gives every file a checker, a
 
 ## Development
 
-`pnpm exec turbo run check test build --filter=./crates` runs fmt and clippy, the Rust tests and both e2e runs, and the release builds. The toolchain is in `rust-toolchain.toml`. ts-rust comes from [tunnckoCore/ts-rust](https://github.com/tunnckoCore/ts-rust), branch `tsgolint-rust-upstream` at `e21a51bc`: upstream ts-rust `d4eecf99` plus four small patches (a 32-bit fix and three wasm memory changes). The root `Cargo.toml` pins that revision.
+`pnpm exec turbo run check test build --filter=./crates` runs fmt and clippy, the Rust tests and both e2e runs, and the release builds. The toolchain is in `rust-toolchain.toml`. ts-rust comes from [pingdotgg/ts-rust](https://github.com/pingdotgg/ts-rust), branch `main`. `Cargo.lock` pins the commit, now `598e6416`.

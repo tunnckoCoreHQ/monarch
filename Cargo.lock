@@ -256,7 +256,7 @@ dependencies = [
 [[package]]
 name = "goport_core"
 version = "7.0.0-dev"
-source = "git+https://github.com/tunnckoCore/ts-rust?rev=e21a51bc63dd6bbbc60065e5caed911f1d36f2fc#e21a51bc63dd6bbbc60065e5caed911f1d36f2fc"
+source = "git+https://github.com/pingdotgg/ts-rust?branch=main#598e6416bfc04962605209911451a3f45f15495c"
 dependencies = [
  "bumpalo",
  "flate2",
@@ -278,7 +278,7 @@ dependencies = [
 [[package]]
 name = "goport_util"
 version = "7.0.0-dev"
-source = "git+https://github.com/tunnckoCore/ts-rust?rev=e21a51bc63dd6bbbc60065e5caed911f1d36f2fc#e21a51bc63dd6bbbc60065e5caed911f1d36f2fc"
+source = "git+https://github.com/pingdotgg/ts-rust?branch=main#598e6416bfc04962605209911451a3f45f15495c"
 dependencies = [
  "indexmap",
  "lzma-rust2",

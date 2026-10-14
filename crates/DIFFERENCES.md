@@ -1,6 +1,6 @@
 # Differences from tsgolint v7.0.2003
 
-tsgolint-rust gives the same output as the Go tsgolint, with the exceptions below. Most of them come from the TypeScript revision: tsgolint v7.0.2003 uses typescript-go `2bd066d87f5b` (the TypeScript 7.0 release branch, 2026-07-07). tsgolint-rust uses the `tsgolint-rust-upstream` branch of the ts-rust fork at `e21a51bc` (upstream ts-rust `d4eecf99` plus 4 patches), which ports microsoft/TypeScript `fed0bf24149f` (7.1.0-dev, 2026-10-08). The patches do not change that TypeScript revision.
+tsgolint-rust gives the same output as the Go tsgolint, with the exceptions below. Most of them come from the TypeScript revision: tsgolint v7.0.2003 uses typescript-go `2bd066d87f5b` (the TypeScript 7.0 release branch, 2026-07-07). tsgolint-rust uses ts-rust `main` at `598e6416`, which ports microsoft/TypeScript `fed0bf24149f` (7.1.0-dev, 2026-10-08).
 
 Each TypeScript difference below was checked with two compilers: `typescript@7.0.2` (close to tsgolint's typescript-go) and `typescript@7.1.0-dev.20261008.1` (the revision that ts-rust ports). Go agrees with 7.0.2 and tsgolint-rust agrees with 7.1.0-dev in every case.
 
