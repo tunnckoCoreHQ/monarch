@@ -12,8 +12,7 @@
 //   3. run the jobs in order on that machine, one GitHub check run each, and stop at the
 //      first failure. Every step also appends to ~/ci.log on that machine, which
 //      holds only this run: the log is emptied first.
-//   4. green on master: save the machine as the next snapshot version (two names,
-//      alternating, so the last one stays restorable while the next one saves).
+//   4. green on master: save the machine as the next version of the snapshot.
 //      A green machine is deleted. A failed machine is kept, named in the failed
 //      check's summary, so `boxd connect <name>` lands in the failed state. The nightly
 //      cold run deletes failed machines older than a day.
@@ -64,13 +63,10 @@ const LOG = "/home/boxd/ci.log";
 const KEEP_FAILED_MS = 24 * 3_600_000;
 
 type Inflight = { owner: string; name: string; checks: number[]; machine?: string };
-/** Which of the two snapshot names jobs restore from, per repo, and the runs in flight.
+/** The runs in flight.
     Survives restarts: boxd restarts this script on redeploy, fork, and integration changes,
     which kills any run in progress. `recover` closes what such a run left behind. */
-const state = object<{ active: Record<string, string>; inflight: Record<string, Inflight> }>(
-  "boxd-ci",
-);
-state.active ??= {};
+const state = object<{ inflight: Record<string, Inflight> }>("boxd-ci");
 state.inflight ??= {};
 const track = (key: string, r: Inflight) => {
   state.inflight = { ...state.inflight, [key]: r };
@@ -78,14 +74,6 @@ const track = (key: string, r: Inflight) => {
 const untrack = (key: string) => {
   state.inflight = Object.fromEntries(Object.entries(state.inflight).filter(([k]) => k !== key));
 };
-// A stored name only counts while it belongs to the configured snapshot, so pointing a
-// repo at a new snapshot in ci.json takes effect.
-const active = (repo: string) => {
-  const a = state.active[repo];
-  return a === repos[repo].snapshot || a === `${repos[repo].snapshot}-b` ? a : repos[repo].snapshot;
-};
-const other = (repo: string) =>
-  active(repo) === repos[repo].snapshot ? `${repos[repo].snapshot}-b` : repos[repo].snapshot;
 const promotions = new Map<string, Promise<void>>();
 
 const secs = (t0: number) => ((performance.now() - t0) / 1000).toFixed(1);
@@ -153,7 +141,7 @@ async function ci(repoName: string, run: Run) {
   const say = (msg: string) => console.log(`${secs(t0).padStart(6)}s  ${msg}`);
   const suffix = run.cold ? " (cold)" : "";
   const short7 = run.sha.slice(0, 7);
-  const source = active(repoName);
+  const source = repo.snapshot;
   const allJobs = Object.entries(repo.jobs);
   // A re-run of one check runs that job alone.
   const only = run.only ? allJobs.filter(([job]) => run.only?.includes(job)) : [];
@@ -373,7 +361,7 @@ async function ci(repoName: string, run: Run) {
 
 async function promote(repoName: string, machineId: string) {
   const t0 = performance.now();
-  const target = other(repoName);
+  const target = repos[repoName].snapshot;
   const before = await boxd.snapshots.get(target).catch(() => null);
   await boxd.snapshots.create(machineId, target);
   // The copy reads from the live machine: keep it until the snapshot is ready.
@@ -382,7 +370,6 @@ async function promote(repoName: string, machineId: string) {
     await sleep(1000);
     snap = await boxd.snapshots.get(target);
   }
-  state.active = { ...state.active, [repoName]: target };
   console.log(
     `        ★ saved as ${target}@${snap.version} in ${secs(t0)}s: the next job starts here`,
   );
@@ -390,9 +377,7 @@ async function promote(repoName: string, machineId: string) {
 
 /** Closes what a run killed by a restart left behind: its open checks and its machine. */
 async function recover() {
-  // SAFETY: `track` is the only writer of `state.inflight`, and it writes `Inflight` values.
-  // SAFETY: `track` is the only writer of `state.inflight`, and it writes `Inflight` values.
-  const entries = Object.entries(state.inflight) as Array<[string, Inflight]>;
+  const entries: Array<[string, Inflight]> = Object.entries(state.inflight);
   if (!entries.length) {
     return;
   }
