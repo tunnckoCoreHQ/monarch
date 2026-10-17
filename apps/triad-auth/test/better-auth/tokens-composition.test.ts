@@ -136,6 +136,8 @@ describe("token composition", () => {
       "cred",
       "pubkey",
       "cosekey",
+      "owner_name",
+      "owner_email",
       "resource:read",
     ]);
     expect(oauthProviderOptions.scopes).not.toContain("profile");
@@ -168,6 +170,8 @@ describe("token composition", () => {
       "cred",
       "pubkey",
       "cosekey",
+      "owner_name",
+      "owner_email",
       "resource:read",
     ]);
     expect(oauthProviderOptions.clientRegistrationDefaultScopes).toEqual(["openid"]);
@@ -409,6 +413,26 @@ describe("token composition", () => {
     ).resolves.toEqual({ cosekey });
   });
 
+  it("returns the agent owner claims for the owner scopes", async () => {
+    const owner = {
+      owner_name: "Agent Owner",
+      owner_email: "owner@example.com",
+      owner_email_verified: true,
+    };
+    const profileClaims: TokenProfileClaimResolver = {
+      resolveProfileClaims: vi.fn(async () => owner),
+    };
+    const { oauthProviderOptions } = createComposition(createIdentityResolver(), profileClaims);
+
+    await expect(
+      oauthProviderOptions.customIdTokenClaims?.({
+        metadata: {},
+        scopes: ["openid", "owner_name", "owner_email"],
+        user,
+      }),
+    ).resolves.toEqual(owner);
+  });
+
   it("adds global-subject triple claims to access tokens and introspection", async () => {
     const composition = createComposition();
     const extension = claimsExtension(composition);
@@ -487,6 +511,9 @@ describe("token composition", () => {
       "cred",
       "pubkey",
       "cosekey",
+      "owner_name",
+      "owner_email",
+      "owner_email_verified",
     ]);
     expect(oauthProviderOptions.advertisedMetadata?.scopes_supported).toEqual([
       "openid",
@@ -500,6 +527,8 @@ describe("token composition", () => {
       "cred",
       "pubkey",
       "cosekey",
+      "owner_name",
+      "owner_email",
       "resource:read",
     ]);
   });
