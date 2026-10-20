@@ -46,11 +46,11 @@
     },
     "deploy:nightly": {
       "cache": false,
-      "passThroughEnv": ["COMMIT_SHA"]
+      "passThroughEnv": ["COMMIT_SHA", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]
     },
     "deploy:prod": {
       "cache": false,
-      "passThroughEnv": ["COMMIT_SHA"]
+      "passThroughEnv": ["COMMIT_SHA", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]
     }
   }
 }

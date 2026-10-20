@@ -372,6 +372,8 @@ tasks:
       TURBO_SCM_BASE: ${{ init.commit-sha }}^1
       TURBO_SCM_HEAD: ${{ init.commit-sha }}
       COMMIT_SHA: ${{ init.commit-sha }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vaults.monarch_master.secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ vaults.monarch_master.secrets.CLOUDFLARE_API_TOKEN }}
     # A master push deploys the apps it changed; the dispatch deploys one app, or every app.
     # badges.wgw.lol is skipped: the app is going away. --continue lets the other apps deploy when
     # one fails.
@@ -395,6 +397,8 @@ tasks:
       TURBO_TELEMETRY_DISABLED: 1
       APP: ${{ init.app }}
       COMMIT_SHA: ${{ init.commit-sha }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vaults.monarch_master.secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ vaults.monarch_master.secrets.CLOUDFLARE_API_TOKEN }}
     run: pnpm exec turbo run deploy:prod ${APP:+--filter="$APP"}
 
   # Runs Socket Optimize. Verified overrides are pushed straight to master by the PAT owner, a
