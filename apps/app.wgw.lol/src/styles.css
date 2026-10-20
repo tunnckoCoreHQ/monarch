@@ -1,0 +1,159 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/archivo";
+@import "@fontsource-variable/jetbrains-mono";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  color-scheme: dark;
+  --radius: 0rem;
+  --background: oklch(0.09 0 0);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.12 0.004 120);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.12 0.004 120);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.91 0.21 124);
+  --primary-foreground: oklch(0.12 0.03 124);
+  --secondary: oklch(0.18 0.006 120);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.16 0.004 120);
+  --muted-foreground: oklch(0.68 0.01 120);
+  --faint: oklch(0.59 0.008 120);
+  --accent: oklch(0.2 0.01 120);
+  --accent-foreground: oklch(0.96 0 0);
+  --destructive: oklch(0.65 0.22 27);
+  --border: oklch(0.27 0.006 120);
+  --input: oklch(0.32 0.006 120);
+  --ring: oklch(0.72 0.15 250);
+  --signal: oklch(0.91 0.21 124);
+  --violet: oklch(0.7 0.17 300);
+  /* Opaque tints, so sticky line-number gutters can sit on top of scrolled code. */
+  --diff-add: color-mix(in oklab, var(--signal) 9%, var(--background));
+  --diff-add-gutter: color-mix(in oklab, var(--signal) 18%, var(--background));
+  --diff-del: color-mix(in oklab, var(--destructive) 13%, var(--background));
+  --diff-del-gutter: color-mix(in oklab, var(--destructive) 24%, var(--background));
+  --diff-hunk: color-mix(in oklab, var(--violet) 12%, var(--background));
+}
+
+@theme inline {
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) + 2px);
+  --radius-md: calc(var(--radius) + 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-signal: var(--signal);
+  --color-violet: var(--violet);
+  --color-diff-add: var(--diff-add);
+  --color-diff-add-gutter: var(--diff-add-gutter);
+  --color-diff-del: var(--diff-del);
+  --color-diff-del-gutter: var(--diff-del-gutter);
+  --color-diff-hunk: var(--diff-hunk);
+  --animate-progress: progress 1.4s ease-in-out infinite;
+
+  @keyframes progress {
+    0% {
+      transform: translateX(-100%) scaleX(0.3);
+    }
+    100% {
+      transform: translateX(100%) scaleX(0.6);
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "ss01";
+  }
+  ::selection {
+    background: var(--signal);
+    color: var(--primary-foreground);
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+.prose-md {
+  @apply text-[15px] leading-7 wrap-break-word;
+}
+.prose-md > :first-child {
+  @apply mt-0;
+}
+.prose-md h1 {
+  @apply mt-2 mb-4 border-b pb-2 text-3xl font-black tracking-tight;
+}
+.prose-md h2 {
+  @apply mt-8 mb-3 border-b pb-1 text-2xl font-extrabold tracking-tight;
+}
+.prose-md h3 {
+  @apply mt-6 mb-2 text-lg font-bold;
+}
+.prose-md p,
+.prose-md ul,
+.prose-md ol,
+.prose-md pre,
+.prose-md blockquote,
+.prose-md table {
+  @apply my-3;
+}
+.prose-md ul {
+  @apply list-disc pl-6;
+}
+.prose-md ol {
+  @apply list-decimal pl-6;
+}
+.prose-md a {
+  @apply text-signal underline underline-offset-4;
+}
+.prose-md code {
+  @apply bg-muted px-1 py-0.5 font-mono text-[13px];
+}
+.prose-md pre {
+  @apply bg-card overflow-x-auto border p-4;
+}
+.prose-md pre code {
+  @apply bg-transparent p-0;
+}
+.prose-md blockquote {
+  @apply border-signal text-muted-foreground border-l-4 pl-4;
+}
+.prose-md table {
+  @apply block max-w-full border-collapse overflow-x-auto text-sm;
+}
+.prose-md th,
+.prose-md td {
+  @apply border px-3 py-1.5 text-left;
+}
+.prose-md hr {
+  @apply my-6;
+}
+.prose-md img {
+  @apply inline-block max-w-full;
+}
