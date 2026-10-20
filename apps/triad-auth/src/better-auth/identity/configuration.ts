@@ -1,9 +1,17 @@
-import type { Account, BetterAuthOptions } from "better-auth";
+import type { Account, BetterAuthOptions, HookEndpointContext } from "better-auth";
+import { createAuthMiddleware } from "better-auth/api";
+import { genericOAuth, type GenericOAuthUserInfo } from "better-auth/plugins";
 
 import { isRecord } from "../../utils";
+import { PROVIDER_UPSTREAM_SCOPE_MAP } from "../disclosures";
 import type { TriadEnv } from "../env";
 import { validateEncryptionSecrets } from "./encryption";
-import { captureProviderProfile, sealProfileEncryptedData, type CapturedProfile } from "./profile";
+import {
+  captureProviderProfile,
+  openProfileEncryptedData,
+  sealProfileEncryptedData,
+  type CapturedProfile,
+} from "./profile";
 import {
   accountSubject,
   type AuthenticationProvider,
@@ -13,13 +21,17 @@ import {
 } from "./subjects";
 
 const ACCOUNT_SUB_PATTERN = /^acc_[0-9a-f]{64}$/;
-const GOOGLE_SUB_PATTERN = /^[\x21-\x7e]{1,255}$/;
+const OIDC_SUB_PATTERN = /^[\x21-\x7e]{1,255}$/;
 const DECIMAL_ID_PATTERN = /^[1-9][0-9]*$/;
 const SIWE_CHAIN_ID_FIELD = "Chain ID: ";
+const AGENTID_ISSUER = "https://auth.agentid.com";
+const AGENTID_OWNER_SCOPES = ["owner_name", "owner_email"] as const;
+const OWNER_MERGE_ATTEMPTS = 3;
 const IDENTITY_PROVIDERS: AuthenticationProvider[] = [
   "google",
   "github",
   "twitter",
+  "agentid",
   "ethereum",
   "passkey",
 ];
@@ -36,7 +48,7 @@ function invalidUpstreamId(provider: SocialProvider): Error {
 
 function googleUpstreamId(profile: unknown): string {
   const upstreamId = isRecord(profile) ? profile.sub : undefined;
-  if (typeof upstreamId !== "string" || !GOOGLE_SUB_PATTERN.test(upstreamId)) {
+  if (typeof upstreamId !== "string" || !OIDC_SUB_PATTERN.test(upstreamId)) {
     throw invalidUpstreamId("google");
   }
 
@@ -63,6 +75,41 @@ function twitterUpstreamId(profile: unknown): string {
   }
 
   return upstreamId;
+}
+
+function agentidUpstreamId(profile: unknown): string {
+  const upstreamId = isRecord(profile) ? profile.sub : undefined;
+  if (typeof upstreamId !== "string" || !OIDC_SUB_PATTERN.test(upstreamId)) {
+    throw invalidUpstreamId("agentid");
+  }
+
+  return upstreamId;
+}
+
+// The access token comes from Triad's own code exchange, so the userinfo
+// response is the profile. Triad does not read the ID token. A failed or
+// malformed response, including one without a valid `sub`, returns null, which
+// Better Auth turns into an OAuth error.
+async function agentidUserInfo(accessToken: string | undefined) {
+  if (!accessToken) {
+    return null;
+  }
+
+  const response = await fetch(`${AGENTID_ISSUER}/v0/userinfo`, {
+    headers: { accept: "application/json", authorization: `Bearer ${accessToken}` },
+  }).catch(() => undefined);
+  if (!response?.ok) {
+    return null;
+  }
+
+  const profile: unknown = await response.json().catch(() => undefined);
+
+  return isRecord(profile) && typeof profile.sub === "string" && OIDC_SUB_PATTERN.test(profile.sub)
+    ? ({
+        ...profile,
+        emailVerified: profile.email_verified === true,
+      } satisfies GenericOAuthUserInfo)
+    : null;
 }
 
 async function mapIdentity(
@@ -361,4 +408,211 @@ export function createIdentityConfiguration(env: TriadEnv) {
       },
     },
   } satisfies BetterAuthOptions;
+}
+
+// Maps the Triad owner scopes that a Client Application requested to the
+// AgentID scopes that carry them.
+export function agentidOwnerScopes(requested: readonly string[]): string[] {
+  const upstream = PROVIDER_UPSTREAM_SCOPE_MAP.agentid;
+
+  return [
+    ...new Set(
+      AGENTID_OWNER_SCOPES.filter((scope) => requested.includes(scope)).flatMap((scope) => [
+        ...upstream[scope],
+      ]),
+    ),
+  ];
+}
+
+function ownerProfile(profile: CapturedProfile): CapturedProfile {
+  return {
+    ...(profile.profileOwnerName === undefined
+      ? {}
+      : { profileOwnerName: profile.profileOwnerName }),
+    ...(profile.profileOwnerEmail === undefined
+      ? {}
+      : { profileOwnerEmail: profile.profileOwnerEmail }),
+    ...(profile.profileOwnerEmailVerified === undefined
+      ? {}
+      : { profileOwnerEmailVerified: profile.profileOwnerEmailVerified }),
+  };
+}
+
+// True when a Client Application asks an AgentID account for owner claims that
+// its encrypted profile does not hold yet. The account then signs in with
+// AgentID again, and that sign-in requests the owner scopes.
+export async function agentidOwnerDataMissing(
+  env: TriadEnv,
+  user: Record<string, unknown>,
+  scopes: readonly string[],
+): Promise<boolean> {
+  const wantsName = scopes.includes("owner_name");
+  const wantsEmail = scopes.includes("owner_email");
+  if (user.provider !== "agentid" || typeof user.id !== "string" || (!wantsName && !wantsEmail)) {
+    return false;
+  }
+
+  const envelope =
+    typeof user.encryptedData === "string"
+      ? user.encryptedData
+      : (
+          await env.DB.prepare('select "encryptedData" from "user" where "id" = ?')
+            .bind(user.id)
+            .first<{ encryptedData: unknown }>()
+        )?.encryptedData;
+  const profile =
+    typeof envelope === "string"
+      ? await openProfileEncryptedData(env.ENCRYPTION_SECRETS, user.id, envelope)
+      : {};
+
+  return (wantsName && !profile.profileOwnerName) || (wantsEmail && !profile.profileOwnerEmail);
+}
+
+// AgentID is not a built-in Better Auth provider. Generic OAuth registers it
+// as a social provider, so it uses `/sign-in/social` and `/callback/agentid`.
+// The endpoints are fixed because Triad builds Better Auth on every request,
+// and discovery would fetch the AgentID metadata each time.
+export function createAgentIdAuthentication(env: TriadEnv) {
+  const clientId = env.AGENTID_CLIENT_ID?.trim();
+  const clientSecret = env.AGENTID_CLIENT_SECRET?.trim();
+  const signedInProfiles = new Map<string, CapturedProfile>();
+  const plugin = genericOAuth({
+    config:
+      clientId && clientSecret
+        ? [
+            {
+              providerId: "agentid",
+              name: "AgentID",
+              clientId,
+              clientSecret,
+              authentication: "basic",
+              authorizationUrl: `${AGENTID_ISSUER}/v0/authorize`,
+              tokenUrl: `${AGENTID_ISSUER}/v0/token`,
+              accountIssuer: AGENTID_ISSUER,
+              scopes: ["openid", "email", "profile"],
+              getUserInfo: (tokens) => agentidUserInfo(tokens.accessToken),
+              accountSubject: ({ profile }) => agentidUpstreamId(profile),
+              mapProfileToUser: (profile) => {
+                const upstreamId = agentidUpstreamId(profile);
+                const captured = captureProviderProfile("agentid", profile);
+
+                return mapIdentity(
+                  env.IDENTIFIER_SECRET,
+                  "agentid",
+                  upstreamId,
+                  captured,
+                  env.ENCRYPTION_SECRETS,
+                ).then((user) => {
+                  signedInProfiles.set(user.name, captured);
+
+                  return user;
+                });
+              },
+            },
+          ]
+        : [],
+  });
+
+  return {
+    ...plugin,
+    // Generic OAuth takes the issuer only from discovery. AgentID sends `iss` on
+    // its callback (RFC 9207), so Triad sets the issuer here, and Better Auth
+    // rejects a callback whose `iss` is not AgentID before it redeems the code.
+    init: async (...args: Parameters<typeof plugin.init>) => {
+      const result = await plugin.init(...args);
+      for (const provider of result.context.socialProviders) {
+        if (provider.id === "agentid") {
+          provider.issuer = AGENTID_ISSUER;
+        }
+      }
+
+      return result;
+    },
+    hooks: {
+      before: [
+        {
+          // Triad asks AgentID for the owner scopes only when the Client
+          // Application's authorization request asked Triad for owner claims.
+          matcher: (context: HookEndpointContext) =>
+            context.path === "/sign-in/social" &&
+            isRecord(context.body) &&
+            context.body.provider === "agentid",
+          handler: createAuthMiddleware(async (context) => {
+            const query = isRecord(context.body) ? context.body.oauth_query : undefined;
+            const requested =
+              typeof query === "string"
+                ? (new URLSearchParams(query).get("scope")?.split(" ") ?? [])
+                : [];
+            const scopes = agentidOwnerScopes(requested);
+            if (scopes.length === 0) {
+              return;
+            }
+
+            return { context: { body: { ...context.body, scopes } } };
+          }),
+        },
+      ],
+      after: [
+        {
+          // An existing account keeps its encrypted profile. When a later
+          // sign-in brings owner data, Triad adds it to that profile.
+          matcher: (context: HookEndpointContext) =>
+            context.path === "/callback/:id" && context.params?.id === "agentid",
+          handler: createAuthMiddleware(async (context) => {
+            const userId = context.context.newSession?.user.id;
+            const owner = ownerProfile((userId && signedInProfiles.get(userId)) || {});
+            if (userId) {
+              signedInProfiles.delete(userId);
+            }
+            if (!userId || Object.keys(owner).length === 0) {
+              return;
+            }
+
+            // The update only applies while the stored envelope is the one this
+            // sign-in read, so two concurrent sign-ins cannot drop each other's
+            // owner fields. On a conflict, Triad reads the profile again.
+            for (let attempt = 0; attempt < OWNER_MERGE_ATTEMPTS; attempt++) {
+              const user = await context.context.adapter.findOne<{ encryptedData?: unknown }>({
+                model: "user",
+                where: [{ field: "id", value: userId }],
+              });
+              const envelope = typeof user?.encryptedData === "string" ? user.encryptedData : null;
+              const stored: CapturedProfile = envelope
+                ? await openProfileEncryptedData(env.ENCRYPTION_SECRETS, userId, envelope)
+                : {};
+              const merged: CapturedProfile = { ...stored, ...owner };
+              // A new owner email never keeps the verification status of the old one.
+              if (
+                owner.profileOwnerEmail !== undefined &&
+                owner.profileOwnerEmail !== stored.profileOwnerEmail &&
+                owner.profileOwnerEmailVerified === undefined
+              ) {
+                delete merged.profileOwnerEmailVerified;
+              }
+              const encryptedData = await sealProfileEncryptedData(
+                env.ENCRYPTION_SECRETS,
+                userId,
+                merged,
+              );
+              const updated = await context.context.adapter.updateMany({
+                model: "user",
+                where: [
+                  { field: "id", value: userId },
+                  ...(envelope ? [{ field: "encryptedData", value: envelope }] : []),
+                ],
+                update: { encryptedData },
+              });
+              if (updated > 0) {
+                return;
+              }
+            }
+
+            // The sign-in already succeeded. A later sign-in retries the merge,
+            // and the owner-data check sends the agent back until it lands.
+            context.context.logger.warn("AgentID owner data could not be saved");
+          }),
+        },
+      ],
+    },
+  };
 }

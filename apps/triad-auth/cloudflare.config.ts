@@ -23,7 +23,9 @@ export default defineConfig(({ mode }) => {
     worker: {
       name: target.name,
       compatibilityDate: "2026-07-09",
-      compatibilityFlags: ["nodejs_compat", "global_fetch_strictly_public"],
+      // Alchemy deployed both Workers with new_module_registry. `cf deploy` stops when a deploy
+      // would drop a flag the live Worker has, so the flag stays.
+      compatibilityFlags: ["nodejs_compat", "global_fetch_strictly_public", "new_module_registry"],
       entrypoint: "src/index.ts",
       // A zone route, not a custom domain: wgw.lol hosts many subdomains on routes.
       triggers: [triggers.fetch({ pattern: `${host}/*`, zone: "wgw.lol" })],
@@ -38,10 +40,12 @@ export default defineConfig(({ mode }) => {
       },
       env: {
         // Typed as string, so tests and local tools can pass any origin.
-        AUTH_ORIGIN: bindings.text<string>(`https://${host}`),
-        DB: bindings.d1(target.database),
+        // Deploys use the Worker host. A local run sets AUTH_ORIGIN, for example http://localhost:4321.
+        AUTH_ORIGIN: bindings.text<string>(process.env.AUTH_ORIGIN ?? `https://${host}`),
+        // Bound by ID only: the live binding has no database name, and `cf deploy` stops on the extra field.
+        DB: bindings.d1({ id: target.database.id }),
         ASSETS: bindings.assets(),
-        // The ten secrets live on each Worker; `.env` holds local values.
+        // The twelve secrets live on each Worker; `.env` holds local values.
         BETTER_AUTH_SECRET: bindings.secret(),
         IDENTIFIER_SECRET: bindings.secret(),
         RATE_LIMIT_SECRET: bindings.secret(),
@@ -52,6 +56,8 @@ export default defineConfig(({ mode }) => {
         GITHUB_CLIENT_SECRET: bindings.secret(),
         TWITTER_CLIENT_ID: bindings.secret(),
         TWITTER_CLIENT_SECRET: bindings.secret(),
+        AGENTID_CLIENT_ID: bindings.secret(),
+        AGENTID_CLIENT_SECRET: bindings.secret(),
       },
     },
   };

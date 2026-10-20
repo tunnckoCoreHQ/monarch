@@ -22,6 +22,8 @@ function createEnv(overrides: Partial<TriadEnv> = {}): TriadEnv {
     GITHUB_CLIENT_SECRET: "github-client-secret",
     TWITTER_CLIENT_ID: "twitter-client-id",
     TWITTER_CLIENT_SECRET: "twitter-client-secret",
+    AGENTID_CLIENT_ID: "agentid-client-id",
+    AGENTID_CLIENT_SECRET: "agentid-client-secret",
     ...overrides,
   };
 }
@@ -71,6 +73,7 @@ describe("Triad Better Auth integration configuration", () => {
     expect(configuration.plugins.map((plugin) => plugin.id)).toEqual([
       "device-authorization",
       "siwe",
+      "generic-oauth",
       "passkey",
       "wallet-broker",
       "multi-session",
@@ -100,6 +103,8 @@ describe("Triad Better Auth integration configuration", () => {
         "cred",
         "pubkey",
         "cosekey",
+        "owner_name",
+        "owner_email",
       ],
     });
     expect(providerPlugin.options.extensions).toHaveLength(2);
@@ -130,6 +135,8 @@ describe("Triad Better Auth integration configuration", () => {
           "cred",
           "pubkey",
           "cosekey",
+          "owner_name",
+          "owner_email",
         ],
         disabled: false,
         identifier: "https://auth.example.com/demo",
@@ -148,6 +155,8 @@ describe("Triad Better Auth integration configuration", () => {
       "cred",
       "pubkey",
       "cosekey",
+      "owner_name",
+      "owner_email",
     ]);
   });
 });

@@ -19,10 +19,10 @@ Both Workers are described by one `cloudflare.config.ts`, the typed config of th
 pnpm install --frozen-lockfile
 cp .env.example .env
 pnpm run db:migrate:local
-pnpm run dev
+AUTH_ORIGIN=http://localhost:4321 pnpm run dev
 ```
 
-Fill `.env` with local values. `pnpm run dev` runs `cf dev`, which runs `astro dev` through the Cloudflare Vite plugin: it serves the Worker from `src/index.ts` with the secrets from `.env` and local D1 storage in `.cloudflare/state/`. `db:migrate:local` applies the migrations to that same storage; the `cf` beta keeps running after it prints the result, so stop it with Ctrl-C.
+Fill `.env` with local values. `AUTH_ORIGIN` must match the local URL, or every sign-in fails; without it the local Worker uses its production origin. `pnpm run dev` runs `cf dev`, which runs `astro dev` through the Cloudflare Vite plugin: it serves the Worker from `src/index.ts` with the secrets from `.env` and local D1 storage in `.cloudflare/state/`. `db:migrate:local` applies the migrations to that same storage; the `cf` beta keeps running after it prints the result, so stop it with Ctrl-C.
 
 ## Making a change
 
@@ -64,7 +64,7 @@ Every page footer shows a `BUILD <sha>` link with the commit the running Worker 
 
 ## Secrets
 
-Each Worker needs the same ten secret names. They are set on the Worker and persist across deploys; the deploy scripts never touch them. The first four differ per Worker. The six provider values are shared by both Workers, because one OAuth app per provider registers both callback origins. Set or rotate one with `npx wrangler secret put <NAME> --name <worker>`; `cf` cannot set a single secret yet.
+Each Worker needs the same twelve secret names. They are set on the Worker and persist across deploys; the deploy scripts never touch them. The first four differ per Worker. The eight provider values are shared by both Workers, because one OAuth app per provider registers both callback origins. Set or rotate one with `npx wrangler secret put <NAME> --name <worker>`; `cf` cannot set a single secret yet.
 
 | Name | Value |
 | --- | --- |
@@ -75,6 +75,7 @@ Each Worker needs the same ten secret names. They are set on the Worker and pers
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | From the Google Cloud console |
 | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | From the GitHub OAuth app |
 | `TWITTER_CLIENT_ID`, `TWITTER_CLIENT_SECRET` | From the X developer portal |
+| `AGENTID_CLIENT_ID`, `AGENTID_CLIENT_SECRET` | From a registered application in the AgentID console |
 
 Generate random values with `openssl rand -base64 32 | tr '+/' '-_' | tr -d '='`. Never reuse one of the first four values between the two Workers. Better Auth owns ES256 signing and JWKS persistence, so there is no signing secret.
 

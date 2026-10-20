@@ -29,6 +29,8 @@ function createEnv(overrides: Partial<TriadEnv> = {}): TriadEnv {
     GITHUB_CLIENT_SECRET: "github-client-secret",
     TWITTER_CLIENT_ID: "twitter-client-id",
     TWITTER_CLIENT_SECRET: "twitter-client-secret",
+    AGENTID_CLIENT_ID: "agentid-client-id",
+    AGENTID_CLIENT_SECRET: "agentid-client-secret",
     ...overrides,
   };
 }

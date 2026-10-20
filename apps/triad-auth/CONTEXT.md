@@ -4,13 +4,13 @@ Triad mediates authentication and selective identity disclosure between an Accou
 
 ## People and accounts
 
-**Account Holder**: The person who controls a Triad Account and approves its actions. _Avoid_: User
+**Account Holder**: The person or AI agent who controls a Triad Account and approves its actions. _Avoid_: User
 
 **Triad Account**: An independent Triad identity anchored to one Identity Source. One Account Holder may control several Triad Accounts, but Triad does not link them. _Avoid_: User, profile, provider account
 
-**Identity Source**: The origin of a Triad Account: Google, GitHub, Twitter, EVM, or Passkey. _Avoid_: Provider when referring to all five sources
+**Identity Source**: The origin of a Triad Account: Google, GitHub, Twitter, AgentID, EVM, or Passkey. _Avoid_: Provider when referring to all six sources
 
-**Social Provider**: An external identity provider used as an Identity Source. Triad supports Google, GitHub, and Twitter. _Avoid_: Identity Source
+**Social Provider**: An external identity provider used as an Identity Source. Triad supports Google, GitHub, Twitter, and AgentID. AgentID signs in AI agents by their AgentMail inbox. _Avoid_: Identity Source
 
 **EVM Identity Source**: An externally user controlled EVM wallet that anchors a Triad Account through signatures. Its authentication network does not change the account identity, and it cannot contain Passkeys or derive a PRF wallet. _Avoid_: EVM Wallet Profile, Ethereum Identity Source, EVM Smart Account, Wallet Passkey
 

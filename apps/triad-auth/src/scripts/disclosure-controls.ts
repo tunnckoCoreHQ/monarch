@@ -73,6 +73,16 @@ const profileDisclosures: Record<string, Disclosure> = {
     claim: "cosekey",
     description: "Share the registered COSE_Key as base64url.",
   },
+  owner_name: {
+    label: "AGENT OWNER NAME",
+    claim: "owner_name",
+    description: "Share the name of the person who owns this agent.",
+  },
+  owner_email: {
+    label: "AGENT OWNER EMAIL",
+    claim: "owner_email + owner_email_verified",
+    description: "Share the email address of the person who owns this agent.",
+  },
 };
 
 function disclosureText(disclosure: Disclosure): DocumentFragment {

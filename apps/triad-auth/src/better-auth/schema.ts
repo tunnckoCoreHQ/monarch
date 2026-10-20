@@ -19,6 +19,8 @@ const schemaEnv = {
   GITHUB_CLIENT_SECRET: "schema-github-client-secret",
   TWITTER_CLIENT_ID: "schema-twitter-client-id",
   TWITTER_CLIENT_SECRET: "schema-twitter-client-secret",
+  AGENTID_CLIENT_ID: "schema-agentid-client-id",
+  AGENTID_CLIENT_SECRET: "schema-agentid-client-secret",
 } satisfies TriadEnv;
 
 const configuration = createTriadConfiguration(schemaEnv);
