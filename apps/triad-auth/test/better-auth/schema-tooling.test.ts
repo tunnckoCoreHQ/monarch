@@ -159,7 +159,7 @@ describe("Better Auth schema tooling", () => {
       { type: "fetch", pattern: `${name}.wgw.lol/*`, zone: "wgw.lol" },
     ]);
     expect(worker?.env?.AUTH_ORIGIN).toMatchObject({ value: `https://${name}.wgw.lol` });
-    expect(worker?.env?.DB).toEqual({ type: "d1", id: databaseId });
+    expect(worker?.env?.DB).toMatchObject({ name, id: databaseId });
   });
 
   it("serves static assets with the same runtime behavior in both modes", async () => {
@@ -172,11 +172,7 @@ describe("Better Auth schema tooling", () => {
         runWorkerFirst: false,
       });
       expect(worker?.compatibilityDate).toBe("2026-07-09");
-      expect(worker?.compatibilityFlags).toEqual([
-        "nodejs_compat",
-        "global_fetch_strictly_public",
-        "new_module_registry",
-      ]);
+      expect(worker?.compatibilityFlags).toEqual(["nodejs_compat", "global_fetch_strictly_public"]);
     }
   });
 

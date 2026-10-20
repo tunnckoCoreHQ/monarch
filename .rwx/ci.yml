@@ -376,8 +376,7 @@ tasks:
       CLOUDFLARE_API_TOKEN: ${{ vaults.monarch_master.secrets.CLOUDFLARE_API_TOKEN }}
     # A master push deploys the apps it changed; the dispatch deploys one app, or every app.
     # badges.wgw.lol is skipped: the app is going away. --continue lets the other apps deploy when
-    # one fails. patches/cf@1.0.0-beta.10.patch turns off the cf deploy strict mode, so a deploy
-    # replaces whatever the Worker had, such as dashboard or API edits.
+    # one fails.
     run: |
       if [ -n "$APP" ]; then
         scope=(--filter="$APP")
