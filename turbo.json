@@ -19,7 +19,7 @@
         "scripts/**",
         ".depot/**",
         ".github/**",
-        ".rwx/**",
+        ".rwx-disabled/**",
         ".zed/**"
       ],
       "outputs": []
