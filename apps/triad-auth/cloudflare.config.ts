@@ -23,8 +23,7 @@ export default defineConfig(({ mode }) => {
     worker: {
       name: target.name,
       compatibilityDate: "2026-07-09",
-      // Alchemy deployed both Workers with new_module_registry. `cf deploy` stops when a deploy
-      // would drop a flag the live Worker has, so the flag stays.
+      // Alchemy deployed both Workers with new_module_registry. The flag stays, so the runtime does not change.
       compatibilityFlags: ["nodejs_compat", "global_fetch_strictly_public", "new_module_registry"],
       entrypoint: "src/index.ts",
       // A zone route, not a custom domain: wgw.lol hosts many subdomains on routes.
@@ -42,7 +41,7 @@ export default defineConfig(({ mode }) => {
         // Typed as string, so tests and local tools can pass any origin.
         // Deploys use the Worker host. A local run sets AUTH_ORIGIN, for example http://localhost:4321.
         AUTH_ORIGIN: bindings.text<string>(process.env.AUTH_ORIGIN ?? `https://${host}`),
-        // Bound by ID only: the live binding has no database name, and `cf deploy` stops on the extra field.
+        // Bound by ID only, like the live binding.
         DB: bindings.d1({ id: target.database.id }),
         ASSETS: bindings.assets(),
         // The twelve secrets live on each Worker; `.env` holds local values.

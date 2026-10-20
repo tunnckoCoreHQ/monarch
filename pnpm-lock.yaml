@@ -167,6 +167,7 @@ overrides:
 
 patchedDependencies:
   '@better-auth/oauth-provider@1.7.0-rc.4': faa8be19f1cb40d4569945f9028935b82f6592f7549ec41dda3e9939b61676dd
+  cf@1.0.0-beta.10: 9a3117cb29e0e869d3c48ee9637e0e2bfb20e9cb8bace0b5bae838c490175c11
 
 importers:
 
@@ -195,7 +196,7 @@ importers:
         version: 5.0.3(vitest@5.0.3)
       cf:
         specifier: 'catalog:'
-        version: 1.0.0-beta.10(@types/node@24.19.0)
+        version: 1.0.0-beta.10(patch_hash=9a3117cb29e0e869d3c48ee9637e0e2bfb20e9cb8bace0b5bae838c490175c11)(@types/node@24.19.0)
       effect:
         specifier: 'catalog:'
         version: 4.0.0
@@ -244,7 +245,7 @@ importers:
         version: 24.19.0
       cf:
         specifier: 'catalog:'
-        version: 1.0.0-beta.10(@types/node@24.19.0)
+        version: 1.0.0-beta.10(patch_hash=9a3117cb29e0e869d3c48ee9637e0e2bfb20e9cb8bace0b5bae838c490175c11)(@types/node@24.19.0)
       vite:
         specifier: 'catalog:'
         version: 8.3.2(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
@@ -269,7 +270,7 @@ importers:
         version: 24.19.0
       cf:
         specifier: 'catalog:'
-        version: 1.0.0-beta.10(@types/node@24.19.0)
+        version: 1.0.0-beta.10(patch_hash=9a3117cb29e0e869d3c48ee9637e0e2bfb20e9cb8bace0b5bae838c490175c11)(@types/node@24.19.0)
       vite:
         specifier: 'catalog:'
         version: 8.3.2(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
@@ -345,7 +346,7 @@ importers:
         version: 24.19.0
       cf:
         specifier: 'catalog:'
-        version: 1.0.0-beta.10(@types/node@24.19.0)
+        version: 1.0.0-beta.10(patch_hash=9a3117cb29e0e869d3c48ee9637e0e2bfb20e9cb8bace0b5bae838c490175c11)(@types/node@24.19.0)
       typescript:
         specifier: catalog:types
         version: 7.0.2
@@ -373,7 +374,7 @@ importers:
         version: 24.19.0
       cf:
         specifier: 'catalog:'
-        version: 1.0.0-beta.10(@types/node@24.19.0)
+        version: 1.0.0-beta.10(patch_hash=9a3117cb29e0e869d3c48ee9637e0e2bfb20e9cb8bace0b5bae838c490175c11)(@types/node@24.19.0)
       typescript:
         specifier: catalog:types
         version: 7.0.2
@@ -8042,7 +8043,7 @@ snapshots:
 
   ccount@2.0.1: {}
 
-  cf@1.0.0-beta.10(@types/node@24.19.0):
+  cf@1.0.0-beta.10(patch_hash=9a3117cb29e0e869d3c48ee9637e0e2bfb20e9cb8bace0b5bae838c490175c11)(@types/node@24.19.0):
     dependencies:
       '@cloudflare/build-output-utils': 0.8.4
       '@cloudflare/codemods': 0.3.0
