@@ -215,7 +215,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
     ),
     toHonoHandler((ctx) => {
       const input = ctx.req.param("data") || ctx.req.query("of") || ctx.req.query("data") || "";
-      return getDigestForData(input, { checkExists: true });
+      return getDigestForData(input, { checkExists: true, baseURL });
     }),
   );
 
@@ -234,7 +234,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
         .object({ data: z.string(), checkExists: shaBody.shape.checkExists })
         .parse(await ctx.req.json());
 
-      return getDigestForData(data, settings);
+      return getDigestForData(data, { ...settings, baseURL });
     }),
   );
 

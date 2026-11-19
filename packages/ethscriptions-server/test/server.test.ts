@@ -89,6 +89,21 @@ describe("routes", () => {
     );
   });
 
+  it("checks /sha existence on the given upstream", async () => {
+    const app = withRoutes(createApp(), "https://upstream.example");
+    await app.request("/sha?of=data:,wgw");
+    await app.request("/sha", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ data: "data:,wgw", checkExists: true }),
+    });
+
+    expect(upstreamCalls).toHaveLength(2);
+    for (const url of upstreamCalls) {
+      expect(url).toMatch(/^https:\/\/upstream\.example\//);
+    }
+  });
+
   it("lowercases a 0x transaction hash, like the old schema did", async () => {
     const app = withRoutes(createApp(), "https://upstream.example");
     await app.request(
