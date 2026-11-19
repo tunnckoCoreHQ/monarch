@@ -7,6 +7,7 @@ import {
   getAllEthscriptions,
   getDigestForData,
   getEthscriptionById,
+  getUserProfile,
   hexToBytes,
   isEthereumAddress,
   isHexValue,
@@ -264,5 +265,18 @@ describe("hex and bytes helpers", () => {
     expect(isHexValue("xyz")).toBe(false);
     expect(isEthereumAddress("0x34d6bb3280d2f4ef25ff14801e0838dba76ae664")).toBe(true);
     expect(isEthereumAddress("wgw.eth")).toBe(false);
+  });
+});
+
+describe("getUserProfile", () => {
+  it.each([
+    ["a list", [upstreamEthscription]],
+    ["one object", upstreamEthscription],
+  ])("normalizes %s from the upstream", async (_label, result) => {
+    stubFetch(() => ({ result }));
+
+    const res = await getUserProfile("0x0000000000000000000000000000000000000001");
+
+    expect(res).toMatchObject({ ok: true, result: { latest: { transaction_hash: TX_HASH } } });
   });
 });

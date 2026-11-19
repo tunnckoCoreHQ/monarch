@@ -39,14 +39,20 @@ export type RoutesOptions = {
   title?: string;
 };
 
+// A blank or null override counts as unset, so it does not turn into 0 and replace a price.
+const optionalNumber = z.preprocess(
+  (value) => (value === "" || value === null ? undefined : value),
+  z.coerce.number().optional(),
+);
+
 const costSettings = {
   speed: z.union([z.literal("normal"), z.literal("fast")]).optional(),
-  ethPrice: z.coerce.number().optional(),
-  gasPrice: z.coerce.number().optional(),
-  gasFee: z.coerce.number().optional(),
-  baseFee: z.coerce.number().optional(),
-  bufferFee: z.coerce.number().optional(),
-  priorityFee: z.coerce.number().optional(),
+  ethPrice: optionalNumber,
+  gasPrice: optionalNumber,
+  gasFee: optionalNumber,
+  baseFee: optionalNumber,
+  bufferFee: optionalNumber,
+  priorityFee: optionalNumber,
 };
 
 const CostSettingsSchema = z.object(costSettings);

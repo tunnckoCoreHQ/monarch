@@ -158,6 +158,12 @@ describe("routes", () => {
         result: { prices: { eth_price: 4000, gas_price: 10 } },
       });
     }
+
+    // Blank overrides count as unset, so the fetched prices stay.
+    const blank = await app.request("/estimate/data:,wgw?ethPrice=&gasPrice=");
+    expect(await blank.json()).toMatchObject({
+      result: { prices: { eth_price: 2000, gas_price: 2 } },
+    });
   });
 
   it("lowercases a 0x transaction hash, like the old schema did", async () => {

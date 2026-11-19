@@ -241,7 +241,7 @@ export async function getUserProfile(
   options?: FetchOptions & { latest?: boolean },
 ): Promise<Result<UserProfileResult | UserProfileResult["latest"]>> {
   const opts = { ...options };
-  const res = await upstreamFetcher<UpstreamEthscription[]>({
+  const res = await upstreamFetcher({
     ...opts,
     resolve: opts.resolve ?? !isEthereumAddress(val),
     creator: val,
@@ -253,7 +253,9 @@ export async function getUserProfile(
     return res;
   }
 
-  if (res.result.length === 0) {
+  // The upstream answers with a list, or with one object for a single match.
+  const rows = Array.isArray(res.result) ? res.result : [res.result];
+  if (rows.length === 0) {
     return {
       ok: false,
       error: {
@@ -264,9 +266,7 @@ export async function getUserProfile(
     };
   }
 
-  const data = res.result.map((x) =>
-    normalizeResult(x, { ...opts, with: opts.with || "content_uri" }),
-  );
+  const data = rows.map((x) => normalizeResult(x, { ...opts, with: opts.with || "content_uri" }));
 
   return {
     ok: true,
@@ -648,6 +648,5 @@ export async function estimateDataCost(
 }
 
 export * from "./const";
-export * from "./schema";
 export type * from "./types";
 export * from "./utils";
