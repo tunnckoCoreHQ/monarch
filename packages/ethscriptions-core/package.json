@@ -1,0 +1,42 @@
+{
+  "name": "@tunnckocore/ethscriptions-core",
+  "version": "0.11.3",
+  "description": "Library with utility functions for Ethscriptions. Fetches and filters ethscriptions, fetches user profiles, estimates costs, and resolves ENS and Ethscriptions names.",
+  "homepage": "https://github.com/tunnckoCoreHQ/monarch/tree/master/packages/ethscriptions-core",
+  "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tunnckoCoreHQ/monarch.git",
+    "directory": "packages/ethscriptions-core"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "check": "ultracite fix --type-aware --type-check",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "cdn-cache-control": "catalog:",
+    "file-type": "catalog:",
+    "qs-esm": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:"
+  }
+}

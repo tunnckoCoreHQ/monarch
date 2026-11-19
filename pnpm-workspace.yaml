@@ -39,7 +39,8 @@ catalogs:
     "@x402/svm": ^2.27.0
     hono: ^4.12.27
     "@hono/zod-validator": ^0.9.1
-    ethscriptions: ^0.11.3
+    cdn-cache-control: ^1.3.1
+    qs-esm: ^7.0.3
     file-type: ^21.3.4
     astro: 7.4.0-beta.0
     "@astrojs/cloudflare": 15.0.0-beta.0

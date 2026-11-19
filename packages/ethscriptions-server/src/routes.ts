@@ -12,8 +12,8 @@ import {
   getUserOwnedEthscriptions,
   getUserProfile,
   resolveUser,
-} from "ethscriptions";
-import type { ENUM_ALL_DETAILED } from "ethscriptions";
+} from "@tunnckocore/ethscriptions-core";
+import type { EnumAllDetailed } from "@tunnckocore/ethscriptions-core";
 import type { Context } from "hono";
 import { env as runtimeEnv } from "hono/adapter";
 import { z } from "zod";
@@ -38,14 +38,6 @@ export type RoutesOptions = {
   // The home page title and heading.
   title?: string;
 };
-
-type DetailedMode = (typeof ENUM_ALL_DETAILED)[number];
-// SAFETY: the library spreads the options over its defaults, so every field is optional. Its
-// type marks them all as required and misses the price fields.
-const estimateCost = estimateDataCost as (
-  input: string,
-  options: Record<string, unknown>,
-) => ReturnType<typeof estimateDataCost>;
 
 const costSettings = {
   speed: z.union([z.literal("normal"), z.literal("fast")]).optional(),
@@ -168,7 +160,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
 
         return new Response(new Uint8Array(await resp.arrayBuffer()), {
           headers: getHeaders(3600 * 24 * 7, {
-            "content-type": resp.headers.get("content-type"),
+            "content-type": String(resp.headers.get("content-type")),
           }),
         });
       }
@@ -190,7 +182,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
         }),
       );
 
-      return estimateCost(param(ctx, "data"), settings);
+      return estimateDataCost(param(ctx, "data"), settings);
     }),
   );
 
@@ -202,7 +194,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
         .object({ data: z.string(), ...costSettings })
         .parse(await ctx.req.json());
 
-      return estimateCost(data, settings);
+      return estimateDataCost(data, settings);
     }),
   );
 
@@ -377,7 +369,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
 
       // SAFETY: the param validator limits mode to these names, and the library matches each
       // mode by pattern, so the owner aliases resolve too.
-      return getEthscriptionDetailed(toEthscriptionId(id), mode as DetailedMode, settings);
+      return getEthscriptionDetailed(toEthscriptionId(id), mode as EnumAllDetailed, settings);
     }),
   );
 
