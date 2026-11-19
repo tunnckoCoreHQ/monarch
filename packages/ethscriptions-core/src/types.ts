@@ -55,10 +55,10 @@ export type UpstreamEthscription = {
   block_blockhash: `0x${string}`;
   block_timestamp: `${number}`;
   transaction_index: `${number}`;
-  event_log_index: `${number}` | null;
-  value: string;
-  transaction_fee: string;
-  gas_price: string;
+  // Wei amounts. The API sends them as strings, sometimes with a ".0" suffix; numbers also parse.
+  value: string | number;
+  transaction_fee: string | number;
+  gas_price: string | number;
   gas_used: string;
   creator: `0x${string}`;
   initial_owner: `0x${string}`;
