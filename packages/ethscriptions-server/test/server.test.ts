@@ -104,6 +104,32 @@ describe("routes", () => {
     }
   });
 
+  it.each([
+    ["?creator=true", "0xcreator"],
+    ["?checkCreator=true", "0xcreator"],
+    ["?creator=false", "0xowner"],
+    ["?checkCreator=false", "0xowner"],
+    ["", "0xowner"],
+  ])("resolves /resolve/wgw%s to %s", async (query, address) => {
+    // ENS has no match, so the name resolves through its ethscription.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request) =>
+        String(input).includes("/ethscriptions/exists/")
+          ? Response.json({
+              result: {
+                exists: true,
+                ethscription: { creator: "0xCreator", current_owner: "0xOwner" },
+              },
+            })
+          : Response.json({}),
+      ),
+    );
+    const response = await withRoutes(createApp()).request(`/resolve/wgw${query}`);
+
+    expect(await response.json()).toMatchObject({ result: { address } });
+  });
+
   it("lowercases a 0x transaction hash, like the old schema did", async () => {
     const app = withRoutes(createApp(), "https://upstream.example");
     await app.request(
@@ -120,5 +146,11 @@ describe("JSON", () => {
   it("writes BigInt values as numbers", () => {
     expect(JSON.stringify({ block: 10n })).toBe('{"block":10}');
     expect(JSON.stringify({ a: 1n, b: 2n }, ["a"])).toBe('{"a":1}');
+  });
+
+  it("keeps array items with a key whitelist, like the native one", () => {
+    const value = { rows: [{ id: 1n, skip: 2 }], skip: 3 };
+
+    expect(JSON.stringify(value, ["rows", "id"])).toBe('{"rows":[{"id":1}]}');
   });
 });

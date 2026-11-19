@@ -256,7 +256,8 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
         .strict(),
     ),
     toHonoHandler((ctx) => {
-      const checkCreator = Boolean(ctx.req.query("creator") || ctx.req.query("checkCreator"));
+      const checkCreator =
+        ctx.req.query("creator") === "true" || ctx.req.query("checkCreator") === "true";
       return resolveUser(param(ctx, "name"), { checkCreator, baseURL });
     }),
   );

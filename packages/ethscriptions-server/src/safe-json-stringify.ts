@@ -29,11 +29,16 @@ function stringify(
   }
 
   if (Array.isArray(replacer)) {
-    // The root value has the empty key and is always kept, as the spec says.
+    // As in the spec, the list filters object keys only: the root value and array items stay.
     const allowed = new Set(replacer.map(String));
+    let isRoot = true;
     return originalStringify(
       value,
-      (key, item) => (key === "" || allowed.has(key) ? bigIntToNumber(item) : undefined),
+      function whitelist(this: unknown, key: string, item: unknown) {
+        const keep = isRoot || Array.isArray(this) || allowed.has(key);
+        isRoot = false;
+        return keep ? bigIntToNumber(item) : undefined;
+      },
       space,
     );
   }
