@@ -1,0 +1,23 @@
+{
+  "name": "ethscriptions-api-proxy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ethscriptions API proxy for mainnet and Sepolia at api.calldata.space",
+  "type": "module",
+  "scripts": {
+    "check": "ultracite fix --type-aware --type-check",
+    "deploy:nightly": "pnpm exec cf deploy",
+    "dev": "pnpm exec cf dev",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ethscriptions-server": "catalog:",
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "catalog:",
+    "@types/node": "catalog:types",
+    "cf": "catalog:",
+    "vite": "catalog:"
+  }
+}
