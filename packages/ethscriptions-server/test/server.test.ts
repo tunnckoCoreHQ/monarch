@@ -130,6 +130,36 @@ describe("routes", () => {
     expect(await response.json()).toMatchObject({ result: { address } });
   });
 
+  it("applies camelCase price overrides to /estimate", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          data: {
+            blockNr: "1",
+            ethPrice: 2000,
+            baseFee: 1,
+            nextFee: 1,
+            oracle: { normal: { gwei: 2, gasFee: 2, priorityFee: 2 } },
+          },
+        }),
+      ),
+    );
+    const app = withRoutes(createApp());
+    const get = await app.request("/estimate/data:,wgw?ethPrice=4000&gasPrice=10");
+    const post = await app.request("/estimate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ data: "data:,wgw", ethPrice: 4000, gasPrice: 10 }),
+    });
+
+    for (const response of [get, post]) {
+      expect(await response.json()).toMatchObject({
+        result: { prices: { eth_price: 4000, gas_price: 10 } },
+      });
+    }
+  });
+
   it("lowercases a 0x transaction hash, like the old schema did", async () => {
     const app = withRoutes(createApp(), "https://upstream.example");
     await app.request(

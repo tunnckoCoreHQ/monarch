@@ -571,7 +571,7 @@ export function hexToBytes(str: string): Uint8Array {
 }
 
 export function bytesToHex(bytes: Uint8Array): string {
-  return [...bytes].map((n) => n.toString(16)).join("");
+  return [...bytes].map((n) => n.toString(16).padStart(2, "0")).join("");
 }
 
 export function isEthereumAddress(val: string): boolean {

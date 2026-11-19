@@ -254,6 +254,7 @@ describe("hex and bytes helpers", () => {
 
     expect([...bytes]).toEqual([0x64, 0x61, 0x74, 0x61, 0x3a, 0x2c]);
     expect(bytesToHex(bytes)).toBe("646174613a2c");
+    expect(bytesToHex(new Uint8Array([0x0a, 0x00, 0xff]))).toBe("0a00ff");
   });
 
   it("checks hex values and addresses", () => {

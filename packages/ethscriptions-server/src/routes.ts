@@ -13,7 +13,7 @@ import {
   getUserProfile,
   resolveUser,
 } from "@tunnckocore/ethscriptions-core";
-import type { EnumAllDetailed } from "@tunnckocore/ethscriptions-core";
+import type { EnumAllDetailed, EstimateCostOptions } from "@tunnckocore/ethscriptions-core";
 import type { Context } from "hono";
 import { env as runtimeEnv } from "hono/adapter";
 import { z } from "zod";
@@ -48,6 +48,24 @@ const costSettings = {
   bufferFee: z.coerce.number().optional(),
   priorityFee: z.coerce.number().optional(),
 };
+
+const CostSettingsSchema = z.object(costSettings);
+
+// The routes take camelCase overrides, and the core reads the price fields in snake_case. Unset
+// fields stay out, so they do not replace the current prices.
+function toCostOptions(settings: z.infer<typeof CostSettingsSchema>): EstimateCostOptions {
+  const { speed, bufferFee, ethPrice, gasPrice, gasFee, baseFee, priorityFee } = settings;
+
+  return {
+    ...(speed && { speed }),
+    ...(bufferFee !== undefined && { bufferFee }),
+    ...(ethPrice !== undefined && { eth_price: ethPrice }),
+    ...(gasPrice !== undefined && { gas_price: gasPrice }),
+    ...(gasFee !== undefined && { gas_fee: gasFee }),
+    ...(baseFee !== undefined && { base_fee: baseFee }),
+    ...(priorityFee !== undefined && { priority_fee: priorityFee }),
+  };
+}
 
 // The build commit comes from COMMIT_SHA, and is "local" when it is missing.
 export function getEnv(ctx: Context, key = "COMMIT_SHA"): string {
@@ -172,17 +190,10 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
   app.get(
     "/estimate/:data",
     validate("param", z.object({ data: DataURISchema })),
-    validate("query", z.object(costSettings).strict()),
+    validate("query", CostSettingsSchema.strict()),
     toHonoHandler((ctx) => {
-      const { searchParams } = new URL(ctx.req.url);
-      const settings = Object.fromEntries(
-        [...searchParams.entries()].map(([key, value]) => {
-          const val = Number(value);
-          return [key, Number.isNaN(val) ? value : val || 0];
-        }),
-      );
-
-      return estimateDataCost(param(ctx, "data"), settings);
+      const settings = CostSettingsSchema.parse(ctx.req.query());
+      return estimateDataCost(param(ctx, "data"), toCostOptions(settings));
     }),
   );
 
@@ -190,11 +201,11 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
     "/estimate",
     validate("json", z.object({ data: DataURISchema, ...costSettings }).strict()),
     toHonoHandler(async (ctx) => {
-      const { data, ...settings } = z
-        .object({ data: z.string(), ...costSettings })
-        .parse(await ctx.req.json());
+      const { data, ...settings } = CostSettingsSchema.extend({ data: z.string() }).parse(
+        await ctx.req.json(),
+      );
 
-      return estimateDataCost(data, settings);
+      return estimateDataCost(data, toCostOptions(settings));
     }),
   );
 

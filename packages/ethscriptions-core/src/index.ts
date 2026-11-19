@@ -65,7 +65,7 @@ export async function getPrices(
     }
 
     // SAFETY: the ethgastracker.com API answers with this shape.
-    const { data } = (await resp.json()) as GasTrackerResponse;
+    const { data }: GasTrackerResponse = await resp.json();
 
     return {
       ok: true,
@@ -135,7 +135,7 @@ export async function multiCheckExists(
       body: JSON.stringify({ shas: shaList.map((x) => `0x${x}`) }),
     });
     // SAFETY: the upstream exists_multi endpoint maps each hash to a transaction hash or null.
-    const body = (await resp.json()) as { result?: Record<string, string | null> };
+    const body: { result?: Record<string, string | null> } = await resp.json();
     found = body.result || {};
   } catch {
     return {
