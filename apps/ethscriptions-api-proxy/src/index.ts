@@ -1,13 +1,16 @@
-import { createApp, withRoutes } from "ethscriptions-server";
+import { createApp, withRoutes } from "@tunnckocore/ethscriptions-server";
 
 import type { Env } from "./env";
 
+const TITLE = "Calldata Ethscriptions API";
 const SOURCE_URL =
   "https://github.com/tunnckoCoreHQ/monarch/tree/master/apps/ethscriptions-api-proxy";
 
 const networks = {
   mainnet: withRoutes(createApp()),
-  sepolia: withRoutes(createApp(), "https://sepolia-api-v2.ethscriptions.com"),
+  sepolia: withRoutes(createApp(), "https://sepolia-api-v2.ethscriptions.com", {
+    title: `${TITLE} (Sepolia)`,
+  }),
 };
 
 type Network = keyof typeof networks;
@@ -42,40 +45,18 @@ async function handle(request: Request, env: Env): Promise<Response> {
   const { network, pathname } = resolveNetwork(url);
   url.pathname = pathname;
 
-  const response = await networks[network].fetch(new Request(url, request), serverEnv(env));
-  if (network === "sepolia" && pathname === "/" && response.ok) {
-    return retitle(response, "Calldata API (Sepolia)");
-  }
-
-  return response;
-}
-
-// The server shows the build commit from this variable, and "local" when it is missing.
-function serverEnv(env: Env) {
-  return { VERCEL_GIT_COMMIT_SHA: env.COMMIT_SHA };
-}
-
-async function retitle(response: Response, title: string): Promise<Response> {
-  const html = (await response.text()).replace(
-    "<title>Calldata API</title>",
-    `<title>${title}</title>`,
-  );
-
-  const headers = new Headers(response.headers);
-  headers.delete("content-length");
-  headers.delete("etag");
-
-  return new Response(html, { status: response.status, headers });
+  return networks[network].fetch(new Request(url, request), env);
 }
 
 async function llmsTxt(request: Request, env: Env): Promise<Response> {
-  const url = new URL("/endpoints", request.url);
-  const response = await networks.mainnet.fetch(new Request(url, request), serverEnv(env));
+  // A GET, because a forwarded HEAD request gets /endpoints without a body.
+  const endpoints = new Request(new URL("/endpoints", request.url));
+  const response = await networks.mainnet.fetch(endpoints, env);
   // SAFETY: the server's /endpoints route always answers with this JSON object.
   const data: { endpoints?: string[] } = await response.json();
 
   const lines = [
-    "# Calldata API",
+    `# ${TITLE}`,
     "",
     "API for Ethscriptions, Blobscriptions, calldata utilities, profiles, ENS/name resolution, content, metadata, and related helpers.",
     "",
@@ -101,7 +82,8 @@ async function llmsTxt(request: Request, env: Env): Promise<Response> {
     }
   }
 
-  return new Response(`${lines.join("\n").trim()}\n`, {
+  const body = request.method === "HEAD" ? null : `${lines.join("\n").trim()}\n`;
+  return new Response(body, {
     headers: {
       "content-type": "text/plain; charset=utf-8",
       "cache-control": "public,max-age=0,must-revalidate",

@@ -56,6 +56,9 @@ catalogs:
     '@hono/node-server':
       specifier: ^2.0.6
       version: 2.1.1
+    '@hono/zod-validator':
+      specifier: ^0.9.1
+      version: 0.9.1
     '@openzeppelin/contracts':
       specifier: 5.6.1
       version: 5.6.1
@@ -92,9 +95,12 @@ catalogs:
     erc721a:
       specifier: 4.3.0
       version: 4.3.0
-    ethscriptions-server:
-      specifier: ^0.13.5
-      version: 0.13.5
+    ethscriptions:
+      specifier: ^0.11.3
+      version: 0.11.3
+    file-type:
+      specifier: ^21.3.4
+      version: 21.3.4
     hono:
       specifier: ^4.12.27
       version: 4.13.9
@@ -254,12 +260,9 @@ importers:
 
   apps/ethscriptions-api-proxy:
     dependencies:
-      ethscriptions-server:
-        specifier: 'catalog:'
-        version: 0.13.5(@orpc/contract@1.16.3)(crossws@0.3.5)(supports-color@10.2.2)(ws@8.22.0)
-      hono:
-        specifier: 'catalog:'
-        version: 4.13.9
+      '@tunnckocore/ethscriptions-server':
+        specifier: workspace:^
+        version: link:../../packages/ethscriptions-server
     devDependencies:
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
@@ -420,6 +423,28 @@ importers:
       viem:
         specifier: 'catalog:'
         version: 2.56.9(typescript@7.0.2)(zod@4.6.5)
+    devDependencies:
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.23.0(typescript@7.0.2)
+
+  packages/ethscriptions-server:
+    dependencies:
+      '@hono/zod-validator':
+        specifier: 'catalog:'
+        version: 0.9.1(hono@4.13.9)(zod@4.6.5)
+      ethscriptions:
+        specifier: 'catalog:'
+        version: 0.11.3(@orpc/contract@1.16.3)(crossws@0.3.5)(supports-color@10.2.2)(ws@8.22.0)
+      file-type:
+        specifier: 'catalog:'
+        version: 21.3.4(supports-color@10.2.2)
+      hono:
+        specifier: 'catalog:'
+        version: 4.13.9
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       tsdown:
         specifier: 'catalog:'
@@ -1411,11 +1436,11 @@ packages:
     peerDependencies:
       hono: ^4
 
-  '@hono/zod-validator@0.4.3':
-    resolution: {integrity: sha512-xIgMYXDyJ4Hj6ekm9T9Y27s080Nl9NXHcJkOvkXPhubOLj8hZkOL8pDnnXfvCf5xEE8Q4oMFenQUZZREUY2gqQ==}
+  '@hono/zod-validator@0.9.1':
+    resolution: {integrity: sha512-iiv6w0qrIc0arfvCtUqBWsvl4fXjzaTcQcCJTTtCnkawF9HHGE+KjEl0ox3gQJ6rKZEgE3mLExlQCF72M+mNuw==}
     peerDependencies:
-      hono: '>=3.9.0'
-      zod: ^3.19.1
+      hono: '>=4.11.2'
+      zod: ^3.25.0 || ^4.0.0
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -3950,10 +3975,6 @@ packages:
   estree-walker@3.0.3:
     resolution: {integrity: sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==}
 
-  ethscriptions-server@0.13.5:
-    resolution: {integrity: sha512-e8gE2QcRk71f2ti0DbYgjUqPbNnH4xS1villW+ZyckGmy0bj8RgCo+2T/KC9O0tN0en/+JWbacfqfrrH2F6Zxw==}
-    engines: {node: '>=20'}
-
   ethscriptions@0.11.3:
     resolution: {integrity: sha512-qtGb/cjznVS3iGpc2EGVaS7nO/9QLANULHKJKs3r/6mbt7wZuD7k0RNhLbp8LiDf8cfZ/7/u2ig4zdTH2UBb/A==}
     engines: {bun: '>=1.1.40', node: '>=22', npm: please-use-bun, yarn: please-use-bun-yarn-is-dead}
@@ -6238,10 +6259,10 @@ snapshots:
     dependencies:
       hono: 4.13.9
 
-  '@hono/zod-validator@0.4.3(hono@4.13.9)(zod@3.25.76)':
+  '@hono/zod-validator@0.9.1(hono@4.13.9)(zod@4.6.5)':
     dependencies:
       hono: 4.13.9
-      zod: 3.25.76
+      zod: 4.6.5
 
   '@img/colour@1.1.0': {}
 
@@ -8600,21 +8621,6 @@ snapshots:
   estree-walker@3.0.3:
     dependencies:
       '@types/estree': 1.0.9
-
-  ethscriptions-server@0.13.5(@orpc/contract@1.16.3)(crossws@0.3.5)(supports-color@10.2.2)(ws@8.22.0):
-    dependencies:
-      '@hono/zod-validator': 0.4.3(hono@4.13.9)(zod@3.25.76)
-      ethscriptions: 0.11.3(@orpc/contract@1.16.3)(crossws@0.3.5)(supports-color@10.2.2)(ws@8.22.0)
-      file-type: 21.3.4(supports-color@10.2.2)
-      hono: 4.13.9
-      zod: 3.25.76
-    transitivePeerDependencies:
-      - '@opentelemetry/api'
-      - '@orpc/contract'
-      - crossws
-      - fastify
-      - supports-color
-      - ws
 
   ethscriptions@0.11.3(@orpc/contract@1.16.3)(crossws@0.3.5)(supports-color@10.2.2)(ws@8.22.0):
     dependencies:

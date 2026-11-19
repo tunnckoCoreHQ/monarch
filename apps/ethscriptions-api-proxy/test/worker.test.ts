@@ -24,7 +24,7 @@ function memoryCache() {
   };
 }
 
-async function request(url: string) {
+async function request(url: string, method = "GET") {
   // SAFETY: the Worker only calls waitUntil on the context.
   const ctx = {
     waitUntil: (promise: Promise<unknown>) => {
@@ -32,7 +32,7 @@ async function request(url: string) {
     },
   } as ExecutionContext;
   // SAFETY: the Worker never reads request.cf.
-  const incoming = new Request(url) as Parameters<typeof worker.fetch>[0];
+  const incoming = new Request(url, { method }) as Parameters<typeof worker.fetch>[0];
 
   const response = await worker.fetch(incoming, env, ctx);
   await Promise.all(pending);
@@ -45,8 +45,11 @@ async function firstHash(url: string) {
   return body.result[0]?.transaction_hash;
 }
 
-async function title(url: string) {
-  return /<title>(.*)<\/title>/.exec(await (await request(url)).text())?.[1];
+async function heading(url: string) {
+  const html = await (await request(url)).text();
+  const title = /<title>(.*)<\/title>/.exec(html)?.[1];
+  const h1 = /<h1>(.*)<\/h1>/.exec(html)?.[1];
+  return title === h1 ? title : `${title} != ${h1}`;
 }
 
 beforeEach(() => {
@@ -80,12 +83,20 @@ describe("routing", () => {
   });
 
   it.each([
-    ["https://api.calldata.space/", "Calldata API"],
-    ["https://api.calldata.space/mainnet", "Calldata API"],
-    ["https://api.calldata.space/sepolia", "Calldata API (Sepolia)"],
-    ["https://sepolia-api.calldata.space/", "Calldata API (Sepolia)"],
-  ])("%s has the title %s", async (url, expected) => {
-    expect(await title(url)).toBe(expected);
+    ["https://api.calldata.space/", "Calldata Ethscriptions API"],
+    ["https://api.calldata.space/mainnet", "Calldata Ethscriptions API"],
+    ["https://api.calldata.space/sepolia", "Calldata Ethscriptions API (Sepolia)"],
+    ["https://sepolia-api.calldata.space/", "Calldata Ethscriptions API (Sepolia)"],
+  ])("%s has the title and heading %s", async (url, expected) => {
+    expect(await heading(url)).toBe(expected);
+  });
+
+  it("answers HEAD /llms.txt with headers and no body", async () => {
+    const response = await request("https://api.calldata.space/llms.txt", "HEAD");
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(await response.text()).toBe("");
   });
 
   it("shows the deployed commit", async () => {
