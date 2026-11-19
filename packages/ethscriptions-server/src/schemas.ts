@@ -4,11 +4,12 @@ export const numberSchema = z.string().transform(Number).pipe(z.number().int().p
 
 export const booleanSchema = z.enum(["true", "false"]).transform((value) => value === "true");
 
-// A transaction hash as a decimal BigInt. Zod 4 `int()` only takes safe integers, so it checks digits.
+// A transaction hash as a BigInt, in decimal or 0x hex. Zod 4 `int()` only takes safe integers,
+// so it checks the digits instead.
 export const BigIntFromHashSchema = z
   .string()
   .min(60)
-  .regex(/^[1-9]\d*$/);
+  .regex(/^([1-9]\d*|0x[\da-f]+)$/i);
 
 export const HexSchema = z.custom(
   (x) =>

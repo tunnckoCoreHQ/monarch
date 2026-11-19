@@ -88,6 +88,17 @@ describe("routes", () => {
       "0x074ee2a9028840b3aa8962a2eec5560f5b0a5dbfe10e67c9685057d419371d9e",
     );
   });
+
+  it("lowercases a 0x transaction hash, like the old schema did", async () => {
+    const app = withRoutes(createApp(), "https://upstream.example");
+    await app.request(
+      "/ethscriptions/0x074EE2A9028840B3AA8962A2EEC5560F5B0A5DBFE10E67C9685057D419371D9E",
+    );
+
+    expect(upstreamCalls[0]).toContain(
+      "0x074ee2a9028840b3aa8962a2eec5560f5b0a5dbfe10e67c9685057d419371d9e",
+    );
+  });
 });
 
 describe("JSON", () => {
