@@ -9,7 +9,6 @@ export default defineConfig({
     triggers: [triggers.fetch({ pattern: "npm.wgw.lol/*", zone: "wgw.lol" })],
     workersDev: false,
     previewUrls: false,
-    observability: { enabled: true, headSamplingRate: 1 },
     env: {
       ALLOWED_GITHUB_LOGIN: bindings.text("tunnckoCore"),
       // The deploy task passes the commit being deployed; local builds get "local".
