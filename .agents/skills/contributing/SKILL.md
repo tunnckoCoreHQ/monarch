@@ -11,7 +11,7 @@ description: How to develop in the monarch monorepo. Use before changing code, a
 - Cloudflare apps live in `apps/*`. Each one has a `cloudflare.config.ts`, the typed config of the Cloudflare CLI `cf` (beta): `cf build` runs Vite (or Astro) with the Cloudflare Vite plugin, and `cf deploy` deploys.
 - Solidity projects live in `solidity/*` and build with Foundry.
 - Chrome extensions live in `chrome-extensions/*`, load unpacked, and have only a `check` script.
-- The workspace runs on pnpm and Turborepo. TypeScript uses ultracite (oxlint, oxfmt, tsgolint) and Vitest.
+- The workspace runs on pnpm and Turborepo. TypeScript uses ultracite (oxlint, oxfmt, tsrs) and Vitest.
 - Dependency versions come from the catalogs in `pnpm-workspace.yaml`.
 
 ## Commands
