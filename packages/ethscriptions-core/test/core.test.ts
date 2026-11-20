@@ -425,3 +425,13 @@ describe("follow-up fixes", () => {
     expect(res).toMatchObject({ ok: true, result: { block_number: 26_452_429 } });
   });
 });
+
+describe("transaction_hash_only flag", () => {
+  it("normalizes the record when the query sends transaction_hash_only=false", async () => {
+    stubFetch(() => ({ result: upstreamEthscription }));
+
+    const res = await getEthscriptionById(TX_HASH, { transaction_hash_only: "false" });
+
+    expect(res).toMatchObject({ ok: true, result: { block_number: 26_452_429 } });
+  });
+});

@@ -228,7 +228,8 @@ export function normalizeResult(
   const withs = Array.isArray(opts.with) ? opts.with : opts.with?.split(",") || [];
   const onlys = Array.isArray(opts.only) ? opts.only : opts.only?.split(",") || [];
   const isTxOnly =
-    (keys.length === 1 && keys[0] === "transaction_hash") || opts.transaction_hash_only;
+    (keys.length === 1 && keys[0] === "transaction_hash") ||
+    ["true", "1"].includes(String(opts.transaction_hash_only));
 
   if (isTxOnly) {
     // SAFETY: a transaction-hash-only result passes through as the upstream API returned it.
