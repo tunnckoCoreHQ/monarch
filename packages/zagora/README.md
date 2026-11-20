@@ -69,7 +69,7 @@ _This library is product of 3+ months of dedication and passion, after 10 years 
 This is ESM-only package with built-in types.
 
 ```bash
-bun install zagora@next
+bun install zagora@nightly
 ```
 
 ## Usage
