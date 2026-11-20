@@ -12,8 +12,8 @@ import {
   getUserOwnedEthscriptions,
   getUserProfile,
   resolveUser,
-} from "ethscriptions";
-import type { ENUM_ALL_DETAILED } from "ethscriptions";
+} from "@tunnckocore/ethscriptions-core";
+import type { EnumAllDetailed } from "@tunnckocore/ethscriptions-core";
 import type { Context } from "hono";
 import { env as runtimeEnv } from "hono/adapter";
 import { z } from "zod";
@@ -39,22 +39,15 @@ export type RoutesOptions = {
   title?: string;
 };
 
-type DetailedMode = (typeof ENUM_ALL_DETAILED)[number];
-// SAFETY: the library spreads the options over its defaults, so every field is optional. Its
-// type marks them all as required and misses the price fields.
-const estimateCost = estimateDataCost as (
-  input: string,
-  options: Record<string, unknown>,
-) => ReturnType<typeof estimateDataCost>;
-
+// The cost options use the same snake_case names as the core and the other query params.
 const costSettings = {
   speed: z.union([z.literal("normal"), z.literal("fast")]).optional(),
-  ethPrice: z.coerce.number().optional(),
-  gasPrice: z.coerce.number().optional(),
-  gasFee: z.coerce.number().optional(),
-  baseFee: z.coerce.number().optional(),
-  bufferFee: z.coerce.number().optional(),
-  priorityFee: z.coerce.number().optional(),
+  eth_price: z.coerce.number().optional(),
+  gas_price: z.coerce.number().optional(),
+  gas_fee: z.coerce.number().optional(),
+  base_fee: z.coerce.number().optional(),
+  buffer_fee: z.coerce.number().optional(),
+  priority_fee: z.coerce.number().optional(),
 };
 
 // The build commit comes from COMMIT_SHA, and is "local" when it is missing.
@@ -168,7 +161,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
 
         return new Response(new Uint8Array(await resp.arrayBuffer()), {
           headers: getHeaders(3600 * 24 * 7, {
-            "content-type": resp.headers.get("content-type"),
+            "content-type": String(resp.headers.get("content-type")),
           }),
         });
       }
@@ -190,7 +183,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
         }),
       );
 
-      return estimateCost(param(ctx, "data"), settings);
+      return estimateDataCost(param(ctx, "data"), settings);
     }),
   );
 
@@ -202,7 +195,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
         .object({ data: z.string(), ...costSettings })
         .parse(await ctx.req.json());
 
-      return estimateCost(data, settings);
+      return estimateDataCost(data, settings);
     }),
   );
 
@@ -358,7 +351,9 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
       const settings: Record<string, string | string[]> = { baseURL };
       for (const [key, value] of new URL(ctx.req.url).searchParams) {
         const existing = settings[key];
-        settings[key] = existing === undefined ? value : [existing, value].flat();
+        // A `baseURL` query param replaces the configured upstream for this request.
+        settings[key] =
+          key === "baseURL" || existing === undefined ? value : [existing, value].flat();
       }
 
       const id = ctx.req.param("id");
@@ -377,7 +372,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
 
       // SAFETY: the param validator limits mode to these names, and the library matches each
       // mode by pattern, so the owner aliases resolve too.
-      return getEthscriptionDetailed(toEthscriptionId(id), mode as DetailedMode, settings);
+      return getEthscriptionDetailed(toEthscriptionId(id), mode as EnumAllDetailed, settings);
     }),
   );
 

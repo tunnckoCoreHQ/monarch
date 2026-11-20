@@ -1,4 +1,4 @@
-import { BASE_API_URL } from "ethscriptions";
+import { BASE_API_URL } from "@tunnckocore/ethscriptions-core";
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
 
@@ -47,7 +47,7 @@ export function createRouteHandlers(
   };
 }
 
-export { BASE_API_URL, CACHE_TTL } from "ethscriptions";
+export { BASE_API_URL, CACHE_TTL } from "@tunnckocore/ethscriptions-core";
 export { handle as honoVercelHandle } from "hono/vercel";
 
 export { ENDPOINTS } from "./endpoints-docs";

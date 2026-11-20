@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@hono/zod-validator": "catalog:",
-    "ethscriptions": "catalog:",
+    "@tunnckocore/ethscriptions-core": "workspace:^",
     "file-type": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
