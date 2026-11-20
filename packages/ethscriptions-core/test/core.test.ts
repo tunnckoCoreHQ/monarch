@@ -284,7 +284,6 @@ describe("getUserProfile", () => {
   });
 });
 
-// An upstream transfer at the given block and time.
 const transfer = (block: `${number}`, timestamp: `${number}`): UpstreamTransfer => ({
   transaction_hash: TX_HASH,
   ethscription_transaction_hash: TX_HASH,
@@ -381,5 +380,18 @@ describe("estimateDataCost fees", () => {
 
     const gasNeeded = 12 * 16 + 21_000;
     expect(res).toMatchObject({ ok: true, result: { cost: { wei: gasNeeded * 4 } } });
+  });
+});
+
+describe("exists check upstream errors", () => {
+  it("passes the upstream status instead of answering not found", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ error: "rate limited" }, { status: 429 })),
+    );
+
+    const res = await checkExists(FOOBAR_SHA);
+
+    expect(res).toMatchObject({ ok: false, error: { code: "UPSTREAM_ERROR", httpStatus: 429 } });
   });
 });

@@ -39,7 +39,6 @@ export type RoutesOptions = {
   title?: string;
 };
 
-// The cost options use the same snake_case names as the core and the other query params.
 const costSettings = {
   speed: z.union([z.literal("normal"), z.literal("fast")]).optional(),
   eth_price: z.coerce.number().optional(),
@@ -351,7 +350,6 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
       const settings: Record<string, string | string[]> = { baseURL };
       for (const [key, value] of new URL(ctx.req.url).searchParams) {
         const existing = settings[key];
-        // A `baseURL` query param replaces the configured upstream for this request.
         settings[key] =
           key === "baseURL" || existing === undefined ? value : [existing, value].flat();
       }

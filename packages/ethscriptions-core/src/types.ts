@@ -20,8 +20,6 @@ export type EnumTransfer = (typeof ENUM_TRANSFER)[number];
 export type EnumAttachment = (typeof ENUM_ATTACHMENT)[number];
 export type EnumAllDetailed = (typeof ENUM_ALL_DETAILED)[number];
 
-// The options every function takes. Other keys are upstream API filters, like `creator`,
-// `media_type`, or `page_key`.
 export type FetchOptions = {
   baseURL?: string;
   cacheTtl?: number;
@@ -34,7 +32,6 @@ export type FetchOptions = {
   [filter: string]: unknown;
 };
 
-// A transfer as the upstream Ethscriptions API returns it.
 export type UpstreamTransfer = {
   ethscription_transaction_hash?: `0x${string}`;
   transaction_hash: `0x${string}`;
@@ -48,7 +45,6 @@ export type UpstreamTransfer = {
   enforced_previous_owner: `0x${string}` | null;
 };
 
-// An ethscription as the upstream Ethscriptions API returns it.
 export type UpstreamEthscription = {
   transaction_hash: `0x${string}`;
   block_number: `${number}`;
@@ -56,7 +52,6 @@ export type UpstreamEthscription = {
   block_timestamp: `${number}`;
   transaction_index: `${number}`;
   event_log_index: `${number}` | null;
-  // Wei amounts. The API sends them as strings, sometimes with a ".0" suffix; numbers also parse.
   value: string | number;
   transaction_fee: string | number;
   gas_price: string | number;
@@ -127,8 +122,6 @@ export type EthscriptionTransfer = {
   is_esip2: boolean;
 };
 
-// Maps each SHA-256 hash to the transaction hash of its ethscription, or to the ethscription
-// itself with `expand`, or to null when it does not exist.
 export type CheckExistResult = Record<string, string | EthscriptionBase | null>;
 
 export type ResolveUserResult = {
@@ -190,7 +183,6 @@ export type BaseCostOpts = {
   buffer_fee: number;
 };
 
-// Every field is optional: the defaults and the current gas prices fill the rest.
 export type EstimateCostOptions = Partial<BaseCostOpts & PricesResult>;
 
 export type EstimateCostResult = {
@@ -210,7 +202,6 @@ export type EnsHandler = (
   options: NamesResolverOptions,
 ) => Promise<EnsRecord | null>;
 
-// The viem public client methods that `ensBasicOnchainHandler` uses.
 export type EnsPublicClient = {
   getEnsAddress: (args: { name: string }) => Promise<`0x${string}`>;
   getEnsName: (args: { address: string }) => Promise<string>;

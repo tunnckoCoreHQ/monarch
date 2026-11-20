@@ -14,7 +14,6 @@ export type Bindings = {
 
 export type App = Hono<{ Bindings: Bindings }>;
 
-// The result of the `@tunnckocore/ethscriptions-core` functions.
 export type HandlerResult = Result<unknown>;
 
 export function createApp(corsOptions?: Parameters<typeof cors>[0]): App {

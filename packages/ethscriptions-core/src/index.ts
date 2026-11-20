@@ -97,8 +97,6 @@ export async function multiCheckExists(
   options?: FetchOptions,
 ): Promise<Result<CheckExistResult>> {
   const opts = { baseURL: BASE_API_URL, ...options };
-  // Each hash must be exactly 64 hex digits, with an optional 0x, so a longer run is rejected
-  // instead of cut. A value can hold several hashes with separators.
   const shaList = (typeof shas === "string" ? [shas] : shas)
     .flatMap((x) => x.split(/[^\da-fx]+/i))
     .map((x) => x.replace(/^0x/i, ""))
@@ -133,6 +131,16 @@ export async function multiCheckExists(
       },
       body: JSON.stringify({ shas: shaList.map((x) => `0x${x}`) }),
     });
+    if (!resp.ok) {
+      return {
+        ok: false,
+        error: {
+          code: "UPSTREAM_ERROR",
+          message: `Failed to check hashes: ${resp.statusText}`,
+          httpStatus: resp.status || 500,
+        },
+      };
+    }
     // SAFETY: the upstream exists_multi endpoint maps each hash to a transaction hash or null.
     const body: { result?: Record<string, string | null> } = await resp.json();
     found = body.result || {};
@@ -252,7 +260,6 @@ export async function getUserProfile(
     return res;
   }
 
-  // The upstream answers with a list, or with one object for a single match.
   const rows = Array.isArray(res.result) ? res.result : [res.result];
   if (rows.length === 0) {
     return {
@@ -418,7 +425,6 @@ export async function getEthscriptionById(
   return getEthscriptionDetailed(id, "meta", options);
 }
 
-// NOTE: careful changing result fields here, because of the `as ResultDetailed<T>` assertions
 // we can footgun ourselves but it's required to be able to have editor complitions!
 export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
   id: string,
@@ -474,7 +480,6 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
 
   if (/owner|creator|receiver|previous|initial/i.test(type)) {
     // use `data.result` because transfers does not exists in `result` by default
-    // Sorted newest first. The creation is not a transfer, so no transfers is a 404.
     const transfers = normalizeAndSortTransfers(data.result.ethscription_transfers);
     const latest = transfers[0];
     if (!latest) {
@@ -628,7 +633,6 @@ export async function estimateDataCost(
     const transferWei = 21_000;
     const bufferWei = opts.buffer_fee || 0;
     const usedWei = dataWei + transferWei + bufferWei;
-    // Fees given without a gas price replace the fetched gas price.
     const useFees =
       cfg.gas_price === undefined && (cfg.base_fee !== undefined || cfg.priority_fee !== undefined);
     const totalGasWei =

@@ -25,8 +25,6 @@ type UpstreamResponse<T> = {
   pagination?: PaginationType;
 };
 
-// Fetches from the upstream API. The caller picks the result type `T` for the path it fetches:
-// a list, one ethscription, or the attachment bytes.
 export async function upstreamFetcher<T = UpstreamEthscription | UpstreamEthscription[]>(
   options?: FetchOptions,
   id?: string | null,
@@ -37,7 +35,6 @@ export async function upstreamFetcher<T = UpstreamEthscription | UpstreamEthscri
     ...filtersNormalizer({ ...options }),
   };
 
-  // A query string sends "false" as text, so only true or 1 turn resolution on.
   if (["true", "1"].includes(String(opts.resolve))) {
     let res: Record<string, unknown>;
 
@@ -186,7 +183,6 @@ function logHints(opts: Record<string, unknown> = {}): void {
   }
 }
 
-// Chain order: block, then transaction, then log. A transfer without a log index comes first.
 function chainOrder(
   a: Pick<UpstreamTransfer, "block_number" | "transaction_index" | "event_log_index">,
   b: Pick<UpstreamTransfer, "block_number" | "transaction_index" | "event_log_index">,
@@ -210,13 +206,13 @@ export function normalizeAndSortTransfers(transfers: UpstreamTransfer[]): Ethscr
         is_esip1: x.event_log_index !== null,
         is_esip2: x.event_log_index !== null,
       }))
-      // sort in chain order, oldest first
+      // sort by block number, ascending
       .toSorted(chainOrder)
       .map((x, idx) => ({
         ...x,
         transfer_index: idx,
       }))
-      // sort newest first, after setting the transfer index
+      // sort by block number, descending after setting the transfer index
       .toSorted((a, b) => chainOrder(b, a))
   );
 }
@@ -287,7 +283,6 @@ export function normalizeResult(
   );
 
   for (const withKey of withs) {
-    // Check the key, not its value, so computed `false` fields stay.
     if (!(withKey in onlyRes)) {
       onlyRes[withKey] = withKey in fields ? fields[withKey] : result[withKey];
     }
