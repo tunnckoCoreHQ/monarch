@@ -225,7 +225,7 @@ describe("Triad Better Auth platform options", () => {
     const encodedRateLimitSecret = btoa(rateLimitSecret)
       .replaceAll("+", "-")
       .replaceAll("/", "_")
-      .replace(/=+$/, "");
+      .replace(/[=]+$/, "");
     const env = createEnv({
       RATE_LIMIT_SECRET: rateLimitSecret,
       ENCRYPTION_SECRETS: JSON.stringify({
@@ -237,7 +237,7 @@ describe("Triad Better Auth platform options", () => {
     expect(() => createTriadAuthOptions(env)).toThrow("ENCRYPTION_SECRETS");
   });
 
-  it.each(["a".repeat(32), btoa("a".repeat(31)).replace(/=+$/, "")])(
+  it.each(["a".repeat(32), btoa("a".repeat(31)).replace(/[=]+$/, "")])(
     "rejects profile encryption material that is not canonical base64url for 32 bytes",
     (encryptionSecret) => {
       const env = createEnv({

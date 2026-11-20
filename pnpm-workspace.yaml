@@ -52,9 +52,9 @@ catalogs:
     erc721a: 4.3.0
     viem: 2.56.9
     jose: ^6.2.12
-    oxlint: 1.86.0
+    oxlint: 1.94.0
     oxfmt: 0.71.0
-    oxlint-tsgolint: 7.0.2003
+    tsrs: 7.1.0-beta.tsrs3
     ultracite: 7.12.2
     vitest: 5.0.3
     "@vitest/coverage-v8": 5.0.3

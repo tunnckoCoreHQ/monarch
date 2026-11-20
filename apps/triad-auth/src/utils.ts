@@ -14,7 +14,7 @@ export function base64UrlEncode(bytes: Uint8Array): string {
     binary += String.fromCharCode(byte);
   }
 
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/[=]+$/, "");
 }
 
 export function getArrayBuffer(bytes: Uint8Array): ArrayBuffer {
