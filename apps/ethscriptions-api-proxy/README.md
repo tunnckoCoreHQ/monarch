@@ -1,6 +1,6 @@
 # ethscriptions-api-proxy
 
-The Calldata API at [api.calldata.space](https://api.calldata.space). It is a Cloudflare Worker that runs [`ethscriptions-server`](https://www.npmjs.com/package/ethscriptions-server) for Ethereum mainnet and Sepolia.
+The Calldata Ethscriptions API at [api.calldata.space](https://api.calldata.space). It is a Cloudflare Worker that runs [`@tunnckocore/ethscriptions-server`](../../packages/ethscriptions-server) for Ethereum mainnet and Sepolia.
 
 | URL                            | Network |
 | ------------------------------ | ------- |
