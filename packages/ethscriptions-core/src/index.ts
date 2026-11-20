@@ -97,13 +97,12 @@ export async function multiCheckExists(
   options?: FetchOptions,
 ): Promise<Result<CheckExistResult>> {
   const opts = { baseURL: BASE_API_URL, ...options };
-  const shaList = (typeof shas === "string" ? [shas] : shas).filter(Boolean).flatMap(
-    (x) =>
-      x
-        .replace("0x", "")
-        .match(/[0-9a-fA-F]{64}/g)
-        ?.map((z) => z.replace("0x", "")) ?? [],
-  );
+  // Each hash must be exactly 64 hex digits, with an optional 0x, so a longer run is rejected
+  // instead of cut. A value can hold several hashes with separators.
+  const shaList = (typeof shas === "string" ? [shas] : shas)
+    .flatMap((x) => x.split(/[^\da-fx]+/i))
+    .map((x) => x.replace(/^0x/i, ""))
+    .filter((x) => /^[\da-f]{64}$/i.test(x));
 
   if (shaList.length === 0) {
     return {
@@ -475,15 +474,23 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
 
   if (/owner|creator|receiver|previous|initial/i.test(type)) {
     // use `data.result` because transfers does not exists in `result` by default
+    // Sorted newest first. The creation is not a transfer, so no transfers is a 404.
     const transfers = normalizeAndSortTransfers(data.result.ethscription_transfers);
+    const latest = transfers[0];
+    if (!latest) {
+      return {
+        ok: false,
+        error: { message: "No transfers found for this ethscription", httpStatus: 404 },
+      };
+    }
 
     // SAFETY: the owner modes map to OwnersResult.
     return {
       ok: true,
       result: {
-        latest_transfer_timestamp: transfers[0].block_timestamp,
-        latest_transfer_datetime: new Date(result.block_timestamp * 1000).toISOString(),
-        latest_transfer_block: transfers[0].block_number,
+        latest_transfer_timestamp: latest.block_timestamp,
+        latest_transfer_datetime: new Date(Number(latest.block_timestamp) * 1000).toISOString(),
+        latest_transfer_block: latest.block_number,
         creator: result.creator,
         initial: data.result.initial_owner,
         current: data.result.current_owner,
@@ -506,7 +513,7 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
         block_number: result.block_number,
         block_number_fmt: numberFormat(result.block_number),
         transaction_index: result.transaction_index,
-        event_log_index: result.event_log_index ?? null,
+        event_log_index: data.result.event_log_index ?? null,
         ethscription_number: data.result.ethscription_number ?? null,
         ethscription_number_fmt: data.result.ethscription_number
           ? numberFormat(data.result.ethscription_number)
@@ -621,7 +628,11 @@ export async function estimateDataCost(
     const transferWei = 21_000;
     const bufferWei = opts.buffer_fee || 0;
     const usedWei = dataWei + transferWei + bufferWei;
-    const totalGasWei = opts.gas_price ? opts.gas_price * 1e9 : opts.base_fee + opts.priority_fee;
+    // Fees given without a gas price replace the fetched gas price.
+    const useFees =
+      cfg.gas_price === undefined && (cfg.base_fee !== undefined || cfg.priority_fee !== undefined);
+    const totalGasWei =
+      opts.gas_price && !useFees ? opts.gas_price * 1e9 : opts.base_fee + opts.priority_fee;
     const costWei = usedWei * totalGasWei;
 
     const eth = costWei / 1e18;

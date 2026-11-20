@@ -37,7 +37,8 @@ export async function upstreamFetcher<T = UpstreamEthscription | UpstreamEthscri
     ...filtersNormalizer({ ...options }),
   };
 
-  if (opts.resolve) {
+  // A query string sends "false" as text, so only true or 1 turn resolution on.
+  if (["true", "1"].includes(String(opts.resolve))) {
     let res: Record<string, unknown>;
 
     try {
@@ -185,6 +186,18 @@ function logHints(opts: Record<string, unknown> = {}): void {
   }
 }
 
+// Chain order: block, then transaction, then log. A transfer without a log index comes first.
+function chainOrder(
+  a: Pick<UpstreamTransfer, "block_number" | "transaction_index" | "event_log_index">,
+  b: Pick<UpstreamTransfer, "block_number" | "transaction_index" | "event_log_index">,
+): number {
+  return (
+    Number(a.block_number) - Number(b.block_number) ||
+    Number(a.transaction_index) - Number(b.transaction_index) ||
+    Number(a.event_log_index ?? -1) - Number(b.event_log_index ?? -1)
+  );
+}
+
 export function normalizeAndSortTransfers(transfers: UpstreamTransfer[]): EthscriptionTransfer[] {
   return (
     transfers
@@ -197,14 +210,14 @@ export function normalizeAndSortTransfers(transfers: UpstreamTransfer[]): Ethscr
         is_esip1: x.event_log_index !== null,
         is_esip2: x.event_log_index !== null,
       }))
-      // sort by block number, ascending
-      .toSorted((a, b) => Number(a.block_number) - Number(b.block_number))
+      // sort in chain order, oldest first
+      .toSorted(chainOrder)
       .map((x, idx) => ({
         ...x,
         transfer_index: idx,
       }))
-      // sort by block number, descending after setting the transfer index
-      .toSorted((a, b) => Number(b.block_number) - Number(a.block_number))
+      // sort newest first, after setting the transfer index
+      .toSorted((a, b) => chainOrder(b, a))
   );
 }
 
@@ -274,8 +287,9 @@ export function normalizeResult(
   );
 
   for (const withKey of withs) {
-    if (!onlyRes[withKey]) {
-      onlyRes[withKey] = fields[withKey] || result[withKey];
+    // Check the key, not its value, so computed `false` fields stay.
+    if (!(withKey in onlyRes)) {
+      onlyRes[withKey] = withKey in fields ? fields[withKey] : result[withKey];
     }
   }
 

@@ -7,11 +7,14 @@ import {
   getAllEthscriptions,
   getDigestForData,
   getEthscriptionById,
+  getEthscriptionDetailed,
   getUserProfile,
   hexToBytes,
   isEthereumAddress,
   isHexValue,
+  normalizeAndSortTransfers,
 } from "../src/index";
+import type { UpstreamTransfer } from "../src/types";
 
 const TX_HASH = "0x35d1a4680e450eb8766f966f5182ba171f247c91b06e79e70da383e760094203";
 const FOOBAR_SHA = "daf733bdb187b0b64c7cc39adc45d4516dbc8786db9958d5151d6c80b24af63b";
@@ -278,5 +281,105 @@ describe("getUserProfile", () => {
     const res = await getUserProfile("0x0000000000000000000000000000000000000001");
 
     expect(res).toMatchObject({ ok: true, result: { latest: { transaction_hash: TX_HASH } } });
+  });
+});
+
+// An upstream transfer at the given block and time.
+const transfer = (block: `${number}`, timestamp: `${number}`): UpstreamTransfer => ({
+  transaction_hash: TX_HASH,
+  ethscription_transaction_hash: TX_HASH,
+  from_address: "0x0000000000000000000000000000000000000001",
+  to_address: "0x0000000000000000000000000000000000000002",
+  block_number: block,
+  block_timestamp: timestamp,
+  block_blockhash: "0x01",
+  event_log_index: null,
+  transaction_index: "1",
+  enforced_previous_owner: null,
+});
+
+describe("detail modes", () => {
+  it("reports the latest transfer time for owner lookups", async () => {
+    const ethscription_transfers = [transfer("1", "1000"), transfer("5", "5000")];
+    stubFetch(() => ({ result: { ...upstreamEthscription, ethscription_transfers } }));
+
+    const res = await getEthscriptionDetailed(TX_HASH, "owners");
+
+    expect(res).toMatchObject({
+      ok: true,
+      result: { latest_transfer_datetime: new Date(5_000_000).toISOString() },
+    });
+  });
+
+  it("answers 404 for an owner lookup without transfers", async () => {
+    stubFetch(() => ({ result: upstreamEthscription }));
+
+    const res = await getEthscriptionDetailed(TX_HASH, "owners");
+
+    expect(res).toMatchObject({ ok: false, error: { httpStatus: 404 } });
+  });
+
+  it("reports the upstream log index in numbers mode", async () => {
+    stubFetch(() => ({ result: { ...upstreamEthscription, event_log_index: "7" } }));
+
+    const res = await getEthscriptionDetailed(TX_HASH, "numbers");
+
+    expect(res).toMatchObject({ ok: true, result: { event_log_index: "7" } });
+  });
+
+  it("keeps a computed false field asked for with `with`", async () => {
+    stubFetch(() => ({ result: upstreamEthscription }));
+
+    const res = await getEthscriptionById(TX_HASH, { only: "transaction_hash", with: "is_esip8" });
+
+    expect(res.ok && res.result).toEqual({ transaction_hash: TX_HASH, is_esip8: false });
+  });
+});
+
+describe("transfer order", () => {
+  it("orders transfers in one block by transaction and log index", () => {
+    const sorted = normalizeAndSortTransfers([
+      { ...transfer("5", "5000"), transaction_index: "9", event_log_index: "2" },
+      { ...transfer("5", "5000"), transaction_index: "3", event_log_index: null },
+      { ...transfer("5", "5000"), transaction_index: "9", event_log_index: "1" },
+    ]);
+
+    expect(sorted.map((x) => [x.transaction_index, x.event_log_index, x.transfer_index])).toEqual([
+      ["9", "2", 2],
+      ["9", "1", 1],
+      ["3", null, 0],
+    ]);
+  });
+});
+
+describe("exists check input", () => {
+  it("rejects a hex run longer than a hash, without a request", async () => {
+    stubFetch(() => ({}));
+
+    const res = await checkExists(`0x${FOOBAR_SHA}a`);
+
+    expect(res).toMatchObject({ ok: false, error: { code: "NO_VALID_SHA256_HASHES" } });
+    expect(calls).toEqual([]);
+  });
+
+  it("accepts several hashes in one value", async () => {
+    stubFetch(() => ({ result: { [`0x${FOOBAR_SHA}`]: TX_HASH } }));
+
+    await checkExists(`0x${FOOBAR_SHA},${"a".repeat(64)}`);
+
+    expect(calls[0]?.init?.body).toBe(
+      JSON.stringify({ shas: [`0x${FOOBAR_SHA}`, `0x${"a".repeat(64)}`] }),
+    );
+  });
+});
+
+describe("estimateDataCost fees", () => {
+  it("prices with the given fees when no gas price is given", async () => {
+    stubFetch(() => gasPrices);
+
+    const res = await estimateDataCost("data:,foobar", { base_fee: 3, priority_fee: 1 });
+
+    const gasNeeded = 12 * 16 + 21_000;
+    expect(res).toMatchObject({ ok: true, result: { cost: { wei: gasNeeded * 4 } } });
   });
 });
