@@ -3,7 +3,6 @@ name: improve-codebase
 description: >
   Scan a codebase for deepening opportunities, present them as a visual HTML
   report, then question the user through whichever one they pick.
-disable-model-invocation: false
 ---
 
 # Improve codebase

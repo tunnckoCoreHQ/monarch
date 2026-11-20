@@ -1,7 +1,6 @@
 ---
 name: no-comments
 description: "Spawn a subagent with the comment-sicko skill, fix accepted findings, and offer encodings for claimed constraints."
-disable-model-invocation: true
 license: MIT
 metadata:
   author: Lauren Tan
