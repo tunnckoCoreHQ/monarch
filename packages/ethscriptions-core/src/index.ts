@@ -367,7 +367,7 @@ export async function getUserCreatedEthscritions(
 ): Promise<Result<EthscriptionBase[]>> {
   const createdByUser = await getAllEthscriptions({
     ...options,
-    resolve: !isEthereumAddress(val),
+    resolve: options?.resolve ?? !isEthereumAddress(val),
     creator: val,
   });
 
@@ -466,7 +466,16 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
   // because in most cases when ESIP-8 Blobscription is created the regular Ethscription is `data:;esip6` as "content_uri"
   if (/content|data/i.test(type)) {
     // use `data.result` instead of `result` because `content_uri` is not included in `result` by default
-    const contentBuffer = await fetch(data.result.content_uri).then((res) => res.arrayBuffer());
+    let contentBuffer: ArrayBuffer;
+    try {
+      contentBuffer = await fetch(data.result.content_uri).then((res) => res.arrayBuffer());
+    } catch (error) {
+      return {
+        ok: false,
+        error: { message: `Failed to read the content: ${String(error)}`, httpStatus: 502 },
+      };
+    }
+
     const mime = (await fileTypeFromBuffer(contentBuffer))?.mime ?? "";
 
     const contentHeaders: Record<string, string> = {
@@ -502,7 +511,7 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
         latest_transfer_timestamp: latest.block_timestamp,
         latest_transfer_datetime: new Date(Number(latest.block_timestamp) * 1000).toISOString(),
         latest_transfer_block: latest.block_number,
-        creator: result.creator,
+        creator: data.result.creator,
         initial: data.result.initial_owner,
         current: data.result.current_owner,
         previous: data.result.previous_owner,
@@ -514,17 +523,19 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
   }
 
   if (/number|index|stat|info/i.test(type)) {
+    // Read the upstream record, because `only` and `with` may leave fields out of `result`.
+    const raw = data.result;
     // SAFETY: the number modes map to NumbersResult.
     return {
       ok: true,
       result: {
-        block_timestamp: result.block_timestamp,
-        block_datetime: new Date(result.block_timestamp * 1000).toISOString(),
-        block_blockhash: result.block_hash,
-        block_number: result.block_number,
-        block_number_fmt: numberFormat(result.block_number),
-        transaction_index: result.transaction_index,
-        event_log_index: result.event_log_index ?? null,
+        block_timestamp: Number(raw.block_timestamp),
+        block_datetime: new Date(Number(raw.block_timestamp) * 1000).toISOString(),
+        block_blockhash: raw.block_blockhash,
+        block_number: Number(raw.block_number),
+        block_number_fmt: numberFormat(raw.block_number),
+        transaction_index: Number(raw.transaction_index),
+        event_log_index: raw.event_log_index,
         ethscription_number: data.result.ethscription_number ?? null,
         ethscription_number_fmt: data.result.ethscription_number
           ? numberFormat(data.result.ethscription_number)
@@ -570,9 +581,11 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
       return res;
     }
 
-    const attachmentHeaders: Record<string, string> = {
-      "content-type": String(data.result.attachment_content_type),
-    };
+    // A missing content type stays out, so the header is never the string "null".
+    const attachmentType = data.result.attachment_content_type;
+    const attachmentHeaders: Record<string, string> = attachmentType
+      ? { "content-type": attachmentType }
+      : {};
 
     // SAFETY: the attachment modes map to Uint8Array.
     return {

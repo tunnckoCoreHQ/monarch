@@ -37,7 +37,8 @@ export async function upstreamFetcher<T = UpstreamEthscription | UpstreamEthscri
     ...filtersNormalizer({ ...options }),
   };
 
-  if (opts.resolve) {
+  // Query strings send "false" as a string, so only an explicit true value turns it on.
+  if (["true", "1"].includes(String(opts.resolve))) {
     let res: Record<string, unknown>;
 
     try {
@@ -192,26 +193,39 @@ function logHints(opts: Record<string, unknown> = {}): void {
   }
 }
 
+// Chain order: block, then transaction, then log. A transfer without a log index comes first.
+function chainOrder(
+  a: Pick<UpstreamTransfer, "block_number" | "transaction_index" | "event_log_index">,
+  b: Pick<UpstreamTransfer, "block_number" | "transaction_index" | "event_log_index">,
+): number {
+  return (
+    Number(a.block_number) - Number(b.block_number) ||
+    Number(a.transaction_index) - Number(b.transaction_index) ||
+    Number(a.event_log_index ?? -1) - Number(b.event_log_index ?? -1)
+  );
+}
+
 export function normalizeAndSortTransfers(transfers: UpstreamTransfer[]): EthscriptionTransfer[] {
   return (
     transfers
       // oxlint-disable-next-line no-unused-vars -- the rename drops the field from the rest object.
-      .map(({ ethscription_transaction_hash: _, block_blockhash, ...x }, idx) => ({
+      .map(({ ethscription_transaction_hash: _, block_blockhash, ...x }) => ({
         ...x,
         block_hash: block_blockhash,
-        is_esip0: idx === 0,
         // theoretically, it could be ESIP-1 Transfer too, but ESIP-2 is more used and more likely
         is_esip1: x.event_log_index !== null,
         is_esip2: x.event_log_index !== null,
       }))
-      // sort by block number, ascending
-      .toSorted((a, b) => Number(a.block_number) - Number(b.block_number))
+      // sort in chain order, oldest first
+      .toSorted(chainOrder)
       .map((x, idx) => ({
         ...x,
+        // The creation is the first transfer in chain order.
+        is_esip0: idx === 0,
         transfer_index: idx,
       }))
-      // sort by block number, descending after setting the transfer index
-      .toSorted((a, b) => Number(b.block_number) - Number(a.block_number))
+      // sort newest first, after setting the transfer index
+      .toSorted((a, b) => chainOrder(b, a))
   );
 }
 

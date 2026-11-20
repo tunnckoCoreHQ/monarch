@@ -170,6 +170,13 @@ describe("routes", () => {
     expect(blank.status).toBe(400);
   });
 
+  it("does not resolve names when the query says resolve=false", async () => {
+    const app = withRoutes(createApp(), "https://upstream.example");
+    await app.request("/ethscriptions?resolve=false&current_owner=wgw");
+
+    expect(upstreamCalls.some((url) => url.includes("ensdata.net"))).toBe(false);
+  });
+
   it("lowercases a 0x transaction hash, like the old schema did", async () => {
     const app = withRoutes(createApp(), "https://upstream.example");
     await app.request(

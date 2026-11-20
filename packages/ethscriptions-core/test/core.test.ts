@@ -8,13 +8,16 @@ import {
   getDigestForData,
   getEthscriptionById,
   getEthscriptionDetailed,
+  getUserCreatedEthscritions,
   getUserProfile,
   hexToBytes,
   isEthereumAddress,
   isHexValue,
+  normalizeAndSortTransfers,
   resolveUser,
   upstreamFetcher,
 } from "../src/index";
+import type { UpstreamTransfer } from "../src/types";
 
 const TX_HASH = "0x35d1a4680e450eb8766f966f5182ba171f247c91b06e79e70da383e760094203";
 const FOOBAR_SHA = "daf733bdb187b0b64c7cc39adc45d4516dbc8786db9958d5151d6c80b24af63b";
@@ -285,7 +288,7 @@ describe("getUserProfile", () => {
 });
 
 // An upstream transfer at the given block and time.
-const transfer = (block: `${number}`, timestamp: `${number}`) => ({
+const transfer = (block: `${number}`, timestamp: `${number}`): UpstreamTransfer => ({
   transaction_hash: TX_HASH,
   ethscription_transaction_hash: TX_HASH,
   from_address: "0x0000000000000000000000000000000000000001",
@@ -366,5 +369,75 @@ describe("upstream edge cases", () => {
     });
 
     expect(res).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
+  });
+});
+
+describe("more upstream edge cases", () => {
+  it("orders transfers in the same block by transaction and log index", () => {
+    const sorted = normalizeAndSortTransfers([
+      { ...transfer("5", "5000"), transaction_index: "9", event_log_index: "2" },
+      { ...transfer("5", "5000"), transaction_index: "3", event_log_index: null },
+      { ...transfer("5", "5000"), transaction_index: "9", event_log_index: "1" },
+    ]);
+
+    expect(sorted.map((x) => [x.transaction_index, x.event_log_index, x.transfer_index])).toEqual([
+      ["9", "2", 2],
+      ["9", "1", 1],
+      ["3", null, 0],
+    ]);
+    expect(sorted.at(-1)?.is_esip0).toBe(true);
+  });
+
+  it("keeps an explicit resolve: false for created ethscriptions", async () => {
+    stubFetch(() => ({ result: [upstreamEthscription] }));
+
+    await getUserCreatedEthscritions("wgw", { resolve: false });
+
+    expect(calls.map((x) => x.url).some((url) => url.includes("ensdata.net"))).toBe(false);
+  });
+
+  it("reads numbers from the upstream record, even with `only`", async () => {
+    stubFetch(() => ({ result: { ...upstreamEthscription, event_log_index: "7" } }));
+
+    const res = await getEthscriptionDetailed(TX_HASH, "numbers", { only: "transaction_hash" });
+
+    expect(res).toMatchObject({
+      ok: true,
+      result: { block_number: 26_452_429, transaction_index: 254, event_log_index: "7" },
+    });
+  });
+
+  it("returns an error result when the content download fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request) => {
+        if (String(input).startsWith("data:")) {
+          throw new TypeError("network down");
+        }
+        return Response.json({ result: upstreamEthscription });
+      }),
+    );
+
+    const res = await getEthscriptionDetailed(TX_HASH, "content");
+
+    expect(res).toMatchObject({ ok: false, error: { httpStatus: 502 } });
+  });
+
+  it("leaves out the content type of an attachment without one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request) =>
+        String(input).endsWith("/attachment")
+          ? new Response(new Uint8Array([1, 2, 3]))
+          : Response.json({
+              result: { ...upstreamEthscription, attachment_sha: `0x${FOOBAR_SHA}` },
+            }),
+      ),
+    );
+
+    const res = await getEthscriptionDetailed(TX_HASH, "attachment");
+
+    expect(res.ok).toBe(true);
+    expect(res.ok && new Headers(res.headers).get("content-type")).toBeNull();
   });
 });
