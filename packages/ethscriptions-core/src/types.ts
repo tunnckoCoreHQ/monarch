@@ -185,8 +185,7 @@ export type PricesResult = {
 
 export type BaseCostOpts = {
   speed: EnumSpeeds;
-  usePrices: boolean;
-  bufferFee: number;
+  buffer_fee: number;
 };
 
 // Every field is optional: the defaults and the current gas prices fill the rest.

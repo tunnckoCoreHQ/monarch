@@ -13,7 +13,7 @@ import {
   getUserProfile,
   resolveUser,
 } from "@tunnckocore/ethscriptions-core";
-import type { EnumAllDetailed, EstimateCostOptions } from "@tunnckocore/ethscriptions-core";
+import type { EnumAllDetailed } from "@tunnckocore/ethscriptions-core";
 import type { Context } from "hono";
 import { env as runtimeEnv } from "hono/adapter";
 import { z } from "zod";
@@ -39,41 +39,18 @@ export type RoutesOptions = {
   title?: string;
 };
 
-// A blank or null override counts as unset, so it does not turn into 0 and replace a price.
-const optionalNumber = z.preprocess(
-  (value) => (value === "" || value === null ? undefined : value),
-  z.coerce.number().optional(),
-);
-
-const costSettings = {
+// The cost options, named like the core's fields and the other query params. A blank value fails
+// validation, so it never turns into 0 and replaces a fetched price.
+const price = z.coerce.number().positive().optional();
+const CostOptionsSchema = z.object({
   speed: z.union([z.literal("normal"), z.literal("fast")]).optional(),
-  ethPrice: optionalNumber,
-  gasPrice: optionalNumber,
-  gasFee: optionalNumber,
-  baseFee: optionalNumber,
-  bufferFee: optionalNumber,
-  priorityFee: optionalNumber,
-};
-
-const CostSettingsSchema = z.object(costSettings);
-
-// The routes take camelCase overrides, and the core reads the price fields in snake_case. Unset
-// fields stay out, so they do not replace the current prices. The core prices with `gas_price`
-// when it is set, so a fee override without a gas price clears it to price with the fees.
-function toCostOptions(settings: z.infer<typeof CostSettingsSchema>): EstimateCostOptions {
-  const { speed, bufferFee, ethPrice, gasPrice, gasFee, baseFee, priorityFee } = settings;
-  const feeOverride = baseFee !== undefined || priorityFee !== undefined;
-
-  return {
-    ...(speed && { speed }),
-    ...(bufferFee !== undefined && { bufferFee }),
-    ...(ethPrice !== undefined && { eth_price: ethPrice }),
-    ...((gasPrice !== undefined || feeOverride) && { gas_price: gasPrice ?? 0 }),
-    ...(gasFee !== undefined && { gas_fee: gasFee }),
-    ...(baseFee !== undefined && { base_fee: baseFee }),
-    ...(priorityFee !== undefined && { priority_fee: priorityFee }),
-  };
-}
+  eth_price: price,
+  gas_price: price,
+  gas_fee: price,
+  base_fee: price,
+  priority_fee: price,
+  buffer_fee: price,
+});
 
 // The build commit comes from COMMIT_SHA, and is "local" when it is missing.
 export function getEnv(ctx: Context, key = "COMMIT_SHA"): string {
@@ -198,22 +175,22 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
   app.get(
     "/estimate/:data",
     validate("param", z.object({ data: DataURISchema })),
-    validate("query", CostSettingsSchema.strict()),
+    validate("query", CostOptionsSchema.strict()),
     toHonoHandler((ctx) => {
-      const settings = CostSettingsSchema.parse(ctx.req.query());
-      return estimateDataCost(param(ctx, "data"), toCostOptions(settings));
+      const settings = CostOptionsSchema.parse(ctx.req.query());
+      return estimateDataCost(param(ctx, "data"), settings);
     }),
   );
 
   app.post(
     "/estimate",
-    validate("json", z.object({ data: DataURISchema, ...costSettings }).strict()),
+    validate("json", CostOptionsSchema.extend({ data: DataURISchema }).strict()),
     toHonoHandler(async (ctx) => {
-      const { data, ...settings } = CostSettingsSchema.extend({ data: z.string() }).parse(
+      const { data, ...settings } = CostOptionsSchema.extend({ data: z.string() }).parse(
         await ctx.req.json(),
       );
 
-      return estimateDataCost(data, toCostOptions(settings));
+      return estimateDataCost(data, settings);
     }),
   );
 

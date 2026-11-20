@@ -596,8 +596,7 @@ export async function estimateDataCost(
 ): Promise<Result<EstimateCostResult>> {
   const cfg = {
     speed: "normal" as const,
-    usePrices: true,
-    bufferFee: 0,
+    buffer_fee: 0,
     ...options,
   };
   const prices = await getPrices(cfg.speed);
@@ -636,9 +635,14 @@ export async function estimateDataCost(
 
     const dataWei = data.reduce((acc, byte) => acc + (byte === 0 ? 4 : 16), 0);
     const transferWei = 21_000;
-    const bufferWei = opts.bufferFee || 0;
+    const bufferWei = opts.buffer_fee || 0;
     const usedWei = dataWei + transferWei + bufferWei;
-    const totalGasWei = opts.gas_price ? opts.gas_price * 1e9 : opts.base_fee + opts.priority_fee;
+    // Given fees without a gas price replace the fetched gas price.
+    const useFees =
+      options?.gas_price === undefined &&
+      (options?.base_fee !== undefined || options?.priority_fee !== undefined);
+    const totalGasWei =
+      opts.gas_price && !useFees ? opts.gas_price * 1e9 : opts.base_fee + opts.priority_fee;
     const costWei = usedWei * totalGasWei;
 
     const eth = costWei / 1e18;

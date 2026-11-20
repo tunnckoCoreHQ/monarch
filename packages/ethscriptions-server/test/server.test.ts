@@ -130,7 +130,7 @@ describe("routes", () => {
     expect(await response.json()).toMatchObject({ result: { address } });
   });
 
-  it("applies camelCase price overrides to /estimate", async () => {
+  it("applies price overrides to /estimate", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -146,11 +146,11 @@ describe("routes", () => {
       ),
     );
     const app = withRoutes(createApp());
-    const get = await app.request("/estimate/data:,wgw?ethPrice=4000&gasPrice=10");
+    const get = await app.request("/estimate/data:,wgw?eth_price=4000&gas_price=10");
     const post = await app.request("/estimate", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ data: "data:,wgw", ethPrice: 4000, gasPrice: 10 }),
+      body: JSON.stringify({ data: "data:,wgw", eth_price: 4000, gas_price: 10 }),
     });
 
     for (const response of [get, post]) {
@@ -160,16 +160,14 @@ describe("routes", () => {
     }
 
     // Fee overrides without a gas price price the call with the fees, in wei.
-    const fees = await app.request("/estimate/data:,wgw?baseFee=3&priorityFee=1");
+    const fees = await app.request("/estimate/data:,wgw?base_fee=3&priority_fee=1");
     expect(await fees.json()).toMatchObject({
-      result: { prices: { gas_price: 0, base_fee: 3, priority_fee: 1 }, cost: { wei: 21_144 * 4 } },
+      result: { prices: { gas_price: 2, base_fee: 3, priority_fee: 1 }, cost: { wei: 21_144 * 4 } },
     });
 
-    // Blank overrides count as unset, so the fetched prices stay.
-    const blank = await app.request("/estimate/data:,wgw?ethPrice=&gasPrice=");
-    expect(await blank.json()).toMatchObject({
-      result: { prices: { eth_price: 2000, gas_price: 2 } },
-    });
+    // A blank override fails validation instead of turning into 0.
+    const blank = await app.request("/estimate/data:,wgw?eth_price=");
+    expect(blank.status).toBe(400);
   });
 
   it("lowercases a 0x transaction hash, like the old schema did", async () => {

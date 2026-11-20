@@ -206,7 +206,7 @@ describe("estimateDataCost", () => {
     expect(res).toMatchObject({
       ok: true,
       result: {
-        prices: { block_number: 26_452_452, gas_price: 2, speed: "normal", bufferFee: 0 },
+        prices: { block_number: 26_452_452, gas_price: 2, speed: "normal", buffer_fee: 0 },
         cost: { wei, eth: wei / 1e18, usd: (wei / 1e18) * 2000 },
         meta: { gasNeeded, inputLength: 12 },
       },
@@ -216,7 +216,7 @@ describe("estimateDataCost", () => {
   it("uses the given speed and buffer", async () => {
     stubFetch(() => gasPrices);
 
-    const res = await estimateDataCost("data:,foobar", { speed: "fast", bufferFee: 8 });
+    const res = await estimateDataCost("data:,foobar", { speed: "fast", buffer_fee: 8 });
 
     expect(res.ok && res.result.meta.gasNeeded).toBe(12 * 16 + 21_000 + 8);
     expect(res.ok && res.result.prices.gas_price).toBe(3);
