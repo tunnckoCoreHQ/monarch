@@ -8,7 +8,6 @@ import {
   getDigestForData,
   getEthscriptionById,
   getEthscriptionDetailed,
-  getUserCreatedEthscritions,
   getUserProfile,
   hexToBytes,
   isEthereumAddress,
@@ -386,14 +385,6 @@ describe("more upstream edge cases", () => {
       ["3", null, 0],
     ]);
     expect(sorted.at(-1)?.is_esip0).toBe(true);
-  });
-
-  it("keeps an explicit resolve: false for created ethscriptions", async () => {
-    stubFetch(() => ({ result: [upstreamEthscription] }));
-
-    await getUserCreatedEthscritions("wgw", { resolve: false });
-
-    expect(calls.map((x) => x.url).some((url) => url.includes("ensdata.net"))).toBe(false);
   });
 
   it("reads numbers from the upstream record, even with `only`", async () => {

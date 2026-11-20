@@ -366,7 +366,7 @@ export async function getUserCreatedEthscritions(
 ): Promise<Result<EthscriptionBase[]>> {
   const createdByUser = await getAllEthscriptions({
     ...options,
-    resolve: options?.resolve ?? !isEthereumAddress(val),
+    resolve: !isEthereumAddress(val),
     creator: val,
   });
 
@@ -510,7 +510,7 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
         latest_transfer_timestamp: latest.block_timestamp,
         latest_transfer_datetime: new Date(Number(latest.block_timestamp) * 1000).toISOString(),
         latest_transfer_block: latest.block_number,
-        creator: data.result.creator,
+        creator: result.creator,
         initial: data.result.initial_owner,
         current: data.result.current_owner,
         previous: data.result.previous_owner,
