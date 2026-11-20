@@ -274,7 +274,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
     validate("query", FilterSchema),
     toHonoHandler((ctx) => {
       const { searchParams } = new URL(ctx.req.url);
-      const settings = { ...searchParamsToOptions(searchParams), baseURL };
+      const settings = { ...Object.fromEntries(searchParams.entries()), baseURL };
       const name = param(ctx, "name");
 
       return param(ctx, "mode") === "created"

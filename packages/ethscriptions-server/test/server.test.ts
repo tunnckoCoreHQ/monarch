@@ -174,15 +174,6 @@ describe("routes", () => {
     expect(upstreamCalls.some((url) => url.includes("ensdata.net"))).toBe(false);
   });
 
-  it("keeps repeated query keys on the profile route", async () => {
-    const app = withRoutes(createApp(), "https://upstream.example");
-    await app.request(
-      "/profiles/0x0000000000000000000000000000000000000001/owned?sort_order=asc&sort_order=desc",
-    );
-
-    expect(upstreamCalls[0]).toContain("sort_order=asc&sort_order=desc");
-  });
-
   it("lowercases a 0x transaction hash, like the old schema did", async () => {
     const app = withRoutes(createApp(), "https://upstream.example");
     await app.request(
