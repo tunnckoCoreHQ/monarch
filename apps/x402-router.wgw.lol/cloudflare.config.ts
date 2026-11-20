@@ -8,7 +8,6 @@ export default defineConfig({
     entrypoint: "@astrojs/cloudflare/entrypoints/server",
     // A zone route, not a custom domain: wgw.lol hosts many subdomains on routes.
     triggers: [triggers.fetch({ pattern: "x402-router.wgw.lol/*", zone: "wgw.lol" })],
-    observability: { enabled: true },
     assets: {
       // The x402 facilitator API is served by the Worker; everything else is a static asset first.
       runWorkerFirst: ["/supported", "/verify", "/settle", "/health", "/healthz"],

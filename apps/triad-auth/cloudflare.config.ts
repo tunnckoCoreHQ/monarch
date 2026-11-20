@@ -29,7 +29,6 @@ export default defineConfig(({ mode }) => {
       triggers: [triggers.fetch({ pattern: `${host}/*`, zone: "wgw.lol" })],
       workersDev: false,
       previewUrls: false,
-      observability: { enabled: true },
       // `astro build` prerenders every page; the Worker serves the auth API and the built assets.
       assets: {
         htmlHandling: "drop-trailing-slash",

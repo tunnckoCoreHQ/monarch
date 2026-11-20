@@ -9,7 +9,6 @@ export default defineConfig({
     triggers: [triggers.fetch({ pattern: "badges.wgw.lol/*", zone: "wgw.lol" })],
     workersDev: false,
     previewUrls: false,
-    observability: { enabled: true, headSamplingRate: 1 },
     env: {
       // The deploy task passes the commit being deployed; local builds get "local".
       COMMIT_SHA: bindings.text(process.env.COMMIT_SHA ?? "local"),
