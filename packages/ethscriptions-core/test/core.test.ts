@@ -441,3 +441,24 @@ describe("more upstream edge cases", () => {
     expect(res.ok && new Headers(res.headers).get("content-type")).toBeNull();
   });
 });
+
+describe("exists check input", () => {
+  it("rejects a hex run longer than a hash, without a request", async () => {
+    stubFetch(() => ({}));
+
+    const res = await checkExists(`0x${FOOBAR_SHA}a`);
+
+    expect(res).toMatchObject({ ok: false, error: { code: "NO_VALID_SHA256_HASHES" } });
+    expect(calls).toEqual([]);
+  });
+
+  it("accepts several hashes in one value", async () => {
+    stubFetch(() => ({ result: { [`0x${FOOBAR_SHA}`]: TX_HASH } }));
+
+    await checkExists(`0x${FOOBAR_SHA},${"a".repeat(64)}`);
+
+    expect(calls[0]?.init?.body).toBe(
+      JSON.stringify({ shas: [`0x${FOOBAR_SHA}`, `0x${"a".repeat(64)}`] }),
+    );
+  });
+});

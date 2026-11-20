@@ -170,6 +170,16 @@ describe("routes", () => {
     expect(blank.status).toBe(400);
   });
 
+  it("keeps the configured upstream when the query has a baseURL", async () => {
+    const app = withRoutes(createApp(), "https://upstream.example");
+    await app.request("/ethscriptions?baseURL=https://evil.example");
+
+    expect(upstreamCalls.length).toBeGreaterThan(0);
+    for (const url of upstreamCalls) {
+      expect(url).toMatch(/^https:\/\/upstream\.example\//);
+    }
+  });
+
   it("does not resolve names when the query says resolve=false", async () => {
     const app = withRoutes(createApp(), "https://upstream.example");
     await app.request("/ethscriptions?resolve=false&current_owner=wgw");

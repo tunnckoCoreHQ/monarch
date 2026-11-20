@@ -97,13 +97,12 @@ export async function multiCheckExists(
   options?: FetchOptions,
 ): Promise<Result<CheckExistResult>> {
   const opts = { baseURL: BASE_API_URL, ...options };
-  const shaList = (typeof shas === "string" ? [shas] : shas).filter(Boolean).flatMap(
-    (x) =>
-      x
-        .replace("0x", "")
-        .match(/[0-9a-fA-F]{64}/g)
-        ?.map((z) => z.replace("0x", "")) ?? [],
-  );
+  // A value can hold several hashes with separators. Each hash must be exactly 64 hex digits,
+  // with an optional 0x, so a longer run of hex is rejected instead of cut.
+  const shaList = (typeof shas === "string" ? [shas] : shas)
+    .flatMap((x) => x.split(/[^\da-fx]+/i))
+    .map((x) => x.replace(/^0x/i, ""))
+    .filter((x) => /^[\da-f]{64}$/i.test(x));
 
   if (shaList.length === 0) {
     return {

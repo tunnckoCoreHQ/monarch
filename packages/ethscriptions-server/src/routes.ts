@@ -343,11 +343,13 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
     // Not strict: the query passes through to the upstream API.
     validate("query", FilterSchema),
     toHonoHandler((ctx) => {
-      const settings: Record<string, string | string[]> = { baseURL };
+      const settings: Record<string, string | string[]> = {};
       for (const [key, value] of new URL(ctx.req.url).searchParams) {
         const existing = settings[key];
         settings[key] = existing === undefined ? value : [existing, value].flat();
       }
+      // Set last, so a `baseURL` query param can never change the upstream.
+      settings.baseURL = baseURL;
 
       const id = ctx.req.param("id");
       if (!id) {
