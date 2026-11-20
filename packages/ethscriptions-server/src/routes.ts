@@ -12,6 +12,7 @@ import {
   getUserOwnedEthscriptions,
   getUserProfile,
   resolveUser,
+  searchParamsToOptions,
 } from "@tunnckocore/ethscriptions-core";
 import type { EnumAllDetailed } from "@tunnckocore/ethscriptions-core";
 import type { Context } from "hono";
@@ -273,7 +274,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
     validate("query", FilterSchema),
     toHonoHandler((ctx) => {
       const { searchParams } = new URL(ctx.req.url);
-      const settings = { ...Object.fromEntries(searchParams.entries()), baseURL };
+      const settings = { ...searchParamsToOptions(searchParams), baseURL };
       const name = param(ctx, "name");
 
       return param(ctx, "mode") === "created"
@@ -347,12 +348,7 @@ export function withRoutes(app: App, baseURL = BASE_API_URL, options: RoutesOpti
     // Not strict: the query passes through to the upstream API.
     validate("query", FilterSchema),
     toHonoHandler((ctx) => {
-      const settings: Record<string, string | string[]> = { baseURL };
-      for (const [key, value] of new URL(ctx.req.url).searchParams) {
-        const existing = settings[key];
-        settings[key] =
-          key === "baseURL" || existing === undefined ? value : [existing, value].flat();
-      }
+      const settings = { baseURL, ...searchParamsToOptions(new URL(ctx.req.url).searchParams) };
 
       const id = ctx.req.param("id");
       if (!id) {

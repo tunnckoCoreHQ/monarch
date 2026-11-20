@@ -380,9 +380,9 @@ export function filtersNormalizer(opts: Record<string, unknown>): Record<string,
   return { ...opts };
 }
 
-export function filtersNormalizerFromUrlSearchParams(
+export function searchParamsToOptions(
   searchParams: URLSearchParams,
-): URLSearchParams {
+): Record<string, string | string[]> {
   const opts: Record<string, string | string[]> = {};
   for (const [key, value] of searchParams.entries()) {
     const existing = opts[key];
@@ -394,7 +394,13 @@ export function filtersNormalizerFromUrlSearchParams(
       : value;
   }
 
-  const normalizedOptions = filtersNormalizer(opts);
+  return opts;
+}
+
+export function filtersNormalizerFromUrlSearchParams(
+  searchParams: URLSearchParams,
+): URLSearchParams {
+  const normalizedOptions = filtersNormalizer(searchParamsToOptions(searchParams));
   const searchParamsStr = qs.stringify(normalizedOptions, {
     encode: false,
     indices: false,

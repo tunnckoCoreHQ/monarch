@@ -14,6 +14,7 @@ import {
   isHexValue,
   namesResolver,
   normalizeAndSortTransfers,
+  searchParamsToOptions,
 } from "../src/index";
 import type { UpstreamTransfer } from "../src/types";
 
@@ -433,5 +434,13 @@ describe("transaction_hash_only flag", () => {
     const res = await getEthscriptionById(TX_HASH, { transaction_hash_only: "false" });
 
     expect(res).toMatchObject({ ok: true, result: { block_number: 26_452_429 } });
+  });
+});
+
+describe("searchParamsToOptions", () => {
+  it("merges repeated keys into a list", () => {
+    const params = new URLSearchParams("creator=a&creator=b&media_type=image");
+
+    expect(searchParamsToOptions(params)).toEqual({ creator: ["a", "b"], media_type: "image" });
   });
 });
