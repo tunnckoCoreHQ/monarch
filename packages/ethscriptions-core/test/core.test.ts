@@ -12,6 +12,7 @@ import {
   hexToBytes,
   isEthereumAddress,
   isHexValue,
+  namesResolver,
   normalizeAndSortTransfers,
 } from "../src/index";
 import type { UpstreamTransfer } from "../src/types";
@@ -393,5 +394,34 @@ describe("exists check upstream errors", () => {
     const res = await checkExists(FOOBAR_SHA);
 
     expect(res).toMatchObject({ ok: false, error: { code: "UPSTREAM_ERROR", httpStatus: 429 } });
+  });
+});
+
+describe("follow-up fixes", () => {
+  it("marks the first transfer in chain order as ESIP-0", () => {
+    const sorted = normalizeAndSortTransfers([transfer("5", "5000"), transfer("1", "1000")]);
+
+    expect(sorted.map((x) => [x.block_number, x.is_esip0])).toEqual([
+      ["5", false],
+      ["1", true],
+    ]);
+  });
+
+  it("uses the ENS name when the record has no primary name", async () => {
+    const res = await namesResolver(
+      "0x0000000000000000000000000000000000000001",
+      async () => ({ address: "0x0000000000000000000000000000000000000001", ens: "WGW.eth" }),
+      { resolveName: true, primary: true },
+    );
+
+    expect(res).toBe("wgw.eth");
+  });
+
+  it("builds numbers mode even when `only` drops the block fields", async () => {
+    stubFetch(() => ({ result: upstreamEthscription }));
+
+    const res = await getEthscriptionDetailed(TX_HASH, "numbers", { only: "transaction_hash" });
+
+    expect(res).toMatchObject({ ok: true, result: { block_number: 26_452_429 } });
   });
 });

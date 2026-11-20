@@ -198,10 +198,9 @@ export function normalizeAndSortTransfers(transfers: UpstreamTransfer[]): Ethscr
   return (
     transfers
       // oxlint-disable-next-line no-unused-vars -- the rename drops the field from the rest object.
-      .map(({ ethscription_transaction_hash: _, block_blockhash, ...x }, idx) => ({
+      .map(({ ethscription_transaction_hash: _, block_blockhash, ...x }) => ({
         ...x,
         block_hash: block_blockhash,
-        is_esip0: idx === 0,
         // theoretically, it could be ESIP-1 Transfer too, but ESIP-2 is more used and more likely
         is_esip1: x.event_log_index !== null,
         is_esip2: x.event_log_index !== null,
@@ -210,6 +209,7 @@ export function normalizeAndSortTransfers(transfers: UpstreamTransfer[]): Ethscr
       .toSorted(chainOrder)
       .map((x, idx) => ({
         ...x,
+        is_esip0: idx === 0,
         transfer_index: idx,
       }))
       // sort by block number, descending after setting the transfer index
@@ -447,11 +447,11 @@ export async function namesResolver(
   if (result && result.address && result.ens) {
     const resolved = opts.resolveName
       ? opts.primary
-        ? result.ens_primary
+        ? (result.ens_primary ?? result.ens)
         : result.ens
       : result.address;
 
-    return resolved!.toLowerCase();
+    return resolved.toLowerCase();
   }
 
   // thus if not properly resolved, we fallback to try to find address by Ethscription Name

@@ -508,16 +508,17 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
   }
 
   if (/number|index|stat|info/i.test(type)) {
+    const full = normalizeResult(data.result, { ...opts, only: undefined });
     // SAFETY: the number modes map to NumbersResult.
     return {
       ok: true,
       result: {
-        block_timestamp: result.block_timestamp,
-        block_datetime: new Date(result.block_timestamp * 1000).toISOString(),
-        block_blockhash: result.block_hash,
-        block_number: result.block_number,
-        block_number_fmt: numberFormat(result.block_number),
-        transaction_index: result.transaction_index,
+        block_timestamp: full.block_timestamp,
+        block_datetime: new Date(full.block_timestamp * 1000).toISOString(),
+        block_blockhash: full.block_hash,
+        block_number: full.block_number,
+        block_number_fmt: numberFormat(full.block_number),
+        transaction_index: full.transaction_index,
         event_log_index: data.result.event_log_index ?? null,
         ethscription_number: data.result.ethscription_number ?? null,
         ethscription_number_fmt: data.result.ethscription_number
