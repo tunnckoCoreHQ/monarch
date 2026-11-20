@@ -1,4 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
+import type { Result } from "@tunnckocore/ethscriptions-core";
 import { fileTypeFromBuffer } from "file-type";
 import { Hono } from "hono";
 import type { Context, MiddlewareHandler, ValidationTargets } from "hono";
@@ -13,10 +14,7 @@ export type Bindings = {
 
 export type App = Hono<{ Bindings: Bindings }>;
 
-// The result shape of the `ethscriptions` library functions.
-export type HandlerResult =
-  | { ok: true; result: unknown; headers?: HeadersInit; pagination?: unknown }
-  | { ok: false; error: { message: string; httpStatus?: number } };
+export type HandlerResult = Result<unknown>;
 
 export function createApp(corsOptions?: Parameters<typeof cors>[0]): App {
   const app: App = new Hono();

@@ -130,6 +130,50 @@ describe("routes", () => {
     expect(await response.json()).toMatchObject({ result: { address } });
   });
 
+  it("applies snake_case price options to /estimate", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          data: {
+            blockNr: "1",
+            ethPrice: 2000,
+            baseFee: 1,
+            nextFee: 1,
+            oracle: { normal: { gwei: 2, gasFee: 2, priorityFee: 2 } },
+          },
+        }),
+      ),
+    );
+    const app = withRoutes(createApp());
+    const get = await app.request("/estimate/data:,wgw?eth_price=4000&gas_price=10");
+    const post = await app.request("/estimate", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ data: "data:,wgw", eth_price: 4000, gas_price: 10 }),
+    });
+
+    for (const response of [get, post]) {
+      expect(await response.json()).toMatchObject({
+        result: { prices: { eth_price: 4000, gas_price: 10 } },
+      });
+    }
+  });
+
+  it("uses a baseURL query param as the upstream on the list route", async () => {
+    const app = withRoutes(createApp(), "https://upstream.example");
+    await app.request("/ethscriptions?baseURL=https://other.example");
+
+    expect(upstreamCalls[0]).toMatch(/^https:\/\/other\.example\/ethscriptions/);
+  });
+
+  it("does not resolve names when the query says resolve=false", async () => {
+    const app = withRoutes(createApp(), "https://upstream.example");
+    await app.request("/ethscriptions?resolve=false&current_owner=wgw");
+
+    expect(upstreamCalls.some((url) => url.includes("ensdata.net"))).toBe(false);
+  });
+
   it("lowercases a 0x transaction hash, like the old schema did", async () => {
     const app = withRoutes(createApp(), "https://upstream.example");
     await app.request(
