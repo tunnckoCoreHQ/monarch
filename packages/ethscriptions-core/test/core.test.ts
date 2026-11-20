@@ -7,10 +7,13 @@ import {
   getAllEthscriptions,
   getDigestForData,
   getEthscriptionById,
+  getEthscriptionDetailed,
   getUserProfile,
   hexToBytes,
   isEthereumAddress,
   isHexValue,
+  resolveUser,
+  upstreamFetcher,
 } from "../src/index";
 
 const TX_HASH = "0x35d1a4680e450eb8766f966f5182ba171f247c91b06e79e70da383e760094203";
@@ -278,5 +281,90 @@ describe("getUserProfile", () => {
     const res = await getUserProfile("0x0000000000000000000000000000000000000001");
 
     expect(res).toMatchObject({ ok: true, result: { latest: { transaction_hash: TX_HASH } } });
+  });
+});
+
+// An upstream transfer at the given block and time.
+const transfer = (block: `${number}`, timestamp: `${number}`) => ({
+  transaction_hash: TX_HASH,
+  ethscription_transaction_hash: TX_HASH,
+  from_address: "0x0000000000000000000000000000000000000001",
+  to_address: "0x0000000000000000000000000000000000000002",
+  block_number: block,
+  block_timestamp: timestamp,
+  block_blockhash: "0x01",
+  event_log_index: null,
+  transaction_index: "1",
+  enforced_previous_owner: null,
+});
+
+describe("upstream edge cases", () => {
+  it("reports the latest transfer time for owner lookups", async () => {
+    const ethscription_transfers = [transfer("1", "1000"), transfer("5", "5000")];
+    stubFetch(() => ({ result: { ...upstreamEthscription, ethscription_transfers } }));
+
+    const res = await getEthscriptionDetailed(TX_HASH, "owners");
+
+    expect(res).toMatchObject({
+      ok: true,
+      result: { latest_transfer_datetime: new Date(5_000_000).toISOString() },
+    });
+  });
+
+  it("answers 404 for an owner lookup without transfers", async () => {
+    stubFetch(() => ({ result: upstreamEthscription }));
+
+    const res = await getEthscriptionDetailed(TX_HASH, "owners");
+
+    expect(res).toMatchObject({ ok: false, error: { httpStatus: 404 } });
+  });
+
+  it("keeps a computed false field asked for with `with`", async () => {
+    stubFetch(() => ({ result: upstreamEthscription }));
+
+    const res = await getEthscriptionById(TX_HASH, { only: "transaction_hash", with: "is_esip8" });
+
+    expect(res.ok && res.result).toEqual({ transaction_hash: TX_HASH, is_esip8: false });
+  });
+
+  it("passes the upstream status when the exists check fails", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ error: "down" }, { status: 503 })),
+    );
+
+    const res = await checkExists(FOOBAR_SHA);
+
+    expect(res).toMatchObject({ ok: false, error: { httpStatus: 503 } });
+  });
+
+  it("returns an error result when the attachment body fails", async () => {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.error(new Error("boom"));
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(body)),
+    );
+
+    const res = await upstreamFetcher({}, `${TX_HASH}/attachment`);
+
+    expect(res).toMatchObject({ ok: false, error: { httpStatus: 500 } });
+  });
+
+  it("falls back to the Ethscription Name when ENS has no primary name", async () => {
+    stubFetch((url) =>
+      url.includes("ensdata.net")
+        ? { address: "0x0000000000000000000000000000000000000001", ens: "wgw.eth" }
+        : { result: { exists: false } },
+    );
+
+    const res = await resolveUser("0x0000000000000000000000000000000000000001", {
+      primary: true,
+    });
+
+    expect(res).toMatchObject({ ok: false, error: { code: "NOT_FOUND" } });
   });
 });

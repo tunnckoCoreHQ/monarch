@@ -159,6 +159,12 @@ describe("routes", () => {
       });
     }
 
+    // Fee overrides without a gas price price the call with the fees, in wei.
+    const fees = await app.request("/estimate/data:,wgw?baseFee=3&priorityFee=1");
+    expect(await fees.json()).toMatchObject({
+      result: { prices: { gas_price: 0, base_fee: 3, priority_fee: 1 }, cost: { wei: 21_144 * 4 } },
+    });
+
     // Blank overrides count as unset, so the fetched prices stay.
     const blank = await app.request("/estimate/data:,wgw?ethPrice=&gasPrice=");
     expect(await blank.json()).toMatchObject({

@@ -58,15 +58,17 @@ const costSettings = {
 const CostSettingsSchema = z.object(costSettings);
 
 // The routes take camelCase overrides, and the core reads the price fields in snake_case. Unset
-// fields stay out, so they do not replace the current prices.
+// fields stay out, so they do not replace the current prices. The core prices with `gas_price`
+// when it is set, so a fee override without a gas price clears it to price with the fees.
 function toCostOptions(settings: z.infer<typeof CostSettingsSchema>): EstimateCostOptions {
   const { speed, bufferFee, ethPrice, gasPrice, gasFee, baseFee, priorityFee } = settings;
+  const feeOverride = baseFee !== undefined || priorityFee !== undefined;
 
   return {
     ...(speed && { speed }),
     ...(bufferFee !== undefined && { bufferFee }),
     ...(ethPrice !== undefined && { eth_price: ethPrice }),
-    ...(gasPrice !== undefined && { gas_price: gasPrice }),
+    ...((gasPrice !== undefined || feeOverride) && { gas_price: gasPrice ?? 0 }),
     ...(gasFee !== undefined && { gas_fee: gasFee }),
     ...(baseFee !== undefined && { base_fee: baseFee }),
     ...(priorityFee !== undefined && { priority_fee: priorityFee }),

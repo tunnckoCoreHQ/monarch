@@ -135,8 +135,15 @@ export async function upstreamFetcher<T = UpstreamEthscription | UpstreamEthscri
   }
 
   if (isAttachment) {
-    // SAFETY: the caller asks for an attachment path only with `T` as Uint8Array.
-    return { ok: true, result: new Uint8Array(await resp.arrayBuffer()) as T };
+    try {
+      // SAFETY: the caller asks for an attachment path only with `T` as Uint8Array.
+      return { ok: true, result: new Uint8Array(await resp.arrayBuffer()) as T };
+    } catch (error) {
+      return {
+        ok: false,
+        error: { message: `Failed to read attachment response: ${String(error)}`, httpStatus: 500 },
+      };
+    }
   }
 
   let data: UpstreamResponse<T>;
@@ -144,7 +151,7 @@ export async function upstreamFetcher<T = UpstreamEthscription | UpstreamEthscri
   try {
     // SAFETY: the upstream API wraps every JSON response in `result`, with an optional
     // `pagination`, and the caller picks `T` for the path it fetches.
-    data = (await resp.json()) as UpstreamResponse<T>;
+    data = await resp.json();
   } catch (error) {
     return {
       ok: false,
@@ -273,9 +280,10 @@ export function normalizeResult(
     }),
   );
 
+  // Check for the key, not its value, so computed `false` and `0` fields stay.
   for (const withKey of withs) {
-    if (!onlyRes[withKey]) {
-      onlyRes[withKey] = fields[withKey] || result[withKey];
+    if (!(withKey in onlyRes)) {
+      onlyRes[withKey] = withKey in fields ? fields[withKey] : result[withKey];
     }
   }
 
@@ -442,7 +450,10 @@ export async function namesResolver(
         : result.ens
       : result.address;
 
-    return resolved!.toLowerCase();
+    // A record without a primary name falls through to the Ethscription Name lookup.
+    if (resolved) {
+      return resolved.toLowerCase();
+    }
   }
 
   // thus if not properly resolved, we fallback to try to find address by Ethscription Name
@@ -464,9 +475,8 @@ export async function namesResolver(
 
   const resp = await fetch(`${opts.baseURL}/ethscriptions/exists/0x${nameSha}`);
   // SAFETY: the upstream exists endpoint answers with this shape.
-  const body = (await resp.json()) as {
-    result: { exists: boolean; ethscription: UpstreamEthscription };
-  };
+  const body: { result: { exists: boolean; ethscription: UpstreamEthscription } } =
+    await resp.json();
 
   if (body.result.exists) {
     const eth = body.result.ethscription;
@@ -484,7 +494,7 @@ export async function ensApiHandler(val: string): Promise<EnsRecord | null> {
   }
 
   // SAFETY: the ensdata.net API answers with the ENS record of the name or address.
-  const data = (await resp.json()) as EnsRecord;
+  const data: EnsRecord = await resp.json();
 
   return data;
 }

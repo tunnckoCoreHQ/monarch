@@ -134,6 +134,17 @@ export async function multiCheckExists(
       },
       body: JSON.stringify({ shas: shaList.map((x) => `0x${x}`) }),
     });
+    if (!resp.ok) {
+      return {
+        ok: false,
+        error: {
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to fetch from upstream API",
+          httpStatus: resp.status || 500,
+        },
+      };
+    }
+
     // SAFETY: the upstream exists_multi endpoint maps each hash to a transaction hash or null.
     const body: { result?: Record<string, string | null> } = await resp.json();
     found = body.result || {};
@@ -475,15 +486,22 @@ export async function getEthscriptionDetailed<T extends EnumAllDetailed>(
 
   if (/owner|creator|receiver|previous|initial/i.test(type)) {
     // use `data.result` because transfers does not exists in `result` by default
-    const transfers = normalizeAndSortTransfers(data.result.ethscription_transfers);
+    // Sorted newest first, so the first transfer is the latest one.
+    const [latest] = normalizeAndSortTransfers(data.result.ethscription_transfers);
+    if (!latest) {
+      return {
+        ok: false,
+        error: { message: "No transfers found for this ethscription", httpStatus: 404 },
+      };
+    }
 
     // SAFETY: the owner modes map to OwnersResult.
     return {
       ok: true,
       result: {
-        latest_transfer_timestamp: transfers[0].block_timestamp,
-        latest_transfer_datetime: new Date(result.block_timestamp * 1000).toISOString(),
-        latest_transfer_block: transfers[0].block_number,
+        latest_transfer_timestamp: latest.block_timestamp,
+        latest_transfer_datetime: new Date(Number(latest.block_timestamp) * 1000).toISOString(),
+        latest_transfer_block: latest.block_number,
         creator: result.creator,
         initial: data.result.initial_owner,
         current: data.result.current_owner,
