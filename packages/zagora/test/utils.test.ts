@@ -77,7 +77,7 @@ test("validateError - error with kind not in errorsMap (line 130)", () => {
   }
 });
 
-test("a non-string thrown error kind becomes an internal error", () => {
+test("validateError - non-string kind becomes an internal error", () => {
   const thrown = { kind: Symbol("failure") };
   const procedure = zagora()
     .errors({
@@ -177,14 +177,14 @@ test("deepMerge - replace complex values from the source", () => {
   expect(result.nested).toEqual({ keep: true, db: "mock" });
 });
 
-test("context merging preserves __proto__ as an own data property", () => {
+test("deepMerge - keep __proto__ as an own data property", () => {
   const override = JSON.parse('{"nested":{"__proto__":{"admin":true}}}');
   const merged = deepMerge({ nested: { retained: true } }, override);
 
   expect(Object.getPrototypeOf(merged.nested)).toBe(Object.prototype);
-  expect(Object.getOwnPropertyDescriptor(merged.nested, "__proto__")?.value).toEqual({
-    admin: true,
-  });
+  expect(Object.getOwnPropertyDescriptor(merged.nested, "__proto__")?.value).toBe(
+    Object.getOwnPropertyDescriptor(override.nested, "__proto__")?.value,
+  );
   expect(merged.nested.retained).toBe(true);
   expect(merged.nested.admin).toBeUndefined();
 });

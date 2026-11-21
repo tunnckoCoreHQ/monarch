@@ -69,7 +69,9 @@ export function createValidationError<ErrorKindNames = never>(
     .map((issue) => {
       const key =
         issue.path
-          ?.map((segment) => String(typeof segment === "object" ? segment.key : segment))
+          ?.map((segment) =>
+            String(typeof segment === "object" && segment !== null ? segment.key : segment),
+          )
           .join(".") || "(root)";
       const message = issue.message.replace("Invalid input: ", "");
       return `${key} => ${message}`;
