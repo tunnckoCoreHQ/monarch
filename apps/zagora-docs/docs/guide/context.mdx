@@ -84,7 +84,7 @@ procedure();
 // { ok: true, data: { db: 'test', config: { timeout: 5, retries: 2 } }, error: undefined }
 ```
 
-The context root must be a plain object. TypeScript rejects other values.
+The context root must be a plain object. TypeScript rejects other values. A value that bypasses the type, through a cast or plain JavaScript, makes the call throw `Expects plain object args`.
 
 ## Auto-callable procedures get only the initial context
 
