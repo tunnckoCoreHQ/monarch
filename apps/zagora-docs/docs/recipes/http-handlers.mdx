@@ -7,7 +7,7 @@ zagora has no network layer, so you write the HTTP code. For each request, read 
 
 ## Write a fetch handler
 
-The following handler works in Cloudflare Workers, Bun, Deno, and any other runtime with the Fetch API.
+The following handler works in Bun, Deno, Cloudflare Workers, and any other runtime with the Fetch API. zagora imports `node:crypto` to hash cache keys, so a Cloudflare Worker needs the `nodejs_compat` compatibility flag.
 
 ```ts twoslash
 import { z } from "zod";

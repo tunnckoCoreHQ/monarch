@@ -1,9 +1,9 @@
 ---
-title: Error handling
-description: The three error kinds, the type guards that tell them apart, and the guarantee that a zagora procedure never throws.
+title: Handle failed results
+description: The three error kinds, the type guards that tell them apart, the failures that come back in the result, and the two cases that still throw.
 ---
 
-A zagora procedure never throws and never rejects. Every failure comes back in the result as one of three kinds of error.
+A zagora procedure does not throw or reject when a step fails. Every failure comes back in the result as one of three kinds of error.
 
 | Kind | When | Fields |
 | --- | --- | --- |
@@ -11,7 +11,7 @@ A zagora procedure never throws and never rejects. Every failure comes back in t
 | `UNKNOWN_ERROR` | The handler threw or rejected, a schema threw or rejected, the cache failed, or the env schema is async. | `message`, `cause`, `stack` |
 | Your kinds, such as `NOT_FOUND` | The handler threw a declared [typed error](/guide/typed-errors). | The fields of its schema |
 
-## The result
+## Check result.ok first
 
 ```ts
 type Result =
@@ -22,7 +22,7 @@ type Result =
 
 Check `result.ok` first. TypeScript then narrows `data` and `error`. The [result reference](/reference/result) has the exact type.
 
-## Never-throwing guarantees
+## Every failed step becomes a result
 
 Each failure in this table becomes a failed result.
 
@@ -35,6 +35,11 @@ Each failure in this table becomes a failed result.
 | A cache adapter method that throws or rejects | `UNKNOWN_ERROR` |
 | A cache key that zagora cannot compute | `UNKNOWN_ERROR` |
 | An async env schema, which zagora does not support | `UNKNOWN_ERROR` |
+
+Two cases escape the result:
+
+- A `.callable()` context whose root is not a plain object. The call throws `Expects plain object args`, also when the procedure is async. TypeScript rejects that context.
+- A thrown value whose `kind` getter throws, in a procedure with an error map. A sync call throws the getter error, and an async call rejects with it.
 
 ```ts twoslash
 import { zagora } from "zagora";
@@ -54,7 +59,7 @@ const result = procedure();
 
 zagora freezes every error object in a result with `Object.freeze`.
 
-## Type guards
+## Narrow an error with a type guard
 
 The `zagora/errors` entry point exports a guard for each kind. A guard is useful when you handle errors from many procedures in one place, or when you do not want a `switch` on `kind`.
 
@@ -92,15 +97,8 @@ if (!result.ok) {
 
 On a result error, each guard narrows to the matching kinds, and its `false` branch keeps the rest. So you can check the kinds in any order, and TypeScript knows what is left.
 
-| Guard | Returns `true` for |
-| --- | --- |
-| `isValidationError(value)` | `kind: "VALIDATION_ERROR"` with a non-empty string `message` and an `issues` array |
-| `isInternalError(value)` | `kind: "UNKNOWN_ERROR"` with a non-empty string `message` and the `cause` and `stack` keys |
-| `isDefinedError(value)` | any other non-empty uppercase `kind` |
-| `isZagoraError(value)` | any of the three |
+The guards check the shape at runtime. So they also work on a value that zagora did not make, such as JSON from a worker. The [errors reference](/reference/errors) lists the exact check of each guard.
 
-The guards check the shape at runtime. So they also work on a value that zagora did not make, such as JSON from a worker.
-
-## Errors outside the handler
+## The call stops at the first failed step
 
 zagora stops the call at the first step that fails. Invalid env stops the call before zagora validates the input. Invalid input stops the call before the handler runs. A failed handler skips the output validation and the cache write. So the handler runs only with valid input, and the cache stores only valid output.

@@ -121,5 +121,5 @@ The procedure is the function that `.callable()` returns, or that `.handler()` r
 
 - It takes the arguments that the input schema describes.
 - It returns a [result](/reference/result), or a `Promise` of one when part of the procedure is async. See the [async guide](/guide/async).
-- It returns failures in the result. It does not throw and does not reject.
+- It returns failures in the result. It throws or rejects only in the two cases that [error handling](/guide/error-handling#every-failed-step-becomes-a-result) lists.
 - Its `~zagora` property has the definition, without the env values. The definition can have the keys `inputSchema`, `outputSchema`, `errorsMap`, `envVarsMapSchema`, `initialContext`, `cacheAdapter`, `handler`, `disableOptions`, and `autoCallable`. A key is there only when the builder set it.
