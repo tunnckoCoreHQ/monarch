@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { runInNewContext } from "node:vm";
 
 import * as v from "valibot";
 import { expect, test } from "vitest";
@@ -456,4 +457,105 @@ test("Valibot nested issue path - validation message prints the keys", () => {
 
   expect(res.ok).toBe(false);
   expect(res.error?.message).toContain("Input validation failed: users.0.name => ");
+});
+
+test("thenable handler result - awaited like a native Promise", async () => {
+  // A Promise from another realm is a thenable, and it is not an instance of this realm's Promise.
+  const resolving: PromiseLike<string> = runInNewContext("Promise.resolve('done')");
+  expect(resolving).not.toBeInstanceOf(Promise);
+
+  const proc = zagora()
+    .handler(() => resolving)
+    .callable();
+
+  const pending = proc();
+  expect(pending).toBeInstanceOf(Promise);
+  expect(await pending).toMatchObject({ ok: true, data: "done" });
+
+  const failing = zagora()
+    .handler((): PromiseLike<string> =>
+      runInNewContext("Promise.reject(new Error('query failed'))"),
+    )
+    .callable();
+
+  const res = await failing();
+  expect(res.ok).toBe(false);
+  expect(isInternalError(res.error)).toBe(true);
+  expect(res.error?.message).toBe("Async handler threw unknown error");
+});
+
+test("async handler - procedure returns a Promise when the handler never runs", async () => {
+  const proc = zagora()
+    .input(z.string())
+    .handler(async (_, input) => input)
+    .callable();
+
+  // @ts-expect-error - the input must be a string
+  const invalid = proc(123);
+  expect(invalid).toBeInstanceOf(Promise);
+  expect((await invalid).ok).toBe(false);
+
+  const cached = zagora()
+    .input(z.string())
+    .cache(new Map())
+    .handler(async (_, input) => input)
+    .callable();
+
+  expect(await cached("a")).toMatchObject({ ok: true, data: "a" });
+  const hit = cached("a");
+  expect(hit).toBeInstanceOf(Promise);
+  expect(await hit).toMatchObject({ ok: true, data: "a" });
+});
+
+test("Tuple with a transform - zod and valibot pass the output as one handler argument", () => {
+  const zodProc = zagora()
+    .input(z.tuple([z.string(), z.number().default(5)]).transform(([a, b]) => ({ a, b })))
+    .handler((_, input) => input)
+    .callable();
+
+  expect(zodProc("x", 1)).toMatchObject({ ok: true, data: { a: "x", b: 1 } });
+  expect(zodProc("x")).toMatchObject({ ok: true, data: { a: "x", b: 5 } });
+
+  const valibotProc = zagora()
+    .input(
+      v.pipe(
+        v.tuple([v.string(), v.optional(v.number(), 5)]),
+        v.transform(([a, b]) => ({ a, b })),
+      ),
+    )
+    .handler((_, input) => input)
+    .callable();
+
+  expect(valibotProc("x", 1)).toMatchObject({ ok: true, data: { a: "x", b: 1 } });
+  expect(valibotProc("x")).toMatchObject({ ok: true, data: { a: "x", b: 5 } });
+});
+
+test("Zod tuple with only defaulted or optional elements - spreads into arguments", () => {
+  const defaulted = zagora()
+    .input(z.tuple([z.string().default("x"), z.number().default(1), z.string().optional()]))
+    .handler((_, a, b, c) => [a, b, c] as const)
+    .callable();
+
+  expect(defaulted()).toMatchObject({ ok: true, data: ["x", 1, undefined] });
+  expect(defaulted("a")).toMatchObject({ ok: true, data: ["a", 1, undefined] });
+  expect(defaulted("a", 2)).toMatchObject({ ok: true, data: ["a", 2, undefined] });
+  expect(defaulted("a", 2, "c")).toMatchObject({ ok: true, data: ["a", 2, "c"] });
+
+  // @ts-expect-error - the tuple spreads into arguments, so one array argument is invalid
+  const res = defaulted(["a", 2]);
+  expect(res.ok).toBe(false);
+
+  const optional = zagora()
+    .input(z.tuple([z.string().optional(), z.number().optional()]))
+    .handler((_, a, b) => [a, b] as const)
+    .callable();
+
+  expect(optional()).toMatchObject({ ok: true });
+  expect(optional("a", 2)).toMatchObject({ ok: true, data: ["a", 2] });
+});
+
+test("published types do not need Node types", async () => {
+  const types = await readFile(new URL("../src/types.ts", import.meta.url), "utf-8");
+
+  expect(types).not.toContain("NodeJS.");
 });

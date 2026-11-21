@@ -83,10 +83,7 @@ export type UppercaseKeys<T> = {
   [K in keyof T as Uppercase<string & K>]: T[K];
 };
 
-export type ZagoraEnvVars =
-  | Record<string, string>
-  | NodeJS.ProcessEnv
-  | Record<string, string | undefined>;
+export type ZagoraEnvVars = Record<string, string> | Record<string, string | undefined>;
 
 export type Prettify<T> = {
   [K in keyof T]: T[K];
@@ -202,7 +199,9 @@ export type ResolveProcedure<
   ? TInputSchema extends AnySchema
     ? InferSchemaOutput<TInputSchema> extends readonly [any, ...any[]]
       ? SpreadTuple<InferSchemaOutput<TInputSchema>, any>
-      : (arg: InferSchemaOutput<TInputSchema>) => any
+      : [FixedTuple<InferSchemaOutput<TInputSchema>>] extends [never]
+        ? (arg: InferSchemaOutput<TInputSchema>) => any
+        : SpreadTuple<FixedTuple<InferSchemaOutput<TInputSchema>>, any>
     : () => any
   : TInputSchema extends AnySchema
     ? InferSchemaOutput<TInputSchema> extends readonly [any, ...any[]]
@@ -213,11 +212,26 @@ export type ResolveProcedure<
           ],
           any
         >
-      : (
-          options: Prettify<ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>>,
-          arg: InferSchemaOutput<TInputSchema>,
-        ) => any
+      : [FixedTuple<InferSchemaOutput<TInputSchema>>] extends [never]
+        ? (
+            options: Prettify<ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>>,
+            arg: InferSchemaOutput<TInputSchema>,
+          ) => any
+        : SpreadTuple<
+            [
+              Prettify<ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>>,
+              ...FixedTuple<InferSchemaOutput<TInputSchema>>,
+            ],
+            any
+          >
     : (options: Prettify<ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>>) => any;
+
+// A tuple with a fixed length, also when every element is optional. The runtime spreads it.
+export type FixedTuple<T> = [T] extends [infer TTuple extends readonly any[]]
+  ? number extends TTuple["length"]
+    ? never
+    : TTuple
+  : never;
 
 // Only the trailing elements that accept `undefined` become optional.
 type OptionalTail<T extends readonly any[], TTail extends any[] = []> = T extends readonly [
@@ -239,5 +253,7 @@ export type ResolvedProcedure<
 > = TInputSchema extends AnySchema
   ? InferSchemaInput<TInputSchema> extends readonly [any, ...any[]]
     ? SpreadTuple<InferSchemaInput<TInputSchema>, TFinalResult>
-    : (arg: InferSchemaInput<TInputSchema>) => TFinalResult
+    : [FixedTuple<InferSchemaInput<TInputSchema>>] extends [never]
+      ? (arg: InferSchemaInput<TInputSchema>) => TFinalResult
+      : SpreadTuple<FixedTuple<InferSchemaInput<TInputSchema>>, TFinalResult>
   : () => TFinalResult;

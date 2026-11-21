@@ -1021,3 +1021,37 @@ test("4-argument tuple with defaults", () => {
     expect(false, "Expected success").toBe(true);
   }
 });
+
+test("callable env accepts `process.env`, which is not a plain object on Node", () => {
+  const envSchema = z.object({ PATH: z.string().optional() });
+
+  const proc = zagora()
+    .env(envSchema)
+    .handler(({ env }) => typeof env.PATH)
+    .callable({ env: process.env });
+
+  expect(proc().ok).toBe(true);
+
+  const auto = zagora({ autoCallable: true })
+    .env(envSchema, process.env)
+    .handler(({ env }) => typeof env.PATH);
+
+  expect(auto().ok).toBe(true);
+});
+
+test("cache key supports bigint inputs", () => {
+  let called = 0;
+  const double = zagora()
+    .input(z.bigint())
+    .cache(new Map())
+    .handler((_, value) => {
+      called += 1;
+      return value * 2n;
+    })
+    .callable();
+
+  expect(double(5n)).toMatchObject({ ok: true, data: 10n });
+  expect(double(5n)).toMatchObject({ ok: true, data: 10n });
+  expect(double(6n)).toMatchObject({ ok: true, data: 12n });
+  expect(called).toBe(2);
+});

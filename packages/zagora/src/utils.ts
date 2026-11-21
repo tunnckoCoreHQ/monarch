@@ -106,7 +106,11 @@ export function processHandler(
   if (cacheAdapter) {
     try {
       // TODO: we should have a better serializer a bit later
-      key = getCacheHash(JSON.stringify({ ...incoming, fnStr: handlerFn.toString(), args }));
+      key = getCacheHash(
+        JSON.stringify({ ...incoming, fnStr: handlerFn.toString(), args }, (_, value) =>
+          typeof value === "bigint" ? `${value}n` : value,
+        ),
+      );
     } catch (error) {
       return createResult(null, createInternalError("Failed to compute cache key", error), false);
     }
@@ -217,8 +221,9 @@ function cacheValidOutput(
 export function tryCatch(fn: any, isHandler: boolean, method = "") {
   try {
     const res = fn();
-    if (res instanceof Promise) {
-      return res
+    // A thenable that is not a native Promise, such as a query builder, is async too.
+    if (typeof res?.then === "function") {
+      return Promise.resolve(res)
         .then((data) => createResult(data, null, false))
         .catch((error: unknown) => {
           if (isHandler) {
@@ -266,7 +271,21 @@ export function createResult(data: any, error: any, isTypedError: boolean) {
   return { ok: true, data, error: undefined } as const;
 }
 
+// A Zod transform wraps its schema in a pipe. The schema that receives the input is the pipe's `in`.
+export function getPipeInputSchema(schema: any) {
+  let inner = schema;
+  while (inner?._def?.type === "pipe") {
+    inner = inner._def.in;
+  }
+  return inner;
+}
+
 export function handleTupleDefaults(schema: AnySchema, rawArgs: unknown[]): unknown[] {
+  // A tuple schema piped into a transform can output a value that is not an array.
+  if (!Array.isArray(rawArgs)) {
+    return [rawArgs];
+  }
+
   // Check if this might be a tuple schema by examining the schema structure
   const schemaAny = schema as any;
   const isZodTuple = schemaAny._def && schemaAny._def.type === "tuple";
