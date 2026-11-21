@@ -9,7 +9,7 @@ const markdownHeaders = { "content-type": "text/markdown; charset=utf-8", vary: 
 const wantsMarkdown = (request: Request) =>
   (request.headers.get("accept") ?? "").includes("text/markdown");
 
-// A page path has no file extension. Blume writes each page's Markdown copy at `<path>.md`.
+// Blume writes each page's Markdown copy at `<path>.md`.
 const markdownPath = (pathname: string) => {
   if (/\.[a-z0-9]+$/i.test(pathname)) {
     return undefined;

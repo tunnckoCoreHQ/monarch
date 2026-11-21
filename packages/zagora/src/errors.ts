@@ -73,8 +73,6 @@ export function isZagoraError<T>(val: any): val is ZagoraError<T> {
   return isValidationError(val) || isInternalError(val) || isDefinedError(val);
 }
 
-const stripInputPrefix = (message: string) => message.replace("Invalid input: ", "");
-
 export function createValidationError<ErrorKindNames = never>(
   mode: "input" | "output" | "error data" | "env",
   issues: SchemaIssue[],
@@ -90,7 +88,7 @@ export function createValidationError<ErrorKindNames = never>(
             String(typeof segment === "object" && segment !== null ? segment.key : segment),
           )
           .join(".") || "(root)";
-      const message = stripInputPrefix(issue.message);
+      const message = issue.message.replace("Invalid input: ", "");
       return `${key} => ${message}`;
     })
     .join("; ");
