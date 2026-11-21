@@ -22,5 +22,8 @@ export default defineConfig({
     links: [{ label: "npm", href: "https://www.npmjs.com/package/zagora" }],
   },
   // A static build: the Worker in cloudflare.config.ts serves dist/ as its assets.
-  deployment: cloudflare({ output: "static", site: "https://zagora-docs.wgw.workers.dev" }),
+  deployment: cloudflare({
+    output: "static",
+    site: "https://zagora-docs.equator-owl-studio.workers.dev",
+  }),
 });
