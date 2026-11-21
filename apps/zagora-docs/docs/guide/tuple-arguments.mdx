@@ -12,7 +12,7 @@ import { zagora } from "zagora";
 const introduce = zagora()
   .input(z.tuple([z.string(), z.number().default(18), z.string().optional()]))
   .handler((_, name, age, country) => {
-    //                 ^?
+    // name: string, age: number, country: string | undefined
     return `${name} is ${age}, from ${country ?? "unknown"}`;
   })
   .callable();
@@ -39,7 +39,7 @@ const introduce = zagora()
   .callable();
 // ---cut---
 introduce;
-// ^?
+// (name: string, age?: number, country?: string) => result
 ```
 
 In the handler, an element with a default has its output type, so `age` is a `number`. An optional element without a default is `string | undefined`.

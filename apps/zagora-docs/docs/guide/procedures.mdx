@@ -80,7 +80,6 @@ const now = zagora()
   .callable();
 
 const result = now();
-//    ^?
 ```
 
 ## Output type
@@ -102,11 +101,11 @@ const fromHandler = zagora()
 
 const a = withSchema();
 if (a.ok) a.data;
-//          ^?
+// number
 
 const b = await fromHandler();
 if (b.ok) b.data;
-//          ^?
+// { id: number }
 ```
 
 ## Procedure metadata
@@ -125,5 +124,5 @@ const greet = zagora()
   .callable();
 
 greet["~zagora"].inputSchema;
-//               ^?
+// z.ZodString | undefined
 ```

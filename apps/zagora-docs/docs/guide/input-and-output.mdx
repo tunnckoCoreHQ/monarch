@@ -58,7 +58,7 @@ import { zagora } from "zagora";
 const upper = zagora()
   .input(z.array(z.string()))
   .handler((_, items) => items.map((item) => item.toUpperCase()))
-  //           ^?
+  // items: string[]
   .callable();
 
 upper(["foo", "bar"]);
@@ -76,7 +76,7 @@ import { zagora } from "zagora";
 const parsePort = zagora()
   .input(z.string().transform((value) => Number(value)))
   .handler((_, port) => port + 1)
-  //           ^?
+  // port: number
   .callable();
 
 parsePort("8080");

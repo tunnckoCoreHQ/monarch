@@ -40,7 +40,7 @@ const parseConfig = zagora({ autoCallable: true, disableOptions: true })
 const result = parseConfig('{"port":8080}');
 if (result.ok) {
   result.data;
-  //     ^?
+  // { port: number; host: string }
 }
 ```
 

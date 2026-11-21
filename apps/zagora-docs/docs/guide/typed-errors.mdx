@@ -28,7 +28,7 @@ const result = getUser("invalid");
 
 if (!result.ok && result.error.kind === "NOT_FOUND") {
   result.error;
-  //     ^?
+  // { readonly kind: "NOT_FOUND"; readonly resource: string }
 }
 ```
 

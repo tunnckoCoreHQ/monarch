@@ -1,5 +1,5 @@
 /* Twoslash renders a hover popup for every token. A hidden popup still takes layout, and its long one-line type makes the page wider than the screen. Keep each popup out of layout until its token is hovered. */
-.prose .twoslash-hover:not(:hover):not(.twoslash-query-persisted) > .twoslash-popup-container {
+.prose .twoslash-hover:not(:hover) > .twoslash-popup-container {
   display: none;
 }
 
@@ -25,21 +25,4 @@
 .prose .twoslash-popup-container :is(pre, code) {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-
-/* On a narrow screen, pin an inline type query to the left edge of its code block, so it stays on the screen. */
-@media (max-width: 40rem) {
-  .prose .twoslash-query-persisted {
-    position: static;
-  }
-
-  .prose .twoslash-query-persisted > .twoslash-popup-container {
-    left: 1rem;
-    max-width: calc(100% - 2rem);
-  }
-}
-
-/* Blume wraps each table in `.blume-table-scroll`, but the wrapper does not scroll. Let a wide table scroll inside it on a narrow screen. */
-.prose .blume-table-scroll {
-  overflow-x: auto;
 }

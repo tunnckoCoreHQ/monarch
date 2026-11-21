@@ -15,7 +15,7 @@ const getUser = zagora()
   .input(z.tuple([z.string(), z.number().default(18)]))
   .output(z.object({ name: z.string(), age: z.number(), email: z.string() }))
   .handler((_, name, age) => {
-    //                 ^?
+    // name: string, age: number
     return { name, age, email: `${name.toLowerCase()}@example.com` };
   })
   .callable();
@@ -27,7 +27,7 @@ if (result.ok) {
   // { name: 'Charlie', age: 18, email: 'charlie@example.com' }
 } else {
   console.error(result.error.kind);
-  //                         ^?
+  // kind: "UNKNOWN_ERROR" | "VALIDATION_ERROR"
 }
 ```
 

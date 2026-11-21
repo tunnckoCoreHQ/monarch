@@ -33,10 +33,10 @@ const asyncProc = zagora()
   .callable();
 
 const a = syncProc("hello");
-//    ^?
+// the result, not a Promise
 
 const b = asyncProc("hello");
-//    ^?
+// a Promise of the result
 ```
 
 An `async` handler makes every call return a `Promise`. That includes the calls that fail before the handler runs. A plain function that returns a promise makes a call async only when the handler runs. zagora awaits a thenable that is not a native `Promise`, such as a query builder, in the same way.
@@ -60,7 +60,7 @@ const checkName = zagora()
   .callable();
 
 const result = checkName("ada");
-//    ^?
+// a Promise of the result
 ```
 
 ## Zod async refinements are async only at runtime

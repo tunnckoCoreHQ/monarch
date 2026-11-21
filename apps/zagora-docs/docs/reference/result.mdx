@@ -43,7 +43,6 @@ const getUser = zagora()
   .callable();
 
 type GetUserResult = ReturnType<typeof getUser>;
-//   ^?
 ```
 
 For an async procedure, use `Awaited<ReturnType<typeof procedure>>`.

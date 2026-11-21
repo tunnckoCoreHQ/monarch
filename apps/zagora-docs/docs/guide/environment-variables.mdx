@@ -20,7 +20,7 @@ const connect = zagora()
     process.env,
   )
   .handler(({ env }) => `${env.DATABASE_URL} on port ${env.PORT}`)
-  //           ^?
+  // env: { DATABASE_URL: string; AUTH_SECRET: string; PORT: number }
   .callable();
 ```
 

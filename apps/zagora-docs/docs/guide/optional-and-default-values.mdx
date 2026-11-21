@@ -20,7 +20,7 @@ const profile = zagora()
     }),
   )
   .handler((_, input) => input)
-  //           ^?
+  // input: { name: string; age: number; country?: string }
   .callable();
 
 profile({ name: "John" });

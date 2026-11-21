@@ -30,7 +30,7 @@ const procedure = zagora()
   .env(z.object({ PORT: z.coerce.number().default(3000) }), {})
   .input(z.string())
   .handler((options, userId) => {
-    //      ^?
+    // options: { context, errors, env }
     if (options.context.user !== "bobby") {
       throw options.errors.NOT_FOUND({ id: userId });
     }

@@ -13,7 +13,7 @@ const procedure = zagora()
   .context<{ userId: string; foo?: string }>({ userId: "default" })
   .input(z.string())
   .handler(({ context }, id) => {
-    //        ^?
+    // context: { userId: string; foo?: string }
     return `${context.userId} has foo -> ${context.foo ?? "unknown"}, id = ${id}`;
   })
   .callable({ context: { userId: "foo-bar", foo: "qux" } });
