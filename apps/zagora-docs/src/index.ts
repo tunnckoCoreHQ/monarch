@@ -1,5 +1,7 @@
-// Serves the static Blume build, and adds the HTTP behavior that Blume's own server build would add:
-// Markdown for `Accept: text/markdown`, a Markdown 404 for agents, and JSON 404s under /api/.
+// Serves the static Blume build, and adds the HTTP behavior that Blume's own server build adds:
+// Markdown for `Accept: text/markdown`, a Markdown 404 for agents, and problem-details 404s under /api/.
+
+import { apiNotFoundResponse } from "blume/ai/api/handlers.ts";
 
 interface Env {
   ASSETS: Fetcher;
@@ -30,8 +32,8 @@ const serveMarkdown = async (request: Request, env: Env, path: string) => {
 
 export default {
   async fetch(request, env) {
-    const { pathname } = new URL(request.url);
-    const path = markdownPath(pathname);
+    const url = new URL(request.url);
+    const path = markdownPath(url.pathname);
 
     if (path && wantsMarkdown(request)) {
       return serveMarkdown(request, env, path);
@@ -39,17 +41,8 @@ export default {
 
     const response = await env.ASSETS.fetch(request);
 
-    if (response.status === 404 && pathname.startsWith("/api/")) {
-      return Response.json(
-        {
-          error: {
-            code: "not_found",
-            message: `No docs API resource at ${pathname}.`,
-            docs: "/openapi.json",
-          },
-        },
-        { status: 404 },
-      );
+    if (response.status === 404 && url.pathname.startsWith("/api/")) {
+      return apiNotFoundResponse(request, { base: "", site: url.origin });
     }
 
     if (!path) {
