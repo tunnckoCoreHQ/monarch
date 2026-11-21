@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { isInternalError } from "../src/errors";
 import { zagora } from "../src/index";
+import type { IsPromise } from "../src/is-promise";
 
 test("typed errors should be in options - when input schema is defined", () => {
   const errorSchemas = {
@@ -493,7 +494,7 @@ test("async handler - invalid input gives a Promise and skips the handler", asyn
     .callable();
 
   expectTypeOf<ReturnType<typeof proc>>().toExtend<Promise<unknown>>();
-  expectTypeOf<ReturnType<typeof proc>>().not.toBeAny();
+  expectTypeOf<IsPromise<ReturnType<typeof proc>>>().toEqualTypeOf<true>();
 
   // @ts-expect-error - the input must be a string
   const invalid = proc(123);
@@ -514,7 +515,7 @@ test("async handler - failed env validation gives a Promise and skips the handle
     .callable();
 
   expectTypeOf<ReturnType<typeof proc>>().toExtend<Promise<unknown>>();
-  expectTypeOf<ReturnType<typeof proc>>().not.toBeAny();
+  expectTypeOf<IsPromise<ReturnType<typeof proc>>>().toEqualTypeOf<true>();
 
   const invalid = proc();
   expectTypeOf(invalid).toExtend<Promise<unknown>>();
@@ -535,7 +536,7 @@ test("async handler - cache hit gives a Promise and skips the handler", async ()
     .callable();
 
   expectTypeOf<ReturnType<typeof proc>>().toExtend<Promise<unknown>>();
-  expectTypeOf<ReturnType<typeof proc>>().not.toBeAny();
+  expectTypeOf<IsPromise<ReturnType<typeof proc>>>().toEqualTypeOf<true>();
 
   expect(await proc("a")).toMatchObject({ ok: true, data: "a" });
   expect(called).toBe(1);
