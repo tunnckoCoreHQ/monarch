@@ -19,7 +19,7 @@ Zagora doesn't need a separate contract builder for this. A chain without a hand
 
 Every builder method returns a new builder, and nothing runs until `.callable()`. So `zagora().input(...).output(...).errors(...)` is a finished value with schemas and types but no behavior. You can export it, import it somewhere else, and add the handler there. TypeScript rejects `.callable()` on a builder that has no handler yet, so a contract can't turn into a procedure by accident.
 
-```ts twoslash include contract-first-contract
+```ts twoslash include contract-first-contract title="contract.ts"
 import { z } from "zod";
 import { zagora } from "zagora";
 
@@ -61,7 +61,7 @@ Keep this file free of implementation code. It imports Zod and Zagora and nothin
 
 An implementation starts from the contract and adds the handler. The handler already knows everything the contract declared: the type of the input, the context, and the error helpers. You only write the logic.
 
-```ts twoslash include contract-first-impl
+```ts twoslash include contract-first-impl title="users.ts"
 // @include: contract-first-contract
 // ---cut---
 export const listUsers = contract.users.list.handler(({ context }) => [
@@ -89,7 +89,7 @@ export const createUser = contract.users.create.handler(({ context, errors }, { 
 
 These are still builders, and nothing is wired to a real database yet. That happens where the app starts, with `.callable()`:
 
-```ts
+```ts title="app.ts"
 import type { Db } from "./contract";
 import { listUsers, findUser, createUser } from "./users";
 
@@ -112,7 +112,7 @@ So far, nothing here is a special API. A contract is a builder, and an implement
 
 A router is a plain object of procedures. Pass it to `implement()` together with the contract, and TypeScript checks that the two match:
 
-```ts twoslash
+```ts twoslash title="router.ts"
 // @include: contract-first-impl
 // ---cut---
 import { implement } from "zagora";
@@ -140,7 +140,7 @@ The contract is useful even where nothing gets implemented.
 
 Types for the code that calls your SDK come straight from the schemas, through [`zagora/types`](/reference/types):
 
-```ts twoslash
+```ts twoslash title="types.ts"
 // @include: contract-first-contract
 // ---cut---
 import type { InferSchemaInput, InferSchemaOutput } from "zagora/types";
