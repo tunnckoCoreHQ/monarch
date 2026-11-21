@@ -50,7 +50,14 @@ export function validateError<TKindNames>(
     );
   }
 
-  const kind = error?.kind;
+  let kind: unknown;
+  let cleanedError: Record<string, unknown> = {};
+  try {
+    ({ kind, ...cleanedError } = error);
+  } catch {
+    kind = undefined;
+  }
+
   if (typeof kind !== "string") {
     return createResult(
       null,
@@ -62,7 +69,6 @@ export function validateError<TKindNames>(
   if (Object.hasOwn(errorsMap, kind)) {
     const kindName = kind as TKindNames;
     const schema = errorsMap[kindName as any] as any;
-    const { kind: _, ...cleanedError } = error;
     const processError = (res: any) =>
       res.issues
         ? createResult(

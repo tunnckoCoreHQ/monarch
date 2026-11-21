@@ -580,3 +580,40 @@ test("Zod tuple with only defaulted or optional elements - spreads into argument
   expect(optional()).toMatchObject({ ok: true, data: "a: undefined, b: undefined" });
   expect(optional("a", 2)).toMatchObject({ ok: true, data: "a: a, b: 2" });
 });
+
+test("thrown value with a throwing kind getter - comes back as UNKNOWN_ERROR", async () => {
+  const thrown = {
+    get kind(): string {
+      throw new Error("getter failed");
+    },
+  };
+  const errors = { NOT_FOUND: z.object({ id: z.string() }) };
+
+  const syncProc = zagora()
+    .errors(errors)
+    .handler((): string => {
+      throw thrown;
+    })
+    .callable();
+
+  const res = syncProc();
+  expect(res.ok).toBe(false);
+  expect(isInternalError(res.error)).toBe(true);
+  if (isInternalError(res.error)) {
+    expect(res.error.cause).toBe(thrown);
+  }
+
+  const asyncProc = zagora()
+    .errors(errors)
+    .handler(async (): Promise<string> => {
+      throw thrown;
+    })
+    .callable();
+
+  const asyncRes = await asyncProc();
+  expect(asyncRes.ok).toBe(false);
+  expect(isInternalError(asyncRes.error)).toBe(true);
+  if (isInternalError(asyncRes.error)) {
+    expect(asyncRes.error.cause).toBe(thrown);
+  }
+});
