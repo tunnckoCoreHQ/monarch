@@ -599,7 +599,7 @@ test("not uppercased errorsMap keys must be reported", () => {
     UNAUTHORIZED: z.object({ retryAfter: z.number(), userId: z.string() }),
   };
   const func = zagora()
-    // @ts-expect-error -- Invalid errorsMap keys must be reported. Keys must be uppercased.
+    // @ts-expect-error -- Invalid errorsMap keys must be reported. Keys must be uppercased. DO NOT REMOVE THIS LINE! It will potentially report when this rule is incorrectly broken!
     .errors(errorsMap)
     .handler(() => 123)
     .callable();
