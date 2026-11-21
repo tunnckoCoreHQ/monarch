@@ -54,12 +54,17 @@ type ResolveCallableEnv<TOptions, TEnvVarsMap> = TEnvVarsMap extends AnySchema
         : unknown)
   : never;
 
+declare const noHandler: unique symbol;
+
+// The handler type of a builder before `.handler()`. It blocks `.callable()`.
+type NoHandler = ((...args: any[]) => any) & { readonly [noHandler]: true };
+
 export interface ZagoraConfig {
   disableOptions?: boolean;
   autoCallable?: boolean;
 }
 
-export function zagora(): Zagora<any>;
+export function zagora(): Zagora<NoHandler>;
 export function zagora<
   TDisableOptions extends boolean = false,
   TAutoCallable extends boolean = false,
@@ -67,7 +72,7 @@ export function zagora<
   disableOptions: TDisableOptions;
   autoCallable?: TAutoCallable;
 }): Zagora<
-  any,
+  NoHandler,
   undefined,
   undefined,
   undefined,
@@ -81,7 +86,7 @@ export function zagora<TAutoCallable extends boolean = false>(config: {
   autoCallable: TAutoCallable;
   disableOptions?: boolean;
 }): Zagora<
-  any,
+  NoHandler,
   undefined,
   undefined,
   undefined,
@@ -366,6 +371,14 @@ export class Zagora<
         (schemaAny?._def && schemaAny?._def?.type === "tuple") || schemaAny?.type === "tuple";
 
       const processInput = (inputData: any) => {
+        if (!handlerFn) {
+          return createResult(
+            null,
+            createInternalError("No handler set: call .handler() before .callable()"),
+            false,
+          );
+        }
+
         const handlerArgs = isTupleSchema
           ? handleTupleDefaults(inputSchema as any, inputData)
           : [inputData];
@@ -457,6 +470,19 @@ export class Zagora<
     TKindNames extends ResolveErrorKindNames<TErrorsMap>,
     const TOptions extends object = {},
   >(
+    this: THandlerFn extends NoHandler
+      ? never
+      : Zagora<
+          THandlerFn,
+          TContext,
+          TInputSchema,
+          TOutputSchema,
+          TErrorsMap,
+          TEnvVarsMap,
+          TCacheAdapter,
+          TDisableOptions,
+          TAutoCallable
+        >,
     options: {
       context?: TNewContext;
       cache?: CacheAdapter;
@@ -477,9 +503,20 @@ export class Zagora<
         : TProvidedCache
       : TCacheAdapter;
 
-    let za = this;
+    // The `this` type above only blocks a builder without a handler. The body needs the plain class type.
+    let za = this as Zagora<
+      THandlerFn,
+      TContext,
+      TInputSchema,
+      TOutputSchema,
+      TErrorsMap,
+      TEnvVarsMap,
+      TCacheAdapter,
+      TDisableOptions,
+      TAutoCallable
+    >;
     if (options.cache) {
-      za = this.cache(options.cache) as any;
+      za = za.cache(options.cache) as any;
     }
 
     return za._createProcedure<TEffectiveCacheAdapter, TIncomingEnv, TNewContext, TKindNames>(
