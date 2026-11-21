@@ -1,9 +1,9 @@
 ---
 title: Handle failed results
-description: The three error kinds, the type guards that tell them apart, the failures that come back in the result, and the two cases that still throw.
+description: The three error kinds, the type guards that tell them apart, and the guarantee that a zagora procedure never throws.
 ---
 
-A zagora procedure does not throw or reject when a step fails. Every failure comes back in the result as one of three kinds of error.
+A zagora procedure never throws and never rejects. Every failure comes back in the result as one of three kinds of error.
 
 | Kind | When | Fields |
 | --- | --- | --- |
@@ -35,11 +35,7 @@ Each failure in this table becomes a failed result.
 | A cache adapter method that throws or rejects | `UNKNOWN_ERROR` |
 | A cache key that zagora cannot compute | `UNKNOWN_ERROR` |
 | An async env schema, which zagora does not support | `UNKNOWN_ERROR` |
-
-Two cases escape the result:
-
-- A `.callable()` context whose root is not a plain object. The call throws `Expects plain object args`, also when the procedure is async. TypeScript rejects that context.
-- A thrown value whose `kind` getter throws, in a procedure with an error map. A sync call throws the getter error, and an async call rejects with it.
+| A thrown value whose `kind` getter throws | `UNKNOWN_ERROR`, with the thrown value in `cause` |
 
 ```ts twoslash
 import { zagora } from "zagora";
@@ -97,7 +93,7 @@ if (!result.ok) {
 
 On a result error, each guard narrows to the matching kinds, and its `false` branch keeps the rest. So you can check the kinds in any order, and TypeScript knows what is left.
 
-The guards check the shape at runtime. So they also work on a value that zagora did not make, such as JSON from a worker. The [errors reference](/reference/errors) lists the exact check of each guard.
+The guards check the shape at runtime. So they also work on a value that zagora did not make. After `JSON.stringify`, an `UNKNOWN_ERROR` keeps its `cause` and `stack` keys only when they hold a value. Without them, `isInternalError` returns `false`, and `isDefinedError` returns `true`. The [errors reference](/reference/errors) lists the exact check of each guard.
 
 ## The call stops at the first failed step
 

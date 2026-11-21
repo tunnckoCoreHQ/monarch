@@ -1,11 +1,11 @@
 ---
 title: Introduction
-description: zagora builds TypeScript functions that return their failures as results instead of throwing them. It validates input and output with any Standard Schema library and returns typed errors. It has no network layer and no router.
+description: zagora builds TypeScript functions that never throw. It validates input and output with any Standard Schema library and returns typed errors. It has no network layer and no router.
 sidebar:
   icon: book-open
 ---
 
-zagora is a small TypeScript library for functions that return their failures as results instead of throwing them. You describe the input, the output, and the errors with any [Standard Schema](https://standardschema.dev) library, such as Zod, Valibot, or ArkType. zagora gives you back a plain function. Every call returns a result object, either `{ ok: true, data }` or `{ ok: false, error }`.
+zagora is a small TypeScript library for functions that never throw. You describe the input, the output, and the errors with any [Standard Schema](https://standardschema.dev) library, such as Zod, Valibot, or ArkType. zagora gives you back a plain function. Every call returns a result object, either `{ ok: true, data }` or `{ ok: false, error }`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -37,10 +37,10 @@ The second argument has a default in the schema, so `getUser("Charlie")` is a va
 
 [oRPC](https://orpc.dev) and [tRPC](https://trpc.io) build procedures for APIs, with a router, a server, a client, and a network between them. zagora keeps only the procedure. It is a lower-level tool for libraries, SDKs, CLIs, and the internals of an app. The result is a regular TypeScript function that you export and call.
 
-- **Failures are values.** Validation failures, thrown errors, rejected promises, and failing cache adapters all come back as `result.error`. The [error handling guide](/guide/error-handling#every-failed-step-becomes-a-result) lists the two cases that still throw.
+- **Never throws.** Validation failures, thrown errors, rejected promises, and failing cache adapters all come back as `result.error`.
 - **Typed errors.** You declare error kinds with schemas. Handlers get a typed helper for each kind, and callers get a discriminated union of every kind.
 - **Real function signatures.** A tuple schema becomes a list of arguments, with validation, defaults, and optional trailing arguments for each one.
-- **Sync stays sync.** The zagora source has no `async` or `await`. A sync handler with sync schemas and a sync cache adapter gives a sync procedure. An `async` handler or an async schema gives a procedure that returns a `Promise`. See [async support](/guide/async) for every case.
+- **Sync stays sync.** A sync handler with sync schemas and a sync cache adapter gives a sync procedure. An `async` handler or an async schema gives a procedure that returns a `Promise`. See [async support](/guide/async) for every case.
 - **No unwrapping.** You read `result.data` or `result.error` directly. With neverthrow, you unwrap a `Result` first.
 - **Typed dependencies.** You set the context, the environment variables, and the cache adapter when you define the procedure or when you make it callable.
 - **Tested types.** The types have their own test suite, next to the runtime tests.

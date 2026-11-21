@@ -3,7 +3,7 @@ title: Call async procedures
 description: When a zagora procedure returns a result and when it returns a promise, for sync and async handlers, schemas, and cache adapters.
 ---
 
-The zagora source has no `async` or `await`. zagora checks for promises at runtime, and a procedure becomes async only when a part of it is async. The return type follows the same rules, so the type of a sync procedure is not a `Promise`.
+When any part of a procedure can be async, `await` every call. An `await` on a sync result does no harm. A procedure becomes async only when a part of it is async, and its return type follows the same rules. So the type of a sync procedure is not a `Promise`.
 
 The table shows what each async part does to the procedure.
 
@@ -88,7 +88,3 @@ An async cache method makes a call async only when that call runs the method. A 
 ## Env schemas cannot be async
 
 zagora does not support async env schemas. The [environment variables guide](/guide/environment-variables) shows the error that you get.
-
-## Await every call when any part can be async
-
-When any part of a procedure can be async, `await` every call. An `await` on a sync result does no harm.

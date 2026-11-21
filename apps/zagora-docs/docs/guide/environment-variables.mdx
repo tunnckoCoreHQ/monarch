@@ -90,4 +90,6 @@ The procedure has a `~zagora` property with its definition. That property has th
 
 With `autoCallable: true`, there is no `.callable()` step. Pass the values as the second argument of `.env()`. If you do not, zagora validates an empty object. A schema with required keys then fails at runtime, but the types still give `env` its values.
 
-With `disableOptions: true`, the handler gets no options object. It cannot read `env`.
+## Procedures with disableOptions cannot read env
+
+With `disableOptions: true`, the handler gets no options object, so it cannot read `env`. zagora still validates the env values on every call.
