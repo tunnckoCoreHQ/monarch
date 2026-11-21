@@ -7,13 +7,13 @@ When any part of a procedure can be async, `await` every call. An `await` on a s
 
 The table shows what each async part does to the procedure.
 
-| What is async | Procedure returns | Type |
+| What is async | Runtime value | TypeScript return type |
 | --- | --- | --- |
 | Nothing | `Result` | `Result` |
 | An `async` handler | always a `Promise` | `Promise<Result>` |
 | A handler that returns a promise | a `Promise` when the handler runs | `Promise<Result>` |
 | A schema marked `async: true`, such as a Valibot async schema | always a `Promise` | `Promise<Result>` |
-| A Zod schema with an async refinement | a `Promise` | `Result`, so `await` it anyway |
+| A Zod schema with an async refinement | a `Promise` | `Result` |
 | A cache adapter method | a `Promise` when the method runs | `Result \| Promise<Result>` |
 
 ## An async handler makes every call async

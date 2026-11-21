@@ -45,7 +45,8 @@ export default {
     const user = getUserFromToken(request.headers.get("authorization"));
     const run = deletePost.callable({ context: { user } });
 
-    const result = run(await request.json());
+    const body = await request.json().catch(() => undefined);
+    const result = run(body);
 
     if (result.ok) {
       return Response.json(result.data);
