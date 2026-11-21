@@ -288,8 +288,6 @@ But wait, there's more: **Type Guards**!
 
 ### Error Type Guards
 
-These guards identify the error kind. They do not validate custom payload fields. Supplying a generic payload type to a guard does not check that payload at runtime.
-
 Since you may want to differentiate between the error kinds, there are couple of helper type guards that you can use to narrow down the error.
 
 Demo calculator below to see it in action.
@@ -455,8 +453,6 @@ zagora()
 
 ### Tuple Inputs (Multiple Arguments)
 
-Variadic calls support bare Zod and Valibot tuple schemas. Wrapped tuple schemas and transforms that change between tuple and non-tuple shapes are not supported.
-
 Tuple schemas is used for defining multiple arguments in a handler. It's one of the ABSOLUTE KEY features of Zagora, and it is one of the most complex stuff to achieve - but the end results is astonishing. It just works - you define schema and you get fully typed and validated arguments, INCLUDING per-argument reporting/diagnostics, INCLUDING filling defaults if `.default()` is used and respecting `.optional()`.
 
 ```ts
@@ -529,8 +525,6 @@ Zagora is fully async-aware at every level of the system:
 - **Sync/async Cache**: If any cache method is async -> procedure becomes async (returns `ZagoraResult | Promise<ZagoraResult>`)
 
 **Important:** Standard Schema does not currently identify async schemas in its type contract. Zagora detects validators whose schema type exposes `async: true` (including Valibot), so those procedures correctly return `Promise<ZagoraResult>` at type level. For validators that do not expose such a marker (like Zod), **always `await` when you know any part of the schema or the cache is async**. Follow [Standard Schema issue #22](https://github.com/standard-schema/standard-schema/issues/22) for the upstream discussion.
-
-Use `await` for async handlers too. A validation failure before the handler runs can return a synchronous result, even when the inferred return type is a Promise. Calling `.then()` directly is unsafe on those paths.
 
 Funnily, ArkType does not support async schemas and it's incredibly fast, so using it you won't have that problem to begin with.
 

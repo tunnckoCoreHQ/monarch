@@ -77,6 +77,24 @@ test("validateError - error with kind not in errorsMap (line 130)", () => {
   }
 });
 
+test("a non-string thrown error kind becomes an internal error", () => {
+  const thrown = { kind: Symbol("failure") };
+  const procedure = zagora()
+    .errors({
+      FAILURE: { "~standard": { version: 1, vendor: "test", validate: (value) => ({ value }) } },
+    })
+    .handler(() => {
+      throw thrown;
+    })
+    .callable();
+
+  expect(procedure()).toMatchObject({
+    ok: false,
+    isTypedError: false,
+    error: { kind: "UNKNOWN_ERROR", cause: thrown },
+  });
+});
+
 test("validateError - async error validation with issues (lines 132-135)", async () => {
   const fn = zagora()
     .input(z.string())
@@ -157,4 +175,16 @@ test("deepMerge - replace complex values from the source", () => {
   expect(result.createdAt).toBe(replacementDate);
   expect(result.db).toBe(replacementDatabase);
   expect(result.nested).toEqual({ keep: true, db: "mock" });
+});
+
+test("context merging preserves __proto__ as an own data property", () => {
+  const override = JSON.parse('{"nested":{"__proto__":{"admin":true}}}');
+  const merged = deepMerge({ nested: { retained: true } }, override);
+
+  expect(Object.getPrototypeOf(merged.nested)).toBe(Object.prototype);
+  expect(Object.getOwnPropertyDescriptor(merged.nested, "__proto__")?.value).toEqual({
+    admin: true,
+  });
+  expect(merged.nested.retained).toBe(true);
+  expect(merged.nested.admin).toBeUndefined();
 });

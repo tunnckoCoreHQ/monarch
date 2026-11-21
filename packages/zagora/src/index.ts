@@ -114,6 +114,14 @@ export class Zagora<
     > = {},
   ) {
     this["~zagora"] = def;
+
+    // Ensure config flags are set from constructor if provided
+    if ("disableOptions" in def && def.disableOptions !== undefined) {
+      this["~zagora"].disableOptions = def.disableOptions;
+    }
+    if ("autoCallable" in def && def.autoCallable !== undefined) {
+      this["~zagora"].autoCallable = def.autoCallable;
+    }
   }
 
   input<TInput extends AnySchema>(
@@ -344,10 +352,18 @@ export class Zagora<
       const isTupleSchema =
         (schemaAny?._def && schemaAny?._def?.type === "tuple") || schemaAny?.type === "tuple";
 
+      const isArraySchema =
+        (schemaAny?._def && schemaAny?._def?.type === "array") || schemaAny?.type === "array";
+
+      const isPrimitiveSchema = !isTupleSchema;
+
       const processInput = (inputData: any) => {
-        const handlerArgs = isTupleSchema
-          ? handleTupleDefaults(inputSchema as any, inputData)
-          : [inputData];
+        // NOTE: isTuple is safe/enough here cuz it's based on the inputSchema,
+        // thus if inputSchema is not defined, then it would be isTuple=false too.
+        const handlerArgs =
+          !isArraySchema && !isPrimitiveSchema
+            ? handleTupleDefaults(inputSchema as any, inputData)
+            : [inputData];
 
         const executionArgs = disableOptions ? handlerArgs : [options, ...handlerArgs];
 
@@ -380,7 +396,7 @@ export class Zagora<
         return handleState(state);
       };
 
-      const inputArgs = isTupleSchema ? args : args[0];
+      const inputArgs = !isArraySchema && !isPrimitiveSchema ? args : args[0];
 
       const inputResult = inputSchema
         ? validateInputOutputOrEnv("input", inputSchema, inputArgs)
