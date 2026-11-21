@@ -15,9 +15,9 @@ Each guard takes any value and returns a boolean.
 
 | Function | Returns `true` when |
 | --- | --- |
-| `isValidationError(val)` | `kind` is `"VALIDATION_ERROR"`, `message` is a non-empty string, and `issues` is an array |
-| `isInternalError(val)` | `kind` is `"UNKNOWN_ERROR"`, `message` is a non-empty string, and the `cause` and `stack` keys exist |
-| `isDefinedError(val)` | `kind` is a non-empty string that equals its uppercase form, and the other two guards return `false` |
+| `isValidationError(val)` | `kind` is `"VALIDATION_ERROR"`, `message` is a string, and `issues` is an array |
+| `isInternalError(val)` | `kind` is `"UNKNOWN_ERROR"`, `message` is a string, and the `cause` and `stack` keys exist |
+| `isDefinedError(val)` | `kind` is an uppercase string, and the other two guards return `false` |
 | `isZagoraError(val)` | one of the three guards above returns `true` |
 
 On an error union, such as `result.error`, each guard narrows to the members that match, and its `false` branch keeps the other members. On any other value, it narrows to the guarded error shape. The order of the checks does not matter. The [type guards section of the error handling guide](/guide/error-handling#narrow-an-error-with-a-type-guard) shows them in use.
