@@ -1,0 +1,88 @@
+---
+title: Caching
+description: Store procedure outputs in any cache adapter that has has, get, and set methods, sync or async, and see how zagora builds the cache key.
+---
+
+When a procedure has a cache adapter, zagora stores each validated output under a key that it builds from the call. The next call with the same arguments returns the stored output and does not run the handler.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const cache = new Map();
+
+const upper = zagora()
+  .input(z.string())
+  .handler((_, input) => input.toUpperCase())
+  .callable({ cache });
+
+upper("hello"); // runs the handler
+upper("hello"); // returns the stored output
+```
+
+A `Map` is a cache adapter as it is. Any other object with the methods of the `CacheAdapter` type is one too.
+
+```ts
+type CacheAdapter = {
+  has(key: string): boolean | Promise<boolean>;
+  get(key: string): unknown;
+  set(key: string, value: unknown): any;
+};
+```
+
+## Pass the adapter when you define or when you make the procedure
+
+Pass the adapter with `.cache(adapter)` when you define the procedure. You can also pass it with `.callable({ cache })` when you make the procedure. An adapter passed to `.callable()` replaces the adapter from `.cache()`. Use `.callable()` when the cache comes from the runtime, for example a KV binding in a `fetch` handler.
+
+## Async adapters make the result possibly async
+
+Any adapter method can be async. Then the procedure can return a `Promise`, and its type is `Result | Promise<Result>`. The result is not always a promise. A call that fails before it reaches the cache, such as a call with invalid input, stays sync. Always `await` such a procedure.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const store = new Map<string, unknown>();
+
+const double = zagora()
+  .cache({
+    async has(key: string) {
+      return store.has(key);
+    },
+    get(key: string) {
+      return store.get(key);
+    },
+    set(key: string, value: unknown) {
+      store.set(key, value);
+    },
+  })
+  .input(z.number())
+  .handler((_, num) => num * 2)
+  .callable();
+
+const result = await double(22);
+```
+
+## The cache stores only valid output
+
+The cache follows these rules:
+
+- zagora stores only output that passed the output schema. A failed call never writes to the cache.
+- A cache hit returns the stored output as it is. zagora does not validate it again.
+- A stored value of `undefined` counts as a miss. If an entry expires between `has` and `get`, the handler runs again.
+
+## The cache key is a hash of the call
+
+The key is a SHA-256 hash of a JSON string. The JSON holds the handler arguments after validation, the source text of the handler, and the input, output, error, and env schemas. Unless `disableOptions` is on, the handler arguments include the options object. The context and the env values are then part of the key too. zagora encodes a `bigint` argument as an object, so its key differs from the key of a string with the same digits.
+
+JSON cannot tell some values apart. These limits follow from that:
+
+- An `undefined` and a `null` in an argument list can give the same key. Cache only procedures whose arguments stay different in JSON.
+- The source text of the handler does not include the variables that the handler captures. Schema functions, such as refinements and transforms, do not appear in JSON either.
+- Two procedures that differ only in captured variables or schema functions can share keys. Give each of them its own cache adapter.
+
+The hash comes from `node:crypto`. On Cloudflare Workers, turn on the `nodejs_compat` flag.
+
+## Cache failures come back in the result
+
+A cache adapter that throws or rejects does not crash the call. The result has an `UNKNOWN_ERROR` with the original error in `cause`. Its message names the method, such as `Failure in CacheAdapter.has method` or `Failure in async CacheAdapter.set method`. When zagora cannot compute the key, for example for a circular argument or context value, the message is `Failed to compute cache key`.

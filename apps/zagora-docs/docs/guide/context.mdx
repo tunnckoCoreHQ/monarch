@@ -1,0 +1,95 @@
+---
+title: Context
+description: Pass typed dependencies, such as a database, a request, or the current user, to handlers, when you define the procedure or when you make it callable.
+---
+
+The context gives the handler its dependencies, such as a database client, the request, or the current user, with a type. Set the type and an optional initial value with `.context()`. The handler reads the value from `options.context`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const procedure = zagora()
+  .context<{ userId: string; foo?: string }>({ userId: "default" })
+  .input(z.string())
+  .handler(({ context }, id) => {
+    // context: { userId: string; foo?: string }
+    return `${context.userId} has foo -> ${context.foo ?? "unknown"}, id = ${id}`;
+  })
+  .callable({ context: { userId: "foo-bar", foo: "qux" } });
+
+procedure("charlie");
+// { ok: true, data: 'foo-bar has foo -> qux, id = charlie', error: undefined }
+```
+
+## Pass the context when you define or when you make the procedure
+
+You can give the context in two places:
+
+- `.context(initialContext)`, when you define the procedure
+- `.callable({ context })`, when you make the procedure
+
+Use `.callable()` when the values exist only where the call happens. A `fetch` handler is one example, because only it has the request and the logged-in user. Define each procedure once, and call `.callable()` once per request.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+type Db = { findUser(id: string): { id: string; name: string } | undefined };
+declare function getDb(env: unknown): Db;
+// ---cut---
+const getUser = zagora()
+  .context<{ db: Db }>()
+  .input(z.string())
+  .handler(({ context }, id) => context.db.findUser(id));
+
+export default {
+  fetch(request: Request, env: unknown) {
+    const id = new URL(request.url).searchParams.get("id") ?? "";
+    const result = getUser.callable({ context: { db: getDb(env) } })(id);
+    return Response.json(result);
+  },
+};
+```
+
+A `.context<T>()` call with no value sets only the type. Pass the value with `.callable()`.
+
+## The two contexts merge key by key
+
+zagora deep-merges the `.callable()` context over the initial context. Plain objects merge key by key. Any other value, such as a class instance, an array, or a `Map`, replaces the initial value as it is. A database client therefore keeps its prototype and its methods.
+
+```ts twoslash
+import { zagora } from "zagora";
+// ---cut---
+class Database {
+  constructor(readonly name: string) {}
+}
+
+type Context = {
+  db: Database;
+  config: { timeout?: number; retries?: number };
+};
+
+const procedure = zagora()
+  .context<Context>({
+    db: new Database("production"),
+    config: { timeout: 5, retries: 1 },
+  })
+  .handler(({ context }) => ({ db: context.db.name, config: context.config }))
+  .callable({
+    context: { db: new Database("test"), config: { retries: 2 } },
+  });
+
+procedure();
+// { ok: true, data: { db: 'test', config: { timeout: 5, retries: 2 } }, error: undefined }
+```
+
+The context root must be a plain object. TypeScript rejects other values.
+
+## Auto-callable procedures get only the initial context
+
+With `autoCallable: true`, there is no `.callable()` step. The handler gets only the initial context from `.context()`. The [instance options guide](/guide/instance-options) describes the flag.
+
+## Procedures with disableOptions get no context
+
+With `disableOptions: true`, the handler gets no options object. It cannot read the context.

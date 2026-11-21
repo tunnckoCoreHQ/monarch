@@ -1,0 +1,96 @@
+---
+title: Optional and default values
+description: Where schema defaults and optional values apply, and how they change the types of the caller and the handler.
+---
+
+zagora takes defaults and optional values from your schema. The caller can leave out a value that has a default, and the handler gets the default. In the handler's type, a value with a default is never `undefined`.
+
+## In objects
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const profile = zagora()
+  .input(
+    z.object({
+      name: z.string(),
+      age: z.number().default(18),
+      country: z.string().optional(),
+    }),
+  )
+  .handler((_, input) => input)
+  // input: { name: string; age: number; country?: string }
+  .callable();
+
+profile({ name: "John" });
+// { ok: true, data: { name: 'John', age: 18 }, error: undefined }
+```
+
+The caller's type has `age?: number`, and the handler's type has `age: number`.
+
+## In tuple arguments
+
+A missing trailing argument gets its default. The [tuple arguments](/guide/tuple-arguments) page explains how a tuple becomes a parameter list.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const repeat = zagora()
+  .input(z.tuple([z.string(), z.number().default(2), z.string().default(" ")]))
+  .handler((_, text, times, separator) => Array(times).fill(text).join(separator))
+  .callable();
+
+repeat("ha");
+// { ok: true, data: 'ha ha', error: undefined }
+repeat("ha", 3, "-");
+// { ok: true, data: 'ha-ha-ha', error: undefined }
+```
+
+Every element of a tuple can be optional or have a default. Then you can call the procedure with no arguments.
+
+## In a primitive input
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const double = zagora()
+  .input(z.number().default(10))
+  .handler((_, value) => value * 2)
+  .callable();
+
+double(undefined);
+// { ok: true, data: 20, error: undefined }
+```
+
+<Callout type="note">
+  The argument of a primitive input with a default is still required at the type level. Pass
+  `undefined` to use the default. With a tuple input, TypeScript lets you leave out a trailing
+  argument.
+</Callout>
+
+## In error data and environment variables
+
+Defaults also apply to the data of [typed errors](/guide/typed-errors) and to [environment variables](/guide/environment-variables). An error helper does not require a field that has a default, and `result.error` has the default value.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const limited = zagora()
+  .errors({
+    RATE_LIMIT: z.object({
+      retryAfter: z.number(),
+      limit: z.number().default(1000),
+    }),
+  })
+  .handler(({ errors }) => {
+    throw errors.RATE_LIMIT({ retryAfter: 120 });
+  })
+  .callable();
+
+limited();
+// { ok: false, isTypedError: true, error: { retryAfter: 120, limit: 1000, kind: 'RATE_LIMIT' } }
+```

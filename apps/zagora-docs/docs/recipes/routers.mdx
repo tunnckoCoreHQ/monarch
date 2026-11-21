@@ -1,0 +1,102 @@
+---
+title: Group procedures into a router
+description: Group zagora procedures in plain objects, nest them, and share a base chain or a context factory.
+---
+
+zagora has no router. Procedures are plain functions, so a plain object of procedures is a typed router.
+
+## Group procedures in an object
+
+Put the callable procedures in an object. Nest the objects to any depth. Every procedure keeps its own signature and result type.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+const users = new Map([["1", { id: "1", name: "Ada" }]]);
+// ---cut---
+const getUser = zagora()
+  .input(z.string())
+  .handler((_, id) => users.get(id) ?? null)
+  .callable();
+
+const createUser = zagora()
+  .input(z.object({ name: z.string() }))
+  .handler((_, { name }) => {
+    const user = { id: String(users.size + 1), name };
+    users.set(user.id, user);
+    return user;
+  })
+  .callable();
+
+export const router = {
+  users: {
+    get: getUser,
+    create: createUser,
+  },
+};
+
+router.users.get("1");
+// { ok: true, data: { id: '1', name: 'Ada' }, error: undefined }
+```
+
+## Share a base chain
+
+Build part of the chain once, and start each procedure from it. Every builder method returns a new instance, so the base does not change.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const base = zagora().errors({
+  NOT_FOUND: z.object({ id: z.string() }),
+  UNAUTHORIZED: z.object({ message: z.string() }),
+});
+
+export const getPost = base
+  .input(z.string())
+  .handler(({ errors }, id) => {
+    throw errors.NOT_FOUND({ id });
+  })
+  .callable();
+
+export const deletePost = base
+  .input(z.string())
+  .handler(({ errors }) => {
+    throw errors.UNAUTHORIZED({ message: "Login required" });
+  })
+  .callable();
+```
+
+## Build the router in a context factory
+
+If every procedure needs the same dependencies, write a function that takes them and returns the router. Call that function with real values in production and with test values in tests.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+type Db = { find(id: string): { id: string } | undefined };
+
+export function createRouter(context: { db: Db }) {
+  const za = zagora().context(context);
+
+  return {
+    getUser: za
+      .input(z.string())
+      .handler(({ context }, id) => context.db.find(id))
+      .callable(),
+  };
+}
+
+const router = createRouter({ db: { find: (id) => ({ id }) } });
+router.getUser("1");
+```
+
+## Replace middleware with context
+
+zagora has no middleware. Run that logic before the call, for example to read a session or check a token. Then pass the outcome as [context](/guide/context). The [HTTP handlers recipe](/recipes/http-handlers) has a full example.
+
+## Use oRPC for a network API
+
+If you need an HTTP protocol, a typed remote client, OpenAPI, or streaming, use [oRPC](https://orpc.dev). An oRPC handler can call a zagora procedure.
