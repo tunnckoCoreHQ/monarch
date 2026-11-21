@@ -26,3 +26,15 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Blume stretches the layout to the full screen width, so the sidebar and the table of contents sit at the screen edges. Cap the layout width and center it. The header and footer contents line up with it. */
+@media (min-width: 64rem) {
+  body > .mx-auto.grid {
+    max-width: 84rem;
+  }
+
+  [data-blume-header],
+  [data-blume-footer] {
+    padding-inline: max(1.5rem, calc((100% - 84rem) / 2 + 1.5rem));
+  }
+}
