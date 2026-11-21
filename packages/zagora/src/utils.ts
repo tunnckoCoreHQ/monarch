@@ -53,7 +53,7 @@ export function validateError<TKindNames>(
   }
 
   const kind = error?.kind;
-  if (kind == null) {
+  if (typeof kind !== "string") {
     return createResult(
       null,
       createInternalError(`${isAsync ? "Async" : "Sync"} handler threw unknown error`, error),
