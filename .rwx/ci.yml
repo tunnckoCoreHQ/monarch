@@ -2,8 +2,8 @@
 # and every push to master. After those pass on a master push, the same run publishes nightly
 # packages, deploys the apps the push changed, maintains the release PR, and publishes the stable
 # versions when the push is the merged release PR. Dispatches run one job by hand on master:
-# `rwx dispatch monarch-deploy-prod`, `rwx dispatch monarch-publish-prod`, and
-# `rwx dispatch monarch-socket-optimize`.
+# `rwx dispatch monarch-deploy-prod`, `rwx dispatch monarch-publish-prod`,
+# `rwx dispatch monarch-publish-dry-run`, and `rwx dispatch monarch-socket-optimize`.
 #
 # SECURITY: every secret and OIDC token lives in a vault locked to master, so pull request runs
 # get none of them. monarch_nightly and monarch_prod each hold one OIDC token for npm.wgw.lol;
@@ -129,6 +129,21 @@ on:
       status-checks:
         enabled: true
         name: publish-prod
+    # Rehearses the release that the pending changesets give, with the prod tasks and tokens. It
+    # uploads nothing, pushes no tag, and creates no GitHub Release.
+    - key: monarch-publish-dry-run
+      init:
+        commit-sha: ${{ event.git.sha }}
+        branch: ${{ event.git.branch }}
+        affected-base: ""
+        master: false
+        release: true
+        app: ""
+        job: publish-dry-run
+      target: [publish-prod-vlt, publish-prod-npm]
+      status-checks:
+        enabled: true
+        name: publish-dry-run
     - key: monarch-socket-optimize
       init: &socket-optimize-init
         commit-sha: ${{ event.git.sha }}
@@ -334,7 +349,8 @@ tasks:
 
   # Publishes the stable versions with latest, then pushes the package tags and creates the
   # GitHub Releases. Runs for the merged release PR commit, or by hand to finish a failed release.
-  # Like the nightly, each registry has its own task.
+  # Like the nightly, each registry has its own task. The dry-run dispatch sets DRY_RUN, and the
+  # script then writes nothing.
   - key: publish-prod-vlt
     if: ${{ init.release }}
     after: [check, test, test-solidity, build]
@@ -342,6 +358,7 @@ tasks:
     cache: false
     env:
       TURBO_TELEMETRY_DISABLED: 1
+      DRY_RUN: "${{ init.job == 'publish-dry-run' ? 'true' : '' }}"
       GITHUB_TOKEN: ${{ vaults.monarch_master.secrets.OLSTENLARCK_HQ_PAT }}
       NPM_ID_TOKEN: ${{ vaults.monarch_prod.oidc.vlt }}
     run: bash scripts/publish-prod.sh vlt
@@ -353,6 +370,7 @@ tasks:
     cache: false
     env:
       TURBO_TELEMETRY_DISABLED: 1
+      DRY_RUN: "${{ init.job == 'publish-dry-run' ? 'true' : '' }}"
       GITHUB_TOKEN: ${{ vaults.monarch_master.secrets.OLSTENLARCK_HQ_PAT }}
       NPM_TOKEN: ${{ vaults.monarch_master.secrets.NPM_TOKEN }}
     run: bash scripts/publish-prod.sh npm
