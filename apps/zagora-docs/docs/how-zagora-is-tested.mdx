@@ -1,45 +1,189 @@
 ---
 title: How Zagora is tested
-description: The runtime tests, the type tests, the test of the built package, and the type-checked docs that stand behind the small Zagora API.
+description: The promises Zagora makes, and the runtime tests, type tests, build test, and type-checked docs that hold each one in place.
 sidebar:
   icon: flask-conical
 ---
 
-Zagora has about 1,300 lines of source, types included. Its tests are about three times that size. The library makes two guarantees that a small change can break. A call never throws, and the types describe what the runtime does. Each guarantee has its own kind of test.
+Zagora is small. The source is about 1,300 lines, types included, and the tests are about three times that. The size makes sense once you see what the library promises. Calls never throw, sync procedures stay sync, and the types match what the runtime does. On top of that, every example in these docs compiles, and the package on npm works the same way the source does. Any of those can break with a one-line change, and a quick manual try won't show it.
 
-## Runtime tests
+So each promise has its own kind of test, and this page goes through them one at a time.
 
-The runtime tests call real procedures with Zod and Valibot schemas, and assert on the results. They cover more than 98% of the source lines and every function. They cover these areas:
+## A call never throws
 
-- **The builder and the call.** Chains, overrides, immutability, tuple arguments, defaults, and the three error kinds.
-- **Edge cases.** Falsy thrown values, thenables that are not native promises, symbol kinds, getters that throw, `__proto__` keys in a context, and `process.env` on Node.
-- **Instance options.** Procedures with `disableOptions`, `autoCallable`, or both.
-- **Utilities.** The cache key, the cache read and write, the merge, and the tuple defaults, each tested on its own.
+This is the promise everything else rests on, so it gets the most tests. They call real procedures with Zod and Valibot schemas and assert on the result. They don't wrap anything in `try`. If a call threw, the test would crash, and that's the failure.
 
-A fix lands with a test that fails without it. The v1 review in [#176](https://github.com/tunnckoCoreHQ/monarch/pull/176) followed that rule for each of its fixes.
+The interesting cases are the strange ones. JavaScript lets you throw anything, so the tests throw the values that a careless `if (error)` would miss:
 
-## Type tests
+```ts twoslash
+import { expect, test } from "vitest";
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+test.each([undefined, null, false, 0, ""])(
+  "a handler throwing %j still returns a failure",
+  (thrown) => {
+    const procedure = zagora()
+      .input(z.boolean())
+      .handler((_, shouldThrow) => {
+        if (shouldThrow) {
+          throw thrown;
+        }
+        return "ok";
+      })
+      .callable();
 
-A type can be wrong while every runtime test passes. For example, a required tuple element can look optional, or an async handler can get a sync type. Zagora tests its types with `expectTypeOf` assertions and `@ts-expect-error` lines. The type checker runs them in the `check` task, so a wrong type fails CI like a failed runtime test.
+    const result = procedure(true);
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.error.kind === "UNKNOWN_ERROR") {
+      expect(result.error.cause).toBe(thrown);
+    }
+  },
+);
+```
 
-The type tests check the hard parts of the type system:
+From there the tests get worse on purpose. Each of these cases has to come back as `{ ok: false, error }`, with the original error kept in `cause`:
 
-- The async shape: a sync result, a `Promise`, or a union of both, for each mix of handler, schemas, and [cache adapter](/guide/caching).
-- The parameters: a tuple spread with optional trailing elements, and a single argument that a default makes optional.
-- The error union of a result, and the narrowing of each guard in both branches.
-- The options object of the handler: the context, the [error helpers](/guide/typed-errors), and the env values.
-- The errors that TypeScript must report, such as an error map key that is not uppercase.
+- a thrown object whose `kind` getter throws when Zagora reads it
+- a `kind` that's a symbol, or a number that happens to match an error key
+- a schema whose own `validate` function throws, for the input, the output, the env, or the error map
+- a thenable that isn't a native promise and rejects
 
-## The built package
+There's one rule for fixes, too. A bug fix lands with a test that fails without it. That's why the edge cases read like a list of things that went wrong once.
 
-The tests import the source, but users import the build. One test file imports from `dist` instead. The `test` task of the package depends on the `build` task, so CI tests the same files that npm gets.
+## Sync stays sync
 
-## Type-checked docs
+Zagora returns a promise only when something in the call is async: the handler, a schema, or a cache method. That's easy to break in a way no type error catches, by adding a stray `await` or a `.then()` on a path that didn't need one. So the tests check the runtime shape directly, with `toBeInstanceOf(Promise)`, in both directions.
 
-Every `ts twoslash` example in these docs compiles with the Zagora types when the site builds. An example that stops compiling fails the build, so an API change cannot leave a stale example behind. A docs test also checks every link on the site.
+The cache case shows how fine-grained that gets. An async `set` makes the call async, but only on the paths that reach the cache. Invalid input fails before the cache is touched, so that result comes back right away:
 
-## Reviews
+```ts twoslash
+import { expect, test } from "vitest";
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+test("async cache methods only make paths that invoke them async", async () => {
+  const cache = {
+    has: () => false,
+    get: () => undefined,
+    async set() {},
+  };
+  const procedure = zagora()
+    .cache(cache)
+    .input(z.string())
+    .handler((_, input) => input)
+    .callable();
 
-Review bots read each pull request, and required CI checks run the type check, the tests, and the build on each push. A pull request cannot merge while one of those checks fails.
+  const invalid = procedure(123 as any);
+  expect(invalid).not.toBeInstanceOf(Promise);
 
-Run `turbo run check test --filter=zagora` to see the current test count and coverage table.
+  const valid = procedure("valid");
+  expect(valid).toBeInstanceOf(Promise);
+  expect((await valid).ok).toBe(true);
+});
+```
+
+The same goes for a handler that returns a promise only sometimes. Call it in sync mode and you get a plain result. Call it in async mode and you get a `Promise`. The type of that procedure is the union of both, which brings us to the types.
+
+## The types match the runtime
+
+A type can be wrong while every runtime test passes. If a required tuple element shows up as optional, or an async handler gets a sync return type, or the error union loses a member, the code still runs. Your editor just tells you something false about it.
+
+Zagora tests its types with Vitest's `expectTypeOf` and with `@ts-expect-error` lines. Vitest doesn't check those at runtime. The `check` task runs the type checker over the test files, so a wrong type fails CI the same way a failed `expect` does. The `@ts-expect-error` lines matter as much as the assertions: if TypeScript stops reporting an error it should report, the unused directive becomes the error.
+
+Most tests check a behavior twice, once with `expect` and once with `expectTypeOf`, right next to each other. A default value is a good example. It has to make the argument optional at runtime and in the signature:
+
+```ts twoslash
+import { expect, expectTypeOf, test } from "vitest";
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+test("a default makes the argument optional", () => {
+  const withDefault = zagora()
+    .input(z.number().default(10))
+    .handler((_, value) => {
+      expectTypeOf(value).toEqualTypeOf<number>();
+      return value * 2;
+    })
+    .callable();
+
+  expectTypeOf(withDefault).parameters.toEqualTypeOf<[arg?: number | undefined]>();
+  expect(withDefault()).toMatchObject({ ok: true, data: 20 });
+
+  const required = zagora()
+    .input(z.number())
+    .handler((_, value) => value)
+    .callable();
+
+  // @ts-expect-error a required input still needs its argument
+  required();
+});
+```
+
+Most of the type tests cover the places where types tend to break. One group checks the async shape for every mix of handler, schemas, and [cache adapter](/guide/caching). Others cover tuples with optional trailing elements, the narrowing of each error guard in both branches, and the options object the handler receives. Some check that TypeScript rejects a mistake, like an error key that isn't uppercase or an env key the schema doesn't declare. The utilities in [`zagora/types`](/reference/types) have a separate small test file, so a change to one of them can't hide behind the bigger inferred types.
+
+The same `check` task also runs the linter with type-aware rules, so code that type-checks but uses a type in a suspicious way gets flagged too.
+
+## Only valid output gets cached
+
+[How Zagora works](/how-zagora-works) says a cache hit can skip validation because only valid output ever gets written. That claim needs a test, because if it broke, a bad value would come back on every later call. The test makes the handler return an invalid value on the first call, then checks the cache:
+
+```ts twoslash
+import { expect, test } from "vitest";
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+test("the cache stores only the validated output", async () => {
+  const cache = new Map();
+  let called = 0;
+  const procedure = zagora()
+    .cache(cache)
+    .input(z.string())
+    .output(z.string().transform((value) => value.length))
+    .handler((_, input) => {
+      called += 1;
+      return called === 1 ? 123 : input;
+    })
+    .callable();
+
+  expect(procedure("foo").ok).toBe(false);
+  expect(procedure("foo")).toMatchObject({ ok: true, data: 3 });
+  expect(procedure("foo")).toMatchObject({ ok: true, data: 3 });
+
+  expect(called).toBe(2);
+  expect([...cache.values()]).toEqual([3]);
+});
+```
+
+The first call fails and writes nothing to the cache. The second call runs the handler and stores the transformed value, and the third call reads that value back as a hit. So the handler runs twice, and the only cache entry is the exact output the caller saw.
+
+A few smaller promises have tests of their own:
+
+- Env values never show up in a procedure's `~zagora` metadata.
+- A cache key for the bigint `5n` never collides with the string `"5"`.
+- If a cache entry expires between `has` and `get`, the handler runs, and the call doesn't return `undefined`.
+- A `__proto__` key in a context merges as a plain property and never touches the prototype.
+
+## The published package works
+
+All of the tests above import from `src`. Nobody installs `src`. You get whatever tsdown wrote to `dist`, through the `exports` map in `package.json`. A wrong file extension or a missing `.d.ts` there breaks every user while the source tests stay green.
+
+So one test file, `auto-callable-dist.test.ts`, imports `zagora` from `../dist/index` instead. It builds a few `autoCallable` procedures with tuple inputs and checks their inferred types. The important assertion is the one after each procedure, `expectTypeOf<typeof add>().not.toEqualTypeOf<any>()`. If the built `.d.ts` files went missing, every procedure would quietly become `any`, and every other type assertion would pass against nothing. In the package's Turbo config, `test` depends on `build`, so this file always runs against a fresh build of the same files npm gets.
+
+## The docs can't drift
+
+Every `ts twoslash` block on this site, including the ones on this page, compiles against the real Zagora types when the site builds. Hover over a name and you see the type TypeScript inferred, not one somebody typed out. If an API changes and an example stops compiling, the build fails, so a stale example can't ship.
+
+There's one limit. The `// { ok: true, ... }` comments under the examples are written by hand. The compiler checks that the code is valid, but nothing runs it and compares the output. The behavior those comments describe is covered by the runtime tests above.
+
+The docs site also has one test of its own. It runs Blume's validator with `blume validate --json` and fails if any link on the site is broken.
+
+## Run it yourself
+
+CI runs the type check, the tests, and the build on every push, for each package the push touches. To run the same thing locally, from the repo root:
+
+```sh
+turbo run check test --filter=zagora
+```
+
+That builds the package, type-checks the source and the type tests, runs the runtime tests with coverage, and prints the table. Line coverage sits around 98%, and every function is covered. The number matters less than the habit behind it: each promise on this page has a test that fails the day the promise breaks.
