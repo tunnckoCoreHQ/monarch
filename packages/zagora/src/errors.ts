@@ -102,11 +102,18 @@ export function createValidationError<ErrorKindNames = never>(
 }
 
 export function createInternalError(msg: string, cause?: any) {
+  let stack: any;
+  try {
+    stack = cause?.stack;
+  } catch {
+    stack = undefined;
+  }
+
   return {
     kind: "UNKNOWN_ERROR" as const,
     message: msg,
     cause,
-    stack: cause?.stack,
+    stack,
   } as const;
 }
 

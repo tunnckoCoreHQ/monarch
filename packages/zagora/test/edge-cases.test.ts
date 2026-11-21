@@ -617,3 +617,34 @@ test("thrown value with a throwing kind getter - comes back as UNKNOWN_ERROR", a
     expect(asyncRes.error.cause).toBe(thrown);
   }
 });
+
+test("thrown value with a throwing stack getter - comes back as UNKNOWN_ERROR", async () => {
+  const thrown = {
+    get stack(): string {
+      throw new Error("getter failed");
+    },
+  };
+
+  const syncProc = zagora()
+    .handler((): string => {
+      throw thrown;
+    })
+    .callable();
+
+  const res = syncProc();
+  expect(res.ok).toBe(false);
+  if (isInternalError(res.error)) {
+    expect(res.error.cause).toBe(thrown);
+    expect(res.error.stack).toBeUndefined();
+  }
+
+  const asyncProc = zagora()
+    .handler(async (): Promise<string> => {
+      throw thrown;
+    })
+    .callable();
+
+  const asyncRes = await asyncProc();
+  expect(asyncRes.ok).toBe(false);
+  expect(isInternalError(asyncRes.error)).toBe(true);
+});
