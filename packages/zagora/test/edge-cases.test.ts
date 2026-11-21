@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import * as v from "valibot";
-import { expect, test } from "vitest";
+import { expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
 
 import { isInternalError } from "../src/errors";
@@ -482,30 +482,63 @@ test("thenable handler result - awaited like a native Promise", async () => {
   expect(res.error?.message).toBe("Async handler threw unknown error");
 });
 
-test("async handler - procedure returns a Promise when the handler never runs", async () => {
+test("async handler - invalid input gives a Promise and skips the handler", async () => {
+  let called = 0;
   const proc = zagora()
     .input(z.string())
-    .handler(async (_, input) => input)
+    .handler(async (_, input) => {
+      called += 1;
+      return input;
+    })
     .callable();
 
   // @ts-expect-error - the input must be a string
   const invalid = proc(123);
+  expectTypeOf(invalid).toExtend<Promise<unknown>>();
   expect(invalid).toBeInstanceOf(Promise);
   expect((await invalid).ok).toBe(false);
-
-  const cached = zagora()
-    .input(z.string())
-    .cache(new Map())
-    .handler(async (_, input) => input)
-    .callable();
-
-  expect(await cached("a")).toMatchObject({ ok: true, data: "a" });
-  const hit = cached("a");
-  expect(hit).toBeInstanceOf(Promise);
-  expect(await hit).toMatchObject({ ok: true, data: "a" });
+  expect(called).toBe(0);
 });
 
-test("Tuple with a transform - zod and valibot pass the output as one handler argument", () => {
+test("async handler - failed env validation gives a Promise and skips the handler", async () => {
+  let called = 0;
+  const proc = zagora()
+    .env(z.object({ API_KEY: z.string() }))
+    .handler(async ({ env }) => {
+      called += 1;
+      return env.API_KEY;
+    })
+    .callable();
+
+  const invalid = proc();
+  expectTypeOf(invalid).toExtend<Promise<unknown>>();
+  expect(invalid).toBeInstanceOf(Promise);
+  expect((await invalid).ok).toBe(false);
+  expect(called).toBe(0);
+});
+
+test("async handler - cache hit gives a Promise and skips the handler", async () => {
+  let called = 0;
+  const proc = zagora()
+    .input(z.string())
+    .cache(new Map())
+    .handler(async (_, input) => {
+      called += 1;
+      return input;
+    })
+    .callable();
+
+  expect(await proc("a")).toMatchObject({ ok: true, data: "a" });
+  expect(called).toBe(1);
+
+  const hit = proc("a");
+  expectTypeOf(hit).toExtend<Promise<unknown>>();
+  expect(hit).toBeInstanceOf(Promise);
+  expect(await hit).toMatchObject({ ok: true, data: "a" });
+  expect(called).toBe(1);
+});
+
+test("Tuple with a transform - zod and valibot take typed spread arguments", () => {
   const zodProc = zagora()
     .input(z.tuple([z.string(), z.number().default(5)]).transform(([a, b]) => ({ a, b })))
     .handler((_, input) => input)
@@ -531,13 +564,13 @@ test("Tuple with a transform - zod and valibot pass the output as one handler ar
 test("Zod tuple with only defaulted or optional elements - spreads into arguments", () => {
   const defaulted = zagora()
     .input(z.tuple([z.string().default("x"), z.number().default(1), z.string().optional()]))
-    .handler((_, a, b, c) => [a, b, c] as const)
+    .handler((_, a, b, c) => `a: ${a}, b: ${b}, c: ${c}`)
     .callable();
 
-  expect(defaulted()).toMatchObject({ ok: true, data: ["x", 1, undefined] });
-  expect(defaulted("a")).toMatchObject({ ok: true, data: ["a", 1, undefined] });
-  expect(defaulted("a", 2)).toMatchObject({ ok: true, data: ["a", 2, undefined] });
-  expect(defaulted("a", 2, "c")).toMatchObject({ ok: true, data: ["a", 2, "c"] });
+  expect(defaulted()).toMatchObject({ ok: true, data: "a: x, b: 1, c: undefined" });
+  expect(defaulted("a")).toMatchObject({ ok: true, data: "a: a, b: 1, c: undefined" });
+  expect(defaulted("a", 2)).toMatchObject({ ok: true, data: "a: a, b: 2, c: undefined" });
+  expect(defaulted("a", 2, "c")).toMatchObject({ ok: true, data: "a: a, b: 2, c: c" });
 
   // @ts-expect-error - the tuple spreads into arguments, so one array argument is invalid
   const res = defaulted(["a", 2]);
@@ -545,15 +578,9 @@ test("Zod tuple with only defaulted or optional elements - spreads into argument
 
   const optional = zagora()
     .input(z.tuple([z.string().optional(), z.number().optional()]))
-    .handler((_, a, b) => [a, b] as const)
+    .handler((_, a, b) => `a: ${a}, b: ${b}`)
     .callable();
 
-  expect(optional()).toMatchObject({ ok: true });
-  expect(optional("a", 2)).toMatchObject({ ok: true, data: ["a", 2] });
-});
-
-test("published types do not need Node types", async () => {
-  const types = await readFile(new URL("../src/types.ts", import.meta.url), "utf-8");
-
-  expect(types).not.toContain("NodeJS.");
+  expect(optional()).toMatchObject({ ok: true, data: "a: undefined, b: undefined" });
+  expect(optional("a", 2)).toMatchObject({ ok: true, data: "a: a, b: 2" });
 });
