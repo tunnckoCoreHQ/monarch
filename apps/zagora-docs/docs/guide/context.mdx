@@ -56,7 +56,7 @@ A `.context<T>()` call with no value sets only the type. Pass the value with `.c
 
 ## The two contexts merge key by key
 
-zagora deep-merges the `.callable()` context over the initial context. The `.callable()` context must still match the whole `.context<T>()` type, so give each required key a value there too. Plain objects merge key by key. Any other value, such as a class instance, an array, or a `Map`, replaces the initial value as it is. A database client therefore keeps its prototype and its methods.
+Zagora deep-merges the `.callable()` context over the initial context. The `.callable()` context must still match the whole `.context<T>()` type, so give each required key a value there too. Plain objects merge key by key. Any other value, such as a class instance, an array, or a `Map`, replaces the initial value as it is. A database client therefore keeps its prototype and its methods.
 
 ```ts twoslash
 import { zagora } from "zagora";

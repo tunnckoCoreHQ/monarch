@@ -26,7 +26,7 @@ On an error union, such as `result.error`, each guard narrows to the members tha
 
 ## Failures and their kinds
 
-Every failure of a step becomes a failed result. zagora freezes each error object with `Object.freeze`.
+Every failure of a step becomes a failed result. Zagora freezes each error object with `Object.freeze`.
 
 | Failure | Kind |
 | --- | --- |
@@ -37,16 +37,16 @@ Every failure of a step becomes a failed result. zagora freezes each error objec
 | A handler that throws or rejects with any other value | `UNKNOWN_ERROR`, with the thrown value in `cause` |
 | A falsy thrown value, such as `throw undefined` or `throw 0` | `UNKNOWN_ERROR` |
 | A schema that throws or rejects | `UNKNOWN_ERROR` |
-| A cache adapter method that throws or rejects | `UNKNOWN_ERROR` |
-| A cache key that zagora cannot compute | `UNKNOWN_ERROR` |
-| An async env schema, which zagora does not support | `UNKNOWN_ERROR` |
+| A [cache adapter](/guide/caching) method that throws or rejects | `UNKNOWN_ERROR` |
+| A cache key that Zagora cannot compute | `UNKNOWN_ERROR` |
+| An async env schema, which Zagora does not support | `UNKNOWN_ERROR` |
 | A thrown value whose `kind` getter throws | `UNKNOWN_ERROR`, with the thrown value in `cause` |
 
-zagora runs the steps in this order: env, input, the cache key and the cache read, the handler, the output, and the cache write. It stops the call at the first step that fails. So the handler runs only with valid input, and the cache stores only valid output.
+Zagora runs the steps in this order: env, input, the cache key and the cache read, the handler, the output, and the cache write. It stops the call at the first step that fails. So the handler runs only with valid input, and the cache stores only valid output.
 
 ## Creators
 
-zagora builds its own errors with these functions.
+Zagora builds its own errors with these functions.
 
 ### createValidationError(mode, issues, key?)
 

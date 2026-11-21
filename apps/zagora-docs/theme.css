@@ -37,3 +37,13 @@
     padding-inline: max(1.5rem, calc((100% - 84rem) / 2 + 1.5rem));
   }
 }
+
+/* Blume marks the current sidebar page with a gray background only. Give it the accent color. */
+.blume-nav-link[aria-current="page"] {
+  background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+}
+
+.blume-nav-link[aria-current="page"] svg {
+  color: inherit;
+}

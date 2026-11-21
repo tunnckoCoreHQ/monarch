@@ -5,6 +5,7 @@ export default defineMeta({
     "index",
     "getting-started",
     "comparison",
+    "contract-first",
     "how-zagora-works",
     "how-zagora-is-tested",
     "guide",

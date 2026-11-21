@@ -1,9 +1,9 @@
 ---
 title: Build a procedure
-description: How a chain of zagora builder methods becomes a procedure, and what each method sets.
+description: How a chain of Zagora builder methods becomes a procedure, and what each method sets.
 ---
 
-A procedure is a function that zagora builds for you. You describe it with a chain of builder methods. Then `.callable()` turns the chain into the function.
+A procedure is a function that Zagora builds for you. You describe it with a chain of builder methods. Then `.callable()` turns the chain into the function.
 
 ```ts twoslash
 import { z } from "zod";
@@ -30,7 +30,7 @@ const result = getPost({ id: "1" });
 
 | Method | What it sets |
 | --- | --- |
-| `.input(schema)` | The arguments. A tuple schema gives several arguments. See [input and output](/guide/input-and-output). |
+| `.input(schema)` | The arguments. A tuple schema gives [several arguments](/guide/tuple-arguments). See [input and output](/guide/input-and-output). |
 | `.output(schema)` | The return value. Without it, the type comes from the handler. |
 | `.errors(map)` | The typed error kinds. See [typed errors](/guide/typed-errors). |
 | `.context(initial?)` | The context type and an optional initial context. See [context](/guide/context). |
@@ -84,7 +84,7 @@ const result = now();
 
 ## Set the output type
 
-With `.output()`, `result.data` has the output type of the schema, and zagora validates the return value. Without `.output()`, `result.data` has the awaited return type of the handler, and zagora does not validate the return value.
+With `.output()`, `result.data` has the output type of the output schema, and Zagora validates the return value. Without `.output()`, `result.data` has the awaited return type of the handler, and Zagora does not validate the return value.
 
 ```ts twoslash
 import { z } from "zod";

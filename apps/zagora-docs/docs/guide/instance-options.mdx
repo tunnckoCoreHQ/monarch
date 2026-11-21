@@ -41,7 +41,7 @@ const procedure = zagora()
 
 ## The disableOptions flag removes the options object
 
-With `disableOptions: true`, the input arguments are the only handler parameters. The handler cannot read the context or the env values, and it gets no error helpers. zagora still validates the env values on every call.
+With `disableOptions: true`, the input arguments are the only handler parameters. The handler cannot read the context or the env values, and it gets no error helpers. Zagora still validates the env values on every call.
 
 ```ts twoslash
 import { z } from "zod";
@@ -55,7 +55,7 @@ const upper = zagora({ disableOptions: true })
 
 ## The autoCallable flag removes the callable step
 
-With `autoCallable: true`, `.handler()` makes the procedure. There is no `.callable()` step. The context, the cache adapter, and the env values come only from `.context()`, `.cache()`, and `.env(schema, envVars)`.
+With `autoCallable: true`, `.handler()` makes the procedure. There is no `.callable()` step. The context, the [cache adapter](/guide/caching), and the env values come only from `.context()`, `.cache()`, and `.env(schema, envVars)`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -93,7 +93,7 @@ upperAll(["foo", "bar"]);
 // { ok: true, data: ['FOO', 'BAR'], error: undefined }
 ```
 
-Without the options object, the handler has no error helpers. Typed errors still work. Throw a plain object with a declared `kind`, and zagora validates it against the error schema.
+Without the options object, the handler has no error helpers. Typed errors still work. Throw a plain object with a declared `kind`, and Zagora validates it against the error schema.
 
 ```ts twoslash
 import { z } from "zod";

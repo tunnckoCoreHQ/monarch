@@ -1,6 +1,6 @@
 ---
 title: Call async procedures
-description: When a zagora procedure returns a result and when it returns a promise, for sync and async handlers, schemas, and cache adapters.
+description: When a Zagora procedure returns a result and when it returns a promise, for sync and async handlers, schemas, and cache adapters.
 ---
 
 When any part of a procedure can be async, `await` every call. An `await` on a sync result does no harm. A procedure becomes async only when a part of it is async, and its return type follows the same rules. So the type of a sync procedure is not a `Promise`.
@@ -14,7 +14,7 @@ The table shows what each async part does to the procedure.
 | A handler that returns a promise | a `Promise` when the handler runs | `Promise<Result>` |
 | A schema marked `async: true`, such as a Valibot async schema | always a `Promise` | `Promise<Result>` |
 | A Zod schema with an async refinement | a `Promise` when the call reaches that schema | `Result` |
-| A cache adapter method | a `Promise` when the method runs | `Result \| Promise<Result>` |
+| A [cache adapter](/guide/caching) method | a `Promise` when the method runs | `Result \| Promise<Result>` |
 
 ## An async handler makes every call async
 
@@ -39,11 +39,11 @@ const b = asyncProc("hello");
 // a Promise of the result
 ```
 
-An async handler makes every call return a `Promise`. That includes the calls that fail before the handler runs. A plain function that returns a promise makes a call async only when the handler runs. zagora awaits a thenable that is not a native `Promise`, such as a query builder, in the same way.
+An async handler makes every call return a `Promise`. That includes the calls that fail before the handler runs. A plain function that returns a promise makes a call async only when the handler runs. Zagora awaits a thenable that is not a native `Promise`, such as a query builder, in the same way.
 
 ## A schema marked async makes every call async
 
-The Standard Schema type does not say whether a schema is async. zagora reads the `async: true` marker that some libraries put on async schemas, such as the Valibot `pipeAsync` and `objectAsync` schemas. The marked schema can be the input schema, the output schema, or any entry of the error map. The procedure then always returns a `Promise`, and its type says so.
+The Standard Schema type does not say whether a schema is async. Zagora reads the `async: true` marker that some libraries put on async schemas, such as the Valibot `pipeAsync` and `objectAsync` schemas. The marked schema can be the input schema, the output schema, or any entry of the error map. The procedure then always returns a `Promise`, and its type says so.
 
 ```ts twoslash
 import * as v from "valibot";
@@ -87,4 +87,4 @@ An async cache method makes a call async only when that call runs the method. A 
 
 ## Env schemas cannot be async
 
-zagora does not support async env schemas. The [environment variables guide](/guide/environment-variables) shows the error that you get.
+Zagora does not support async env schemas. The [environment variables guide](/guide/environment-variables) shows the error that you get.

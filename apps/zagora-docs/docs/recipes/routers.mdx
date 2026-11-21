@@ -1,9 +1,9 @@
 ---
 title: Group procedures into a router
-description: Group zagora procedures in plain objects, nest them, and share a base chain or a context factory.
+description: Group Zagora procedures in plain objects, nest them, and share a base chain or a context factory.
 ---
 
-zagora has no router. Procedures are plain functions, so a plain object of procedures is a typed router.
+Zagora has no router. Procedures are plain functions, so a plain object of procedures is a typed router.
 
 ## Group procedures in an object
 
@@ -95,8 +95,8 @@ router.getUser("1");
 
 ## Replace middleware with context
 
-zagora has no middleware. Run that logic before the call, for example to read a session or check a token. Then pass the outcome as [context](/guide/context). The [HTTP handlers recipe](/recipes/http-handlers) has a full example.
+Zagora has no middleware. Run that logic before the call, for example to read a session or check a token. Then pass the outcome as [context](/guide/context). The [HTTP handlers recipe](/recipes/http-handlers) has a full example.
 
 ## Use oRPC for a network API
 
-If you need an HTTP protocol, a typed remote client, OpenAPI, or streaming, use [oRPC](https://orpc.dev). An oRPC handler can call a zagora procedure.
+If you need an HTTP protocol, a typed remote client, OpenAPI, or streaming, use [oRPC](https://orpc.dev). An oRPC handler can call a Zagora procedure.

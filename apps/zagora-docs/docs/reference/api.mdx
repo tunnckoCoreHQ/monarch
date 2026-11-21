@@ -47,7 +47,7 @@ Sets the Standard Schema for the arguments. A tuple schema gives one argument pe
 .output<TOutput extends AnySchema>(outputSchema: TOutput)
 ```
 
-Sets the Standard Schema for the return value. zagora validates the return value of the handler with it, and `result.data` gets the output type of the schema. Without an output schema, `result.data` has the awaited return type of the handler.
+Sets the Standard Schema for the return value. Zagora validates the return value of the handler with it, and `result.data` gets the output type of the output schema. Without an output schema, `result.data` has the awaited return type of the handler.
 
 ### .context(initialContext?)
 
@@ -55,7 +55,7 @@ Sets the Standard Schema for the return value. zagora validates the return value
 .context<TNewContext extends Record<string, unknown>>(initialContext?: TNewContext)
 ```
 
-Sets the context type and an optional initial value. zagora deep-merges the `.callable()` context over the initial value. See the [context guide](/guide/context).
+Sets the context type and an optional initial value. Zagora deep-merges the `.callable()` context over the initial value. See the [context guide](/guide/context).
 
 ### .errors(errorsMap)
 
@@ -74,7 +74,7 @@ Declares the typed error kinds. The keys must be uppercase. The handler gets one
 )
 ```
 
-Sets the schema for the environment variables and their optional values. The keys of an `envVars` object literal must be uppercase. zagora validates the merged values on every call, and the handler reads the parsed values from `options.env`. An async env schema gives an `UNKNOWN_ERROR`. See the [environment variables guide](/guide/environment-variables).
+Sets the schema for the environment variables and their optional values. The keys of an `envVars` object literal must be uppercase. Zagora validates the merged values on every call, and the handler reads the parsed values from `options.env`. An async env schema gives an `UNKNOWN_ERROR`. See the [environment variables guide](/guide/environment-variables).
 
 ### .cache(cacheAdapter)
 
@@ -104,9 +104,9 @@ Sets the function that runs. Its first parameter is the options object, unless `
 
 Makes the procedure. TypeScript rejects any other option key. The options have these effects:
 
-- zagora deep-merges `context` over the initial context. The context root must be a plain object, as the type requires. A value that bypasses the type, through a cast or plain JavaScript, makes the call throw `Expects plain object args`.
+- Zagora deep-merges `context` over the initial context. The context root must be a plain object, as the type requires. A value that bypasses the type, through a cast or plain JavaScript, makes the call throw `Expects plain object args`.
 - A `cache` adapter replaces the adapter from `.cache()`.
-- zagora merges `env` over the values from `.env()`. The type of `env` is the input type of the env schema, and TypeScript rejects a key that the schema does not have. Without an env schema, the type of `env` is `never`.
+- Zagora merges `env` over the values from `.env()`. The type of `env` is the input type of the env schema, and TypeScript rejects a key that the schema does not have. Without an env schema, the type of `env` is `never`.
 
 The `TNewContext` type extends the context type from `.context()`. The `ResolveCallableEnv` type is internal to `zagora` and is not exported.
 

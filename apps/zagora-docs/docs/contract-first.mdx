@@ -1,0 +1,268 @@
+---
+title: Contract-First
+description: Write a procedure's input, output, and errors first, as a contract with no logic inside, then implement it in another file, another package, or more than once.
+sidebar:
+  icon: handshake
+---
+
+In [Getting started](/getting-started), you define a procedure and write its handler in one chain. Contract-first splits that in two. First you write a **contract**: what the procedure takes, what it returns, and how it can fail, with no logic inside. Then you implement the contract somewhere else.
+
+Zagora has no separate contract builder. A chain that stops before `.handler()` already is the contract. Each builder method returns a new builder, so an implementation builds on a contract and never changes it.
+
+That's worth the extra step when:
+
+- You want to agree on the shape of an SDK before anyone writes the logic.
+- The contract ships in a shared package, and the implementation stays private.
+- One procedure needs more than one implementation, like the real one and a fake one for tests.
+- A tool needs the schemas without the code, to generate docs, a help screen, or a form.
+
+## Define a contract
+
+Declare the input with `.input()`, the output with `.output()`, and the failures with `.errors()`. Then stop. Group the contracts in a plain object, the same way procedures form a [router](/recipes/routers).
+
+```ts twoslash title="contract.ts"
+import { z } from "zod";
+import { zagora } from "zagora";
+
+export const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.email() });
+
+export const contract = {
+  users: {
+    find: zagora()
+      .input(z.object({ id: z.string() }))
+      .output(UserSchema)
+      .errors({ NOT_FOUND: z.object({ id: z.string() }) }),
+
+    create: zagora()
+      .input(z.object({ name: z.string(), email: z.email() }))
+      .output(UserSchema)
+      .errors({ EMAIL_TAKEN: z.object({ email: z.string() }) }),
+  },
+};
+```
+
+A few things to notice:
+
+- The `.output()` schema carries more weight here. With no handler to infer from, it's the only statement of what the procedure returns. It's also a runtime check, because Zagora validates every return value against it.
+- The errors are part of the contract. A caller sees every way a procedure can fail without reading its code.
+- Keep this file free of implementation code. That's what lets any package import it.
+
+## Implement the contract
+
+Import the contract and add a handler. The handler already knows the input type, and it gets a helper for each declared error, so you only write the logic.
+
+An implementation can also ask for what it needs. Here it takes a database through the [context](/guide/context), which the contract never has to mention. The `User` type comes from the contract's `UserSchema`, so a user is defined in one place.
+
+```ts twoslash title="users.ts"
+// @filename: contract.ts
+import { z } from "zod";
+import { zagora } from "zagora";
+
+export const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.email() });
+
+export const contract = {
+  users: {
+    find: zagora()
+      .input(z.object({ id: z.string() }))
+      .output(UserSchema)
+      .errors({ NOT_FOUND: z.object({ id: z.string() }) }),
+
+    create: zagora()
+      .input(z.object({ name: z.string(), email: z.email() }))
+      .output(UserSchema)
+      .errors({ EMAIL_TAKEN: z.object({ email: z.string() }) }),
+  },
+};
+// @filename: users.ts
+// ---cut---
+import type { z } from "zod";
+import { contract, type UserSchema } from "./contract";
+
+type User = z.infer<typeof UserSchema>;
+export type Db = { users: Map<string, User> };
+
+export const findUser = contract.users.find
+  .context<{ db: Db }>()
+  .handler(({ context, errors }, { id }) => {
+    const user = context.db.users.get(id);
+    if (!user) {
+      throw errors.NOT_FOUND({ id });
+    }
+    return user;
+  });
+
+export const createUser = contract.users.create
+  .context<{ db: Db }>()
+  .handler(({ context, errors }, { name, email }) => {
+    for (const user of context.db.users.values()) {
+      if (user.email === email) {
+        throw errors.EMAIL_TAKEN({ email });
+      }
+    }
+    const user = { id: String(context.db.users.size + 1), name, email };
+    context.db.users.set(user.id, user);
+    return user;
+  });
+```
+
+The contract does the checking for you:
+
+- Zagora validates the input before the handler runs.
+- A [typed error](/guide/typed-errors) must be one that the contract declares, with data that passes its schema.
+- Zagora validates the return value against `.output()`. An implementation that drifts from the contract gives a `VALIDATION_ERROR`, never bad data.
+
+## Call the procedures
+
+Make each procedure with `.callable()`, and pass the context there. From then on, they work like any other procedure.
+
+```ts twoslash title="sdk.ts"
+// @filename: contract.ts
+import { z } from "zod";
+import { zagora } from "zagora";
+
+export const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.email() });
+
+export const contract = {
+  users: {
+    find: zagora()
+      .input(z.object({ id: z.string() }))
+      .output(UserSchema)
+      .errors({ NOT_FOUND: z.object({ id: z.string() }) }),
+
+    create: zagora()
+      .input(z.object({ name: z.string(), email: z.email() }))
+      .output(UserSchema)
+      .errors({ EMAIL_TAKEN: z.object({ email: z.string() }) }),
+  },
+};
+// @filename: users.ts
+import type { z } from "zod";
+import { contract, type UserSchema } from "./contract";
+
+type User = z.infer<typeof UserSchema>;
+export type Db = { users: Map<string, User> };
+
+export const findUser = contract.users.find
+  .context<{ db: Db }>()
+  .handler(({ context, errors }, { id }) => {
+    const user = context.db.users.get(id);
+    if (!user) {
+      throw errors.NOT_FOUND({ id });
+    }
+    return user;
+  });
+
+export const createUser = contract.users.create
+  .context<{ db: Db }>()
+  .handler(({ context, errors }, { name, email }) => {
+    for (const user of context.db.users.values()) {
+      if (user.email === email) {
+        throw errors.EMAIL_TAKEN({ email });
+      }
+    }
+    const user = { id: String(context.db.users.size + 1), name, email };
+    context.db.users.set(user.id, user);
+    return user;
+  });
+// @filename: sdk.ts
+// ---cut---
+import { createUser, findUser, type Db } from "./users";
+
+const db: Db = {
+  users: new Map([["1", { id: "1", name: "Ada", email: "ada@example.com" }]]),
+};
+
+export const sdk = {
+  users: {
+    find: findUser.callable({ context: { db } }),
+    create: createUser.callable({ context: { db } }),
+  },
+};
+
+sdk.users.find({ id: "1" });
+// { ok: true, data: { id: '1', name: 'Ada', email: 'ada@example.com' }, error: undefined }
+
+sdk.users.find({ id: "2" });
+// { ok: false, isTypedError: true, error: { id: '2', kind: 'NOT_FOUND' } }
+
+sdk.users.create({ name: "Grace", email: "ada@example.com" });
+// { ok: false, isTypedError: true, error: { email: 'ada@example.com', kind: 'EMAIL_TAKEN' } }
+```
+
+## Swap the implementation
+
+A contract doesn't change when you implement it, so you can implement it again. A test can use a fake with the same signature and the same result type as the real procedure.
+
+```ts twoslash title="users.test.ts"
+// @filename: contract.ts
+import { z } from "zod";
+import { zagora } from "zagora";
+
+export const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.email() });
+
+export const contract = {
+  users: {
+    find: zagora()
+      .input(z.object({ id: z.string() }))
+      .output(UserSchema)
+      .errors({ NOT_FOUND: z.object({ id: z.string() }) }),
+  },
+};
+// @filename: users.test.ts
+// ---cut---
+import { contract } from "./contract";
+
+const findUser = contract.users.find
+  .handler((_, { id }) => ({ id, name: "Test user", email: "test@example.com" }))
+  .callable();
+
+findUser({ id: "42" });
+// { ok: true, data: { id: '42', name: 'Test user', email: 'test@example.com' }, error: undefined }
+```
+
+The fake still goes through the contract. Zagora validates its input and its return value the same way, so a fake can't return something that the real procedure never would.
+
+## Read the schemas
+
+A contract keeps its schemas on the `~zagora` property, so a tool can read them without running anything. This example turns the input of a contract into JSON Schema.
+
+```ts twoslash title="schema.ts"
+// @filename: contract.ts
+import { z } from "zod";
+import { zagora } from "zagora";
+
+export const UserSchema = z.object({ id: z.string(), name: z.string(), email: z.email() });
+
+export const contract = {
+  users: {
+    find: zagora()
+      .input(z.object({ id: z.string() }))
+      .output(UserSchema)
+      .errors({ NOT_FOUND: z.object({ id: z.string() }) }),
+  },
+};
+// @filename: schema.ts
+// ---cut---
+import { z } from "zod";
+import { contract } from "./contract";
+
+const { inputSchema } = contract.users.find["~zagora"];
+
+const jsonSchema = inputSchema && z.toJSONSchema(inputSchema);
+// {
+//   '$schema': 'https://json-schema.org/draft/2020-12/schema',
+//   type: 'object',
+//   properties: { id: { type: 'string' } },
+//   required: ['id'],
+//   additionalProperties: false
+// }
+```
+
+The same property has `outputSchema` and `errorsMap`.
+
+## Next steps
+
+- Group the implementations into one object with the [routers recipe](/recipes/routers).
+- Serve them over HTTP with the [HTTP handlers recipe](/recipes/http-handlers).
+- Pass a database or a request to the handler with [context](/guide/context).
+- Replace dependencies in a test with the [testing recipe](/recipes/testing).

@@ -1,6 +1,6 @@
 ---
 title: Test procedures
-description: Test zagora procedures like any function, swap dependencies through context, and assert on the error kinds and the types.
+description: Test Zagora procedures like any function, swap dependencies through context, and assert on the error kinds and the types.
 ---
 
 A procedure returns a result and does not throw, so assert on the result. A test needs no setup and no `try` block.
@@ -63,7 +63,7 @@ test("returns NOT_FOUND for a missing user", () => {
 
 ## Test the types
 
-Use the `expectTypeOf` function from Vitest to check the parameters and the result type of a procedure. zagora tests its own types the same way.
+Use the `expectTypeOf` function from Vitest to check the parameters and the result type of a procedure. Zagora tests its own types the same way.
 
 ```ts twoslash
 import { expectTypeOf, test } from "vitest";

@@ -1,9 +1,9 @@
 ---
 title: Handle failed results
-description: The three error kinds, the type guards that tell them apart, and the guarantee that a zagora procedure never throws.
+description: The three error kinds, the type guards that tell them apart, and the guarantee that a Zagora procedure never throws.
 ---
 
-A zagora procedure never throws and never rejects. Every failure comes back in the result as one of three kinds of error.
+A Zagora procedure never throws and never rejects. Every failure comes back in the result as one of three kinds of error.
 
 | Kind | When | Fields |
 | --- | --- | --- |
@@ -82,8 +82,8 @@ if (!result.ok) {
 
 On a result error, each guard narrows to the matching kinds, and its `false` branch keeps the rest. So you can check the kinds in any order, and TypeScript knows what is left.
 
-The guards check the shape at runtime. So they also work on a value that zagora did not make. After `JSON.stringify`, an `UNKNOWN_ERROR` keeps its `cause` and `stack` keys only when they hold a value. Without them, `isInternalError` returns `false`, and `isDefinedError` returns `true`. The [errors reference](/reference/errors) lists the exact check of each guard.
+The guards check the shape at runtime. So they also work on a value that Zagora did not make. After `JSON.stringify`, an `UNKNOWN_ERROR` keeps its `cause` and `stack` keys only when they hold a value. Without them, `isInternalError` returns `false`, and `isDefinedError` returns `true`. The [errors reference](/reference/errors) lists the exact check of each guard.
 
 ## The call stops at the first failed step
 
-zagora stops the call at the first step that fails. Invalid env stops the call before zagora validates the input. Invalid input stops the call before the handler runs. A failed handler skips the output validation and the cache write. So the handler runs only with valid input, and the cache stores only valid output.
+Zagora stops the call at the first step that fails. Invalid env stops the call before Zagora validates the input. Invalid input stops the call before the handler runs. A failed handler skips the output validation and the cache write. So the handler runs only with valid input, and the cache stores only valid output.

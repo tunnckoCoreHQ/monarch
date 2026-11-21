@@ -3,9 +3,11 @@ title: Make values optional or give them defaults
 description: Where schema defaults and optional values apply, and how they change the types of the caller and the handler.
 ---
 
-zagora takes defaults and optional values from your schema. The caller can leave out a value that has a default, and the handler gets the default. In the handler's type, a value with a default is never `undefined`.
+Zagora takes defaults and optional values from your schema. The caller can leave out a value that has a default, and the handler gets the default. In the handler's type, a value with a default is never `undefined`.
 
 ## Make object keys optional
+
+Give an object key a `.default()` or make it `.optional()`, and the caller can leave the key out. A key with a default always has a value in the handler, so its type there is not optional. In this example, the caller's type has `age?: number`, and the handler's type has `age: number`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -27,11 +29,9 @@ profile({ name: "John" });
 // { ok: true, data: { name: 'John', age: 18 }, error: undefined }
 ```
 
-The caller's type has `age?: number`, and the handler's type has `age: number`.
-
 ## Make trailing arguments optional
 
-A missing trailing argument gets its default. The [tuple arguments](/guide/tuple-arguments) page explains how a tuple becomes a parameter list.
+In a [tuple](/guide/tuple-arguments), an element with a default or an `.optional()` element becomes an optional parameter, as long as every element after it is optional too. A missing argument gets its default before the handler runs. When every element is optional, you can call the procedure with no arguments.
 
 ```ts twoslash
 import { z } from "zod";
@@ -48,9 +48,9 @@ repeat("ha", 3, "-");
 // { ok: true, data: 'ha-ha-ha', error: undefined }
 ```
 
-Every element of a tuple can be optional or have a default. Then you can call the procedure with no arguments.
-
 ## Make a single argument optional
+
+A non-tuple input schema with a `.default()` makes the one argument optional, because its input type accepts `undefined`. An `.optional()` schema works the same way. Without the argument, the handler gets the default, or `undefined` for an `.optional()` schema.
 
 ```ts twoslash
 import { z } from "zod";
@@ -64,8 +64,6 @@ const double = zagora()
 double();
 // { ok: true, data: 20, error: undefined }
 ```
-
-The input type of `z.number().default(10)` accepts `undefined`, so the argument is optional. An `.optional()` schema works the same way.
 
 ## Give defaults to error data and env values
 

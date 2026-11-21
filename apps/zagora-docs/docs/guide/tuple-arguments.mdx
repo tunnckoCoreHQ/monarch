@@ -3,7 +3,7 @@ title: Take several arguments
 description: Use a tuple schema to give a procedure several arguments, each one validated, with defaults and optional trailing arguments.
 ---
 
-A tuple input schema gives the procedure several arguments. Each element of the tuple is one argument. zagora validates every argument, fills in the defaults, and passes the arguments to the handler as separate parameters.
+A tuple input schema gives the procedure several arguments. Each element of the tuple is one argument. Zagora validates every argument, fills in the defaults, and passes the arguments to the handler as separate parameters.
 
 ```ts twoslash
 import { z } from "zod";
@@ -42,11 +42,11 @@ introduce;
 // (name: string, age?: number, country?: string) => result
 ```
 
-In the handler, an element with a default has its output type, so `age` is a `number`. An optional element without a default is `string | undefined`.
+In the handler, each element has the output type of its schema, so `age` is a `number`. An optional element without a default is `string | undefined`.
 
-## zagora validates each argument
+## Zagora validates each argument
 
-TypeScript reports a wrong or missing argument at compile time. At runtime, zagora still validates every call. For a wrong argument, the issue path is the index of that argument, and index `0` is the first argument. For a missing argument, the issue is on `(root)`, the whole list.
+TypeScript reports a wrong or missing argument at compile time. At runtime, Zagora still validates every call. For a wrong argument, the issue path is the index of that argument, and index `0` is the first argument. For a missing argument, the issue is on `(root)`, the whole list.
 
 ```ts twoslash
 // @errors: 2345 2554
@@ -67,7 +67,7 @@ pair("John");
 
 ## Use Valibot tuples
 
-Valibot tuples work the same way. For an element written as `v.optional(schema, value)`, zagora passes `value` when the argument is missing.
+Valibot tuples work the same way. For an element written as `v.optional(schema, value)`, Zagora passes `value` when the argument is missing.
 
 ```ts twoslash
 import * as v from "valibot";
@@ -105,7 +105,7 @@ swap("apples", 3);
 
 ## Take arguments without the options object
 
-With `disableOptions: true`, the tuple elements are the only handler parameters. The handler then has no error helpers, no `context`, and no `env`, so the option suits small functions. The [instance options](/guide/instance-options) page has the details.
+With `disableOptions: true`, the tuple elements are the only handler parameters. The handler then has no [error helpers](/guide/typed-errors), no `context`, and no `env`, so the option suits small functions. The [instance options](/guide/instance-options) page has the details.
 
 ```ts twoslash
 import { z } from "zod";

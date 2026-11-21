@@ -15,7 +15,56 @@ export default defineConfig({
     accent: "teal",
   },
   navigation: {
-    sidebar: { display: "group" },
+    sidebar: {
+      display: "group",
+      items: [
+        "/",
+        "/getting-started",
+        "/comparison",
+        "/contract-first",
+        "/how-zagora-works",
+        "/how-zagora-is-tested",
+        { label: "API Reference", href: "/reference/api", icon: "code" },
+        {
+          label: "Guides",
+          icon: "book-marked",
+          items: [
+            "/guide/procedures",
+            "/guide/input-and-output",
+            "/guide/tuple-arguments",
+            "/guide/optional-and-default-values",
+            "/guide/typed-errors",
+            "/guide/error-handling",
+            "/guide/context",
+            "/guide/environment-variables",
+            "/guide/caching",
+            "/guide/async",
+            "/guide/instance-options",
+          ],
+        },
+        {
+          label: "Recipes",
+          icon: "chef-hat",
+          items: [
+            "/recipes/routers",
+            "/recipes/http-handlers",
+            "/recipes/wrapping-throwing-code",
+            "/recipes/testing",
+          ],
+        },
+        {
+          label: "Reference",
+          icon: "library",
+          items: [
+            "/reference/api",
+            "/reference/result",
+            "/reference/errors",
+            "/reference/utils",
+            "/reference/types",
+          ],
+        },
+      ],
+    },
   },
   footer: {
     copyright: "Released under the Apache-2.0 License.",

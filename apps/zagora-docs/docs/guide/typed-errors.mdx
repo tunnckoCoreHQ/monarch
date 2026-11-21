@@ -40,11 +40,11 @@ The call returns this result.
 
 ## Throw the error that the helper builds
 
-A helper builds the error object, and you `throw` the object. The helper's return type is `never`, so TypeScript knows that the code after the `throw` does not run. The procedure does not throw, because zagora catches every value that the handler throws.
+A helper builds the error object, and you `throw` the object. The helper's return type is `never`, so TypeScript knows that the code after the `throw` does not run. The procedure does not throw, because Zagora catches every value that the handler throws.
 
 ## Use uppercase keys
 
-Error kinds must be uppercase. TypeScript reports a key that is not uppercase. zagora does not check the keys at runtime.
+Error kinds must be uppercase. TypeScript reports a key that is not uppercase. Zagora does not check the keys at runtime.
 
 ```ts twoslash
 // @errors: 2345
@@ -95,9 +95,9 @@ if (!result.ok) {
 
 On a failed result, `isTypedError` is `true` only for a declared kind.
 
-## zagora validates the error data
+## Zagora validates the error data
 
-zagora validates the data that you pass to a helper against the schema of that kind. TypeScript reports wrong or missing fields at compile time, and zagora checks them again at runtime. When the data fails, the result is a `VALIDATION_ERROR`, and its `key` is the kind that failed.
+Zagora validates the data that you pass to a helper against the schema of that kind. TypeScript reports wrong or missing fields at compile time, and Zagora checks them again at runtime. When the data fails, the result is a `VALIDATION_ERROR`, and its `key` is the kind that failed.
 
 ```ts twoslash
 // @errors: 2345 2322
@@ -151,7 +151,7 @@ A plain thrown object uses its own `kind` field.
 
 A schema transform that sets `kind` does not change the `kind` of the result.
 
-## An undeclared thrown value becomes an UNKNOWN_ERROR
+## Undeclared thrown values
 
 A thrown value becomes a typed error when its `kind` is a key of the error map and its data passes the schema of that kind. A helper always sets such a `kind`. A thrown value without a declared `kind` becomes an `UNKNOWN_ERROR`, and `error.cause` holds the thrown value. The message depends on the thrown value.
 
