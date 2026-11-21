@@ -18,7 +18,6 @@ function createUnexpectedValidationError(
   );
 }
 
-// TEST: with expect-type
 export function validateInputOutputOrEnv(mode: "input" | "output" | "env", schema: any, data: any) {
   const processResult = (result: any) =>
     result.issues
@@ -38,7 +37,6 @@ export function validateInputOutputOrEnv(mode: "input" | "output" | "env", schem
   }
 }
 
-// TEST: with expect-type
 export function validateError<TKindNames>(
   errorsMap: Record<string, AnySchema>,
   error: any,
@@ -98,14 +96,18 @@ export function processHandler(
   handlerFn: any,
   args: any[],
   cacheAdapter: any,
-  incoming: any, // inputSchema, outputSchema, errorsMapSchema, envVarsMapSchema
+  incoming: {
+    inputSchema?: unknown;
+    outputSchema?: unknown;
+    errorsMap?: unknown;
+    envVarsMapSchema?: unknown;
+  },
 ) {
   const { outputSchema } = incoming;
   let key = "";
 
   if (cacheAdapter) {
     try {
-      // TODO: we should have a better serializer a bit later
       key = getCacheHash(
         JSON.stringify({ ...incoming, fnStr: handlerFn.toString(), args }, (_, value) =>
           typeof value === "bigint" ? { $bigint: value.toString() } : value,
@@ -117,46 +119,43 @@ export function processHandler(
   }
 
   if (cacheAdapter) {
-    const ret = tryCatch(() => cacheAdapter.has?.(key), false, "has");
+    const hasResult = tryCatch(() => cacheAdapter.has?.(key), false, "has");
     /* v8 ignore next -- @preserve */
-    if (ret instanceof Promise) {
-      return ret.then((r) => {
-        if (r.ok) {
-          // r.data is the result of the `cache.has`
-          return r.data
+    if (hasResult instanceof Promise) {
+      return hasResult.then((resolved) => {
+        if (resolved.ok) {
+          return resolved.data
             ? readCache(args, { handlerFn, cacheAdapter, key, outputSchema })
             : executeHandler(args, { handlerFn, cacheAdapter, key, outputSchema });
         }
-        return r;
+        return resolved;
       });
     }
 
-    if (ret.ok) {
-      // ret.data is the result of the `cache.has`
-      return ret.data
+    if (hasResult.ok) {
+      return hasResult.data
         ? readCache(args, { handlerFn, cacheAdapter, key, outputSchema })
         : executeHandler(args, { handlerFn, cacheAdapter, key, outputSchema });
     }
-    return ret;
+    return hasResult;
   }
 
   return executeHandler(args, { handlerFn, cacheAdapter, key, outputSchema });
 }
 
-// An entry can expire between `has` and `get`, so a missing value runs the handler again.
 function readCache(
   args: any[],
   options: { handlerFn: any; cacheAdapter: CacheAdapter; key: string; outputSchema?: any },
 ) {
-  const useCached = (cached: any) =>
+  const runHandlerOnMiss = (cached: any) =>
     cached.ok && cached.data === undefined ? executeHandler(args, options) : cached;
 
   const cached = tryCatch(() => options.cacheAdapter.get?.(options.key), false, "get");
   if (cached instanceof Promise) {
-    return cached.then(useCached);
+    return cached.then(runHandlerOnMiss);
   }
 
-  return useCached(cached);
+  return runHandlerOnMiss(cached);
 }
 
 function validateOutput(outputSchema: any, data: unknown) {
@@ -188,7 +187,6 @@ export function executeHandler(
     : handlerResult;
 }
 
-// Only the validated output reaches the cache, so a cache hit returns it without validating again.
 function cacheValidOutput(
   data: unknown,
   {
@@ -202,7 +200,6 @@ function cacheValidOutput(
       return output;
     }
 
-    // NOTE: that `?` and `?.` are important here because there may be no cacheAdapter.
     const resp = tryCatch(() => cacheAdapter?.set?.(key, output.data), false, "set");
     if (resp instanceof Promise) {
       return resp.then((resolved) => (resolved.ok ? output : resolved));
@@ -221,8 +218,8 @@ function cacheValidOutput(
 export function tryCatch(fn: any, isHandler: boolean, method = "") {
   try {
     const res = fn();
-    // A thenable that is not a native Promise, such as a query builder, is async too.
-    if (typeof res?.then === "function") {
+    const isThenable = typeof res?.then === "function";
+    if (isThenable) {
       return Promise.resolve(res)
         .then((data) => createResult(data, null, false))
         .catch((error: unknown) => {
@@ -262,7 +259,6 @@ export function tryCatch(fn: any, isHandler: boolean, method = "") {
   }
 }
 
-// TEST: with expect-type
 export function createResult(data: any, error: any, isTypedError: boolean) {
   if (error) {
     return { ok: false, isTypedError, error: Object.freeze(error) } as const;
@@ -280,26 +276,22 @@ export function getPipeInputSchema(schema: any) {
   return inner;
 }
 
-export function handleTupleDefaults(schema: AnySchema, rawArgs: unknown[]): unknown[] {
-  // A tuple schema piped into a transform can output a value that is not an array.
-  if (!Array.isArray(rawArgs)) {
-    return [rawArgs];
+export function handleTupleDefaults(schema: AnySchema, parsedInput: unknown): unknown[] {
+  if (!Array.isArray(parsedInput)) {
+    return [parsedInput];
   }
 
-  // Check if this might be a tuple schema by examining the schema structure
   const schemaAny = schema as any;
   const isZodTuple = schemaAny._def && schemaAny._def.type === "tuple";
   const isValibotTuple = schemaAny.type === "tuple" && !isZodTuple;
 
-  // Try to detect if this is a StandardSchema tuple schema
   if (isZodTuple || isValibotTuple) {
     const tupleItems = schemaAny?._def?.items || schemaAny.items;
 
     if (tupleItems && Array.isArray(tupleItems)) {
-      const result = [...rawArgs];
+      const result = [...parsedInput];
 
-      // Fill in defaults for missing elements
-      for (let i = rawArgs.length; i < tupleItems.length; i++) {
+      for (let i = parsedInput.length; i < tupleItems.length; i++) {
         const itemSchema = tupleItems[i];
 
         if (itemSchema && itemSchema.type === "default" && itemSchema._def) {
@@ -318,7 +310,7 @@ export function handleTupleDefaults(schema: AnySchema, rawArgs: unknown[]): unkn
     }
   }
 
-  return rawArgs;
+  return parsedInput;
 }
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== "object") {
