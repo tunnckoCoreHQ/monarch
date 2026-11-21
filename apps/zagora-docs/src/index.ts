@@ -1,6 +1,3 @@
-// Serves the static Blume build, and adds the HTTP behavior that Blume's own server build adds:
-// Markdown for `Accept: text/markdown`, a Markdown 404 for agents, and problem-details 404s under /api/.
-
 import { apiNotFoundResponse } from "blume/ai/api/handlers.ts";
 
 interface Env {
@@ -49,7 +46,6 @@ export default {
       return response;
     }
 
-    // A page answers in HTML or Markdown by the Accept header, so caches must keep them apart.
     const page = new Response(response.body, response);
     page.headers.append("vary", "Accept");
     return page;

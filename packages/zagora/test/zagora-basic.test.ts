@@ -122,7 +122,6 @@ test("should maintain immutability when chaining", () => {
   const withOutput = withInput.output(z.string());
   const withErrors = withOutput.errors(errorSchemas.single);
 
-  // Each step should return a new instance
   expect(base).not.toBe(withInput);
   expect(withInput).not.toBe(withOutput);
   expect(withOutput).not.toBe(withErrors);
@@ -209,7 +208,7 @@ test("should spread with tuple input schemas to handler args", () => {
 test("should support overriding schemas", () => {
   const funcOne = zagora()
     .input(z.string())
-    .input(z.number()) // Override input
+    .input(z.number())
     .handler((_, x) => x)
     .callable();
 
@@ -224,7 +223,7 @@ test("should support overriding schemas", () => {
   const funcTwo = zagora()
     .input(z.number())
     .output(z.string())
-    .output(z.number()) // Override output
+    .output(z.number())
     .handler((_, x) => x)
     .callable();
 
@@ -238,9 +237,9 @@ test("should support overriding schemas", () => {
   }
 
   const funcThree = zagora()
-    .input(z.string()) // TODO: support using only `.errors` without .input required
+    .input(z.string())
     .errors(errorSchemas.multiple)
-    .errors(errorSchemas.single) // Override output
+    .errors(errorSchemas.single)
     .handler(
       ({ errors }, str) => `${str}-${Object.keys(errors).length}-${typeof errors.NETWORK_ERROR}`,
     )

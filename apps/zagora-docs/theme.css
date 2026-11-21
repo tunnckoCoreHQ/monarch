@@ -10,13 +10,11 @@
   overflow-wrap: anywhere;
 }
 
-/* A `// @errors:` line shows the compiler message under the code. Let it wrap to the block width instead of its full one-line width. */
 .prose pre.twoslash .twoslash-meta-line {
   width: auto;
   min-width: 0;
 }
 
-/* Size a popup by its content, cap its width, and wrap long types. */
 .prose .twoslash-popup-container {
   width: max-content;
   max-width: min(100vw - 1.5rem, 34rem);

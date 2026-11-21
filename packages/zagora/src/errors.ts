@@ -18,17 +18,13 @@ export type InternalError = Prettify<ReturnType<typeof createInternalError>>;
 export type DefinedError<T> = Prettify<{ readonly kind: string } & T>;
 export type ZagoraError<T> = ValidationError | InternalError | DefinedError<T>;
 
-// The members of a known error union that match a guard. A type with no such member, like
-// `{ kind: string }`, narrows to the guarded shape instead.
-type NarrowTo<TError, TGuarded> = [Extract<TError, TGuarded>] extends [never]
+type ExtractOrIntersect<TError, TGuarded> = [Extract<TError, TGuarded>] extends [never]
   ? TError & TGuarded
   : Extract<TError, TGuarded>;
 
-// On a known error union, each guard narrows to the matching members, so its `false` branch keeps
-// the others. On any other value, it narrows to the error shape.
 export function isValidationError<TError extends { readonly kind: string }>(
   val: TError,
-): val is NarrowTo<TError, ValidationError<any>>;
+): val is ExtractOrIntersect<TError, ValidationError<any>>;
 export function isValidationError(val: unknown): val is ValidationError;
 export function isValidationError(val: any): boolean {
   return Boolean(
@@ -43,7 +39,7 @@ export function isValidationError(val: any): boolean {
 
 export function isInternalError<TError extends { readonly kind: string }>(
   val: TError,
-): val is NarrowTo<TError, InternalError>;
+): val is ExtractOrIntersect<TError, InternalError>;
 export function isInternalError(val: unknown): val is InternalError;
 export function isInternalError(val: any): boolean {
   return Boolean(
@@ -56,7 +52,6 @@ export function isInternalError(val: any): boolean {
   );
 }
 
-// On a known error union, narrow to the declared kinds only.
 export function isDefinedError<TError extends { readonly kind: string }>(
   val: TError,
 ): val is Exclude<TError, ValidationError<any> | InternalError>;
@@ -78,6 +73,8 @@ export function isZagoraError<T>(val: any): val is ZagoraError<T> {
   return isValidationError(val) || isInternalError(val) || isDefinedError(val);
 }
 
+const stripInputPrefix = (message: string) => message.replace("Invalid input: ", "");
+
 export function createValidationError<ErrorKindNames = never>(
   mode: "input" | "output" | "error data" | "env",
   issues: SchemaIssue[],
@@ -86,7 +83,6 @@ export function createValidationError<ErrorKindNames = never>(
   const modeName = mode.charAt(0).toUpperCase() + mode.slice(1);
   const str = key ? ` for ${(key as string).toUpperCase()}` : "";
   const issuesMsg = issues
-    // strip "input" cuz it can be confusing when we are schema validating output and errors too
     .map((issue) => {
       const key =
         issue.path
@@ -94,7 +90,7 @@ export function createValidationError<ErrorKindNames = never>(
             String(typeof segment === "object" && segment !== null ? segment.key : segment),
           )
           .join(".") || "(root)";
-      const message = issue.message.replace("Invalid input: ", "");
+      const message = stripInputPrefix(issue.message);
       return `${key} => ${message}`;
     })
     .join("; ");

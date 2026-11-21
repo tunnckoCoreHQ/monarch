@@ -18,15 +18,8 @@ test("typed errors should be in options - when input schema is defined", () => {
 
   const func = zagora()
     .errors(errorSchemas)
-    // .errors({ FOO: z.object({ msg: z.string() }) })
-    .handler(({ errors }) => {
+    .handler(({ errors }): string => {
       throw errors.BAR_ERR({ msg: "Custom error" });
-
-      // NOTE: simulate return, because the return types break
-      // when no return and no `input` schema
-
-      // oxlint-disable-next-line no-unreachable -- the dead return gives the handler a string return type
-      return "foo";
     })
     .callable();
 
@@ -281,12 +274,9 @@ test("Handler without input schema should work", () => {
   };
 
   const func = zagora()
-    // no .input() call
     .errors(errorSchemas)
-    .handler(({ errors }) => {
+    .handler(({ errors }): string => {
       throw errors.BARRY_ERR({ msg: "Some custom error" });
-      // oxlint-disable-next-line no-unreachable -- the dead return gives the handler a string return type
-      return "foo";
     })
     .callable();
 
@@ -319,7 +309,6 @@ test("Handler without input schema and no errors should work", () => {
   }
 });
 
-// Basic async function that can succeed or fail
 const basicAsyncFn = async (input: string): Promise<string> => {
   if (input !== "foobie") {
     throw new Error("Basic async failed");
@@ -336,7 +325,6 @@ test("wrapping external async functions in pseudo-sync `.handler` fn", async () 
   expect(res1.ok).toBe(true);
   expect((res1 as any).data).toBe("processed: foobie");
 
-  // Test basic wrapper without schemas - failure
   const failingBasicWrapper = zagora()
     .handler(() => basicAsyncFn("fail one"))
     .callable();
@@ -350,7 +338,6 @@ test("wrapping external async functions in pseudo-sync `.handler` fn", async () 
     expect((res2.error.cause as Error).message).toBe("Basic async failed");
   }
 
-  // Test with non-existent file
   const fsWrapper = zagora()
     .input(z.string())
     .output(z.string())
@@ -371,7 +358,6 @@ test("wrapping external async functions in pseudo-sync `.handler` fn", async () 
     ).toBeInstanceOf(true);
   }
 
-  // Test with package.json (should exist)
   const res4 = await fsWrapper("package.json");
   expect(res4.ok).toBe(true);
 
