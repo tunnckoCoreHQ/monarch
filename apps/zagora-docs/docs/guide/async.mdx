@@ -10,7 +10,7 @@ The table shows what each async part does to the procedure.
 | What is async | Runtime value | TypeScript return type |
 | --- | --- | --- |
 | Nothing | `Result` | `Result` |
-| A handler with the `async` keyword | always a `Promise` | `Promise<Result>` |
+| An async handler | always a `Promise` | `Promise<Result>` |
 | A handler that returns a promise | a `Promise` when the handler runs | `Promise<Result>` |
 | A schema marked `async: true`, such as a Valibot async schema | always a `Promise` | `Promise<Result>` |
 | A Zod schema with an async refinement | a `Promise` when the call reaches that schema | `Result` |
@@ -39,7 +39,7 @@ const b = asyncProc("hello");
 // a Promise of the result
 ```
 
-A handler with the `async` keyword makes every call return a `Promise`. That includes the calls that fail before the handler runs. A plain function that returns a promise makes a call async only when the handler runs. zagora awaits a thenable that is not a native `Promise`, such as a query builder, in the same way.
+An async handler makes every call return a `Promise`. That includes the calls that fail before the handler runs. A plain function that returns a promise makes a call async only when the handler runs. zagora awaits a thenable that is not a native `Promise`, such as a query builder, in the same way.
 
 ## A schema marked async makes every call async
 

@@ -13,7 +13,7 @@ Each builder method returns a new `Zagora` instance with one more field in its d
 
 The `.callable()` method reads the definition once and decides the async shape of the procedure. Two parts make every call async:
 
-- A handler with the `async` keyword. zagora wraps the procedure, so every call returns a `Promise`. That includes a call whose input fails the schema.
+- An async handler. zagora wraps the procedure, so every call returns a `Promise`. That includes a call whose input fails the schema.
 - A schema with the `async: true` marker, such as a Valibot `pipeAsync` schema. zagora wraps the procedure in the same way.
 
 Other parts make a call async only when that call reaches them. zagora adds no wrapper for them:
@@ -32,9 +32,9 @@ The env values are not on the `~zagora` definition of the procedure. An early ve
 
 Before the merge, zagora copies `process.env` with a spread. On Node, `process.env` is not a plain object, and the merge accepts only plain objects. The v1 review in [#176](https://github.com/tunnckoCoreHQ/monarch/pull/176) found that `.callable({ env: process.env })` threw for that reason.
 
-## Step 2: the context merge keeps prototypes and blocks `__proto__`
+## Step 2: the context
 
-zagora deep-merges the `.callable()` context over the initial context. Plain objects merge key by key. Any other value, such as a database client, replaces the initial value as it is, so the client keeps its prototype. The merge writes each key as an own data property. A `__proto__` key in an override therefore cannot change the prototype of the merged object. [#176](https://github.com/tunnckoCoreHQ/monarch/pull/176) made that fix.
+zagora deep-merges the `.callable()` context over the initial context. Plain objects merge key by key. Any other value, such as a database client, replaces the initial value as it is, so the client keeps its prototype.
 
 ## Step 3: zagora validates the input, and a tuple becomes real parameters
 
