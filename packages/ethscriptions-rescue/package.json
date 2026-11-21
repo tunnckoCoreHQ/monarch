@@ -1,6 +1,6 @@
 {
   "name": "ethscriptions-rescue",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Rescue ethscriptions from a compromised wallet with EIP-7702, while another wallet pays the gas",
   "keywords": [
     "cli",

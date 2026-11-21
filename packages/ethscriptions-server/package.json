@@ -1,6 +1,6 @@
 {
   "name": "@tunnckocore/ethscriptions-server",
-  "version": "0.13.5",
+  "version": "0.14.0",
   "description": "Enhanced Ethscriptions API server. Caches, validates inputs and outputs with Zod, and unifies Ethscriptions API's responses, according to ESIP-9. Includes support for resolving ENS on-chain / off-chain names, and Ethscriptions names.",
   "homepage": "https://github.com/tunnckoCoreHQ/monarch/tree/master/packages/ethscriptions-server",
   "license": "MPL-2.0",
