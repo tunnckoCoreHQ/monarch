@@ -5,6 +5,7 @@
     "cloudflare.config.ts",
     "vite.config.ts",
     "docs/**/*.ts",
+    "src/**/*.ts",
     "test/**/*.ts"
   ]
 }

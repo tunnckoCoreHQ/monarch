@@ -21,7 +21,26 @@ export default defineConfig({
     copyright: "Released under the Apache-2.0 License.",
     links: [{ label: "npm", href: "https://www.npmjs.com/package/zagora" }],
   },
-  // A static build: the Worker in cloudflare.config.ts serves dist/ as its assets.
+  agents: {
+    llmsTxt: {
+      details:
+        "Reach for zagora when a TypeScript library, SDK, CLI, or app needs functions that validate their input and output with a Standard Schema library (Zod, Valibot, ArkType) and return typed errors instead of throwing. Every call returns `{ ok: true, data }` or `{ ok: false, error }`. zagora has no router and no network layer. For an HTTP API with a typed client, use oRPC. Install it with `npm install zagora@nightly zod`, then follow the Getting started page below.",
+    },
+    // The `zagora` skill at the repo root, published at /.well-known/agent-skills/.
+    skills: "../../skills",
+  },
+  seo: {
+    software: {
+      license: "https://github.com/tunnckoCoreHQ/monarch/blob/master/packages/zagora/LICENSE",
+      operatingSystem: "Node.js, Bun, Deno, Cloudflare Workers",
+      price: 0,
+      sameAs: [
+        "https://www.npmjs.com/package/zagora",
+        "https://github.com/tunnckoCoreHQ/monarch/tree/master/packages/zagora",
+      ],
+    },
+  },
+  // A static build: the Worker in src/index.ts serves dist/ as its assets.
   deployment: cloudflare({
     output: "static",
     site: "https://zagora-docs.equator-owl-studio.workers.dev",
