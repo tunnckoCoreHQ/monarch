@@ -29,7 +29,6 @@ test("validateInputOutput - async validation success path (line 82)", async () =
     .output(z.string())
     .handler((input) => input.toUpperCase());
 
-  // NOTE: Having an ASYNC validation at any place, always require the procedure to be awaited
   const res = await fn("valid");
 
   expect(res.ok).toBe(true);
@@ -130,8 +129,6 @@ test("validateError - async error validation with issues (lines 132-135)", async
     })
     .callable();
 
-  // TODO / DOCUMENT: Having an ASYNC validation at any place,
-  //                  always require the procedure to be awaited
   const res = await fn("fail");
   expect(res.ok).toBe(false);
   if (!res.ok) {
@@ -140,7 +137,6 @@ test("validateError - async error validation with issues (lines 132-135)", async
 });
 
 test("handleTupleDefaults - Valibot tuple with optional having default (lines 202-203)", () => {
-  // Create a mock valibot tuple schema structure
   const mockValibotSchema = {
     type: "tuple",
     items: [{ type: "string" }, { type: "optional", default: 99 }],
@@ -150,7 +146,7 @@ test("handleTupleDefaults - Valibot tuple with optional having default (lines 20
   expect(result).toEqual(["test", 99]);
 });
 
-test("handleTupleDefaults - non-tuple schema returns rawArgs (lines 208-209)", () => {
+test("handleTupleDefaults - non-tuple schema returns the input unchanged (lines 208-209)", () => {
   const result = handleTupleDefaults(z.string() as any, ["foo", "bar"]);
   expect(result).toEqual(["foo", "bar"]);
 });

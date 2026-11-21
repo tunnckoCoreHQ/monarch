@@ -21,5 +21,5 @@ The table lists the functions in the order of the source file.
 | `tryCatch(fn, isHandler, method?)` | Calls `fn` and returns a result, or a `Promise` of one for a thenable. A throw or a rejection gives a failed result. With `isHandler` set to `true`, the failed result has the raw error, `handlerFailed: true`, and `isAsync`. With `isHandler` set to `false`, the error is an `UNKNOWN_ERROR` whose message names the `CacheAdapter` method. |
 | `createResult(data, error, isTypedError)` | Builds a result. With a truthy `error`, it returns `{ ok: false, isTypedError, error }` with the error frozen. Otherwise it returns `{ ok: true, data, error: undefined }`. |
 | `getPipeInputSchema(schema)` | Follows the Zod pipes that transforms make, and returns the schema that receives the input. |
-| `handleTupleDefaults(schema, rawArgs)` | Fills in the defaults of missing trailing elements for Zod and Valibot tuple schemas. A value that is not an array comes back wrapped in an array. |
+| `handleTupleDefaults(schema, parsedInput)` | Fills in the defaults of missing trailing elements for Zod and Valibot tuple schemas. A value that is not an array comes back wrapped in an array. |
 | `deepMerge(base, override)` | Merges plain objects key by key. Other values replace the base value. Throws when `base` or `override` is not a plain object. Keeps `__proto__` as an own data key. |

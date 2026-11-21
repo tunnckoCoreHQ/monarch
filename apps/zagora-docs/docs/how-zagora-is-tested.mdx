@@ -1,0 +1,45 @@
+---
+title: How zagora is tested
+description: The runtime tests, the type tests, the test of the built package, and the type-checked docs that stand behind the small zagora API.
+sidebar:
+  icon: flask-conical
+---
+
+zagora has about 1,300 lines of source, types included. Its tests are about three times that size. The library makes two guarantees that a small change can break. A call never throws, and the types describe what the runtime does. Each guarantee has its own kind of test.
+
+## Runtime tests
+
+The runtime tests call real procedures with Zod and Valibot schemas, and assert on the results. They cover more than 98% of the source lines and every function. They cover these areas:
+
+- **The builder and the call.** Chains, overrides, immutability, tuple arguments, defaults, and the three error kinds.
+- **Edge cases.** Falsy thrown values, thenables that are not native promises, symbol kinds, getters that throw, `__proto__` keys in a context, and `process.env` on Node.
+- **Instance options.** Procedures with `disableOptions`, `autoCallable`, or both.
+- **Utilities.** The cache key, the cache read and write, the merge, and the tuple defaults, each tested on its own.
+
+A fix lands with a test that fails without it. The v1 review in [#176](https://github.com/tunnckoCoreHQ/monarch/pull/176) followed that rule for each of its fixes.
+
+## Type tests
+
+A type can be wrong while every runtime test passes. For example, a required tuple element can look optional, or an async handler can get a sync type. zagora tests its types with `expectTypeOf` assertions and `@ts-expect-error` lines. The type checker runs them in the `check` task, so a wrong type fails CI like a failed runtime test.
+
+The type tests check the hard parts of the type system:
+
+- The async shape: a sync result, a `Promise`, or a union of both, for each mix of handler, schemas, and cache adapter.
+- The parameters: a tuple spread with optional trailing elements, and a single argument that a default makes optional.
+- The error union of a result, and the narrowing of each guard in both branches.
+- The options object of the handler: the context, the error helpers, and the env values.
+- The errors that TypeScript must report, such as an error map key that is not uppercase.
+
+## The built package
+
+The tests import the source, but users import the build. One test file imports from `dist` instead. The `test` task of the package depends on the `build` task, so CI tests the same files that npm gets.
+
+## Type-checked docs
+
+Every `ts twoslash` example in these docs compiles with the zagora types when the site builds. An example that stops compiling fails the build, so an API change cannot leave a stale example behind. A docs test also checks every link on the site.
+
+## Reviews
+
+Review bots read each pull request, and required CI checks run the type check, the tests, and the build on each push. A pull request cannot merge while one of those checks fails.
+
+Run `turbo run check test --filter=zagora` to see the current test count and coverage table.

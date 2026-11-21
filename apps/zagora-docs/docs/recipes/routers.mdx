@@ -42,7 +42,7 @@ router.users.get("1");
 
 ## Share a base chain
 
-Build part of the chain once, and start each procedure from it. Every builder method returns a new instance, so the base does not change.
+Build part of the chain once, and start each procedure from it. Every builder method returns a new builder, so the base does not change.
 
 ```ts twoslash
 import { z } from "zod";

@@ -1,5 +1,5 @@
 ---
-title: Procedures
+title: Build a procedure
 description: How a chain of zagora builder methods becomes a procedure, and what each method sets.
 ---
 
@@ -26,7 +26,7 @@ const getPost = za
 const result = getPost({ id: "1" });
 ```
 
-## The builder methods
+## Chain the builder methods
 
 | Method | What it sets |
 | --- | --- |
@@ -41,7 +41,7 @@ const result = getPost({ id: "1" });
 
 The [API reference](/reference/api) has every signature.
 
-## Order and immutability
+## Share a partly built chain
 
 Each method returns a new builder and leaves the old builder unchanged. So you can share a partly built chain, and many procedures can build on one base.
 
@@ -68,7 +68,7 @@ const getPost = base
 
 You can call the methods before `.handler()` in any order. A second call to the same method replaces the value of the first call. For example, `.input(z.string()).input(z.number())` takes a number.
 
-## No input
+## Define a procedure without input
 
 Without `.input()`, the procedure takes no arguments.
 
@@ -82,7 +82,7 @@ const now = zagora()
 const result = now();
 ```
 
-## Output type
+## Set the output type
 
 With `.output()`, `result.data` has the output type of the schema, and zagora validates the return value. Without `.output()`, `result.data` has the awaited return type of the handler, and zagora does not validate the return value.
 
@@ -108,7 +108,7 @@ if (b.ok) b.data;
 // { id: number }
 ```
 
-## Procedure metadata
+## Read the procedure definition
 
 Every procedure has its definition on the `~zagora` property. The definition holds the schemas, the error map, the initial context, the cache adapter, the handler, and the instance flags. A tool can read it, for example to build a help screen from the input schema.
 

@@ -7,7 +7,6 @@ import { z } from "zod";
 import { isDefinedError, isInternalError, isValidationError } from "../src/errors";
 import { zagora } from "../src/index";
 
-// Schemas
 const errorSchemas = {
   NETWORK_ERROR: z.object({
     message: z.string(),
@@ -154,11 +153,7 @@ test("async input schema", async () => {
     .callable();
 
   const res = await fn("ab");
-  if (!res.ok) {
-    expect(true).toBe(true); // Validation should fail
-  } else {
-    expect(false, "Expected validation error").toBe(true);
-  }
+  expect(res.ok).toBe(false);
 });
 
 test("async output schema", async () => {
@@ -171,11 +166,7 @@ test("async output schema", async () => {
     .callable();
 
   const res = await fn("bad");
-  if (!res.ok) {
-    expect(true).toBe(true); // Validation should fail
-  } else {
-    expect(false, "Expected validation error").toBe(true);
-  }
+  expect(res.ok).toBe(false);
 });
 
 test("Valibot async schemas always return promises", async () => {
@@ -260,11 +251,7 @@ test("handleError with async schema validation", async () => {
     .callable();
 
   const res = await fn("fail");
-  if (!res.ok) {
-    expect(true).toBe(true); // Some error occurred
-  } else {
-    expect(false, "Expected error").toBe(true);
-  }
+  expect(res.ok).toBe(false);
 });
 
 test("async handler typed error", async () => {
@@ -334,7 +321,6 @@ test("Error.cause is set on wrapped errors", () => {
   }
 });
 
-// TODO: fix to support array schemas, and not treat it as tuple schemas!
 test("input schema array of string should work", () => {
   const fn = zagora()
     .input(z.array(z.string()))
@@ -367,11 +353,7 @@ test("input validation failure", () => {
     .callable();
 
   const res = fn(123 as any);
-  if (!res.ok) {
-    expect(true).toBe(true); // Just check it's not ok
-  } else {
-    expect(false, "Expected input validation error").toBe(true);
-  }
+  expect(res.ok).toBe(false);
 });
 
 test("output validation failure", () => {
@@ -382,13 +364,9 @@ test("output validation failure", () => {
     .callable();
 
   const res = fn("foo");
-  if (!res.ok) {
-    expect(true).toBe(true); // Just check it's not ok
-    expect(res.error.kind).toBe("VALIDATION_ERROR");
-    expect(res.error.message).toContain("Output validation failed");
-  } else {
-    expect(false, "Expected output validation error").toBe(true);
-  }
+  expect(res.ok).toBe(false);
+  expect(res.error?.kind).toBe("VALIDATION_ERROR");
+  expect(res.error?.message).toContain("Output validation failed");
 });
 
 test("no error schema works", () => {
@@ -406,11 +384,8 @@ test("no error schema works", () => {
     .callable();
 
   const res = fn("fail");
-  if (!res.ok && isInternalError(res.error)) {
-    expect(true).toBe(true);
-  } else {
-    expect(false, "Expected internal error").toBe(true);
-  }
+  expect(res.ok).toBe(false);
+  expect(isInternalError(res.error)).toBe(true);
 });
 
 test("tuple input arguments", () => {
@@ -553,7 +528,6 @@ test("handle optional/default values in object schemas", async () => {
     }),
   };
 
-  // "contract" means just access to the Zagora instance
   const getPricesContract = zagora({ autoCallable: true })
     .errors(errorSchemas)
     .input(InputSchema)
@@ -567,7 +541,6 @@ test("handle optional/default values in object schemas", async () => {
       includeDetails: boolean;
     }>();
 
-    // Simulate rate limiting
     if (num && num > 1000) {
       throw err.RATE_LIMIT({
         retryAfter: 60,
@@ -576,7 +549,6 @@ test("handle optional/default values in object schemas", async () => {
       });
     }
 
-    // Simulate validation error
     if (speed === "slow" && includeDetails) {
       throw err.AUTH_ERR({
         userId: "user123",
@@ -597,7 +569,6 @@ test("handle optional/default values in object schemas", async () => {
 
       const { data }: any = await resp.json();
 
-      // Success case - return the data
       return {
         block_number: String(data.blockNr),
         base_fee: String(data.baseFee),
@@ -608,7 +579,6 @@ test("handle optional/default values in object schemas", async () => {
         priority_fee: String(data.oracle[speed].priorityFee),
       };
     } catch (error) {
-      // This will be automatically wrapped in ZagoraError since we didn't handle it with our typed errors
       throw new Error(`Failed to fetch gas prices: ${String(error)}`, { cause: error });
     }
   });
@@ -650,18 +620,14 @@ test("handle optional/default values in object schemas", async () => {
 
 test("basic in-memory caching/memoization", async () => {
   const cache = new Map();
-  // const za = zagora({ autoCallable: true }).cache(cache);
   const za = zagora({ autoCallable: true }).cache({
     has(key: string) {
-      // throw new Error("Not implemented");
       return cache.has(key);
     },
     get(key: string) {
-      // throw new Error("Get method not implemented yet");
       return cache.get(key);
     },
     set(key: string, value: any) {
-      // throw new Error("Set method is not implemented");
       cache.set(key, value);
     },
   });
@@ -681,25 +647,18 @@ test("basic in-memory caching/memoization", async () => {
   if (helloRes.ok) {
     expect(helloRes.data).toBe("Hello, World!");
   } else {
-    // console.log("ERR:", helloRes);
     expect(false, "Should not reach here").toBe(true);
   }
 
-  // NOTE: should be instant cuz the in-memory cache - eg. test takes only 100ms instead of 200ms
-  // NOTE: if the input is different, it would not be in the cache, so handler would be called again
   const helloRes2 = await hello("World");
   expect(called, "Expects to be called once after second call").toBe(1);
 
   if (helloRes2.ok) {
     expect(helloRes2.data).toBe("Hello, World!");
   } else {
-    // console.log("helloRes2 ERR:", helloRes2);
     expect(false, "Should be instant and not reach here").toBe(true);
   }
 
-  // NOTE: if the any of the input, inputSchema, outputSchema, or errorsMap schema,
-  // or if the body of the handler changes, it would be a different cache key/entry,
-  // meaning that the handler would be called/executed, thus `called` would be 2 now.
   const _ = await hello("Bobby");
   expect(called, "Expects `called` to be incremented").toBe(2);
 });
@@ -808,7 +767,6 @@ test("the cache stores only the validated output", async () => {
   expect((await procedure("foo")).ok).toBe(false);
   expect(await procedure("foo")).toEqual({ ok: true, data: 3 });
 
-  // the third call returns the cached output without validating it again
   expect(await procedure("foo")).toEqual({ ok: true, data: 3 });
   expect(called).toBe(2);
   expect([...cache.values()]).toEqual([3]);
@@ -886,8 +844,6 @@ test("async env schema should fail", async () => {
     .callable({
       env: {
         ABC: "sasa",
-        // NOTE: as long as the schema is actually `z.union([object, record])`
-        // it is fine, otherwise this line will be reported
         BAR: "env-not-defined-in-schema-is-fine",
       },
     });
@@ -914,7 +870,6 @@ test("passning and sync env schema", () => {
       return `Hello ${env.FOO_NAME}, wasup`;
     })
     .callable({
-      // env: process.env as any,
       env: {
         FOO_NAME: "Charlie",
         // @ts-expect-error -- expected to report type-error! Because the env schema is only `z.object()`
@@ -967,7 +922,6 @@ test("4-argument tuple with last optional", () => {
     })
     .callable();
 
-  // With all 4 args
   const res1 = fn("hello", 42, true, { id: "test" });
   if (res1.ok) {
     expect(res1.data).toBe("hello-42-true-test");
@@ -975,7 +929,6 @@ test("4-argument tuple with last optional", () => {
     expect(false, "expect succcess on 4-arg all passed").toBe(true);
   }
 
-  // With 3 args (4th optional omitted)
   const res2 = fn("hello", 42, true);
   if (res2.ok) {
     expect(res2.data).toBe("hello-42-true-none");
@@ -1005,7 +958,6 @@ test("4-argument tuple with defaults", () => {
     })
     .callable();
 
-  // With all 4 args
   const res1 = fn("test", 10, true, { id: "custom" });
   if (res1.ok) {
     expect(res1.data).toBe("test-10-true-custom");
@@ -1013,7 +965,6 @@ test("4-argument tuple with defaults", () => {
     expect(false, "expect succcess on 4-arg with defaults").toBe(true);
   }
 
-  // With only first arg (rest use defaults)
   const res2 = fn("test");
   if (res2.ok) {
     expect(res2.data).toBe("test-100-false-default");

@@ -1,5 +1,5 @@
 ---
-title: Environment variables
+title: Validate environment variables
 description: Validate environment variables with a schema, pass them when you define the procedure or when you make it callable, and read the parsed values in the handler.
 ---
 
@@ -26,11 +26,11 @@ const connect = zagora()
 
 The handler gets the schema output, not the raw strings. Here `z.coerce.number()` turns `PORT` into a `number`.
 
-## Pass the values when you define or when you make the procedure
+## Pass the values with .env() or .callable()
 
 You can pass the values in one place or in both:
 
-- The second argument of `.env(schema, envVars)` takes `process.env`, `import.meta.env`, a Cloudflare Workers `env`, or a plain object.
+- The second argument of `.env(schema, envVars)` takes a record of string values, such as `process.env`, `import.meta.env`, a Cloudflare Workers `env`, or a plain object.
 - The `env` option of `.callable({ env })` is for values that exist only where the call happens.
 
 When you pass both, zagora merges the `.callable()` values over the `.env()` values.
@@ -86,8 +86,10 @@ proc();
 
 The procedure has a `~zagora` property with its definition. That property has the env schema, but not the env values. Code that gets only the procedure cannot read the values.
 
-## Auto-callable and disableOptions procedures
+## Pass values to auto-callable procedures
 
-With `autoCallable: true`, there is no `.callable()` step. Pass the values as the second argument of `.env()`. If you do not, the types still give `env` its values, but the validation fails at runtime.
+With `autoCallable: true`, there is no `.callable()` step. Pass the values as the second argument of `.env()`. If you do not, zagora validates an empty object. A schema with required keys then fails at runtime, but the types still give `env` its values.
 
-With `disableOptions: true`, the handler gets no options object. It cannot read `env`.
+## Procedures with disableOptions cannot read env
+
+With `disableOptions: true`, the handler gets no options object, so it cannot read `env`. zagora still validates the env values on every call.

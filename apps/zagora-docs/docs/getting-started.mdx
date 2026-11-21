@@ -54,7 +54,7 @@ const result = greet("Ada");
 
 if (result.ok) {
   result.data;
-  // string
+  // 'Hello, Ada!'
 } else {
   result.error;
   // a VALIDATION_ERROR or an UNKNOWN_ERROR
@@ -94,11 +94,10 @@ The `message` names the failed path and the schema's message. The `issues` array
 
 ## Export the procedure
 
-A procedure is a function, so you export it like one. A library can export procedures directly, and an app can collect them in a plain object.
+A procedure is a function, so you export it like one. Keep `greet` in `greet.ts`, and export it again from the entry file of your package.
 
 ```ts
 export { greet } from "./greet";
-export { getUser, createUser } from "./users";
 ```
 
 Other modules can now import `greet` and call it.

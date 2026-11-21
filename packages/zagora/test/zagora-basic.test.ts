@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as v from "valibot";
-import { expect, test } from "vitest";
+import { expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
 
 import { Zagora, zagora } from "../src/index";
@@ -122,7 +122,6 @@ test("should maintain immutability when chaining", () => {
   const withOutput = withInput.output(z.string());
   const withErrors = withOutput.errors(errorSchemas.single);
 
-  // Each step should return a new instance
   expect(base).not.toBe(withInput);
   expect(withInput).not.toBe(withOutput);
   expect(withOutput).not.toBe(withErrors);
@@ -209,7 +208,7 @@ test("should spread with tuple input schemas to handler args", () => {
 test("should support overriding schemas", () => {
   const funcOne = zagora()
     .input(z.string())
-    .input(z.number()) // Override input
+    .input(z.number())
     .handler((_, x) => x)
     .callable();
 
@@ -224,7 +223,7 @@ test("should support overriding schemas", () => {
   const funcTwo = zagora()
     .input(z.number())
     .output(z.string())
-    .output(z.number()) // Override output
+    .output(z.number())
     .handler((_, x) => x)
     .callable();
 
@@ -238,9 +237,9 @@ test("should support overriding schemas", () => {
   }
 
   const funcThree = zagora()
-    .input(z.string()) // TODO: support using only `.errors` without .input required
+    .input(z.string())
     .errors(errorSchemas.multiple)
-    .errors(errorSchemas.single) // Override output
+    .errors(errorSchemas.single)
     .handler(
       ({ errors }, str) => `${str}-${Object.keys(errors).length}-${typeof errors.NETWORK_ERROR}`,
     )
@@ -253,4 +252,28 @@ test("should support overriding schemas", () => {
   } else {
     expect(false, "Should not error for overriding error schemas").toBe(true);
   }
+});
+
+test("should support .errors() without .input()", () => {
+  const countKinds = zagora()
+    .errors(errorSchemas.multiple)
+    .handler(({ errors }) => Object.keys(errors).length)
+    .callable();
+
+  const counted = countKinds();
+  expect(counted).toMatchObject({ ok: true, data: 2 });
+  if (counted.ok) {
+    expectTypeOf(counted.data).toEqualTypeOf<number>();
+  }
+
+  const alwaysFails = zagora()
+    .errors(errorSchemas.single)
+    .handler(({ errors }) => {
+      throw errors.NETWORK_ERROR({ type: "NETWORK_ERROR", message: "offline", statusCode: 503 });
+    })
+    .callable();
+
+  const failed = alwaysFails();
+  expect(failed.ok).toBe(false);
+  expect(failed.error?.kind).toBe("NETWORK_ERROR");
 });

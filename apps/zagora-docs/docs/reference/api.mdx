@@ -17,15 +17,12 @@ description: The zagora() factory, its config, and every builder method with its
 Creates a builder.
 
 ```ts
-function zagora(config?: ZagoraConfig): Zagora;
-
-interface ZagoraConfig {
-  disableOptions?: boolean; // default false
-  autoCallable?: boolean; // default false
-}
+function zagora(): Zagora;
+function zagora(config: { disableOptions: boolean; autoCallable?: boolean }): Zagora;
+function zagora(config: { autoCallable: boolean; disableOptions?: boolean }): Zagora;
 ```
 
-The config has two flags.
+A config object sets at least one of the two flags. Both flags are `false` by default.
 
 - `disableOptions`. The handler gets only the input arguments, without the options object.
 - `autoCallable`. The `.handler()` method returns the procedure, without `.callable()`.
@@ -107,7 +104,7 @@ Sets the function that runs. Its first parameter is the options object, unless `
 
 Makes the procedure. TypeScript rejects any other option key. The options have these effects:
 
-- zagora deep-merges `context` over the initial context.
+- zagora deep-merges `context` over the initial context. The context root must be a plain object, as the type requires. A value that bypasses the type, through a cast or plain JavaScript, makes the call throw `Expects plain object args`.
 - A `cache` adapter replaces the adapter from `.cache()`.
 - zagora merges `env` over the values from `.env()`. The type of `env` is the input type of the env schema, and TypeScript rejects a key that the schema does not have. Without an env schema, the type of `env` is `never`.
 
@@ -121,5 +118,5 @@ The procedure is the function that `.callable()` returns, or that `.handler()` r
 
 - It takes the arguments that the input schema describes.
 - It returns a [result](/reference/result), or a `Promise` of one when part of the procedure is async. See the [async guide](/guide/async).
-- It returns failures in the result. It does not throw and does not reject.
+- It returns every failure in the result. It does not throw and does not reject.
 - Its `~zagora` property has the definition, without the env values. The definition can have the keys `inputSchema`, `outputSchema`, `errorsMap`, `envVarsMapSchema`, `initialContext`, `cacheAdapter`, `handler`, `disableOptions`, and `autoCallable`. A key is there only when the builder set it.

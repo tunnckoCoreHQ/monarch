@@ -11,7 +11,6 @@ test("autoCallable: false (default) - requires .callable() call", () => {
     .output(z.string())
     .handler((_, input) => input.toUpperCase());
 
-  // builder is still a Zagora instance, not callable
   expect(typeof builder.callable).toBe("function");
 
   const fn = builder.callable();
@@ -52,14 +51,11 @@ describe("callable procedure metadata", () => {
       .handler((_, id) => id)
       .callable();
 
-    // Metadata should be available
     expect(procedure["~zagora"]).toBeDefined();
     expect(procedure["~zagora"].inputSchema).toBeDefined();
 
-    // Call procedure multiple times
     procedure("test1");
     procedure("test2");
-    // Metadata should still be available
     expect(procedure["~zagora"]).toBeDefined();
     expect(procedure["~zagora"].inputSchema).toBeDefined();
   });
@@ -88,7 +84,6 @@ test("autoCallable: true - handler returns procedure directly", () => {
     .output(z.string())
     .handler((_, input) => input.toLowerCase());
 
-  // fn should be callable directly
   expect(typeof fn).toBe("function");
 
   const res = fn("WORLD");

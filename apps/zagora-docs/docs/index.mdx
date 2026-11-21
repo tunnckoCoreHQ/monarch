@@ -40,7 +40,7 @@ The second argument has a default in the schema, so `getUser("Charlie")` is a va
 - **Never throws.** Validation failures, thrown errors, rejected promises, and failing cache adapters all come back as `result.error`.
 - **Typed errors.** You declare error kinds with schemas. Handlers get a typed helper for each kind, and callers get a discriminated union of every kind.
 - **Real function signatures.** A tuple schema becomes a list of arguments, with validation, defaults, and optional trailing arguments for each one.
-- **Sync stays sync.** The zagora source has no `async` or `await`. A sync handler gives a sync procedure. An async handler or an async schema gives a procedure that returns a `Promise`.
+- **Sync stays sync.** A sync handler with sync schemas and a sync cache adapter gives a sync procedure. An async handler or an async schema gives a procedure that returns a `Promise`. See [async support](/guide/async) for every case.
 - **No unwrapping.** You read `result.data` or `result.error` directly. With neverthrow, you unwrap a `Result` first.
 - **Typed dependencies.** You set the context, the environment variables, and the cache adapter when you define the procedure or when you make it callable.
 - **Tested types.** The types have their own test suite, next to the runtime tests.

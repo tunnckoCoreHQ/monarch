@@ -1,5 +1,5 @@
 ---
-title: Caching
+title: Cache procedure outputs
 description: Store procedure outputs in any cache adapter that has has, get, and set methods, sync or async, and see how zagora builds the cache key.
 ---
 
@@ -30,9 +30,9 @@ type CacheAdapter = {
 };
 ```
 
-## Pass the adapter when you define or when you make the procedure
+## Pass the adapter with .cache() or .callable()
 
-Pass the adapter with `.cache(adapter)` when you define the procedure. You can also pass it with `.callable({ cache })` when you make the procedure. An adapter passed to `.callable()` replaces the adapter from `.cache()`. Use `.callable()` when the cache comes from the runtime, for example a KV binding in a `fetch` handler.
+Pass the adapter with `.cache(adapter)` when you define the procedure. You can also pass it with `.callable({ cache })` when you make the procedure. An adapter passed to `.callable()` replaces the adapter from `.cache()`. Use `.callable()` when the cache comes from the runtime, for example an adapter that wraps a KV binding in a `fetch` handler. A KV binding itself has no `has` or `set` method.
 
 ## Async adapters make the result possibly async
 

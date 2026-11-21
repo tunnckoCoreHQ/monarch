@@ -27,8 +27,8 @@ oRPC and tRPC are frameworks for APIs. Both let you call a procedure on the serv
 
 - **The function is the product.** The `.callable()` method returns a function with the signature that the input schema describes. There is nothing to mount or serve.
 - **Several arguments.** An oRPC or tRPC procedure takes one input value. In zagora, the tuple schema `z.tuple([z.string(), z.number().default(10)])` gives `(name: string, count?: number)`, and each argument gets its own validation and default. See [tuple arguments](/guide/tuple-arguments).
-- **Sync stays sync.** The zagora source has no `async` or `await`. It checks for promises at runtime, so a sync handler with sync schemas gives a sync result. The return type is a `Result | Promise<Result>` union only when the code can return both. See [async support](/guide/async).
-- **Errors are values.** A `SyntaxError` that a handler throws comes back as `result.error`, like any other thrown value. The caller has no error class to catch.
+- **Sync stays sync.** zagora checks for promises at runtime, so a sync handler with sync schemas and a sync cache adapter gives a sync result. The return type follows the same rules. See [async support](/guide/async) for every case.
+- **Errors are values.** A `SyntaxError` that a handler throws comes back as an `UNKNOWN_ERROR`, with the `SyntaxError` in `result.error.cause`. The caller has no error class to catch.
 - **No middleware.** Do that work before the call, and pass the outcome as [context](/guide/context). The [routers recipe](/recipes/routers) shows how to group procedures, and the [HTTP handlers recipe](/recipes/http-handlers) shows how to serve them.
 
 Use oRPC or tRPC when you need a typed client over HTTP, OpenAPI, or streaming. Use zagora for libraries, SDKs, CLIs, and the internal functions of an app. The two also work together, because an oRPC handler can call a zagora procedure.

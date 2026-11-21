@@ -7,7 +7,7 @@ description: The type utilities exported from zagora/types, which zagora uses to
 import type { ZagoraResult, CacheAdapter, IsPromise } from "zagora/types";
 ```
 
-The main entry has the same exports on its type-only `types` namespace. zagora tests these types with `expectTypeOf`, in a test file of their own.
+The main entry has the same exports on its type-only `types` namespace.
 
 ## Schemas
 
@@ -45,7 +45,7 @@ The main entry has the same exports on its type-only `types` namespace. zagora t
 | `ConditionalAsync<T, Result>` | `Promise<Result>` when `IsPromise<T>` is `true`, `Result` when it is `false`, and `Result \| Promise<Result>` when it is `boolean` |
 | `IsAsyncSchema<T>` | `true` when the `async` property of the schema type is `true`, `boolean` when it can be `true`, otherwise `false` |
 | `HasAsyncSchema<TInputSchema, TOutputSchema, TErrorsMap>` | `true` when one of the schemas is async, `boolean` when one can be async, otherwise `false` |
-| `ConditionalSchemaAsync<TAsync, TSync, TAsyncResult>` | `TAsyncResult` when `TAsync` is `true`, otherwise `TSync` |
+| `ConditionalSchemaAsync<TAsync, TSync, TAsyncResult>` | `TAsyncResult` when `TAsync` is `true`, `TSync` when it is `false`, and the union of both when it is `boolean` |
 | `HasAsyncCache<TCache>` | `true` when a cache method returns a promise, `boolean` when one can, otherwise `false` |
 | `ConditionalCacheAsync<TCache, TResult>` | `TResult` for a sync cache, otherwise `TResult \| Promise<Awaited<TResult>>` |
 

@@ -46,7 +46,7 @@ if (result.ok) {
 
 ## Wrap an async SDK call
 
-Declare a typed error for each failure that the caller must handle, and throw it from the handler. A rejected promise gives an `UNKNOWN_ERROR` with the original error in `cause`.
+Declare a typed error for each failure that the caller must handle, and throw it from the handler. A promise that rejects with any other value gives an `UNKNOWN_ERROR` with that value in `cause`.
 
 ```ts twoslash
 import { z } from "zod";

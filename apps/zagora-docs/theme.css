@@ -16,7 +16,6 @@
   min-width: 0;
 }
 
-/* Size a popup by its content, cap its width, and wrap long types. */
 .prose .twoslash-popup-container {
   width: max-content;
   max-width: min(100vw - 1.5rem, 34rem);
