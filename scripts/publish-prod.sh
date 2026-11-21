@@ -31,7 +31,7 @@ dry_run=${DRY_RUN:-}
 out=$(mktemp -d)
 trap 'rm -rf "$out"' EXIT
 # master still has the pending changesets, so this gives the versions of the release PR.
-[ -z "$dry_run" ] || pnpm exec changeset version
+[ -z "$dry_run" ] || bash scripts/version-packages.sh
 pnpm exec turbo run build "${builds[@]}"
 pnpm exec changeset publish-plan --output "$out/plan.json"
 jq ".plan |= (map(map(select(.name | $share))) | map(select(length > 0)))" "$out/plan.json" > "$out/share.json"

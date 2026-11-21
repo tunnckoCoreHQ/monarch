@@ -17,7 +17,11 @@ git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 git checkout -B "$branch"
 # packages:version without its check and test: this task runs after the CI tasks that ran them.
 pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
-pnpm exec changeset version
+bash scripts/version-packages.sh
+if git diff --quiet -- '*/*/package.json'; then
+  echo "No releases: every pending changeset is for a held package"
+  exit 0
+fi
 git add -A
 git commit --no-verify -m "$title"
 
