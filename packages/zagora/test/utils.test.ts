@@ -95,6 +95,24 @@ test("validateError - non-string kind becomes an internal error", () => {
   });
 });
 
+test("validateError - number kind does not match a numeric errors map key", () => {
+  const thrown = { kind: 404 };
+  const procedure = zagora()
+    .errors({
+      404: { "~standard": { version: 1, vendor: "test", validate: (value) => ({ value }) } },
+    })
+    .handler(() => {
+      throw thrown;
+    })
+    .callable();
+
+  expect(procedure()).toMatchObject({
+    ok: false,
+    isTypedError: false,
+    error: { kind: "UNKNOWN_ERROR", cause: thrown },
+  });
+});
+
 test("validateError - async error validation with issues (lines 132-135)", async () => {
   const fn = zagora()
     .input(z.string())
