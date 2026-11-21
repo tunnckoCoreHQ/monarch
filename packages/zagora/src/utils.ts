@@ -317,10 +317,17 @@ export function deepMerge(base: Record<string, unknown>, override: Record<string
   const result: Record<string, any> = { ...base };
 
   for (const key of Object.keys(override)) {
-    result[key] =
-      isPlainObject(result[key]) && isPlainObject(override[key])
+    const value =
+      Object.hasOwn(result, key) && isPlainObject(result[key]) && isPlainObject(override[key])
         ? deepMerge(result[key], override[key])
         : override[key];
+
+    Object.defineProperty(result, key, {
+      value,
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
   }
 
   return result;
