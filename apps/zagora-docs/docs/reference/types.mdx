@@ -34,6 +34,8 @@ The main entry has the same exports on its type-only `types` namespace.
 | `SpreadTuple<T, R>` | A function type that takes the elements of the tuple `T` as arguments and returns `R`. The trailing elements that accept `undefined` become optional. |
 | `SingleArg<TInput, R>` | A function type that takes one argument of type `TInput` and returns `R`. The argument is optional when `TInput` accepts `undefined`. |
 | `FixedTuple<T>` | `T` when it is a tuple with a fixed length, otherwise `never` |
+| `Implemented<T>` | The router that the contract `T` requires. Each builder becomes the signature of its procedure, with an `unknown` result. Use it with `satisfies`, or through [`implement`](/reference/api#implementcontract-router). |
+| `Exact<T, TContract>` | `T` with each key that `TContract` does not have typed as `never`, at any depth. The `implement` function uses it to reject extra keys. |
 | `CacheAdapter` | `{ has(key): boolean \| Promise<boolean>; get(key): unknown; set(key, value): any }` |
 | `ZagoraEnvVars` | `Record<string, string> \| Record<string, string \| undefined>` |
 

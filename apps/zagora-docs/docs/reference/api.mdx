@@ -7,7 +7,7 @@ description: The zagora() factory, its config, and every builder method with its
 
 | Import | Exports |
 | --- | --- |
-| `zagora` | `zagora`, the `Zagora` class, the `ZagoraConfig` type, the `errors` and `utils` namespaces, and the type-only `types` namespace |
+| `zagora` | `zagora`, `implement`, the `Zagora` class, the `ZagoraConfig` type, the `errors` and `utils` namespaces, and the type-only `types` namespace |
 | `zagora/errors` | The error guards, the error creators, and the error types. See the [zagora/errors reference](/reference/errors). |
 | `zagora/utils` | The runtime helpers. See the [zagora/utils reference](/reference/utils). |
 | `zagora/types` | The type utilities. See the [zagora/types reference](/reference/types). |
@@ -112,6 +112,8 @@ The `TNewContext` type extends the context type from `.context()`. The `ResolveC
 
 You can call `.callable()` many times on one builder, for example once per request.
 
+Call `.handler()` before `.callable()`. TypeScript reports an error for `.callable()` on a builder without a handler. If a cast or plain JavaScript bypasses the types, the procedure still does not throw. A call with valid env values and valid input returns an `UNKNOWN_ERROR` with the message `No handler set: call .handler() before .callable()`.
+
 ## The procedure
 
 The procedure is the function that `.callable()` returns, or that `.handler()` returns in auto-callable mode. It has these properties:
@@ -120,3 +122,40 @@ The procedure is the function that `.callable()` returns, or that `.handler()` r
 - It returns a [result](/reference/result), or a `Promise` of one when part of the procedure is async. See the [async guide](/guide/async).
 - It returns every failure in the result. It does not throw and does not reject.
 - Its `~zagora` property has the definition, without the env values. The definition can have the keys `inputSchema`, `outputSchema`, `errorsMap`, `envVarsMapSchema`, `initialContext`, `cacheAdapter`, `handler`, `disableOptions`, and `autoCallable`. A key is there only when the builder set it.
+
+## implement(contract, router)
+
+```ts
+function implement<TContract, const TRouter extends Implemented<TContract>>(
+  contract: TContract,
+  router: Exact<TRouter, Implemented<TContract>>,
+): TRouter;
+```
+
+Checks at compile time that a router matches a contract, and returns the router unchanged. A contract is an object of builders without handlers. A router is an object of procedures with the same keys. Both can nest.
+
+```ts twoslash
+import { z } from "zod";
+import { implement, zagora } from "zagora";
+// ---cut---
+const contract = {
+  greet: zagora().input(z.string()).output(z.string()),
+};
+
+const router = implement(contract, {
+  greet: contract.greet.handler((_, name) => `Hello, ${name}`).callable(),
+});
+
+router.greet("Ada");
+// { ok: true, data: 'Hello, Ada', error: undefined }
+```
+
+TypeScript reports an error in these cases:
+
+- The router misses a procedure of the contract.
+- The router has a key that the contract does not have, at any depth.
+- A procedure takes parameters that do not match the input schema of its contract.
+
+The check does not compare result types. The returned router keeps the exact type of each procedure.
+
+The same check works without the function, as `satisfies Implemented<typeof contract>`. The [`Implemented`](/reference/types#results-and-procedures) type is in `zagora/types`. The [Contract-First](/contract-first) page shows both in use.

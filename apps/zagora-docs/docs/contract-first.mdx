@@ -17,7 +17,7 @@ Zagora doesn't need a separate contract builder for this. A chain without a hand
 
 ## A chain without a handler is a contract
 
-Every builder method returns a new builder, and nothing runs until `.callable()`. So `zagora().input(...).output(...).errors(...)` is a finished value with schemas and types but no behavior. You can export it, import it somewhere else, and add the handler there.
+Every builder method returns a new builder, and nothing runs until `.callable()`. So `zagora().input(...).output(...).errors(...)` is a finished value with schemas and types but no behavior. You can export it, import it somewhere else, and add the handler there. TypeScript rejects `.callable()` on a builder that has no handler yet, so a contract can't turn into a procedure by accident.
 
 ```ts twoslash include contract-first-contract
 import { z } from "zod";
@@ -112,11 +112,10 @@ Contract-First is just abstraction and organization. Zagora is so low-level that
 
 A router is a plain object of procedures. Pass it to `implement()` together with the contract, and TypeScript checks that the two match:
 
-```ts
+```ts twoslash
+// @include: contract-first-impl
+// ---cut---
 import { implement } from "zagora";
-
-import { contract, type Db } from "./contract";
-import { listUsers, findUser, createUser } from "./users";
 
 const db: Db = {
   users: new Map([["1", { id: "1", name: "Ada", email: "ada@example.com" }]]),
@@ -132,6 +131,8 @@ export const router = implement(contract, {
 ```
 
 Leave out `find` and it doesn't compile. Add a `remove` that the contract doesn't have, at the top level or inside `users`, and it doesn't compile either. Pass a procedure that takes a `string` where the contract says `{ id: string }`, and the parameters don't match. The router comes back with its exact type, so callers still see each procedure's real result.
+
+The same check works as a type, without the function. Write the router as an object literal that `satisfies Implemented<typeof contract>`, with [`Implemented`](/reference/types#results-and-procedures) from `zagora/types`. The [`implement` reference](/reference/api#implementcontract-router) lists what the check covers.
 
 ## Use the contract on its own
 
