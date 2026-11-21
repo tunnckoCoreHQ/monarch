@@ -1,5 +1,5 @@
 ---
-title: Typed errors
+title: Declare and throw typed errors
 description: Declare error kinds with schemas, throw them from the handler with typed helpers, and get a discriminated union of every kind in the result.
 ---
 
@@ -42,7 +42,7 @@ The call returns this result.
 
 A helper builds the error object, and you `throw` the object. The helper's return type is `never`, so TypeScript knows that the code after the `throw` does not run. The procedure does not throw, because zagora catches every value that the handler throws.
 
-## Keys are uppercase
+## Use uppercase keys
 
 Error kinds must be uppercase. TypeScript reports a key that is not uppercase. zagora does not check the keys at runtime.
 
@@ -56,9 +56,9 @@ zagora().errors({
 });
 ```
 
-## The error union
+## Narrow the error union by kind
 
-`result.error` is a discriminated union on `kind`. It has every declared kind, plus the two built-in kinds, `VALIDATION_ERROR` and `UNKNOWN_ERROR`. Check `kind`, or use the [type guards](/guide/error-handling#type-guards), to narrow it.
+`result.error` is a discriminated union on `kind`. It has every declared kind, plus the two built-in kinds, `VALIDATION_ERROR` and `UNKNOWN_ERROR`. Check `kind`, or use the [type guards](/guide/error-handling#narrow-an-error-with-a-type-guard), to narrow it.
 
 ```ts twoslash
 import { z } from "zod";
@@ -95,7 +95,7 @@ if (!result.ok) {
 
 On a failed result, `isTypedError` is `true` only for a declared kind.
 
-## The error data is validated
+## zagora validates the error data
 
 zagora validates the data that you pass to a helper against the schema of that kind. TypeScript reports wrong or missing fields at compile time, and zagora checks them again at runtime. When the data fails, the result is a `VALIDATION_ERROR`, and its `key` is the kind that failed.
 
@@ -147,7 +147,7 @@ A Zod object schema strips unknown fields by default. To reject unknown fields, 
 
 The `kind` of a typed error always comes from the helper that you called. A `kind` field in the data does not change it. A schema transform that sets `kind` does not change it either.
 
-## Thrown values that are not declared
+## An undeclared thrown value becomes an UNKNOWN_ERROR
 
 A thrown value becomes a typed error when its `kind` is a key of the error map and its data passes the schema of that kind. A helper always sets such a `kind`. A thrown value without a declared `kind` becomes an `UNKNOWN_ERROR`, and `error.cause` holds the thrown value. The message depends on the thrown value.
 

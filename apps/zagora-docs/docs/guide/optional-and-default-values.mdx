@@ -1,11 +1,11 @@
 ---
-title: Optional and default values
+title: Make values optional or give them defaults
 description: Where schema defaults and optional values apply, and how they change the types of the caller and the handler.
 ---
 
 zagora takes defaults and optional values from your schema. The caller can leave out a value that has a default, and the handler gets the default. In the handler's type, a value with a default is never `undefined`.
 
-## In objects
+## Make object keys optional
 
 ```ts twoslash
 import { z } from "zod";
@@ -29,7 +29,7 @@ profile({ name: "John" });
 
 The caller's type has `age?: number`, and the handler's type has `age: number`.
 
-## In tuple arguments
+## Make trailing arguments optional
 
 A missing trailing argument gets its default. The [tuple arguments](/guide/tuple-arguments) page explains how a tuple becomes a parameter list.
 
@@ -50,7 +50,7 @@ repeat("ha", 3, "-");
 
 Every element of a tuple can be optional or have a default. Then you can call the procedure with no arguments.
 
-## In a primitive input
+## Make a single argument optional
 
 ```ts twoslash
 import { z } from "zod";
@@ -67,7 +67,7 @@ double();
 
 The input type of `z.number().default(10)` accepts `undefined`, so the argument is optional. An `.optional()` schema works the same way.
 
-## In error data and environment variables
+## Give defaults to error data and env values
 
 Defaults also apply to the data of [typed errors](/guide/typed-errors) and to [environment variables](/guide/environment-variables). An error helper does not require a field that has a default, and `result.error` has the default value.
 
