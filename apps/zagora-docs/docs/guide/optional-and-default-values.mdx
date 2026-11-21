@@ -61,15 +61,11 @@ const double = zagora()
   .handler((_, value) => value * 2)
   .callable();
 
-double(undefined);
+double();
 // { ok: true, data: 20, error: undefined }
 ```
 
-<Callout type="note">
-  The argument of a primitive input with a default is still required at the type level. Pass
-  `undefined` to use the default. With a tuple input, TypeScript lets you leave out a trailing
-  argument.
-</Callout>
+The input type of `z.number().default(10)` accepts `undefined`, so the argument is optional. An `.optional()` schema works the same way.
 
 ## In error data and environment variables
 

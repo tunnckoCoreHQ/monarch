@@ -39,6 +39,7 @@ import type {
   InternalError,
   ValidationError,
 } from "../src/errors";
+import { isDefinedError, isInternalError, isValidationError } from "../src/errors";
 import { Zagora, zagora } from "../src/index";
 import type {
   AnySchema,
@@ -55,6 +56,7 @@ import type {
   ResolvedProcedure,
   ResolveHandlerOptions,
   ResolveProcedure,
+  SingleArg,
   SpreadTuple,
   UppercaseKeys,
   ZagoraResult,
@@ -1093,4 +1095,102 @@ test("non-tuple schema with an optional tuple output passes one handler argument
     .callable();
 
   expect(procedure("x")).toMatchObject({ ok: true, data: 1 });
+});
+
+test("SingleArg<T, R> - an input that accepts undefined makes the argument optional", () => {
+  expectTypeOf<SingleArg<number, string>>().toEqualTypeOf<(arg: number) => string>();
+  expectTypeOf<SingleArg<number | undefined, string>>().toEqualTypeOf<(arg?: number) => string>();
+  expectTypeOf<SingleArg<{ name: string } | undefined, string>>().toEqualTypeOf<
+    (arg?: { name: string }) => string
+  >();
+});
+
+test("a primitive input with a default or optional schema can be called without an argument", () => {
+  const withDefault = zagora()
+    .input(z.number().default(10))
+    .handler((_, value) => {
+      expectTypeOf(value).toEqualTypeOf<number>();
+      return value * 2;
+    })
+    .callable();
+
+  expectTypeOf(withDefault).parameters.toEqualTypeOf<[arg?: number | undefined]>();
+  expect(withDefault()).toMatchObject({ ok: true, data: 20 });
+  expect(withDefault(3)).toMatchObject({ ok: true, data: 6 });
+
+  const withOptional = zagora({ autoCallable: true })
+    .input(v.optional(v.string()))
+    .handler((_, value) => {
+      expectTypeOf(value).toEqualTypeOf<string | undefined>();
+      return value ?? "none";
+    });
+
+  expectTypeOf(withOptional).parameters.toEqualTypeOf<[arg?: string | undefined]>();
+  expect(withOptional()).toMatchObject({ ok: true, data: "none" });
+
+  const required = zagora()
+    .input(z.number())
+    .handler((_, value) => value)
+    .callable();
+
+  expectTypeOf(required).parameters.toEqualTypeOf<[arg: number]>();
+  // @ts-expect-error a required primitive input still needs its argument
+  required();
+
+  type OptionalSchema = StandardSchemaV1<string | undefined, string>;
+  expectTypeOf<ResolvedProcedure<OptionalSchema, boolean>>().toEqualTypeOf<
+    (arg?: string) => boolean
+  >();
+});
+
+test("isDefinedError narrows a result error without emptying its false branch", () => {
+  const procedure = zagora()
+    .input(z.string())
+    .errors({
+      NOT_FOUND: z.object({ id: z.string() }),
+      DENIED: z.object({ reason: z.string() }),
+    })
+    .handler(({ errors }, id) => {
+      throw errors.NOT_FOUND({ id });
+    })
+    .callable();
+
+  const result = procedure("42");
+  if (!result.ok) {
+    if (isDefinedError(result.error)) {
+      expectTypeOf(result.error.kind).toEqualTypeOf<"NOT_FOUND" | "DENIED">();
+    } else {
+      expectTypeOf(result.error).toEqualTypeOf<
+        InternalError | ValidationError<"NOT_FOUND" | "DENIED">
+      >();
+      if (isValidationError(result.error)) {
+        expectTypeOf(result.error.kind).toEqualTypeOf<"VALIDATION_ERROR">();
+      } else {
+        expectTypeOf(result.error).toEqualTypeOf<InternalError>();
+      }
+    }
+    expect(isDefinedError(result.error)).toBe(true);
+  }
+
+  const fromUnknown: unknown = { kind: "NOT_FOUND", id: "42" };
+  if (isDefinedError<{ id: string }>(fromUnknown)) {
+    expectTypeOf(fromUnknown.kind).toEqualTypeOf<string>();
+    expectTypeOf(fromUnknown.id).toEqualTypeOf<string>();
+  }
+
+  expect(isInternalError({ kind: "UNKNOWN_ERROR", message: "x", cause: 1, stack: 1 })).toBe(true);
+});
+
+test("error guards narrow a plain kind-only value to the guarded shape", () => {
+  const plain: { readonly kind: string } = { kind: "VALIDATION_ERROR" };
+
+  if (isValidationError(plain)) {
+    expectTypeOf(plain.issues).toEqualTypeOf<ValidationError["issues"]>();
+  }
+  if (isInternalError(plain)) {
+    expectTypeOf(plain.cause).toBeAny();
+  }
+  if (isDefinedError(plain)) {
+    expectTypeOf(plain.kind).toEqualTypeOf<string>();
+  }
 });

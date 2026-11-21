@@ -61,7 +61,7 @@ The `zagora/errors` entry point exports a guard for each kind. A guard is useful
 ```ts twoslash
 import { z } from "zod";
 import { zagora } from "zagora";
-import { isDefinedError, isInternalError, isValidationError } from "zagora/errors";
+import { isDefinedError, isValidationError } from "zagora/errors";
 
 const div = zagora({ autoCallable: true })
   .input(z.tuple([z.number(), z.number()]))
@@ -78,20 +78,19 @@ const div = zagora({ autoCallable: true })
 const result = div(7, 0);
 
 if (!result.ok) {
-  if (isValidationError(result.error)) {
+  if (isDefinedError(result.error)) {
+    result.error;
+    // { kind: "DIVIDE_BY_ZERO"; a: number; b: number }
+  } else if (isValidationError(result.error)) {
     result.error.issues;
-  } else if (isInternalError(result.error)) {
+  } else {
     result.error.cause;
-  } else if (isDefinedError(result.error)) {
-    // { kind: 'DIVIDE_BY_ZERO', a: 7, b: 0 }
+    // only an UNKNOWN_ERROR is left
   }
 }
 ```
 
-<Callout type="tip">
-  Check `isDefinedError` last. Its type narrows to any error with a `kind`. After it returns
-  `false`, the union has nothing left, so TypeScript narrows the value to `never`.
-</Callout>
+On a result error, each guard narrows to the matching kinds, and its `false` branch keeps the rest. So you can check the kinds in any order, and TypeScript knows what is left.
 
 | Guard | Returns `true` for |
 | --- | --- |

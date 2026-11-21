@@ -18,7 +18,19 @@ export type InternalError = Prettify<ReturnType<typeof createInternalError>>;
 export type DefinedError<T> = Prettify<{ readonly kind: string } & T>;
 export type ZagoraError<T> = ValidationError | InternalError | DefinedError<T>;
 
-export function isValidationError(val: any): val is ValidationError {
+// The members of a known error union that match a guard. A type with no such member, like
+// `{ kind: string }`, narrows to the guarded shape instead.
+type NarrowTo<TError, TGuarded> = [Extract<TError, TGuarded>] extends [never]
+  ? TError & TGuarded
+  : Extract<TError, TGuarded>;
+
+// On a known error union, each guard narrows to the matching members, so its `false` branch keeps
+// the others. On any other value, it narrows to the error shape.
+export function isValidationError<TError extends { readonly kind: string }>(
+  val: TError,
+): val is NarrowTo<TError, ValidationError<any>>;
+export function isValidationError(val: unknown): val is ValidationError;
+export function isValidationError(val: any): boolean {
   return Boolean(
     val &&
     val.kind === "VALIDATION_ERROR" &&
@@ -29,7 +41,11 @@ export function isValidationError(val: any): val is ValidationError {
   );
 }
 
-export function isInternalError(val: any): val is InternalError {
+export function isInternalError<TError extends { readonly kind: string }>(
+  val: TError,
+): val is NarrowTo<TError, InternalError>;
+export function isInternalError(val: unknown): val is InternalError;
+export function isInternalError(val: any): boolean {
   return Boolean(
     val &&
     val.kind === "UNKNOWN_ERROR" &&
@@ -40,7 +56,12 @@ export function isInternalError(val: any): val is InternalError {
   );
 }
 
-export function isDefinedError<T>(val: any): val is DefinedError<T> {
+// On a known error union, narrow to the declared kinds only.
+export function isDefinedError<TError extends { readonly kind: string }>(
+  val: TError,
+): val is Exclude<TError, ValidationError<any> | InternalError>;
+export function isDefinedError<T>(val: unknown): val is DefinedError<T>;
+export function isDefinedError(val: any): boolean {
   return (
     Boolean(
       val?.kind &&
