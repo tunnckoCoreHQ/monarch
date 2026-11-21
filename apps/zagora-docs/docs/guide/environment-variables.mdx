@@ -30,7 +30,7 @@ The handler gets the schema output, not the raw strings. Here `z.coerce.number()
 
 You can pass the values in one place or in both:
 
-- The second argument of `.env(schema, envVars)` takes a record of string values, such as `process.env` or a plain object.
+- The second argument of `.env(schema, envVars)` takes a record of string values, such as `process.env`, `import.meta.env`, a Cloudflare Workers `env`, or a plain object.
 - The `env` option of `.callable({ env })` is for values that exist only where the call happens.
 
 When you pass both, zagora merges the `.callable()` values over the `.env()` values.
