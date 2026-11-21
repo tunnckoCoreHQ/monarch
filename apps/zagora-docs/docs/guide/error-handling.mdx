@@ -94,8 +94,8 @@ On a result error, each guard narrows to the matching kinds, and its `false` bra
 
 | Guard | Returns `true` for |
 | --- | --- |
-| `isValidationError(value)` | `kind: "VALIDATION_ERROR"` with a string `message` and an `issues` array |
-| `isInternalError(value)` | `kind: "UNKNOWN_ERROR"` with a string `message` and the `cause` and `stack` keys |
+| `isValidationError(value)` | `kind: "VALIDATION_ERROR"` with a non-empty string `message` and an `issues` array |
+| `isInternalError(value)` | `kind: "UNKNOWN_ERROR"` with a non-empty string `message` and the `cause` and `stack` keys |
 | `isDefinedError(value)` | any other non-empty uppercase `kind` |
 | `isZagoraError(value)` | any of the three |
 
