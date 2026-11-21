@@ -143,6 +143,8 @@ test("Valibot async schemas produce async procedure types", () => {
       { VALUE: typeof syncSchema } | { VALUE: typeof asyncSchema }
     >
   >().toEqualTypeOf<boolean>();
+  expectTypeOf<ConditionalSchemaAsync<true, "sync", "async">>().toEqualTypeOf<"async">();
+  expectTypeOf<ConditionalSchemaAsync<false, "sync", "async">>().toEqualTypeOf<"sync">();
   expectTypeOf<ConditionalSchemaAsync<boolean, "sync", "async">>().toEqualTypeOf<
     "sync" | "async"
   >();
