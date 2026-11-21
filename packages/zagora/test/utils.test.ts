@@ -146,7 +146,7 @@ test("handleTupleDefaults - Valibot tuple with optional having default (lines 20
   expect(result).toEqual(["test", 99]);
 });
 
-test("handleTupleDefaults - non-tuple schema returns rawArgs (lines 208-209)", () => {
+test("handleTupleDefaults - non-tuple schema returns the input unchanged (lines 208-209)", () => {
   const result = handleTupleDefaults(z.string() as any, ["foo", "bar"]);
   expect(result).toEqual(["foo", "bar"]);
 });

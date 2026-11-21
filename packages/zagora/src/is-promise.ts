@@ -37,6 +37,10 @@ export type IsPromise<V> =
           ? false
           : boolean;
 
+type ResolvePromise<TAsync extends boolean, Result> = TAsync extends true
+  ? Promise<Result>
+  : Result;
+
 /**
  * Preserves sync, async, and possibly-async return shapes from the input type.
  *
@@ -64,8 +68,4 @@ export type IsPromise<V> =
  * @template T - The type to check (typically a function's return type)
  * @template Result - The result type to wrap conditionally
  */
-type ResolvePromise<TAsync extends boolean, Result> = TAsync extends true
-  ? Promise<Result>
-  : Result;
-
 export type ConditionalAsync<T, Result> = ResolvePromise<IsPromise<T>, Result>;

@@ -363,14 +363,10 @@ export class Zagora<
       const isTupleSchema =
         (schemaAny?._def && schemaAny?._def?.type === "tuple") || schemaAny?.type === "tuple";
 
-      const isArraySchema =
-        (schemaAny?._def && schemaAny?._def?.type === "array") || schemaAny?.type === "array";
-
       const processInput = (inputData: any) => {
-        const handlerArgs =
-          !isArraySchema && isTupleSchema
-            ? handleTupleDefaults(inputSchema as any, inputData)
-            : [inputData];
+        const handlerArgs = isTupleSchema
+          ? handleTupleDefaults(inputSchema as any, inputData)
+          : [inputData];
 
         const executionArgs = disableOptions ? handlerArgs : [options, ...handlerArgs];
 
@@ -400,7 +396,7 @@ export class Zagora<
         return handleState(state);
       };
 
-      const inputArgs = !isArraySchema && isTupleSchema ? args : args[0];
+      const inputArgs = isTupleSchema ? args : args[0];
 
       const inputResult = inputSchema
         ? validateInputOutputOrEnv("input", inputSchema, inputArgs)

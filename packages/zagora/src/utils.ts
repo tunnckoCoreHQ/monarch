@@ -1,7 +1,7 @@
 import nodeCrypto from "node:crypto";
 
 import { createInternalError, createValidationError } from "./errors";
-import type { AnySchema, CacheAdapter } from "./types";
+import type { AnySchema, CacheAdapter, ZagoraDef } from "./types";
 
 export function getCacheHash(data: string) {
   return nodeCrypto.createHash("sha256").update(data).digest("hex");
@@ -96,12 +96,10 @@ export function processHandler(
   handlerFn: any,
   args: any[],
   cacheAdapter: any,
-  incoming: {
-    inputSchema?: unknown;
-    outputSchema?: unknown;
-    errorsMap?: unknown;
-    envVarsMapSchema?: unknown;
-  },
+  incoming: Pick<
+    ZagoraDef<any, any, any, any, any>,
+    "inputSchema" | "outputSchema" | "errorsMap" | "envVarsMapSchema"
+  >,
 ) {
   const { outputSchema } = incoming;
   let key = "";
@@ -147,15 +145,15 @@ function readCache(
   args: any[],
   options: { handlerFn: any; cacheAdapter: CacheAdapter; key: string; outputSchema?: any },
 ) {
-  const runHandlerOnMiss = (cached: any) =>
+  const cachedOrRunHandler = (cached: any) =>
     cached.ok && cached.data === undefined ? executeHandler(args, options) : cached;
 
   const cached = tryCatch(() => options.cacheAdapter.get?.(options.key), false, "get");
   if (cached instanceof Promise) {
-    return cached.then(runHandlerOnMiss);
+    return cached.then(cachedOrRunHandler);
   }
 
-  return runHandlerOnMiss(cached);
+  return cachedOrRunHandler(cached);
 }
 
 function validateOutput(outputSchema: any, data: unknown) {
