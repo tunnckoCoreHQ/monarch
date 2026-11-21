@@ -38,7 +38,7 @@ The call returns this result.
 { ok: false, isTypedError: true, error: { resource: "user", kind: "NOT_FOUND" } }
 ```
 
-## Throw the helper
+## Throw the error that the helper builds
 
 A helper builds the error object, and you `throw` the object. The helper's return type is `never`, so TypeScript knows that the code after the `throw` does not run. The procedure does not throw, because zagora catches every value that the handler throws.
 
@@ -145,7 +145,11 @@ A Zod object schema strips unknown fields by default. To reject unknown fields, 
 
 ### The kind is fixed
 
-The `kind` of a typed error always comes from the helper that you called. A `kind` field in the data does not change it. A schema transform that sets `kind` does not change it either.
+A helper always sets `kind` to its own key. It ignores a `kind` field in the data that you pass to it.
+
+A plain thrown object uses its own `kind` field.
+
+A schema transform that sets `kind` does not change the `kind` of the result.
 
 ## An undeclared thrown value becomes an UNKNOWN_ERROR
 
