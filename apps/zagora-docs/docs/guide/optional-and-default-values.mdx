@@ -1,9 +1,9 @@
 ---
 title: Optional and default values
-description: Schema defaults and optional fields work at every level, in tuple arguments, object fields, primitive inputs, error data, and environment variables.
+description: Where schema defaults and optional values apply, and how they change the types of the caller and the handler.
 ---
 
-zagora reads defaults and optionals from your schema. The caller can leave the value out, and the handler gets the filled-in value with a precise type.
+zagora takes defaults and optional values from your schema. The caller can leave out a value that has a default, and the handler gets the default. In the handler's type, a value with a default is never `undefined`.
 
 ## In objects
 
@@ -31,7 +31,7 @@ The caller's type has `age?: number`, and the handler's type has `age: number`.
 
 ## In tuple arguments
 
-A missing trailing argument gets its default before validation. See [tuple arguments](/guide/tuple-arguments).
+A missing trailing argument gets its default. The [tuple arguments](/guide/tuple-arguments) page explains how a tuple becomes a parameter list.
 
 ```ts twoslash
 import { z } from "zod";
@@ -48,7 +48,7 @@ repeat("ha", 3, "-");
 // { ok: true, data: 'ha-ha-ha', error: undefined }
 ```
 
-A tuple in which every element is optional or has a default also works. Then the procedure can be called with no arguments at all.
+Every element of a tuple can be optional or have a default. Then you can call the procedure with no arguments.
 
 ## In a primitive input
 
@@ -66,13 +66,14 @@ double(undefined);
 ```
 
 <Callout type="note">
-  The argument of a primitive input with a default is still required at the type level, so pass
-  `undefined` to use the default. A tuple input makes trailing arguments truly optional.
+  The argument of a primitive input with a default is still required at the type level. Pass
+  `undefined` to use the default. With a tuple input, TypeScript lets you leave out a trailing
+  argument.
 </Callout>
 
 ## In error data and environment variables
 
-Defaults also apply to the data of [typed errors](/guide/typed-errors) and to [environment variables](/guide/environment-variables). An error helper does not require a field that has a default, and the default appears in `result.error`.
+Defaults also apply to the data of [typed errors](/guide/typed-errors) and to [environment variables](/guide/environment-variables). An error helper does not require a field that has a default, and `result.error` has the default value.
 
 ```ts twoslash
 import { z } from "zod";

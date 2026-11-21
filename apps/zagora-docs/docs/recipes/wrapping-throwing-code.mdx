@@ -1,11 +1,13 @@
 ---
-title: Wrapping throwing code
-description: Turn functions that throw, like JSON.parse or a third-party SDK call, into safe functions that return a result.
+title: Wrap code that throws
+description: Turn functions that throw, such as JSON.parse or a call to a third-party SDK, into functions that return a result.
 ---
 
-A handler can call code that throws. zagora catches it, so wrapping a throwing function in a procedure gives you a safe version of it.
+zagora catches what a handler throws. To get a version of a throwing function that returns a result, call that function inside a handler.
 
-## A safe JSON.parse
+## Wrap JSON.parse
+
+Call `JSON.parse` in the handler. Bad JSON gives an `UNKNOWN_ERROR` with the `SyntaxError` in `cause`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -24,7 +26,7 @@ const bad = safeJsonParse("{oops");
 
 ## Parse and validate in one step
 
-Add an output schema, and the parsed value is validated too.
+Add an output schema to validate the parsed value. The schema also fills in defaults, so `result.data.host` is `"localhost"` here.
 
 ```ts twoslash
 import { z } from "zod";
@@ -42,9 +44,9 @@ if (result.ok) {
 }
 ```
 
-## An async SDK call
+## Wrap an async SDK call
 
-A promise that rejects becomes an `UNKNOWN_ERROR` too. Map the failures you care about to typed errors.
+Declare a typed error for each failure that the caller must handle, and throw it from the handler. A rejected promise gives an `UNKNOWN_ERROR` with the original error in `cause`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -65,4 +67,4 @@ export const fetchJson = zagora()
 const result = await fetchJson("https://example.com/data.json");
 ```
 
-A network failure inside `fetch` rejects, and the result has an `UNKNOWN_ERROR` with the original error in `cause`.
+In this example, a non-2xx response gives an `HTTP_ERROR`. A network failure makes `fetch` reject, and the result holds an `UNKNOWN_ERROR`.

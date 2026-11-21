@@ -1,56 +1,59 @@
 ---
 title: zagora/types
-description: The type utilities exported from zagora/types, the core of how zagora infers arguments, results, and async-ness.
+description: The type utilities exported from zagora/types, which zagora uses to infer arguments, results, and async return types.
 ---
 
 ```ts
 import type { ZagoraResult, CacheAdapter, IsPromise } from "zagora/types";
 ```
 
-zagora tests these types with `expectTypeOf`, in their own test suite next to the runtime tests.
+The main entry has the same exports on its type-only `types` namespace. zagora tests these types with `expectTypeOf`, in a test file of their own.
 
 ## Schemas
 
 | Type | Meaning |
 | --- | --- |
-| `Schema<I, O>` | A Standard Schema with input type `I` and output type `O` |
+| `Schema<I, O = I>` | A Standard Schema with input type `I` and output type `O` |
 | `AnySchema` | `Schema<any, any>` |
-| `InferSchemaInput<T>` / `InferSchemaOutput<T>` | The input or output type of a schema |
-| `InferOutput<TOutputSchema, THandler>` | The output schema's type, or the awaited return type of the handler |
 | `SchemaIssue` | `StandardSchemaV1.Issue` |
+| `InferSchemaInput<T>` | The input type of the schema `T` |
+| `InferSchemaOutput<T>` | The output type of the schema `T` |
+| `InferSchemaInputSafe<T>` | The input type of `T` when `T` is a schema, otherwise `unknown` |
+| `InferSchemaOutputSafe<T>` | The output type of `T` when `T` is a schema, otherwise `unknown` |
+| `InferOutput<TOutputSchema, THandlerFn>` | The output type of the output schema, or the awaited return type of the handler without one |
 
 ## Results and procedures
 
 | Type | Meaning |
 | --- | --- |
-| `ZagoraResult<TOutput, TErrorsMap, TResolved>` | The result union. See [result](/reference/result). |
-| `ResolvedProcedure<TInputSchema, TResult>` | The signature of a callable function for an input schema |
-| `ResolveProcedure<...>` | The signature of a handler, with or without the options object |
-| `ResolveHandlerOptions<TContext, TErrorsMap, TEnv>` | The options object: `context`, `errors`, `env` |
-| `SpreadTuple<T, R>` | A function type that takes the tuple `T` as arguments. Trailing elements that accept `undefined` become optional. |
-| `FixedTuple<T>` | `T` when it is a fixed-length tuple, otherwise `never` |
+| `ZagoraResult<TOutput, TErrorsMap, TResolvedResult, IsTypedError>` | The result union. See the [result reference](/reference/result). |
+| `ZagoraDef<TContext, TInputSchema, TOutputSchema, TErrorsMap, TEnvVarsMap, TCacheAdapter>` | The shape of the `~zagora` definition |
+| `ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>` | The options object, with `context`, `errors`, and `env` |
+| `ResolveProcedure<TDisableOptions, TContext, TInputSchema, TErrorsMap, TEnvVarsMap>` | The signature of a handler, with or without the options object |
+| `ResolvedProcedure<TInputSchema, TFinalResult>` | The signature of a procedure for an input schema |
+| `SpreadTuple<T, R>` | A function type that takes the elements of the tuple `T` as arguments and returns `R`. The trailing elements that accept `undefined` become optional. |
+| `FixedTuple<T>` | `T` when it is a tuple with a fixed length, otherwise `never` |
 | `CacheAdapter` | `{ has(key): boolean \| Promise<boolean>; get(key): unknown; set(key, value): any }` |
-| `ZagoraEnvVars` | `Record<string, string \| undefined>` |
-| `ZagoraDef<...>` | The shape of the `~zagora` definition |
+| `ZagoraEnvVars` | `Record<string, string> \| Record<string, string \| undefined>` |
 
 ## Async detection
 
 | Type | Meaning |
 | --- | --- |
-| `IsPromise<T>` | `true` for a promise-like type, `false` for a plain type, and `boolean` for a mixed union. Bare `any` is `false`. |
-| `ConditionalAsync<T, R>` | `Promise<R>`, `R`, or `R \| Promise<R>`, from `IsPromise<T>` |
-| `IsAsyncSchema<T>` | `true` when a schema type has `async: true` |
-| `HasAsyncSchema<TIn, TOut, TErrors>` | Whether any of the schemas is async |
-| `ConditionalSchemaAsync<TAsync, TSync, TAsyncResult>` | Picks the sync or async result type |
-| `HasAsyncCache<TCache>` | Whether any cache method returns a promise |
-| `ConditionalCacheAsync<TCache, TResult>` | `TResult`, or `TResult \| Promise<TResult>` for an async cache |
+| `IsPromise<V>` | `true` for a promise-like type, `false` for a type that is not, and `boolean` for a union of both. Bare `any` gives `false`. |
+| `ConditionalAsync<T, Result>` | `Promise<Result>` when `IsPromise<T>` is `true`, `Result` when it is `false`, and `Result \| Promise<Result>` when it is `boolean` |
+| `IsAsyncSchema<T>` | `true` when the `async` property of the schema type is `true`, `boolean` when it can be `true`, otherwise `false` |
+| `HasAsyncSchema<TInputSchema, TOutputSchema, TErrorsMap>` | `true` when one of the schemas is async, `boolean` when one can be async, otherwise `false` |
+| `ConditionalSchemaAsync<TAsync, TSync, TAsyncResult>` | `TAsyncResult` when `TAsync` is `true`, otherwise `TSync` |
+| `HasAsyncCache<TCache>` | `true` when a cache method returns a promise, `boolean` when one can, otherwise `false` |
+| `ConditionalCacheAsync<TCache, TResult>` | `TResult` for a sync cache, otherwise `TResult \| Promise<Awaited<TResult>>` |
 
 ## Helpers
 
-| Type               | Meaning                                                               |
-| ------------------ | --------------------------------------------------------------------- |
-| `IsAny<T>`         | `true` only for `any`                                                 |
-| `IsOptional<T>`    | `true` when `T` accepts `undefined`                                   |
-| `UppercaseKeys<T>` | `T` with its keys upper-cased. Used to require uppercase error kinds. |
-| `Prettify<T>`      | Flattens an intersection for readable hovers                          |
-| `ObjectToUnion<T>` | The union of the value types of `T`                                   |
+| Type | Meaning |
+| --- | --- |
+| `IsAny<T>` | `true` only for `any` |
+| `IsOptional<T>` | `true` when `T` accepts `undefined` |
+| `UppercaseKeys<T>` | `T` with its keys in uppercase. zagora uses it to require uppercase keys. |
+| `Prettify<T>` | `T` with an intersection flattened into one object type, for readable hovers |
+| `ObjectToUnion<T>` | The union of the value types of `T` |

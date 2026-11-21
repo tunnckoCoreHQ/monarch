@@ -1,9 +1,9 @@
 ---
 title: Environment variables
-description: Validate environment variables with a schema, pass them at definition time or call time, and read the parsed values in the handler.
+description: Validate environment variables with a schema, pass them when you define the procedure or when you make it callable, and read the parsed values in the handler.
 ---
 
-Set a schema for the environment variables with `.env(schema, values?)`. zagora validates the values on every call, and the handler reads the parsed result from `options.env`.
+Set a schema for the environment variables with `.env(schema, envVars?)`. zagora validates the values on every call. The handler reads the parsed values from `options.env`.
 
 ```ts twoslash
 /// <reference types="node" />
@@ -24,16 +24,16 @@ const connect = zagora()
   .callable();
 ```
 
-Schemas can coerce and default, so `PORT` arrives in the handler as a `number`.
+The handler gets the schema output, not the raw strings. Here `z.coerce.number()` turns `PORT` into a `number`.
 
-## Where the values come from
+## Pass the values when you define or when you make the procedure
 
-Pass the values in one of two places, or both:
+You can pass the values in one place or in both:
 
-- the second argument of `.env(schema, values)`, which accepts any source: `process.env`, `import.meta.env`, a Cloudflare Workers `env`, or a plain object
-- `.callable({ env })`, when the values exist only where the call happens
+- The second argument of `.env(schema, envVars)` takes `process.env`, `import.meta.env`, a Cloudflare Workers `env`, or a plain object.
+- The `env` option of `.callable({ env })` is for values that exist only where the call happens.
 
-When you pass both, zagora merges the call-time values over the definition-time values.
+When you pass both, zagora merges the `.callable()` values over the `.env()` values.
 
 ```ts twoslash
 import { z } from "zod";
@@ -45,7 +45,7 @@ const ping = zagora()
   .callable({ env: { API_URL: "https://api.example.com", API_KEY: "secret" } });
 ```
 
-TypeScript checks the object you pass to `.callable({ env })` against the input type of the schema. It reports a missing required key, and a key that the schema does not have.
+TypeScript checks the `env` object of `.callable()` against the input type of the schema. It reports a missing required key. It also reports a key that the schema does not have.
 
 ```ts twoslash
 // @errors: 2322
@@ -58,11 +58,11 @@ const ping = zagora()
   .callable({ env: { API_KEY: "secret", TYPO: "unexpected" } });
 ```
 
-An indexed source, such as `process.env`, fits `.callable({ env })` only when every key of the schema is optional or has a default, because its keys are not known. For a schema with required keys, pass `process.env` to `.env()` instead.
+The type of `process.env` has an index signature, so TypeScript does not know its keys. Such a source fits the `env` option of `.callable()` only when every key of the schema is optional or has a default. For a schema with required keys, pass `process.env` to `.env()`.
 
-## When validation fails
+## Invalid values stop the call before the input check
 
-zagora checks the env before the input. When the env is invalid, the handler does not run, and the result has a `VALIDATION_ERROR` whose message starts with `Env validation failed`.
+zagora validates the env values before the input. When the env values are invalid, the handler does not run. The result has a `VALIDATION_ERROR` whose message starts with `Env validation failed`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -82,12 +82,12 @@ proc();
   message `Environment Variables cannot have async schema validation`.
 </Callout>
 
-## Env values stay private
+## The procedure does not expose the env values
 
-The callable function does not carry the env values. Its `~zagora` metadata has the env schema, but not the values, so code that receives only the function cannot read them.
+The procedure has a `~zagora` property with its definition. That property has the env schema, but not the env values. Code that gets only the procedure cannot read the values.
 
-## With auto-callable or disableOptions
+## Auto-callable and disableOptions procedures
 
-With `autoCallable: true` there is no `.callable()` call, so pass the values as the second argument of `.env()`. Otherwise the types say `env` has values, but at runtime the validation fails.
+With `autoCallable: true`, there is no `.callable()` step. Pass the values as the second argument of `.env()`. If you do not, the types still give `env` its values, but the validation fails at runtime.
 
-With `disableOptions: true` the handler gets no options object, so it cannot read `env`.
+With `disableOptions: true`, the handler gets no options object. It cannot read `env`.

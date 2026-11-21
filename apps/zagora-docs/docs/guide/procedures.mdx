@@ -1,9 +1,9 @@
 ---
 title: Procedures
-description: How the zagora builder works, from zagora() to a callable function, and what each step adds.
+description: How a chain of zagora builder methods becomes a procedure, and what each method sets.
 ---
 
-A procedure is a function that zagora builds for you. You describe it with a chain of builder methods, then turn it into a function with `.callable()`.
+A procedure is a function that zagora builds for you. You describe it with a chain of builder methods. Then `.callable()` turns the chain into the function.
 
 ```ts twoslash
 import { z } from "zod";
@@ -33,17 +33,17 @@ const result = getPost({ id: "1" });
 | `.input(schema)` | The arguments. A tuple schema gives several arguments. See [input and output](/guide/input-and-output). |
 | `.output(schema)` | The return value. Without it, the type comes from the handler. |
 | `.errors(map)` | The typed error kinds. See [typed errors](/guide/typed-errors). |
-| `.context(initial?)` | The type, and an optional initial value, of the context. See [context](/guide/context). |
-| `.env(schema, values?)` | The schema, and optional values, of the environment variables. See [environment variables](/guide/environment-variables). |
+| `.context(initial?)` | The context type and an optional initial context. See [context](/guide/context). |
+| `.env(schema, values?)` | The environment variable schema and optional values. See [environment variables](/guide/environment-variables). |
 | `.cache(adapter)` | A cache adapter for memoization. See [caching](/guide/caching). |
 | `.handler(fn)` | The code that runs. |
-| `.callable(options?)` | Makes the function. It can also set `context`, `cache`, and `env`. |
+| `.callable(options?)` | Makes the procedure. It can also set `context`, `cache`, and `env`. |
 
-The [API reference](/reference/api) lists every signature.
+The [API reference](/reference/api) has every signature.
 
 ## Order and immutability
 
-Each method returns a new builder and leaves the old one unchanged. That makes a partly built chain safe to share: one base can start many procedures.
+Each method returns a new builder and leaves the old builder unchanged. So you can share a partly built chain, and many procedures can build on one base.
 
 ```ts twoslash
 import { z } from "zod";
@@ -66,7 +66,7 @@ const getPost = base
   .callable();
 ```
 
-You can call the methods before `.handler()` in any order. A second call to the same method replaces the first one: `.input(z.string()).input(z.number())` takes a number.
+You can call the methods before `.handler()` in any order. A second call to the same method replaces the value of the first call. For example, `.input(z.string()).input(z.number())` takes a number.
 
 ## No input
 
@@ -85,7 +85,7 @@ const result = now();
 
 ## Output type
 
-With `.output()`, `result.data` has the output type of the schema, and zagora validates the return value. Without it, the type of `result.data` is the awaited return type of the handler, and zagora does not validate it.
+With `.output()`, `result.data` has the output type of the schema, and zagora validates the return value. Without `.output()`, `result.data` has the awaited return type of the handler, and zagora does not validate the return value.
 
 ```ts twoslash
 import { z } from "zod";
@@ -111,7 +111,9 @@ if (b.ok) b.data;
 
 ## Procedure metadata
 
-Every callable procedure carries its definition on the `~zagora` property: the schemas, the error map, the initial context, the cache adapter, and the flags. Tools can read it, for example to build a help screen from the input schema. The environment variable values are not on it, so code that only gets the function cannot read your secrets.
+Every procedure has its definition on the `~zagora` property. The definition holds the schemas, the error map, the initial context, the cache adapter, the handler, and the instance flags. A tool can read it, for example to build a help screen from the input schema.
+
+The definition does not hold the environment variable values. Code that gets only the function cannot read your secrets.
 
 ```ts twoslash
 import { z } from "zod";

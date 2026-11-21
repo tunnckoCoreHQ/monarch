@@ -1,21 +1,25 @@
 ---
 title: Getting started
-description: Install zagora, define a procedure with a schema, call it, and read the result.
+description: Install zagora, write a procedure that validates its input, call it with good and bad input, and export it.
 sidebar:
   icon: rocket
 ---
 
-## Install
+In this tutorial, you write a `greet` procedure. You call it with a valid name and with an empty string, and you read the result of each call. Then you export it.
 
-zagora is an ESM-only package with built-in types. Version 1 is in prerelease on the `nightly` dist-tag. Install it with a Standard Schema library. These docs use [Zod](https://zod.dev), but [Valibot](https://valibot.dev), [ArkType](https://arktype.io), and any other [Standard Schema](https://standardschema.dev) library work the same way.
+## Install zagora and a schema library
+
+zagora is an ESM-only package with built-in types. Version 1 is a prerelease on the `nightly` dist-tag. Install it together with a Standard Schema library. These docs use [Zod](https://zod.dev). [Valibot](https://valibot.dev), [ArkType](https://arktype.io), and the other [Standard Schema libraries](https://standardschema.dev) work the same way.
 
 ```package-install
 npm install zagora@nightly zod
 ```
 
+The two packages are now in your `dependencies`.
+
 ## Define a procedure
 
-A procedure starts from `zagora()`. Chain `.input()` to validate the arguments, `.output()` to validate the return value, and `.handler()` for the code. Call `.callable()` to get the function.
+A procedure starts from `zagora()`. Chain `.input()` to validate the arguments, `.output()` to validate the return value, and `.handler()` for the code. Then call `.callable()` to get the function.
 
 ```ts twoslash
 import { z } from "zod";
@@ -28,11 +32,13 @@ export const greet = zagora()
   .callable();
 ```
 
-The handler gets an options object first, and the validated input after it. The options object holds the [context](/guide/context), the [error helpers](/guide/typed-errors), and the [environment variables](/guide/environment-variables). This example does not use them, so it names the parameter `_`. To leave the options object out, see [instance options](/guide/instance-options).
+The `greet` constant is now a function that takes one string.
 
-## Call it
+The handler gets an options object first and the validated input after it. The options object holds the [context](/guide/context), the [error helpers](/guide/typed-errors), and the [environment variables](/guide/environment-variables). This example does not use them, so it names the parameter `_`. To remove the options object, see [instance options](/guide/instance-options).
 
-The procedure is a regular function. It takes the arguments that the input schema describes, and it returns a result object.
+## Call the procedure
+
+Call `greet` like any other function. It takes the arguments that the input schema describes, and it returns a result object.
 
 ```ts twoslash
 import { z } from "zod";
@@ -55,7 +61,11 @@ if (result.ok) {
 }
 ```
 
-A call never throws. When the input is wrong, the handler does not run, and the result holds a `VALIDATION_ERROR`:
+When `result.ok` is `true`, TypeScript narrows `result.data` to a `string`. Otherwise, `result.error` is a validation error or an unknown error.
+
+## Call it with bad input
+
+Call `greet` with an empty string. The call does not throw. The handler does not run, and the result holds a `VALIDATION_ERROR`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -80,16 +90,22 @@ const result = greet("");
 // }
 ```
 
-## Export it
+The `message` names the failed path and the schema's message. The `issues` array holds the raw Standard Schema issues.
 
-A procedure is just a function, so you export it like one. A library can export procedures directly, and an app can collect them in a plain object.
+## Export the procedure
+
+A procedure is a function, so you export it like one. A library can export procedures directly, and an app can collect them in a plain object.
 
 ```ts
 export { greet } from "./greet";
 export { getUser, createUser } from "./users";
 ```
 
+Other modules can now import `greet` and call it.
+
 ## Next steps
+
+You can continue with any of these pages.
 
 - Learn the builder in [Procedures](/guide/procedures).
 - Pass several arguments with [tuple arguments](/guide/tuple-arguments).

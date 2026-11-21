@@ -1,13 +1,13 @@
 ---
-title: HTTP handlers
-description: Put zagora procedures behind a fetch handler, pass per-request context, and map error kinds to HTTP status codes.
+title: Serve procedures over HTTP
+description: Put zagora procedures behind a fetch handler, pass context for each request, and map error kinds to HTTP status codes.
 ---
 
-zagora has no network layer, so serving a procedure over HTTP is your code. The pattern is short: read the request, build the context, make the procedure callable, call it, and turn the result into a response.
+zagora has no network layer, so you write the HTTP code. For each request, read the request, build the context, make the procedure callable, call it, and turn the result into a response.
 
-## A fetch handler
+## Write a fetch handler
 
-This works in Cloudflare Workers, Bun, Deno, and any runtime with the Fetch API.
+The following handler works in Cloudflare Workers, Bun, Deno, and any other runtime with the Fetch API.
 
 ```ts twoslash
 import { z } from "zod";
@@ -55,12 +55,12 @@ export default {
 };
 ```
 
-The `status` map is typed by the error kinds, so TypeScript reports a kind you forgot.
+The code indexes `status` with `result.error.kind`, which is a union of every error kind. If you leave a kind out of `status`, TypeScript reports an error.
 
-## Do not leak internal errors
+## Keep internal errors on the server
 
-An `UNKNOWN_ERROR` has the thrown value in `cause` and its `stack`. Log them on the server, and send only the `kind`, or your own message, to the client. Validation `issues` are usually safe to return.
+An `UNKNOWN_ERROR` holds the thrown value in `cause` and its stack trace in `stack`. Log both on the server. Send only the `kind`, or your own message, to the client. If the client needs details about bad input, return the validation `issues`.
 
-## Routing
+## Route requests
 
-Use your framework's router, or a plain object keyed by path. zagora does not route. See [routers](/recipes/routers).
+zagora does not route. Use the router of your framework, or a plain object keyed by path. The [routers recipe](/recipes/routers) shows the plain object.

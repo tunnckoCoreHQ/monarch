@@ -3,12 +3,12 @@ title: Error handling
 description: The three error kinds, the type guards that tell them apart, and the guarantee that a zagora procedure never throws.
 ---
 
-A zagora procedure never throws and never rejects. Every failure comes back in the result, as one of three kinds of error.
+A zagora procedure never throws and never rejects. Every failure comes back in the result as one of three kinds of error.
 
 | Kind | When | Fields |
 | --- | --- | --- |
 | `VALIDATION_ERROR` | The input, output, env, or error data failed its schema. | `message`, `issues`, `key?` |
-| `UNKNOWN_ERROR` | The handler threw or rejected, a schema or cache adapter failed, or something else went wrong. | `message`, `cause`, `stack` |
+| `UNKNOWN_ERROR` | The handler threw or rejected, a schema threw or rejected, the cache failed, or the env schema is async. | `message`, `cause`, `stack` |
 | Your kinds, such as `NOT_FOUND` | The handler threw a declared [typed error](/guide/typed-errors). | The fields of its schema |
 
 ## The result
@@ -24,15 +24,17 @@ Check `result.ok` first. TypeScript then narrows `data` and `error`. The [result
 
 ## Never-throwing guarantees
 
-Each of these becomes a failed result:
+Each failure in this table becomes a failed result.
 
-- invalid input, output, env, or typed error data: `VALIDATION_ERROR`
-- a handler that throws, or returns a rejected promise: `UNKNOWN_ERROR`, with the thrown value in `cause`
-- a falsy thrown value, such as `throw undefined` or `throw 0`: still `UNKNOWN_ERROR`
-- a schema whose code throws or rejects: `UNKNOWN_ERROR`
-- a cache adapter method that throws or rejects: `UNKNOWN_ERROR`
-- a cache key that cannot be computed: `UNKNOWN_ERROR`
-- an async env schema, which is not supported: `UNKNOWN_ERROR`
+| Failure | Kind |
+| --- | --- |
+| Invalid input, output, env, or typed error data | `VALIDATION_ERROR` |
+| A handler that throws, or returns a rejected promise | `UNKNOWN_ERROR`, with the thrown value in `cause` |
+| A falsy thrown value, such as `throw undefined` or `throw 0` | `UNKNOWN_ERROR` |
+| A schema that throws or rejects | `UNKNOWN_ERROR` |
+| A cache adapter method that throws or rejects | `UNKNOWN_ERROR` |
+| A cache key that zagora cannot compute | `UNKNOWN_ERROR` |
+| An async env schema, which zagora does not support | `UNKNOWN_ERROR` |
 
 ```ts twoslash
 import { zagora } from "zagora";
@@ -50,11 +52,11 @@ const result = procedure();
 // result.error.cause is the Error, and result.error.cause.message === 'Oops'
 ```
 
-Every error object in a result is frozen.
+zagora freezes every error object in a result with `Object.freeze`.
 
 ## Type guards
 
-The `zagora/errors` entry point exports a guard for each kind. Use them when you handle errors from many procedures in one place, or when a `switch` on `kind` is too much.
+The `zagora/errors` entry point exports a guard for each kind. A guard is useful when you handle errors from many procedures in one place, or when you do not want a `switch` on `kind`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -87,8 +89,8 @@ if (!result.ok) {
 ```
 
 <Callout type="tip">
-  Check `isDefinedError` last. Its type narrows to any error with a `kind`, so after it returns
-  `false` TypeScript has nothing left in the union.
+  Check `isDefinedError` last. Its type narrows to any error with a `kind`. After it returns
+  `false`, the union has nothing left, so TypeScript narrows the value to `never`.
 </Callout>
 
 | Guard | Returns `true` for |
@@ -98,8 +100,8 @@ if (!result.ok) {
 | `isDefinedError(value)` | any other non-empty uppercase `kind` |
 | `isZagoraError(value)` | any of the three |
 
-The guards check the shape at runtime, so they also work on values that crossed a boundary, such as JSON from a worker.
+The guards check the shape at runtime. So they also work on a value that zagora did not make, such as JSON from a worker.
 
 ## Errors outside the handler
 
-zagora returns early when a step fails. Invalid env stops the call before the input is checked, and invalid input stops it before the handler runs. A failed handler skips the output check and the cache write. So the handler only runs with valid input, and the cache only stores valid output.
+zagora stops the call at the first step that fails. Invalid env stops the call before zagora validates the input. Invalid input stops the call before the handler runs. A failed handler skips the output validation and the cache write. So the handler runs only with valid input, and the cache stores only valid output.

@@ -3,7 +3,7 @@ title: Result
 description: The exact shape of the ZagoraResult that every procedure returns, for success, typed errors, and built-in errors.
 ---
 
-Every call returns one of three shapes:
+Every call returns one of three shapes.
 
 ```ts
 // Success
@@ -16,21 +16,21 @@ Every call returns one of three shapes:
 { readonly ok: false; readonly isTypedError: false; readonly error: InternalError | ValidationError }
 ```
 
-The typed error branch exists only when the procedure declares an error map.
+The typed error shape exists only when the procedure declares an error map. The fields have these types:
 
-- `data` has the output type of the output schema, or the awaited return type of the handler.
-- A typed error has the output type of its schema, plus `kind`.
-- `ValidationError` has `key` typed as the union of the declared kinds, for a failed typed error.
+- The `data` field has the output type of the output schema. Without an output schema, it has the awaited return type of the handler.
+- A typed error has the output type of its schema, without its own `kind` field, plus `kind` set to the error key.
+- In a procedure with an error map, the `key` field of a `ValidationError` has the union of the declared kinds as its type. zagora sets `key` when the data of a typed error fails its schema.
 
 ## The ZagoraResult type
 
-`ZagoraResult` from `zagora/types` builds these shapes:
+The `ZagoraResult` type from `zagora/types` builds these shapes.
 
 ```ts
 type ZagoraResult<TOutput, TErrorsMap, TResolvedResult, IsTypedError = ...>;
 ```
 
-You rarely need it directly. Infer the result type from a procedure instead:
+To get the result type of a procedure, infer it from the procedure.
 
 ```ts twoslash
 import { z } from "zod";
@@ -66,4 +66,4 @@ type InternalError = {
 };
 ```
 
-The error object in a failed result is frozen.
+The error object in a failed result is frozen with `Object.freeze`. The freeze is shallow, so nested objects stay mutable.

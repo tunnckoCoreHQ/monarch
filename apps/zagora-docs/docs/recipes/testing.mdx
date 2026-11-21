@@ -1,9 +1,9 @@
 ---
-title: Testing
-description: Test zagora procedures like any function, swap dependencies through context, and check the error kinds.
+title: Test procedures
+description: Test zagora procedures like any function, swap dependencies through context, and assert on the error kinds and the types.
 ---
 
-Procedures are functions that return values, so tests need no special setup. There is nothing to catch: you assert on the result.
+A procedure returns a result and does not throw, so assert on the result. A test needs no setup and no `try` block.
 
 ```ts twoslash
 import { describe, expect, test } from "vitest";
@@ -29,7 +29,7 @@ describe("add", () => {
 
 ## Swap dependencies
 
-Define the procedure once, without calling `.callable()`. Production and tests then make their own callable with their own context.
+Define the procedure without `.callable()`. Then make one callable for production and one for each test, each with its own context.
 
 ```ts twoslash
 import { expect, test } from "vitest";
@@ -63,7 +63,7 @@ test("returns NOT_FOUND for a missing user", () => {
 
 ## Test the types
 
-zagora tests its own types with Vitest's `expectTypeOf`. You can do the same for your procedures.
+Use the `expectTypeOf` function from Vitest to check the parameters and the result type of a procedure. zagora tests its own types the same way.
 
 ```ts twoslash
 import { expectTypeOf, test } from "vitest";

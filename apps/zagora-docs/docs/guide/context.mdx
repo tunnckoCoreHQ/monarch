@@ -1,9 +1,9 @@
 ---
 title: Context
-description: Pass typed dependencies, such as a database, a request, or the current user, to handlers, at definition time or at call time.
+description: Pass typed dependencies, such as a database, a request, or the current user, to handlers, when you define the procedure or when you make it callable.
 ---
 
-Context is typed dependency injection. Set its type, and an optional initial value, with `.context()`. The handler reads it from `options.context`.
+The context gives the handler its dependencies, such as a database client, the request, or the current user, with a type. Set the type and an optional initial value with `.context()`. The handler reads the value from `options.context`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -22,14 +22,14 @@ procedure("charlie");
 // { ok: true, data: 'foo-bar has foo -> qux, id = charlie', error: undefined }
 ```
 
-## Definition time and call time
+## Pass the context when you define or when you make the procedure
 
 You can give the context in two places:
 
-- `.context(initial)` when you define the procedure
-- `.callable({ context })` when you make the function
+- `.context(initialContext)`, when you define the procedure
+- `.callable({ context })`, when you make the procedure
 
-The second place is useful when the values exist only where the call happens, for example in a `fetch` handler that has the request and the logged-in user. Define the procedures once, and make them callable per request.
+Use `.callable()` when the values exist only where the call happens. A `fetch` handler is one example, because only it has the request and the logged-in user. Define each procedure once, and call `.callable()` once per request.
 
 ```ts twoslash
 import { z } from "zod";
@@ -52,11 +52,11 @@ export default {
 };
 ```
 
-`.context<T>()` with no value only sets the type. Then pass the value with `.callable()`.
+A `.context<T>()` call with no value sets only the type. Pass the value with `.callable()`.
 
-## How the two values merge
+## The two contexts merge key by key
 
-zagora deep-merges the call-time context into the initial context. Plain objects merge key by key. Any other value, such as a class instance, an array, or a `Map`, replaces the initial value as it is, so a database client keeps its prototype and methods.
+zagora deep-merges the `.callable()` context over the initial context. Plain objects merge key by key. Any other value, such as a class instance, an array, or a `Map`, replaces the initial value as it is. A database client therefore keeps its prototype and its methods.
 
 ```ts twoslash
 import { zagora } from "zagora";
@@ -86,10 +86,10 @@ procedure();
 
 The context root must be a plain object. TypeScript rejects other values.
 
-## Context with auto-callable
+## Auto-callable procedures get only the initial context
 
-With `autoCallable: true` there is no `.callable()` call, so the handler gets only the initial context from `.context()`. See [instance options](/guide/instance-options).
+With `autoCallable: true`, there is no `.callable()` step. The handler gets only the initial context from `.context()`. The [instance options guide](/guide/instance-options) describes the flag.
 
-## Context with disableOptions
+## Procedures with disableOptions get no context
 
-With `disableOptions: true` the handler gets no options object, so it has no access to the context.
+With `disableOptions: true`, the handler gets no options object. It cannot read the context.

@@ -1,11 +1,13 @@
 ---
-title: Routers
-description: zagora has no router, and does not need one. Group procedures in plain objects, nest them, and share a base or a context factory.
+title: Group procedures into a router
+description: Group zagora procedures in plain objects, nest them, and share a base chain or a context factory.
 ---
 
-zagora has no router by design. A router is an app concern, and its shape depends on the app: an HTTP API routes by path, a CLI by command, and a library does not route at all. Procedures are plain functions, so a plain object is already a typed router.
+zagora has no router. Procedures are plain functions, so a plain object of procedures is a typed router.
 
-## A plain object
+## Group procedures in an object
+
+Put the callable procedures in an object. Nest the objects to any depth. Every procedure keeps its own signature and result type.
 
 ```ts twoslash
 import { z } from "zod";
@@ -38,11 +40,9 @@ router.users.get("1");
 // { ok: true, data: { id: '1', name: 'Ada' }, error: undefined }
 ```
 
-Nest objects as deep as you like. Every leaf keeps its own signature and result type.
+## Share a base chain
 
-## A shared base
-
-Start many procedures from one partly built chain. The builder is immutable, so the base does not change.
+Build part of the chain once, and start each procedure from it. Every builder method returns a new instance, so the base does not change.
 
 ```ts twoslash
 import { z } from "zod";
@@ -68,9 +68,9 @@ export const deletePost = base
   .callable();
 ```
 
-## A context factory
+## Build the router in a context factory
 
-When every procedure needs the same dependencies, build the router in a function that takes them. Production and tests then call the same function with different values.
+If every procedure needs the same dependencies, write a function that takes them and returns the router. Call that function with real values in production and with test values in tests.
 
 ```ts twoslash
 import { z } from "zod";
@@ -93,10 +93,10 @@ const router = createRouter({ db: { find: (id) => ({ id }) } });
 router.getUser("1");
 ```
 
-## Middleware
+## Replace middleware with context
 
-zagora has no middleware. Run that logic before the call, such as reading a session or checking a token, and pass the outcome as [context](/guide/context). See [HTTP handlers](/recipes/http-handlers) for a full example.
+zagora has no middleware. Run that logic before the call, for example to read a session or check a token. Then pass the outcome as [context](/guide/context). The [HTTP handlers recipe](/recipes/http-handlers) has a full example.
 
-## When you need more
+## Use oRPC for a network API
 
-If you need an HTTP protocol, a typed remote client, OpenAPI, or streaming, use [oRPC](https://orpc.dev). Its handlers can call zagora procedures inside.
+If you need an HTTP protocol, a typed remote client, OpenAPI, or streaming, use [oRPC](https://orpc.dev). An oRPC handler can call a zagora procedure.

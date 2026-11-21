@@ -3,7 +3,9 @@ title: Async support
 description: When a zagora procedure returns a result and when it returns a promise, for sync and async handlers, schemas, and cache adapters.
 ---
 
-zagora has no `async`/`await` in its code. It checks for promises at runtime, and a procedure becomes async only when a part of it is async. The return type follows the same rules, so a sync procedure is not typed as a `Promise`.
+The zagora source has no `async` or `await`. zagora checks for promises at runtime, and a procedure becomes async only when a part of it is async. The return type follows the same rules, so the type of a sync procedure is not a `Promise`.
+
+The table shows what each async part does to the procedure.
 
 | What is async | Procedure returns | Type |
 | --- | --- | --- |
@@ -14,7 +16,7 @@ zagora has no `async`/`await` in its code. It checks for promises at runtime, an
 | A Zod schema with an async refinement | a `Promise` | `Result`, so `await` it anyway |
 | A cache adapter method | a `Promise` when the method runs | `Result \| Promise<Result>` |
 
-## Handlers
+## An async handler makes every call async
 
 ```ts twoslash
 import { z } from "zod";
@@ -37,11 +39,11 @@ const b = asyncProc("hello");
 //    ^?
 ```
 
-An `async` handler makes every call return a `Promise`, also the calls that fail before the handler runs. A plain function that returns a promise does the same when it runs. A thenable that is not a native `Promise`, such as a query builder, is awaited like one.
+An `async` handler makes every call return a `Promise`. That includes the calls that fail before the handler runs. A plain function that returns a promise makes a call async only when the handler runs. zagora awaits a thenable that is not a native `Promise`, such as a query builder, in the same way.
 
-## Schemas
+## A schema marked async makes every call async
 
-The Standard Schema type does not say whether a schema is async. zagora reads the `async: true` marker that some libraries put on async schemas, such as Valibot's `pipeAsync` and `objectAsync`. A procedure with such a schema, in the input, the output, or any entry of the error map, always returns a `Promise`, and its type says so.
+The Standard Schema type does not say whether a schema is async. zagora reads the `async: true` marker that some libraries put on async schemas, such as the Valibot `pipeAsync` and `objectAsync` schemas. The marked schema can be the input schema, the output schema, or any entry of the error map. The procedure then always returns a `Promise`, and its type says so.
 
 ```ts twoslash
 import * as v from "valibot";
@@ -61,7 +63,9 @@ const result = checkName("ada");
 //    ^?
 ```
 
-Zod has no such marker. A Zod schema with an async refinement still makes the call return a `Promise` at runtime, but the type cannot show it. When you know that a schema is async, always `await` the call. Your editor may say that `await` has no effect there. You still need it. The upstream discussion is [Standard Schema issue #22](https://github.com/standard-schema/standard-schema/issues/22).
+## Zod async refinements are async only at runtime
+
+Zod schemas have no `async: true` marker. A Zod schema with an async refinement still makes the call return a `Promise` at runtime, but the type cannot show it. When you know that a schema is async, always `await` the call. Your editor may say that `await` has no effect there. You still need it. The [Standard Schema issue about async detection](https://github.com/standard-schema/standard-schema/issues/22) has the upstream discussion.
 
 ```ts twoslash
 import { z } from "zod";
@@ -77,14 +81,14 @@ const result = await longText("hello");
 
 ArkType has no async schemas, so it does not have this problem.
 
-## Cache adapters
+## An async cache adapter makes some calls async
 
-An async cache method makes a call async only when that call runs the method. A call with invalid input fails before the cache and stays sync. That is why the type is `Result | Promise<Result>`. See [caching](/guide/caching).
+An async cache method makes a call async only when that call runs the method. A call with invalid input fails before the cache and stays sync. For that reason, the type is `Result | Promise<Result>`. The [caching guide](/guide/caching) has the details.
 
-## Environment variables
+## Env schemas cannot be async
 
-Async env schemas are not supported. See [environment variables](/guide/environment-variables).
+zagora does not support async env schemas. The [environment variables guide](/guide/environment-variables) shows the error that you get.
 
-## Rule of thumb
+## Await every call when any part can be async
 
-When any part of a procedure can be async, `await` every call. `await` on a sync result is harmless.
+When any part of a procedure can be async, `await` every call. An `await` on a sync result does no harm.

@@ -3,22 +3,22 @@ title: Instance options
 description: The handler options object, and the two zagora() flags, disableOptions and autoCallable, that make procedures shorter.
 ---
 
-`zagora(config?)` takes two flags. Both are `false` by default.
+The `zagora(config?)` factory takes two flags. Both flags are `false` by default.
 
 | Flag             | Effect                                                                 |
 | ---------------- | ---------------------------------------------------------------------- |
 | `disableOptions` | The handler gets only the input arguments, without the options object. |
-| `autoCallable`   | `.handler()` returns the function directly, without `.callable()`.     |
+| `autoCallable`   | `.handler()` returns the procedure, without `.callable()`.             |
 
-## The handler options object
+## The handler gets an options object first
 
-By default, the first handler parameter is the options object:
+By default, the first handler parameter is the options object. The table lists its fields.
 
 | Field | Value |
 | --- | --- |
-| `context` | The initial context merged with the call-time context. See [context](/guide/context). |
-| `errors` | One helper per declared error kind. See [typed errors](/guide/typed-errors). |
-| `env` | The parsed environment variables. See [environment variables](/guide/environment-variables). |
+| `context` | The initial context, merged with the `.callable()` context. The [context guide](/guide/context) has the details. |
+| `errors` | One helper per declared error kind. The [typed errors guide](/guide/typed-errors) has the details. |
+| `env` | The parsed environment variables. The [environment variables guide](/guide/environment-variables) has the details. |
 
 ```ts twoslash
 import { z } from "zod";
@@ -39,9 +39,9 @@ const procedure = zagora()
   .callable();
 ```
 
-## disableOptions
+## The disableOptions flag removes the options object
 
-With `disableOptions: true`, the input arguments are the only handler parameters. The handler then has no context, no error helpers, and no env. A declared error map and context are ignored.
+With `disableOptions: true`, the input arguments are the only handler parameters. The handler cannot read the context or the env values, and it gets no error helpers. zagora still validates the env values on every call.
 
 ```ts twoslash
 import { z } from "zod";
@@ -53,9 +53,9 @@ const upper = zagora({ disableOptions: true })
   .callable();
 ```
 
-## autoCallable
+## The autoCallable flag removes the callable step
 
-With `autoCallable: true`, `.handler()` makes the function. There is no `.callable()` step, so context, cache, and env come only from `.context()`, `.cache()`, and `.env(schema, values)`.
+With `autoCallable: true`, `.handler()` makes the procedure. There is no `.callable()` step. The context, the cache adapter, and the env values come only from `.context()`, `.cache()`, and `.env(schema, envVars)`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -69,9 +69,9 @@ hello("bob");
 // { ok: true, data: 'Hello, BOB', error: undefined }
 ```
 
-## Both flags
+## Both flags give the shortest form
 
-Together, the two flags give the shortest form. One instance can make many small functions.
+With both flags, a procedure is one `.input()` call and one `.handler()` call. One instance can make many small procedures.
 
 ```ts twoslash
 import { z } from "zod";
@@ -93,4 +93,4 @@ upperAll(["foo", "bar"]);
 // { ok: true, data: ['FOO', 'BAR'], error: undefined }
 ```
 
-When a procedure needs typed errors with `autoCallable`, keep the options object: use `zagora({ autoCallable: true })` for that one procedure.
+A procedure that needs typed errors needs the options object. For that procedure, use `zagora({ autoCallable: true })` without `disableOptions`.
