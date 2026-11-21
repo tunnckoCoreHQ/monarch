@@ -17,15 +17,12 @@ description: The zagora() factory, its config, and every builder method with its
 Creates a builder.
 
 ```ts
-function zagora(config?: ZagoraConfig): Zagora;
-
-interface ZagoraConfig {
-  disableOptions?: boolean; // default false
-  autoCallable?: boolean; // default false
-}
+function zagora(): Zagora;
+function zagora(config: { disableOptions: boolean; autoCallable?: boolean }): Zagora;
+function zagora(config: { autoCallable: boolean; disableOptions?: boolean }): Zagora;
 ```
 
-The config has two flags.
+A config object sets at least one of the two flags. Both flags are `false` by default.
 
 - `disableOptions`. The handler gets only the input arguments, without the options object.
 - `autoCallable`. The `.handler()` method returns the procedure, without `.callable()`.

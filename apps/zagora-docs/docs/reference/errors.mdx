@@ -20,7 +20,29 @@ Each guard takes any value and returns a boolean.
 | `isDefinedError(val)` | `kind` is an uppercase string, and the other two guards return `false` |
 | `isZagoraError(val)` | one of the three guards above returns `true` |
 
+After `JSON.stringify`, an `UNKNOWN_ERROR` keeps its `cause` and `stack` keys only when they hold a value. Without them, `isInternalError` returns `false`, and `isDefinedError` returns `true`.
+
 On an error union, such as `result.error`, each guard narrows to the members that match, and its `false` branch keeps the other members. On any other value, it narrows to the guarded error shape. The order of the checks does not matter. The [type guards section of the error handling guide](/guide/error-handling#narrow-an-error-with-a-type-guard) shows them in use.
+
+## Failures and their kinds
+
+Every failure of a step becomes a failed result. zagora freezes each error object with `Object.freeze`.
+
+| Failure | Kind |
+| --- | --- |
+| Invalid input, output, or env | `VALIDATION_ERROR` |
+| A handler that throws or rejects with a declared kind and valid data | That kind, with `isTypedError` set to `true` |
+| A handler that throws or rejects with a declared kind and invalid data | `VALIDATION_ERROR`, with the kind in `key` |
+| A handler that throws or rejects with a kind that the error map does not declare | `UNKNOWN_ERROR` |
+| A handler that throws or rejects with any other value | `UNKNOWN_ERROR`, with the thrown value in `cause` |
+| A falsy thrown value, such as `throw undefined` or `throw 0` | `UNKNOWN_ERROR` |
+| A schema that throws or rejects | `UNKNOWN_ERROR` |
+| A cache adapter method that throws or rejects | `UNKNOWN_ERROR` |
+| A cache key that zagora cannot compute | `UNKNOWN_ERROR` |
+| An async env schema, which zagora does not support | `UNKNOWN_ERROR` |
+| A thrown value whose `kind` getter throws | `UNKNOWN_ERROR`, with the thrown value in `cause` |
+
+zagora runs the steps in this order: env, input, the cache key and the cache read, the handler, the output, and the cache write. It stops the call at the first step that fails. So the handler runs only with valid input, and the cache stores only valid output.
 
 ## Creators
 
@@ -44,7 +66,7 @@ Returns `{ kind: "VALIDATION_ERROR", message, key, issues }`. The message has th
 createInternalError(msg: string, cause?: any);
 ```
 
-Returns `{ kind: "UNKNOWN_ERROR", message: msg, cause, stack: cause?.stack }`.
+Returns `{ kind: "UNKNOWN_ERROR", message: msg, cause, stack }`. The `stack` is the `stack` of `cause`, or `undefined` when `cause` has no readable `stack`.
 
 ### createErrorHelpers(errorMap)
 

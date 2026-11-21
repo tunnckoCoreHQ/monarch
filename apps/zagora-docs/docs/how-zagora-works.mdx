@@ -1,0 +1,58 @@
+---
+title: How zagora works
+description: A walk through one zagora call, from the env check to the cache write, with the design decision behind each step and the bugs that shaped it.
+sidebar:
+  icon: lightbulb
+---
+
+A zagora procedure looks like a plain function, and that is the point of the library. Behind the call, zagora runs up to seven steps. Each step has a decision behind it, and reviews found the bugs that shaped several of those decisions. This article follows one call from start to end.
+
+## The builder only collects a definition
+
+Each builder method returns a new `Zagora` instance with one more field in its definition. Nothing runs until `.callable()`, or until `.handler()` in auto-callable mode. So a partly built chain is a plain value. You can share it, export it, and build many procedures on it.
+
+The `.callable()` method reads the definition once and decides the async shape of the procedure. It checks two things: whether the handler is an `async` function, and whether a schema has the `async: true` marker. That decision sets both the TypeScript return type and the runtime wrapper. An async cache adapter changes only the type, to `Result | Promise<Result>`, because its methods run only on some calls. An `async` handler gets a wrapper that returns a `Promise` on every call. So the type is true also for a call that fails before the handler runs.
+
+## Step 1: the env values
+
+zagora validates the env values first, before it looks at the arguments. A procedure with a wrong configuration then fails the same way on every call, whatever the input is.
+
+The env values are not on the `~zagora` definition of the procedure. An early version kept them there, and a review flagged it in [#120](https://github.com/tunnckoCoreHQ/monarch/issues/120): any code that got the function could read the secrets. The fix in [#121](https://github.com/tunnckoCoreHQ/monarch/pull/121) removed the values from the callable, and a test now checks that they stay out.
+
+Before the merge, zagora copies `process.env` with a spread. On Node, `process.env` is not a plain object, and the merge accepts only plain objects. The v1 review in [#176](https://github.com/tunnckoCoreHQ/monarch/pull/176) found that `.callable({ env: process.env })` threw for that reason.
+
+## Step 2: the context
+
+zagora deep-merges the `.callable()` context over the initial context. Plain objects merge key by key. Any other value, such as a database client, replaces the initial value as it is, so the client keeps its prototype. The merge writes each key as an own data property. A `__proto__` key in an override therefore cannot change the prototype of the merged object, which [#176](https://github.com/tunnckoCoreHQ/monarch/pull/176) fixed.
+
+## Step 3: the input
+
+A tuple schema gives the procedure one parameter per element. zagora detects the tuple through the schema structure of Zod and Valibot. A Zod transform wraps the tuple in a pipe, so zagora reads the input schema of the pipe. After the validation, zagora fills in the defaults of the missing trailing elements and spreads the values into the handler.
+
+The types follow the runtime. Only the trailing elements that accept `undefined` become optional parameters. An early `SpreadTuple` type made required elements look optional, and [#121](https://github.com/tunnckoCoreHQ/monarch/pull/121) replaced it with one recursive type that works for a tuple of any length.
+
+## Step 4: the cache read
+
+With a cache adapter, zagora builds a key from the whole call: the validated arguments, the source text of the handler, and every schema. The key is a SHA-256 hash of that JSON.
+
+The source text was a deliberate choice. [#121](https://github.com/tunnckoCoreHQ/monarch/pull/121) first used an in-memory ID for each handler, so that two handlers with the same source but different captured values could not share entries. [#123](https://github.com/tunnckoCoreHQ/monarch/pull/123) went back to the source text. An in-memory ID changes on every restart, so a shared external cache could not reuse any entry across processes. The [caching guide](/guide/caching) gives the rule that follows from this trade-off: give each procedure that captures different values its own adapter.
+
+A cache hit returns the stored value without a second validation. That is safe because of step 7. An entry can expire between the `has` call and the `get` call. Then the `get` returns `undefined`, and zagora runs the handler instead of returning `undefined` as a success.
+
+## Step 5: the handler
+
+zagora calls the handler inside a guard. A sync handler that returns a value gives a sync result, because the zagora source has no `async` and no `await`. zagora waits only when a value is a promise, or a thenable such as a query builder.
+
+A thrown value goes through the error map. A value with a declared `kind` and valid data becomes that typed error. Every other value becomes an `UNKNOWN_ERROR`, with the value in `cause`. The guard also handles thrown values that break the usual shape, such as a symbol `kind`, or a `kind` or `stack` getter that throws. Each of those cases once made the call throw, and each now has a test.
+
+## Step 6: the output
+
+With an output schema, zagora validates the return value of the handler. A transform in the output schema changes the value that the caller gets, so `result.data` has the output type of the schema. Without an output schema, zagora returns the value of the handler as it is.
+
+## Step 7: the cache write
+
+zagora writes only output that passed step 6. An early version cached the raw handler result, so an invalid result stayed in the cache, and every later call returned it. [#121](https://github.com/tunnckoCoreHQ/monarch/pull/121) moved the write after the validation. That move is what lets step 4 skip the validation on a hit.
+
+## Why one result shape
+
+Every step can fail, and every failure becomes a frozen error object in the same result shape. A caller checks `result.ok`, and TypeScript narrows the rest. The design leaves out a `try` block, an error class, and an unwrap step. A test can assert on the result directly, and a router can map `error.kind` to a status code with one object. The [comparison](/comparison) page shows how this differs from neverthrow and Effect.

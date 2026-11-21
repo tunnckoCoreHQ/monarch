@@ -10,19 +10,19 @@ import { z } from "zod";
 import { zagora } from "zagora";
 // ---cut---
 const procedure = zagora()
-  .context<{ userId: string; foo?: string }>({ userId: "default" })
+  .context<{ userId: string; requestId?: string }>({ userId: "anonymous" })
   .input(z.string())
   .handler(({ context }, id) => {
-    // context: { userId: string; foo?: string }
-    return `${context.userId} has foo -> ${context.foo ?? "unknown"}, id = ${id}`;
+    // context: { userId: string; requestId?: string }
+    return `${context.userId} reads ${id} in request ${context.requestId ?? "none"}`;
   })
-  .callable({ context: { userId: "foo-bar", foo: "qux" } });
+  .callable({ context: { userId: "ada", requestId: "req-1" } });
 
-procedure("charlie");
-// { ok: true, data: 'foo-bar has foo -> qux, id = charlie', error: undefined }
+procedure("post-1");
+// { ok: true, data: 'ada reads post-1 in request req-1', error: undefined }
 ```
 
-## Pass the context when you define or when you make the procedure
+## Pass the context with .context() or .callable()
 
 You can give the context in two places:
 
