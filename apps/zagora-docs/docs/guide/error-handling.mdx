@@ -22,9 +22,20 @@ type Result =
 
 Check `result.ok` first. TypeScript then narrows `data` and `error`. The [result reference](/reference/result) has the exact type.
 
-## Read a thrown error from the result
+## Every failed step becomes a result
 
-A thrown error becomes an `UNKNOWN_ERROR`, and the thrown value is in `cause`.
+Each failure in this table becomes a failed result.
+
+| Failure | Kind |
+| --- | --- |
+| Invalid input, output, env, or typed error data | `VALIDATION_ERROR` |
+| A handler that throws, or returns a rejected promise | `UNKNOWN_ERROR`, with the thrown value in `cause` |
+| A falsy thrown value, such as `throw undefined` or `throw 0` | `UNKNOWN_ERROR` |
+| A schema that throws or rejects | `UNKNOWN_ERROR` |
+| A cache adapter method that throws or rejects | `UNKNOWN_ERROR` |
+| A cache key that zagora cannot compute | `UNKNOWN_ERROR` |
+| An async env schema, which zagora does not support | `UNKNOWN_ERROR` |
+| A thrown value whose `kind` getter throws | `UNKNOWN_ERROR`, with the thrown value in `cause` |
 
 ```ts twoslash
 import { zagora } from "zagora";
@@ -42,7 +53,7 @@ const result = procedure();
 // result.error.cause is the Error, and result.error.cause.message === 'Oops'
 ```
 
-The [errors reference](/reference/errors#failures-and-their-kinds) lists every failure and its kind.
+zagora freezes every error object in a result with `Object.freeze`.
 
 ## Narrow an error with a type guard
 
@@ -82,4 +93,8 @@ if (!result.ok) {
 
 On a result error, each guard narrows to the matching kinds, and its `false` branch keeps the rest. So you can check the kinds in any order, and TypeScript knows what is left.
 
-The guards check the shape at runtime, so they also work on a value that zagora did not make. The [errors reference](/reference/errors#guards) lists what each guard checks.
+The guards check the shape at runtime. So they also work on a value that zagora did not make. After `JSON.stringify`, an `UNKNOWN_ERROR` keeps its `cause` and `stack` keys only when they hold a value. Without them, `isInternalError` returns `false`, and `isDefinedError` returns `true`. The [errors reference](/reference/errors) lists the exact check of each guard.
+
+## The call stops at the first failed step
+
+zagora stops the call at the first step that fails. Invalid env stops the call before zagora validates the input. Invalid input stops the call before the handler runs. A failed handler skips the output validation and the cache write. So the handler runs only with valid input, and the cache stores only valid output.
