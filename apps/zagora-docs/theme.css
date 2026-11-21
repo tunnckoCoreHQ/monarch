@@ -10,6 +10,15 @@
   overflow-wrap: anywhere;
 }
 
+/* A phone has no hover, so popups matter less there than readable lines. Scroll long lines sideways instead of wrapping them. */
+@media (max-width: 640px), (hover: none) {
+  .prose pre.twoslash > code {
+    overflow-x: auto;
+    overflow-wrap: normal;
+    white-space: pre;
+  }
+}
+
 /* A `// @errors:` line shows the compiler message under the code. Let it wrap to the block width instead of its full one-line width. */
 .prose pre.twoslash .twoslash-meta-line {
   width: auto;
