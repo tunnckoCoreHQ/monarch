@@ -10,7 +10,7 @@
     "check": "ultracite fix --type-aware --type-check",
     "deploy:nightly": "blume build && pnpm exec cf deploy",
     "dev": "blume dev",
-    "test": "blume validate"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "catalog:",
@@ -19,6 +19,7 @@
     "cf": "catalog:",
     "valibot": "catalog:",
     "vite": "catalog:",
+    "vitest": "catalog:",
     "zagora": "workspace:^",
     "zod": "catalog:"
   }
