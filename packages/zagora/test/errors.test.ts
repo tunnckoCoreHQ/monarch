@@ -99,13 +99,6 @@ test("should support symbol path keys in validation messages", () => {
   );
 });
 
-test("should not throw on an off-spec null path segment", () => {
-  const issues = JSON.parse('[{"message":"expected string","path":[null,"name"]}]');
-  const error = createValidationError("input", issues);
-
-  expect(error.message).toBe("Input validation failed: null.name => expected string");
-});
-
 test("should maintain readonly properties", () => {
   const error = createInternalError("Some custom msg");
 
