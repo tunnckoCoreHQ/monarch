@@ -3,10 +3,12 @@ import type { ConditionalAsync } from "./is-promise";
 import type {
   AnySchema,
   CacheAdapter,
+  Exact,
   FixedTuple,
   ConditionalCacheAsync,
   ConditionalSchemaAsync,
   HasAsyncSchema,
+  Implemented,
   InferOutput,
   InferSchemaInput,
   InferSchemaInputSafe,
@@ -485,4 +487,11 @@ export class Zagora<
       options.env,
     );
   }
+}
+
+export function implement<TContract, const TRouter extends Implemented<TContract>>(
+  _contract: TContract,
+  router: Exact<TRouter, Implemented<TContract>>,
+): TRouter {
+  return router;
 }

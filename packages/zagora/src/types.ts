@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import type { ErrorHelpers, InferSchemaMapPlain, InternalError, ValidationError } from "./errors";
+import type { Zagora } from "./index";
 import type { IsPromise } from "./is-promise";
 
 export type * from "./is-promise";
@@ -250,3 +251,15 @@ export type ResolvedProcedure<
       ? SingleArg<InferSchemaInput<TInputSchema>, TFinalResult>
       : SpreadTuple<FixedTuple<InferSchemaInput<TInputSchema>>, TFinalResult>
   : () => TFinalResult;
+
+export type Implemented<T> = {
+  [K in keyof T]: T[K] extends Zagora<any, any, infer TInput, any, any, any, any, any, any>
+    ? ResolvedProcedure<TInput, unknown>
+    : Implemented<T[K]>;
+};
+
+export type Exact<T, TContract> = T extends (...args: any[]) => any
+  ? T
+  : T & { [K in Exclude<keyof T, keyof TContract>]: never } & {
+      [K in keyof T & keyof TContract]: Exact<T[K], TContract[K]>;
+    };
