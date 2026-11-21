@@ -96,9 +96,11 @@ export function processHandler(
   handlerFn: any,
   args: any[],
   cacheAdapter: any,
-  incoming: Pick<
-    ZagoraDef<any, any, any, any, any>,
-    "inputSchema" | "outputSchema" | "errorsMap" | "envVarsMapSchema"
+  incoming: Partial<
+    Pick<
+      ZagoraDef<any, any, any, any, any>,
+      "inputSchema" | "outputSchema" | "errorsMap" | "envVarsMapSchema"
+    >
   >,
 ) {
   const { outputSchema } = incoming;
