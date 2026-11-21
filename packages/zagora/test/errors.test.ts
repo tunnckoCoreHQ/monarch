@@ -79,6 +79,33 @@ test("should handle empty issues array", () => {
   expect(error.issues).toEqual([]);
 });
 
+test("should resolve Standard Schema path segments in validation messages", () => {
+  const issues = [
+    { message: "Invalid input: expected string", path: [{ key: "users" }, { key: 0 }, "name"] },
+  ];
+  const error = createValidationError("input", issues);
+
+  expect(error.message).toBe("Input validation failed: users.0.name => expected string");
+  expect(error.issues).toBe(issues);
+});
+
+test("should support symbol path keys in validation messages", () => {
+  const error = createValidationError("output", [
+    { message: "expected string", path: [Symbol("field"), { key: Symbol("nested") }] },
+  ]);
+
+  expect(error.message).toBe(
+    "Output validation failed: Symbol(field).Symbol(nested) => expected string",
+  );
+});
+
+test("should not throw on an off-spec null path segment", () => {
+  const issues = JSON.parse('[{"message":"expected string","path":[null,"name"]}]');
+  const error = createValidationError("input", issues);
+
+  expect(error.message).toBe("Input validation failed: null.name => expected string");
+});
+
 test("should maintain readonly properties", () => {
   const error = createInternalError("Some custom msg");
 

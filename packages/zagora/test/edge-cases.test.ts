@@ -1,11 +1,12 @@
 import { readFile } from "node:fs/promises";
 
 import * as v from "valibot";
-import { expect, test } from "vitest";
+import { expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
 
 import { isInternalError } from "../src/errors";
 import { zagora } from "../src/index";
+import type { IsPromise } from "../src/is-promise";
 
 test("typed errors should be in options - when input schema is defined", () => {
   const errorSchemas = {
@@ -443,4 +444,153 @@ test("proper return type for sync and async handlers", async () => {
   const res5 = safeAsyncParse();
   expect(res5).toBeInstanceOf(Promise);
   expect(((await res5) as any).data.name).toBe("zagora");
+});
+
+test("Valibot nested issue path - validation message prints the keys", () => {
+  const listNames = zagora()
+    .input(v.object({ users: v.array(v.object({ name: v.string() })) }))
+    .handler((_, input) => input.users.map((user) => user.name))
+    .callable();
+
+  // @ts-expect-error - name must be a string
+  const res = listNames({ users: [{ name: 1 }] });
+
+  expect(res.ok).toBe(false);
+  expect(res.error?.message).toContain("Input validation failed: users.0.name => ");
+});
+
+const createThenable = <T>(settle: () => Promise<T>): PromiseLike<T> => ({
+  // oxlint-disable-next-line unicorn/no-thenable -- the test needs a thenable that is not a native Promise
+  then: (onFulfilled, onRejected) => settle().then(onFulfilled).catch(onRejected),
+});
+
+test("thenable handler result - awaited like a native Promise", async () => {
+  const proc = zagora()
+    .handler(() => createThenable(() => Promise.resolve("done")))
+    .callable();
+
+  const pending = proc();
+  expect(pending).toBeInstanceOf(Promise);
+  expect(await pending).toMatchObject({ ok: true, data: "done" });
+
+  const failing = zagora()
+    .handler(() => createThenable<string>(() => Promise.reject(new Error("query failed"))))
+    .callable();
+
+  const res = await failing();
+  expect(res.ok).toBe(false);
+  expect(isInternalError(res.error)).toBe(true);
+  expect(res.error?.message).toBe("Async handler threw unknown error");
+});
+
+test("async handler - invalid input gives a Promise and skips the handler", async () => {
+  let called = 0;
+  const proc = zagora()
+    .input(z.string())
+    .handler(async (_, input) => {
+      called += 1;
+      return input;
+    })
+    .callable();
+
+  expectTypeOf<ReturnType<typeof proc>>().toExtend<Promise<unknown>>();
+  expectTypeOf<IsPromise<ReturnType<typeof proc>>>().toEqualTypeOf<true>();
+
+  // @ts-expect-error - the input must be a string
+  const invalid = proc(123);
+  expectTypeOf(invalid).toExtend<Promise<unknown>>();
+  expect(invalid).toBeInstanceOf(Promise);
+  expect((await invalid).ok).toBe(false);
+  expect(called).toBe(0);
+});
+
+test("async handler - failed env validation gives a Promise and skips the handler", async () => {
+  let called = 0;
+  const proc = zagora()
+    .env(z.object({ API_KEY: z.string() }))
+    .handler(async ({ env }) => {
+      called += 1;
+      return env.API_KEY;
+    })
+    .callable();
+
+  expectTypeOf<ReturnType<typeof proc>>().toExtend<Promise<unknown>>();
+  expectTypeOf<IsPromise<ReturnType<typeof proc>>>().toEqualTypeOf<true>();
+
+  const invalid = proc();
+  expectTypeOf(invalid).toExtend<Promise<unknown>>();
+  expect(invalid).toBeInstanceOf(Promise);
+  expect((await invalid).ok).toBe(false);
+  expect(called).toBe(0);
+});
+
+test("async handler - cache hit gives a Promise and skips the handler", async () => {
+  let called = 0;
+  const proc = zagora()
+    .input(z.string())
+    .cache(new Map())
+    .handler(async (_, input) => {
+      called += 1;
+      return input;
+    })
+    .callable();
+
+  expectTypeOf<ReturnType<typeof proc>>().toExtend<Promise<unknown>>();
+  expectTypeOf<IsPromise<ReturnType<typeof proc>>>().toEqualTypeOf<true>();
+
+  expect(await proc("a")).toMatchObject({ ok: true, data: "a" });
+  expect(called).toBe(1);
+
+  const hit = proc("a");
+  expectTypeOf(hit).toExtend<Promise<unknown>>();
+  expect(hit).toBeInstanceOf(Promise);
+  expect(await hit).toMatchObject({ ok: true, data: "a" });
+  expect(called).toBe(1);
+});
+
+test("Tuple with a transform - zod and valibot take typed spread arguments", () => {
+  const zodProc = zagora()
+    .input(z.tuple([z.string(), z.number().default(5)]).transform(([a, b]) => ({ a, b })))
+    .handler((_, input) => input)
+    .callable();
+
+  expect(zodProc("x", 1)).toMatchObject({ ok: true, data: { a: "x", b: 1 } });
+  expect(zodProc("x")).toMatchObject({ ok: true, data: { a: "x", b: 5 } });
+
+  const valibotProc = zagora()
+    .input(
+      v.pipe(
+        v.tuple([v.string(), v.optional(v.number(), 5)]),
+        v.transform(([a, b]) => ({ a, b })),
+      ),
+    )
+    .handler((_, input) => input)
+    .callable();
+
+  expect(valibotProc("x", 1)).toMatchObject({ ok: true, data: { a: "x", b: 1 } });
+  expect(valibotProc("x")).toMatchObject({ ok: true, data: { a: "x", b: 5 } });
+});
+
+test("Zod tuple with only defaulted or optional elements - spreads into arguments", () => {
+  const defaulted = zagora()
+    .input(z.tuple([z.string().default("x"), z.number().default(1), z.string().optional()]))
+    .handler((_, a, b, c) => `a: ${a}, b: ${b}, c: ${c}`)
+    .callable();
+
+  expect(defaulted()).toMatchObject({ ok: true, data: "a: x, b: 1, c: undefined" });
+  expect(defaulted("a")).toMatchObject({ ok: true, data: "a: a, b: 1, c: undefined" });
+  expect(defaulted("a", 2)).toMatchObject({ ok: true, data: "a: a, b: 2, c: undefined" });
+  expect(defaulted("a", 2, "c")).toMatchObject({ ok: true, data: "a: a, b: 2, c: c" });
+
+  // @ts-expect-error - the tuple spreads into arguments, so one array argument is invalid
+  const res = defaulted(["a", 2]);
+  expect(res.ok).toBe(false);
+
+  const optional = zagora()
+    .input(z.tuple([z.string().optional(), z.number().optional()]))
+    .handler((_, a, b) => `a: ${a}, b: ${b}`)
+    .callable();
+
+  expect(optional()).toMatchObject({ ok: true, data: "a: undefined, b: undefined" });
+  expect(optional("a", 2)).toMatchObject({ ok: true, data: "a: a, b: 2" });
 });

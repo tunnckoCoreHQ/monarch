@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # Packages to keep out of the release. Remove a name to release that package.
-held=(zagora)
+held=()
 
 if [ "${#held[@]}" -eq 0 ]; then
   exec pnpm exec changeset version

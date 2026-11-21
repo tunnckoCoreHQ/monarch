@@ -3,6 +3,7 @@ import type { ConditionalAsync } from "./is-promise";
 import type {
   AnySchema,
   CacheAdapter,
+  FixedTuple,
   ConditionalCacheAsync,
   ConditionalSchemaAsync,
   HasAsyncSchema,
@@ -22,6 +23,7 @@ import type {
 import {
   createResult,
   deepMerge,
+  getPipeInputSchema,
   handleTupleDefaults,
   processHandler,
   validateError,
@@ -258,7 +260,14 @@ export class Zagora<
             Promise<ZagoraResult<InferOutput<TOutputSchema, TFn>, TErrorsMap, any>>
           >
         >
-      >
+      > & {
+        "~zagora": Omit<
+          Partial<
+            ZagoraDef<TContext, TInputSchema, TOutputSchema, TErrorsMap, TEnvVarsMap, TCacheAdapter>
+          >,
+          "envVars"
+        >;
+      }
     : Zagora<
         TFn,
         TContext,
@@ -317,7 +326,11 @@ export class Zagora<
       isAsyncSchema(outputSchema) ||
       Object.values(errorsMap || {}).some(isAsyncSchema);
 
-    const mergedEnvVars = deepMerge({ ...baseEnvVars }, env || {});
+    // An `async` handler types the procedure as a Promise, also on the paths that never call it.
+    const hasAsyncHandler = handlerFn?.constructor?.name === "AsyncFunction";
+
+    // The spread copies `process.env`, which is not a plain object on Node.
+    const mergedEnvVars = deepMerge({ ...baseEnvVars }, { ...env });
 
     const forwardProcedure = (...args: unknown[]) => {
       const envVars = envVarsMapSchema
@@ -348,7 +361,8 @@ export class Zagora<
         ResolveHandlerOptions<Prettify<TNewContext & TContext>, TErrorsMap, TEnvVarsMap>
       >;
 
-      const schemaAny = inputSchema as any;
+      // A Zod transform wraps the tuple in a pipe, and the tuple is the pipe's input schema.
+      const schemaAny = getPipeInputSchema(inputSchema);
       const isTupleSchema =
         (schemaAny?._def && schemaAny?._def?.type === "tuple") || schemaAny?.type === "tuple";
 
@@ -423,13 +437,15 @@ export class Zagora<
     type TFinalResult = ConditionalCacheAsync<TCache, TResult>;
 
     const procedure = (
-      hasAsyncSchema
+      hasAsyncSchema || hasAsyncHandler
         ? (...args: unknown[]) => Promise.resolve(forwardProcedure(...args))
         : forwardProcedure
     ) as TInputSchema extends AnySchema
       ? InferSchemaInput<TInputSchema> extends readonly [any, ...any[]]
         ? SpreadTuple<InferSchemaInput<TInputSchema>, TFinalResult>
-        : (arg: InferSchemaInput<TInputSchema>) => TFinalResult
+        : [FixedTuple<InferSchemaInput<TInputSchema>>] extends [never]
+          ? (arg: InferSchemaInput<TInputSchema>) => TFinalResult
+          : SpreadTuple<FixedTuple<InferSchemaInput<TInputSchema>>, TFinalResult>
       : () => TFinalResult;
 
     const proc = procedure as typeof procedure & {
@@ -449,7 +465,7 @@ export class Zagora<
   }
 
   callable<
-    TNewContext extends TContext,
+    TNewContext extends TContext & Record<string, unknown>,
     TIncomingEnv extends ZagoraEnvVars,
     TKindNames extends ResolveErrorKindNames<TErrorsMap>,
     const TOptions extends object = {},

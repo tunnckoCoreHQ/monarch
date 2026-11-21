@@ -1047,3 +1047,50 @@ test("ResolvedProcedure<TInputSchema, TFinalResult> - resolves procedure type ba
   type ObjectProc = ResolvedProcedure<MockObjectSchema, object>;
   expectTypeOf<ObjectProc>().toEqualTypeOf<(arg: { name: string }) => object>();
 });
+
+test("callable context root must be a plain object", () => {
+  class RequestContext {
+    constructor(readonly userId: string) {}
+  }
+
+  const builder = zagora()
+    .context({ userId: "base" })
+    .handler(({ context }) => context.userId);
+
+  const assertInvalidRoot = () => {
+    // @ts-expect-error callable context roots must be records
+    builder.callable({ context: new RequestContext("u1") });
+  };
+  expectTypeOf(assertInvalidRoot).toBeFunction();
+
+  const nested = zagora()
+    .context({ request: new RequestContext("base") })
+    .handler(({ context }) => context.request.userId)
+    .callable({ context: { request: new RequestContext("u1") } });
+
+  expect(nested()).toMatchObject({ ok: true, data: "u1" });
+});
+
+test("should have ~zagora property typed on auto-callable procedures", () => {
+  const procedure = zagora({ autoCallable: true })
+    .input(z.string())
+    .handler((_, id) => id);
+
+  const meta = procedure["~zagora"];
+
+  expect(typeof procedure).toEqual("function");
+  expect(meta.inputSchema).toBeDefined();
+  expect(meta).not.toHaveProperty("envVars");
+});
+
+test("non-tuple schema with an optional tuple output passes one handler argument", () => {
+  const procedure = zagora()
+    .input(z.string().transform((value): [string?] => [value]))
+    .handler((_, list) => {
+      expectTypeOf(list).toEqualTypeOf<[string?]>();
+      return list.length;
+    })
+    .callable();
+
+  expect(procedure("x")).toMatchObject({ ok: true, data: 1 });
+});

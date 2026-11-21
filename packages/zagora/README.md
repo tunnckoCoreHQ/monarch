@@ -395,7 +395,8 @@ const hello = zagora()
     }
 
     return input;
-  });
+  })
+  .callable();
 
 hello("ok");
 // => ZagoraResult OK
@@ -579,6 +580,8 @@ const result2 = await procAsyncOutput("hello"); // ZagoraResult
 ### Caching/Memoization
 
 Built-in caching with custom cache adapter. Cache key includes the input, the input/output/error schemas, and handler function body. That can be used to implement custom caching strategies, and memoization.
+
+Cache keys use JSON serialization. Values such as `undefined` and `null` in argument arrays can produce the same key. Use caching only with values that JSON serialization keeps distinct. Handler source text does not identify captured variables, and schema serialization omits functions. Give procedures with different captured state or schema transforms separate cache instances.
 
 **Couple of notes:**
 
