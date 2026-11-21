@@ -51,7 +51,7 @@ if (result.ok) {
 
 - No `.input()`: the function takes no arguments.
 - A tuple schema spreads into arguments. Trailing elements with a default or `.optional()` become optional parameters. Spreading works for Zod and Valibot tuples only.
-- Any other schema, including an array, is one argument.
+- Any other schema, including an array, is one argument. When its input type accepts `undefined`, from `.default()` or `.optional()`, the argument is optional.
 - The function accepts the schema's input type. The handler gets the output type, so defaults are filled and transforms are applied.
 
 ## Errors
@@ -68,7 +68,7 @@ A failed result has one of three kinds of error:
 - Throw the helper: `throw errors.NOT_FOUND({ ... })`. Its return type is `never`.
 - zagora validates the error data with the kind's schema. Bad data gives a `VALIDATION_ERROR` with `key` set to the kind.
 - `isTypedError` is `true` only for a declared kind.
-- Guards come from `zagora/errors`: `isValidationError`, `isInternalError`, `isDefinedError`, `isZagoraError`. Check `isDefinedError` last: its `false` branch narrows to `never`.
+- Guards come from `zagora/errors`: `isValidationError`, `isInternalError`, `isDefinedError`, `isZagoraError`. On `result.error`, each guard narrows to the matching kinds in any order.
 
 ## Async
 
@@ -88,8 +88,3 @@ A failed result has one of three kinds of error:
 
 - `zagora({ disableOptions: true })`: the handler gets only the arguments. No context, error helpers, or env.
 - `zagora({ autoCallable: true })`: `.handler()` returns the function, with no `.callable()` step. Pass env values to `.env()` directly.
-
-## Known gaps
-
-- A primitive input with a default, such as `z.number().default(10)`, still requires its argument at the type level. Pass `undefined`, or use a tuple.
-- The `isDefinedError` narrowing above.
