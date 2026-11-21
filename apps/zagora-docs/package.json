@@ -1,0 +1,25 @@
+{
+  "name": "zagora-docs",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The zagora documentation site, built with Blume",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "blume build",
+    "check": "ultracite fix --type-aware --type-check",
+    "deploy:nightly": "blume build && pnpm exec cf deploy",
+    "dev": "blume dev",
+    "test": "blume validate"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "catalog:",
+    "@types/node": "catalog:types",
+    "blume": "catalog:",
+    "cf": "catalog:",
+    "valibot": "catalog:",
+    "vite": "catalog:",
+    "zagora": "workspace:^",
+    "zod": "catalog:"
+  }
+}

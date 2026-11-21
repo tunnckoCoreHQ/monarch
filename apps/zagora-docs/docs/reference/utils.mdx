@@ -1,0 +1,23 @@
+---
+title: zagora/utils
+description: The low-level runtime helpers that zagora is built from, exported from zagora/utils.
+---
+
+These are the building blocks of the runtime. Most apps never need them. They are useful for tools built on top of zagora.
+
+```ts
+import { createResult, deepMerge } from "zagora/utils";
+```
+
+| Function | What it does |
+| --- | --- |
+| `createResult(data, error, isTypedError)` | Builds a result. With an `error`, it returns `{ ok: false, isTypedError, error }` with the error frozen. Otherwise `{ ok: true, data, error: undefined }`. |
+| `validateInputOutputOrEnv(mode, schema, data)` | Runs a Standard Schema and returns a result, or a `Promise` of one for an async schema. A schema that throws gives an `UNKNOWN_ERROR`. |
+| `validateError(errorsMap, error, isAsync)` | Turns a thrown value into a typed error, a `VALIDATION_ERROR` for bad error data, or an `UNKNOWN_ERROR`. |
+| `processHandler(handler, args, cache, schemas)` | Computes the cache key, reads the cache, or runs the handler. |
+| `executeHandler(args, options)` | Runs the handler, validates the output, and writes the cache. |
+| `tryCatch(fn, isHandler, method?)` | Calls `fn` and turns a throw or a rejected thenable into a failed result. |
+| `getCacheHash(text)` | The SHA-256 hex digest of `text`, from `node:crypto`. |
+| `getPipeInputSchema(schema)` | Follows Zod pipes, from transforms, to the schema that receives the input. |
+| `handleTupleDefaults(schema, args)` | Fills in the defaults of missing trailing tuple elements, for Zod and Valibot tuples. |
+| `deepMerge(base, override)` | Merges plain objects key by key. Other values replace. Throws for a root that is not a plain object. Keeps `__proto__` as an own data key. |

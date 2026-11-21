@@ -1,0 +1,96 @@
+---
+title: Instance options
+description: The handler options object, and the two zagora() flags, disableOptions and autoCallable, that make procedures shorter.
+---
+
+`zagora(config?)` takes two flags. Both are `false` by default.
+
+| Flag             | Effect                                                                 |
+| ---------------- | ---------------------------------------------------------------------- |
+| `disableOptions` | The handler gets only the input arguments, without the options object. |
+| `autoCallable`   | `.handler()` returns the function directly, without `.callable()`.     |
+
+## The handler options object
+
+By default, the first handler parameter is the options object:
+
+| Field | Value |
+| --- | --- |
+| `context` | The initial context merged with the call-time context. See [context](/guide/context). |
+| `errors` | One helper per declared error kind. See [typed errors](/guide/typed-errors). |
+| `env` | The parsed environment variables. See [environment variables](/guide/environment-variables). |
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const procedure = zagora()
+  .context({ user: "bobby" })
+  .errors({ NOT_FOUND: z.object({ id: z.string() }) })
+  .env(z.object({ PORT: z.coerce.number().default(3000) }), {})
+  .input(z.string())
+  .handler((options, userId) => {
+    //      ^?
+    if (options.context.user !== "bobby") {
+      throw options.errors.NOT_FOUND({ id: userId });
+    }
+    return `bobby found on port ${options.env.PORT}`;
+  })
+  .callable();
+```
+
+## disableOptions
+
+With `disableOptions: true`, the input arguments are the only handler parameters. The handler then has no context, no error helpers, and no env. A declared error map and context are ignored.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const upper = zagora({ disableOptions: true })
+  .input(z.string())
+  .handler((text) => text.toUpperCase())
+  .callable();
+```
+
+## autoCallable
+
+With `autoCallable: true`, `.handler()` makes the function. There is no `.callable()` step, so context, cache, and env come only from `.context()`, `.cache()`, and `.env(schema, values)`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const hello = zagora({ autoCallable: true })
+  .input(z.string())
+  .handler((_, name) => `Hello, ${name.toUpperCase()}`);
+
+hello("bob");
+// { ok: true, data: 'Hello, BOB', error: undefined }
+```
+
+## Both flags
+
+Together, the two flags give the shortest form. One instance can make many small functions.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const za = zagora({ autoCallable: true, disableOptions: true });
+
+/** Adds two numbers. */
+export const add = za.input(z.tuple([z.number(), z.number()])).handler((a, b) => a + b);
+
+/** Upper-cases every string. */
+export const upperAll = za
+  .input(z.array(z.string()))
+  .handler((items) => items.map((item) => item.toUpperCase()));
+
+add(5, 3);
+// { ok: true, data: 8, error: undefined }
+upperAll(["foo", "bar"]);
+// { ok: true, data: ['FOO', 'BAR'], error: undefined }
+```
+
+When a procedure needs typed errors with `autoCallable`, keep the options object: use `zagora({ autoCallable: true })` for that one procedure.

@@ -1,0 +1,127 @@
+---
+title: Procedures
+description: How the zagora builder works, from zagora() to a callable function, and what each step adds.
+---
+
+A procedure is a function that zagora builds for you. You describe it with a chain of builder methods, then turn it into a function with `.callable()`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+const za = zagora();
+
+const getPost = za
+  .input(z.object({ id: z.string() }))
+  .output(z.object({ id: z.string(), title: z.string() }))
+  .errors({ NOT_FOUND: z.object({ id: z.string() }) })
+  .handler(({ errors }, { id }) => {
+    if (id !== "1") {
+      throw errors.NOT_FOUND({ id });
+    }
+    return { id, title: "Hello" };
+  })
+  .callable();
+
+const result = getPost({ id: "1" });
+```
+
+## The builder methods
+
+| Method | What it sets |
+| --- | --- |
+| `.input(schema)` | The arguments. A tuple schema gives several arguments. See [input and output](/guide/input-and-output). |
+| `.output(schema)` | The return value. Without it, the type comes from the handler. |
+| `.errors(map)` | The typed error kinds. See [typed errors](/guide/typed-errors). |
+| `.context(initial?)` | The type, and an optional initial value, of the context. See [context](/guide/context). |
+| `.env(schema, values?)` | The schema, and optional values, of the environment variables. See [environment variables](/guide/environment-variables). |
+| `.cache(adapter)` | A cache adapter for memoization. See [caching](/guide/caching). |
+| `.handler(fn)` | The code that runs. |
+| `.callable(options?)` | Makes the function. It can also set `context`, `cache`, and `env`. |
+
+The [API reference](/reference/api) lists every signature.
+
+## Order and immutability
+
+Each method returns a new builder and leaves the old one unchanged. That makes a partly built chain safe to share: one base can start many procedures.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const base = zagora().errors({
+  NOT_FOUND: z.object({ id: z.string() }),
+});
+
+const getUser = base
+  .input(z.string())
+  .handler(({ errors }, id) => {
+    throw errors.NOT_FOUND({ id });
+  })
+  .callable();
+
+const getPost = base
+  .input(z.number())
+  .handler((_, id) => ({ id }))
+  .callable();
+```
+
+You can call the methods before `.handler()` in any order. A second call to the same method replaces the first one: `.input(z.string()).input(z.number())` takes a number.
+
+## No input
+
+Without `.input()`, the procedure takes no arguments.
+
+```ts twoslash
+import { zagora } from "zagora";
+// ---cut---
+const now = zagora()
+  .handler(() => Date.now())
+  .callable();
+
+const result = now();
+//    ^?
+```
+
+## Output type
+
+With `.output()`, `result.data` has the output type of the schema, and zagora validates the return value. Without it, the type of `result.data` is the awaited return type of the handler, and zagora does not validate it.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const withSchema = zagora()
+  .output(z.string().transform((value) => value.length))
+  .handler(() => "four")
+  .callable();
+
+const fromHandler = zagora()
+  .handler(async () => ({ id: 1 }))
+  .callable();
+
+const a = withSchema();
+if (a.ok) a.data;
+//          ^?
+
+const b = await fromHandler();
+if (b.ok) b.data;
+//          ^?
+```
+
+## Procedure metadata
+
+Every callable procedure carries its definition on the `~zagora` property: the schemas, the error map, the initial context, the cache adapter, and the flags. Tools can read it, for example to build a help screen from the input schema. The environment variable values are not on it, so code that only gets the function cannot read your secrets.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const greet = zagora()
+  .input(z.string())
+  .handler((_, name) => `Hello, ${name}`)
+  .callable();
+
+greet["~zagora"].inputSchema;
+//               ^?
+```

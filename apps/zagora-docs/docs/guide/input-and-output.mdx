@@ -1,0 +1,150 @@
+---
+title: Input and output
+description: Validate the arguments and the return value of a procedure with any Standard Schema library, and see how each schema shape maps to function arguments.
+---
+
+The input schema validates the arguments before the handler runs. The output schema validates the return value after it runs. Both accept any [Standard Schema](https://standardschema.dev) library, and one procedure can mix libraries.
+
+## How the input schema maps to arguments
+
+The shape of the input schema decides the signature of the procedure:
+
+| Input schema                         | Procedure     | Handler, after the options object |
+| ------------------------------------ | ------------- | --------------------------------- |
+| none                                 | `()`          | nothing                           |
+| primitive, such as `z.string()`      | `(value)`     | `value`                           |
+| object, such as `z.object({...})`    | `(input)`     | `input`                           |
+| array, such as `z.array(z.string())` | `(items)`     | `items`                           |
+| tuple, such as `z.tuple([...])`      | `(a, b, ...)` | `a, b, ...`                       |
+
+Only a tuple spreads into several arguments. An array stays one argument. See [tuple arguments](/guide/tuple-arguments).
+
+### Primitive input
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const shout = zagora()
+  .input(z.string())
+  .handler((_, text) => text.toUpperCase())
+  .callable();
+
+shout("hello world");
+// { ok: true, data: 'HELLO WORLD', error: undefined }
+```
+
+### Object input
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const describe = zagora()
+  .input(z.object({ name: z.string(), age: z.number().default(18) }))
+  .handler((_, { name, age }) => `${name} is ${age}`)
+  .callable();
+
+describe({ name: "Ada" });
+// { ok: true, data: 'Ada is 18', error: undefined }
+```
+
+### Array input
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const upper = zagora()
+  .input(z.array(z.string()))
+  .handler((_, items) => items.map((item) => item.toUpperCase()))
+  //           ^?
+  .callable();
+
+upper(["foo", "bar"]);
+// { ok: true, data: ['FOO', 'BAR'], error: undefined }
+```
+
+## Input types and output types
+
+A schema has an input type and an output type. They differ when the schema has defaults or transforms. The procedure accepts the input type, and the handler gets the output type.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const parsePort = zagora()
+  .input(z.string().transform((value) => Number(value)))
+  .handler((_, port) => port + 1)
+  //           ^?
+  .callable();
+
+parsePort("8080");
+// { ok: true, data: 8081, error: undefined }
+```
+
+## Output validation
+
+With an output schema, zagora validates what the handler returns. A wrong value becomes a `VALIDATION_ERROR`, and the message starts with `Output validation failed`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const age = zagora()
+  .input(z.number())
+  .output(z.number().min(0))
+  .handler((_, years) => years - 100)
+  .callable();
+
+age(30);
+// {
+//   ok: false,
+//   isTypedError: false,
+//   error: {
+//     kind: 'VALIDATION_ERROR',
+//     message: 'Output validation failed: (root) => Too small: expected number to be >=0',
+//     ...
+//   }
+// }
+```
+
+The output schema also types `result.data`. A transform in the output schema runs on the return value, and `result.data` has the transformed type.
+
+## Validation errors
+
+Every validation failure has the same shape:
+
+```ts
+{
+  kind: "VALIDATION_ERROR";
+  message: string; // "Input validation failed: name => expected string, received number"
+  issues: readonly StandardSchemaV1.Issue[];
+  key?: string; // set only for a failed typed error, see Typed errors
+}
+```
+
+The message names the part that failed (`Input`, `Output`, `Env`, or `Error data`) and lists each issue as `path => message`. A path is the keys joined with dots, and `(root)` means the whole value. The `issues` array is the original list from your schema library.
+
+## Other schema libraries
+
+Valibot, ArkType, and every other Standard Schema library work the same way, and you can mix them in one procedure.
+
+```ts twoslash
+import * as v from "valibot";
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const add = zagora()
+  .input(v.tuple([v.number(), v.optional(v.number(), 1)]))
+  .output(z.number())
+  .handler((_, a, b) => a + b)
+  .callable();
+
+add(2);
+// { ok: true, data: 3, error: undefined }
+```
+
+## When a schema itself fails
+
+If the schema code throws or its promise rejects, that is not a validation failure. zagora returns an `UNKNOWN_ERROR` with the message `Unexpected failure during input validation` (or `output`, `env`, `error data`), and the thrown value is in `error.cause`. The handler does not run when the input schema fails.

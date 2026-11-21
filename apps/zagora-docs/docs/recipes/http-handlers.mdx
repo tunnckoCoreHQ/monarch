@@ -1,0 +1,66 @@
+---
+title: HTTP handlers
+description: Put zagora procedures behind a fetch handler, pass per-request context, and map error kinds to HTTP status codes.
+---
+
+zagora has no network layer, so serving a procedure over HTTP is your code. The pattern is short: read the request, build the context, make the procedure callable, call it, and turn the result into a response.
+
+## A fetch handler
+
+This works in Cloudflare Workers, Bun, Deno, and any runtime with the Fetch API.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+type User = { id: string; role: "admin" | "member" };
+declare function getUserFromToken(token: string | null): User | null;
+// ---cut---
+const deletePost = zagora()
+  .context<{ user: User | null }>()
+  .errors({
+    UNAUTHORIZED: z.object({ message: z.string() }),
+    FORBIDDEN: z.object({ message: z.string() }),
+  })
+  .input(z.object({ id: z.string() }))
+  .handler(({ context, errors }, { id }) => {
+    if (!context.user) {
+      throw errors.UNAUTHORIZED({ message: "Login required" });
+    }
+    if (context.user.role !== "admin") {
+      throw errors.FORBIDDEN({ message: "Admins only" });
+    }
+    return { deleted: id };
+  });
+
+const status = {
+  VALIDATION_ERROR: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  UNKNOWN_ERROR: 500,
+} as const;
+
+export default {
+  async fetch(request: Request) {
+    const user = getUserFromToken(request.headers.get("authorization"));
+    const run = deletePost.callable({ context: { user } });
+
+    const result = run(await request.json());
+
+    if (result.ok) {
+      return Response.json(result.data);
+    }
+    return Response.json({ kind: result.error.kind }, { status: status[result.error.kind] });
+  },
+};
+```
+
+The `status` map is typed by the error kinds, so TypeScript reports a kind you forgot.
+
+## Do not leak internal errors
+
+An `UNKNOWN_ERROR` has the thrown value in `cause` and its `stack`. Log them on the server, and send only the `kind`, or your own message, to the client. Validation `issues` are usually safe to return.
+
+## Routing
+
+Use your framework's router, or a plain object keyed by path. zagora does not route. See [routers](/recipes/routers).

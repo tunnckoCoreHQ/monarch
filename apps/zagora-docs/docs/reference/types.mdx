@@ -1,0 +1,56 @@
+---
+title: zagora/types
+description: The type utilities exported from zagora/types, the core of how zagora infers arguments, results, and async-ness.
+---
+
+```ts
+import type { ZagoraResult, CacheAdapter, IsPromise } from "zagora/types";
+```
+
+zagora tests these types with `expectTypeOf`, in their own test suite next to the runtime tests.
+
+## Schemas
+
+| Type | Meaning |
+| --- | --- |
+| `Schema<I, O>` | A Standard Schema with input type `I` and output type `O` |
+| `AnySchema` | `Schema<any, any>` |
+| `InferSchemaInput<T>` / `InferSchemaOutput<T>` | The input or output type of a schema |
+| `InferOutput<TOutputSchema, THandler>` | The output schema's type, or the awaited return type of the handler |
+| `SchemaIssue` | `StandardSchemaV1.Issue` |
+
+## Results and procedures
+
+| Type | Meaning |
+| --- | --- |
+| `ZagoraResult<TOutput, TErrorsMap, TResolved>` | The result union. See [result](/reference/result). |
+| `ResolvedProcedure<TInputSchema, TResult>` | The signature of a callable function for an input schema |
+| `ResolveProcedure<...>` | The signature of a handler, with or without the options object |
+| `ResolveHandlerOptions<TContext, TErrorsMap, TEnv>` | The options object: `context`, `errors`, `env` |
+| `SpreadTuple<T, R>` | A function type that takes the tuple `T` as arguments. Trailing elements that accept `undefined` become optional. |
+| `FixedTuple<T>` | `T` when it is a fixed-length tuple, otherwise `never` |
+| `CacheAdapter` | `{ has(key): boolean \| Promise<boolean>; get(key): unknown; set(key, value): any }` |
+| `ZagoraEnvVars` | `Record<string, string \| undefined>` |
+| `ZagoraDef<...>` | The shape of the `~zagora` definition |
+
+## Async detection
+
+| Type | Meaning |
+| --- | --- |
+| `IsPromise<T>` | `true` for a promise-like type, `false` for a plain type, and `boolean` for a mixed union. Bare `any` is `false`. |
+| `ConditionalAsync<T, R>` | `Promise<R>`, `R`, or `R \| Promise<R>`, from `IsPromise<T>` |
+| `IsAsyncSchema<T>` | `true` when a schema type has `async: true` |
+| `HasAsyncSchema<TIn, TOut, TErrors>` | Whether any of the schemas is async |
+| `ConditionalSchemaAsync<TAsync, TSync, TAsyncResult>` | Picks the sync or async result type |
+| `HasAsyncCache<TCache>` | Whether any cache method returns a promise |
+| `ConditionalCacheAsync<TCache, TResult>` | `TResult`, or `TResult \| Promise<TResult>` for an async cache |
+
+## Helpers
+
+| Type               | Meaning                                                               |
+| ------------------ | --------------------------------------------------------------------- |
+| `IsAny<T>`         | `true` only for `any`                                                 |
+| `IsOptional<T>`    | `true` when `T` accepts `undefined`                                   |
+| `UppercaseKeys<T>` | `T` with its keys upper-cased. Used to require uppercase error kinds. |
+| `Prettify<T>`      | Flattens an intersection for readable hovers                          |
+| `ObjectToUnion<T>` | The union of the value types of `T`                                   |

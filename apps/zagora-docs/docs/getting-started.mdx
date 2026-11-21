@@ -1,0 +1,98 @@
+---
+title: Getting started
+description: Install zagora, define a procedure with a schema, call it, and read the result.
+sidebar:
+  icon: rocket
+---
+
+## Install
+
+zagora is an ESM-only package with built-in types. Version 1 is in prerelease on the `nightly` dist-tag. Install it with a Standard Schema library. These docs use [Zod](https://zod.dev), but [Valibot](https://valibot.dev), [ArkType](https://arktype.io), and any other [Standard Schema](https://standardschema.dev) library work the same way.
+
+```package-install
+npm install zagora@nightly zod
+```
+
+## Define a procedure
+
+A procedure starts from `zagora()`. Chain `.input()` to validate the arguments, `.output()` to validate the return value, and `.handler()` for the code. Call `.callable()` to get the function.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+export const greet = zagora()
+  .input(z.string().min(1))
+  .output(z.string())
+  .handler((_, name) => `Hello, ${name}!`)
+  .callable();
+```
+
+The handler gets an options object first, and the validated input after it. The options object holds the [context](/guide/context), the [error helpers](/guide/typed-errors), and the [environment variables](/guide/environment-variables). This example does not use them, so it names the parameter `_`. To leave the options object out, see [instance options](/guide/instance-options).
+
+## Call it
+
+The procedure is a regular function. It takes the arguments that the input schema describes, and it returns a result object.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+const greet = zagora()
+  .input(z.string().min(1))
+  .output(z.string())
+  .handler((_, name) => `Hello, ${name}!`)
+  .callable();
+// ---cut---
+const result = greet("Ada");
+
+if (result.ok) {
+  result.data;
+  //     ^?
+} else {
+  result.error;
+  //     ^?
+}
+```
+
+A call never throws. When the input is wrong, the handler does not run, and the result holds a `VALIDATION_ERROR`:
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+const greet = zagora()
+  .input(z.string().min(1))
+  .output(z.string())
+  .handler((_, name) => `Hello, ${name}!`)
+  .callable();
+// ---cut---
+const result = greet("");
+// {
+//   ok: false,
+//   isTypedError: false,
+//   error: {
+//     kind: 'VALIDATION_ERROR',
+//     message: 'Input validation failed: (root) => Too small: expected string to have >=1 characters',
+//     key: undefined,
+//     issues: [...]
+//   }
+// }
+```
+
+## Export it
+
+A procedure is just a function, so you export it like one. A library can export procedures directly, and an app can collect them in a plain object.
+
+```ts
+export { greet } from "./greet";
+export { getUser, createUser } from "./users";
+```
+
+## Next steps
+
+- Learn the builder in [Procedures](/guide/procedures).
+- Pass several arguments with [tuple arguments](/guide/tuple-arguments).
+- Declare and throw [typed errors](/guide/typed-errors).
+- See how the three error kinds work in [error handling](/guide/error-handling).
+- Inject dependencies with [context](/guide/context).

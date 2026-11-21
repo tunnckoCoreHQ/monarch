@@ -1,0 +1,60 @@
+---
+title: zagora/errors
+description: The error guards, error creators, and error types exported from zagora/errors.
+---
+
+```ts
+import { isValidationError, isInternalError, isDefinedError, isZagoraError } from "zagora/errors";
+```
+
+The same exports are on the `errors` namespace of the main entry: `import { errors } from "zagora"`.
+
+## Guards
+
+| Function | Returns `true` when |
+| --- | --- |
+| `isValidationError(value)` | `kind` is `"VALIDATION_ERROR"`, `message` is a non-empty string, and `issues` is an array |
+| `isInternalError(value)` | `kind` is `"UNKNOWN_ERROR"`, `message` is a non-empty string, and the `cause` and `stack` keys exist |
+| `isDefinedError(value)` | `kind` is a non-empty uppercase string, and the value is not one of the two above |
+| `isZagoraError(value)` | any of the three is `true` |
+
+Each one accepts any value and never throws. Check `isDefinedError` last. See [error handling](/guide/error-handling#type-guards).
+
+## Creators
+
+zagora uses these to build its own errors. They are exported for tools and tests.
+
+### createValidationError(mode, issues, key?)
+
+```ts
+createValidationError(
+  mode: "input" | "output" | "error data" | "env",
+  issues: StandardSchemaV1.Issue[],
+  key?: string,
+): ValidationError;
+```
+
+Builds a `VALIDATION_ERROR`. The message is `<Mode> validation failed[ for KEY]: <path> => <message>; ...`. A path is the issue's keys joined with dots, or `(root)`. The `Invalid input: ` prefix of Zod messages is removed.
+
+### createInternalError(message, cause?)
+
+```ts
+createInternalError(message: string, cause?: unknown): InternalError;
+```
+
+Builds an `UNKNOWN_ERROR` with `cause`, and `stack` set to `cause?.stack`.
+
+### createErrorHelpers(errorsMap)
+
+Builds one helper per own key of the map. A helper returns `{ ...data, kind }`, and the declared `kind` wins over a `kind` field in the data.
+
+## Types
+
+| Type | Shape |
+| --- | --- |
+| `ValidationError<TKinds>` | `{ kind: "VALIDATION_ERROR"; message; issues; key?: TKinds }` |
+| `InternalError` | `{ kind: "UNKNOWN_ERROR"; message; cause; stack }` |
+| `DefinedError<T>` | `{ kind: string } & T` |
+| `ZagoraError<T>` | `ValidationError \| InternalError \| DefinedError<T>` |
+| `ErrorHelpers<TErrorsMap>` | The `options.errors` object: one `(data) => never` function per kind |
+| `ResolveErrorKindNames<TErrorsMap>` | The union of the declared kinds |

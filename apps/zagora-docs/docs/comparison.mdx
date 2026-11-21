@@ -1,0 +1,56 @@
+---
+title: Comparison
+description: How zagora relates to oRPC, tRPC, neverthrow, Effect, plain TypeScript functions, and schema libraries used on their own.
+sidebar:
+  icon: scale
+---
+
+zagora keeps the procedure builder that [oRPC](https://orpc.dev) and [tRPC](https://trpc.io) made familiar, and removes everything around it: the router, the server, the client, and the network. It is for code that calls functions, not endpoints.
+
+## At a glance
+
+|  | zagora | oRPC / tRPC | neverthrow | Effect |
+| --- | --- | --- | --- | --- |
+| Output | A plain function | A procedure in a router | A `Result` wrapper | An `Effect` value |
+| Network layer | None | Built in | None | Optional |
+| Router | Not needed, use a plain object | Required to serve | None | None |
+| Arguments | Any number, from a tuple schema | One input value | Any | Any |
+| Sync calls | Sync handlers return a sync result | Calls return a `Promise` | Yes | Yes |
+| Runtime validation | Standard Schema | Standard Schema | Not included | Effect Schema |
+| Typed errors | Declared with schemas | oRPC: declared with schemas. tRPC: fixed error codes | From types | From types |
+| Unwrapping | None, read `result.data` | None | Required | Required to run |
+| Middleware | None | Built in | None | Layers and services |
+
+## oRPC and tRPC
+
+oRPC and tRPC are frameworks for APIs. Both let you call a procedure on the server side too: oRPC has `.callable()` and `createRouterClient`, and tRPC has `createCaller`. They still bring the router, the protocol, and the async contract with them. zagora is the smaller tool for when you only want the function.
+
+- **A function is the product.** `.callable()` returns a function with the signature that the input schema describes. There is nothing to mount or serve.
+- **Several arguments.** An oRPC or tRPC procedure takes one input value. A zagora tuple schema such as `z.tuple([z.string(), z.number().default(10)])` gives `(name: string, count?: number)`, with per-argument validation and defaults. See [tuple arguments](/guide/tuple-arguments).
+- **Sync stays sync.** zagora has no `async`/`await` in its code. It checks for promises at runtime, so a sync handler with sync schemas gives a sync result. The return type is not a `Result | Promise<Result>` union unless the code really can be both. See [async support](/guide/async).
+- **Errors are values.** Even a syntax error in a handler comes back as `result.error`. There is no error class to catch on the caller side.
+- **No middleware.** Do that work before the call, then pass the outcome as [context](/guide/context). See [routers](/recipes/routers) and [HTTP handlers](/recipes/http-handlers) for how to group procedures and put them behind a server.
+
+Use oRPC or tRPC when you need a typed client over HTTP, OpenAPI, or streaming. Use zagora for libraries, SDKs, CLIs, and the internal functions of an app. The two also fit together: a zagora procedure can be the body of an oRPC handler.
+
+## neverthrow
+
+neverthrow returns a `Result` that you unwrap with `match`, `map`, or `isOk()`. zagora returns a plain discriminated union. You check `result.ok` and read `result.data` or `result.error`, and TypeScript narrows them. zagora also validates the input and output at runtime, and neverthrow does not.
+
+## Effect
+
+Effect is a full runtime with its own model for errors, dependencies, concurrency, and resources. It is powerful, and it asks you to learn that model. zagora covers a small part of it, typed errors and typed dependencies, with plain functions and plain objects.
+
+## Plain TypeScript functions
+
+TypeScript checks types at compile time only. Data from users, files, the network, or `process.env` can still have the wrong shape at runtime, and the function then throws or returns garbage. zagora adds runtime validation from the same schema that gives the types, and returns one result shape for every failure.
+
+## Schema libraries on their own
+
+You can call `schema.safeParse()` in every function. zagora puts that in one place and adds:
+
+- a builder for input, output, errors, context, environment variables, and cache
+- several arguments from tuple schemas, with defaults filled in before the handler runs
+- validation of the output and of the error data, not only the input
+- one result shape for validation errors, thrown errors, and typed errors
+- any Standard Schema library, and you can mix libraries in one procedure

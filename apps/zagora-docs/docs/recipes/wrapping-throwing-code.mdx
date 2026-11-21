@@ -1,0 +1,68 @@
+---
+title: Wrapping throwing code
+description: Turn functions that throw, like JSON.parse or a third-party SDK call, into safe functions that return a result.
+---
+
+A handler can call code that throws. zagora catches it, so wrapping a throwing function in a procedure gives you a safe version of it.
+
+## A safe JSON.parse
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+export const safeJsonParse = zagora({ autoCallable: true, disableOptions: true })
+  .input(z.string())
+  .handler((text) => JSON.parse(text) as unknown);
+
+const good = safeJsonParse('{"a":1}');
+// { ok: true, data: { a: 1 }, error: undefined }
+
+const bad = safeJsonParse("{oops");
+// { ok: false, isTypedError: false, error: { kind: 'UNKNOWN_ERROR', message: 'Sync handler threw unknown error', cause: SyntaxError, ... } }
+```
+
+## Parse and validate in one step
+
+Add an output schema, and the parsed value is validated too.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const parseConfig = zagora({ autoCallable: true, disableOptions: true })
+  .input(z.string())
+  .output(z.object({ port: z.number(), host: z.string().default("localhost") }))
+  .handler((text) => JSON.parse(text));
+
+const result = parseConfig('{"port":8080}');
+if (result.ok) {
+  result.data;
+  //     ^?
+}
+```
+
+## An async SDK call
+
+A promise that rejects becomes an `UNKNOWN_ERROR` too. Map the failures you care about to typed errors.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+export const fetchJson = zagora()
+  .input(z.string().url())
+  .errors({ HTTP_ERROR: z.object({ status: z.number() }) })
+  .handler(async ({ errors }, url) => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw errors.HTTP_ERROR({ status: response.status });
+    }
+    return (await response.json()) as unknown;
+  })
+  .callable();
+
+const result = await fetchJson("https://example.com/data.json");
+```
+
+A network failure inside `fetch` rejects, and the result has an `UNKNOWN_ERROR` with the original error in `cause`.

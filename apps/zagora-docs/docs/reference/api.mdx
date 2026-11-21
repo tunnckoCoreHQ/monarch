@@ -1,0 +1,106 @@
+---
+title: API
+description: The zagora() factory, its config, and every builder method with its signature and behavior.
+---
+
+## Entry points
+
+| Import | Exports |
+| --- | --- |
+| `zagora` | `zagora`, the `Zagora` class, the `ZagoraConfig` type, and the `errors`, `utils`, and `types` namespaces |
+| `zagora/errors` | Error guards, error creators, and error types. See [errors](/reference/errors). |
+| `zagora/utils` | The low-level runtime helpers. See [utils](/reference/utils). |
+| `zagora/types` | The type utilities. See [types](/reference/types). |
+
+## zagora(config?)
+
+Creates a builder.
+
+```ts
+function zagora(config?: ZagoraConfig): Zagora;
+
+interface ZagoraConfig {
+  disableOptions?: boolean; // default false
+  autoCallable?: boolean; // default false
+}
+```
+
+- `disableOptions`: the handler gets only the input arguments, without the options object.
+- `autoCallable`: `.handler()` returns the callable function, without `.callable()`.
+
+See [instance options](/guide/instance-options).
+
+## Builder methods
+
+Every method returns a new builder and leaves the old one unchanged. A second call to the same method replaces the first one.
+
+### .input(schema)
+
+Sets the Standard Schema for the arguments. A tuple schema gives one argument per element, and any other schema gives one argument. Without it, the procedure takes no arguments. See [input and output](/guide/input-and-output) and [tuple arguments](/guide/tuple-arguments).
+
+### .output(schema)
+
+Sets the Standard Schema for the return value. zagora validates the handler's return value with it, and `result.data` gets its output type. Without it, `result.data` has the awaited return type of the handler.
+
+### .errors(map)
+
+```ts
+.errors<TErrors extends Record<string, StandardSchemaV1>>(map: TErrors & UppercaseKeys<TErrors>)
+```
+
+Declares the typed error kinds. Keys must be uppercase. The handler gets one helper per key on `options.errors`. See [typed errors](/guide/typed-errors).
+
+### .context(initialContext?)
+
+```ts
+.context<TContext extends Record<string, unknown>>(initialContext?: TContext)
+```
+
+Sets the context type, and optionally an initial value. The call-time context from `.callable({ context })` is deep-merged over it. See [context](/guide/context).
+
+### .env(schema, envVars?)
+
+```ts
+.env<TSchema extends StandardSchemaV1>(schema: TSchema, envVars?: Record<string, string | undefined>)
+```
+
+Sets the schema for the environment variables, and optionally their values. The keys of a literal `envVars` object must be uppercase. zagora validates them on every call, and the handler reads the parsed values from `options.env`. Async schemas are not supported. See [environment variables](/guide/environment-variables).
+
+### .cache(adapter)
+
+```ts
+.cache<TCache extends CacheAdapter>(adapter: TCache)
+```
+
+Sets a cache adapter with `has`, `get`, and `set` methods. See [caching](/guide/caching).
+
+### .handler(fn)
+
+Sets the function that runs. Its parameters are the options object, unless `disableOptions` is on, followed by the input arguments. With `autoCallable` it returns the callable function, and otherwise a builder.
+
+### .callable(options?)
+
+```ts
+.callable(options?: {
+  context?: TContext;
+  cache?: CacheAdapter;
+  env?: EnvInput;
+})
+```
+
+Makes the callable function. TypeScript rejects any other option key.
+
+- `context` is deep-merged over the initial context.
+- `cache` replaces the adapter from `.cache()`.
+- `env` is merged over the values from `.env()`. Its keys are checked against the env schema.
+
+You can call `.callable()` many times on one builder, for example once per request.
+
+## The callable function
+
+The function returned by `.callable()`, or by `.handler()` in auto-callable mode:
+
+- takes the arguments that the input schema describes
+- returns a [result](/reference/result), or a `Promise` of one when part of the procedure is [async](/guide/async)
+- never throws and never rejects
+- has a `~zagora` property with its definition: `inputSchema`, `outputSchema`, `errorsMap`, `envVarsMapSchema`, `initialContext`, `cacheAdapter`, `handler`, `disableOptions`, and `autoCallable`. The env values are left out on purpose.

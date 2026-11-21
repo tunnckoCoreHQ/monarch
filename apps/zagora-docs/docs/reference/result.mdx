@@ -1,0 +1,69 @@
+---
+title: Result
+description: The exact shape of the ZagoraResult that every procedure returns, for success, typed errors, and built-in errors.
+---
+
+Every call returns one of three shapes:
+
+```ts
+// Success
+{ readonly ok: true; data: TOutput; readonly error: undefined }
+
+// A declared typed error
+{ readonly ok: false; readonly isTypedError: true; readonly error: { kind: "NOT_FOUND" } & NotFoundData | ... }
+
+// A built-in error
+{ readonly ok: false; readonly isTypedError: false; readonly error: InternalError | ValidationError }
+```
+
+The typed error branch exists only when the procedure declares an error map.
+
+- `data` has the output type of the output schema, or the awaited return type of the handler.
+- A typed error has the output type of its schema, plus `kind`.
+- `ValidationError` has `key` typed as the union of the declared kinds, for a failed typed error.
+
+## The ZagoraResult type
+
+`ZagoraResult` from `zagora/types` builds these shapes:
+
+```ts
+type ZagoraResult<TOutput, TErrorsMap, TResolvedResult, IsTypedError = ...>;
+```
+
+You rarely need it directly. Infer the result type from a procedure instead:
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const getUser = zagora()
+  .input(z.string())
+  .errors({ NOT_FOUND: z.object({ id: z.string() }) })
+  .handler((_, id) => ({ id }))
+  .callable();
+
+type GetUserResult = ReturnType<typeof getUser>;
+//   ^?
+```
+
+For an async procedure, use `Awaited<ReturnType<typeof procedure>>`.
+
+## Built-in error types
+
+```ts
+type ValidationError<TKinds = never> = {
+  readonly kind: "VALIDATION_ERROR";
+  readonly message: string;
+  readonly issues: readonly StandardSchemaV1.Issue[];
+  readonly key?: TKinds;
+};
+
+type InternalError = {
+  readonly kind: "UNKNOWN_ERROR";
+  readonly message: string;
+  readonly cause: any;
+  readonly stack: any;
+};
+```
+
+The error object in a failed result is frozen.

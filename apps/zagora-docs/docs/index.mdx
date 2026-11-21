@@ -1,0 +1,63 @@
+---
+title: Introduction
+description: zagora builds type-safe, error-safe TypeScript functions that never throw. You get input and output validation from any Standard Schema library and typed errors, with no network layer and no routers.
+sidebar:
+  icon: book-open
+---
+
+zagora is a small TypeScript library for building functions that never throw. You describe the input, the output, and the errors with any [Standard Schema](https://standardschema.dev) library (Zod, Valibot, ArkType, and others). zagora gives you back a plain function. Every call returns a result object: `{ ok: true, data }` or `{ ok: false, error }`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+const getUser = zagora()
+  .input(z.tuple([z.string(), z.number().default(18)]))
+  .output(z.object({ name: z.string(), age: z.number(), email: z.string() }))
+  .handler((_, name, age) => {
+    //                 ^?
+    return { name, age, email: `${name.toLowerCase()}@example.com` };
+  })
+  .callable();
+
+const result = getUser("Charlie");
+
+if (result.ok) {
+  console.log(result.data);
+  // { name: 'Charlie', age: 18, email: 'charlie@example.com' }
+} else {
+  console.error(result.error.kind);
+  //                         ^?
+}
+```
+
+The second argument has a default in the schema, so `getUser("Charlie")` is a valid call, and the handler gets `age` as a `number`, not `number | undefined`.
+
+## Why zagora
+
+[oRPC](https://orpc.dev) and [tRPC](https://trpc.io) build procedures for APIs: a router, a server, a client, and a network between them. zagora keeps only the procedure. It is a lower-level tool for building libraries, SDKs, CLIs, and the internals of an app. What it produces is a regular TypeScript function that you export and call.
+
+- **Never throws.** Validation failures, thrown errors, rejected promises, and broken cache adapters all come back as `result.error`. The process does not crash.
+- **Typed errors.** You declare error kinds with schemas. Handlers get typed helpers, and callers get a discriminated union of every kind.
+- **Real function signatures.** A tuple schema becomes a list of arguments, with per-argument validation, defaults, and optional trailing arguments.
+- **Sync stays sync.** zagora does not use `async`/`await` internally. A sync handler gives a sync procedure, and an async handler or async schema gives a `Promise`. The return type follows the runtime.
+- **No unwrapping.** Unlike `neverthrow`, you read `result.data` or `result.error` directly.
+- **Typed dependencies.** Context, environment variables, and a cache adapter are set when you define the procedure or when you make it callable.
+- **Tested types.** The type system has its own test suite, next to the runtime tests.
+
+## Where to next
+
+<CardGroup cols={2}>
+  <Card title="Getting started" href="/getting-started" icon="rocket">
+    Install zagora and write your first procedure.
+  </Card>
+  <Card title="Comparison" href="/comparison" icon="scale">
+    How zagora relates to oRPC, tRPC, neverthrow, Effect, and plain validators.
+  </Card>
+  <Card title="Typed errors" href="/guide/typed-errors" icon="shield-alert">
+    Declare error kinds and throw them with typed helpers.
+  </Card>
+  <Card title="API reference" href="/reference/api" icon="code">
+    Every builder method, option, and export.
+  </Card>
+</CardGroup>

@@ -1,0 +1,105 @@
+---
+title: Error handling
+description: The three error kinds, the type guards that tell them apart, and the guarantee that a zagora procedure never throws.
+---
+
+A zagora procedure never throws and never rejects. Every failure comes back in the result, as one of three kinds of error.
+
+| Kind | When | Fields |
+| --- | --- | --- |
+| `VALIDATION_ERROR` | The input, output, env, or error data failed its schema. | `message`, `issues`, `key?` |
+| `UNKNOWN_ERROR` | The handler threw or rejected, a schema or cache adapter failed, or something else went wrong. | `message`, `cause`, `stack` |
+| Your kinds, such as `NOT_FOUND` | The handler threw a declared [typed error](/guide/typed-errors). | The fields of its schema |
+
+## The result
+
+```ts
+type Result =
+  | { ok: true; data: Output; error: undefined }
+  | { ok: false; isTypedError: true; error: DeclaredError }
+  | { ok: false; isTypedError: false; error: ValidationError | InternalError };
+```
+
+Check `result.ok` first. TypeScript then narrows `data` and `error`. The [result reference](/reference/result) has the exact type.
+
+## Never-throwing guarantees
+
+Each of these becomes a failed result:
+
+- invalid input, output, env, or typed error data: `VALIDATION_ERROR`
+- a handler that throws, or returns a rejected promise: `UNKNOWN_ERROR`, with the thrown value in `cause`
+- a falsy thrown value, such as `throw undefined` or `throw 0`: still `UNKNOWN_ERROR`
+- a schema whose code throws or rejects: `UNKNOWN_ERROR`
+- a cache adapter method that throws or rejects: `UNKNOWN_ERROR`
+- a cache key that cannot be computed: `UNKNOWN_ERROR`
+- an async env schema, which is not supported: `UNKNOWN_ERROR`
+
+```ts twoslash
+import { zagora } from "zagora";
+// ---cut---
+const procedure = zagora()
+  .handler(() => {
+    throw new Error("Oops");
+  })
+  .callable();
+
+const result = procedure();
+// result.ok === false
+// result.error.kind === 'UNKNOWN_ERROR'
+// result.error.message === 'Sync handler threw unknown error'
+// result.error.cause is the Error, and result.error.cause.message === 'Oops'
+```
+
+Every error object in a result is frozen.
+
+## Type guards
+
+The `zagora/errors` entry point exports a guard for each kind. Use them when you handle errors from many procedures in one place, or when a `switch` on `kind` is too much.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+import { isDefinedError, isInternalError, isValidationError } from "zagora/errors";
+
+const div = zagora({ autoCallable: true })
+  .input(z.tuple([z.number(), z.number()]))
+  .errors({
+    DIVIDE_BY_ZERO: z.object({ a: z.number(), b: z.number() }),
+  })
+  .handler(({ errors }, a, b) => {
+    if (b === 0) {
+      throw errors.DIVIDE_BY_ZERO({ a, b });
+    }
+    return a / b;
+  });
+
+const result = div(7, 0);
+
+if (!result.ok) {
+  if (isValidationError(result.error)) {
+    result.error.issues;
+  } else if (isInternalError(result.error)) {
+    result.error.cause;
+  } else if (isDefinedError(result.error)) {
+    // { kind: 'DIVIDE_BY_ZERO', a: 7, b: 0 }
+  }
+}
+```
+
+<Callout type="tip">
+  Check `isDefinedError` last. Its type narrows to any error with a `kind`, so after it returns
+  `false` TypeScript has nothing left in the union.
+</Callout>
+
+| Guard | Returns `true` for |
+| --- | --- |
+| `isValidationError(value)` | `kind: "VALIDATION_ERROR"` with a string `message` and an `issues` array |
+| `isInternalError(value)` | `kind: "UNKNOWN_ERROR"` with a string `message` and the `cause` and `stack` keys |
+| `isDefinedError(value)` | any other non-empty uppercase `kind` |
+| `isZagoraError(value)` | any of the three |
+
+The guards check the shape at runtime, so they also work on values that crossed a boundary, such as JSON from a worker.
+
+## Errors outside the handler
+
+zagora returns early when a step fails. Invalid env stops the call before the input is checked, and invalid input stops it before the handler runs. A failed handler skips the output check and the cache write. So the handler only runs with valid input, and the cache only stores valid output.
