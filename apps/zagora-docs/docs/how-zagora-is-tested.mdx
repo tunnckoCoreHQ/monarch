@@ -20,7 +20,7 @@ A fix lands with a test that fails without it. The v1 review in [#176](https://g
 
 ## Type tests
 
-A type can be wrong while every runtime test passes. For example, a required tuple element can look optional, or a handler with the `async` keyword can get a sync type. zagora tests its types with `expectTypeOf` assertions and `@ts-expect-error` lines. The type checker runs them in the `check` task, so a wrong type fails CI like a failed runtime test.
+A type can be wrong while every runtime test passes. For example, a required tuple element can look optional, or an async handler can get a sync type. zagora tests its types with `expectTypeOf` assertions and `@ts-expect-error` lines. The type checker runs them in the `check` task, so a wrong type fails CI like a failed runtime test.
 
 The type tests check the hard parts of the type system:
 
