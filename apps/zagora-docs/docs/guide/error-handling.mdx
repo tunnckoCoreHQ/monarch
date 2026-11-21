@@ -22,20 +22,9 @@ type Result =
 
 Check `result.ok` first. TypeScript then narrows `data` and `error`. The [result reference](/reference/result) has the exact type.
 
-## Every failed step becomes a result
+## Read a thrown error from the result
 
-Each failure in this table becomes a failed result.
-
-| Failure | Kind |
-| --- | --- |
-| Invalid input, output, env, or typed error data | `VALIDATION_ERROR` |
-| A handler that throws, or returns a rejected promise | `UNKNOWN_ERROR`, with the thrown value in `cause` |
-| A falsy thrown value, such as `throw undefined` or `throw 0` | `UNKNOWN_ERROR` |
-| A schema that throws or rejects | `UNKNOWN_ERROR` |
-| A cache adapter method that throws or rejects | `UNKNOWN_ERROR` |
-| A cache key that zagora cannot compute | `UNKNOWN_ERROR` |
-| An async env schema, which zagora does not support | `UNKNOWN_ERROR` |
-| A thrown value whose `kind` getter throws | `UNKNOWN_ERROR`, with the thrown value in `cause` |
+A thrown error becomes an `UNKNOWN_ERROR`, and the thrown value is in `cause`.
 
 ```ts twoslash
 import { zagora } from "zagora";
@@ -53,7 +42,7 @@ const result = procedure();
 // result.error.cause is the Error, and result.error.cause.message === 'Oops'
 ```
 
-zagora freezes every error object in a result with `Object.freeze`.
+The [errors reference](/reference/errors#failures-and-their-kinds) lists every failure and its kind.
 
 ## Narrow an error with a type guard
 
