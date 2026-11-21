@@ -1,6 +1,6 @@
 {
   "name": "@tunnckocore/ethscriptions-core",
-  "version": "0.11.3",
+  "version": "0.12.0",
   "description": "Library with utility functions for Ethscriptions. Fetches and filters ethscriptions, fetches user profiles, estimates costs, and resolves ENS and Ethscriptions names.",
   "homepage": "https://github.com/tunnckoCoreHQ/monarch/tree/master/packages/ethscriptions-core",
   "license": "MPL-2.0",
