@@ -93,4 +93,21 @@ upperAll(["foo", "bar"]);
 // { ok: true, data: ['FOO', 'BAR'], error: undefined }
 ```
 
-A procedure that needs typed errors needs the options object. For that procedure, use `zagora({ autoCallable: true })` without `disableOptions`.
+Without the options object, the handler has no error helpers. Typed errors still work. Throw a plain object with a declared `kind`, and zagora validates it against the error schema.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const za = zagora({ autoCallable: true, disableOptions: true });
+
+const findUser = za
+  .errors({ NOT_FOUND: z.object({ id: z.string() }) })
+  .input(z.string())
+  .handler((id) => {
+    throw { kind: "NOT_FOUND", id };
+  });
+
+findUser("42");
+// { ok: false, isTypedError: true, error: { id: '42', kind: 'NOT_FOUND' } }
+```
