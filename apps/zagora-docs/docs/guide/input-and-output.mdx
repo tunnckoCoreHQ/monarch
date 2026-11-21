@@ -150,3 +150,5 @@ add(2);
 ## A schema that throws gives an UNKNOWN_ERROR
 
 A schema can throw instead of returning issues, or an async schema can reject. zagora does not report a validation failure then. It returns an `UNKNOWN_ERROR` with the message `Unexpected failure during input validation`, and the thrown value is in `error.cause`. For the other schemas, the message has `output`, `env`, or `error data` in place of `input`.
+
+An env schema that is async always fails with a different `UNKNOWN_ERROR`, because zagora does not support async env schemas. The handler does not run when the input schema fails.
