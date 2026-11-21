@@ -14,6 +14,7 @@ import type {
   ResolvedProcedure,
   ResolveHandlerOptions,
   ResolveProcedure,
+  SingleArg,
   SpreadTuple,
   UppercaseKeys,
   ZagoraDef,
@@ -444,7 +445,7 @@ export class Zagora<
       ? InferSchemaInput<TInputSchema> extends readonly [any, ...any[]]
         ? SpreadTuple<InferSchemaInput<TInputSchema>, TFinalResult>
         : [FixedTuple<InferSchemaInput<TInputSchema>>] extends [never]
-          ? (arg: InferSchemaInput<TInputSchema>) => TFinalResult
+          ? SingleArg<InferSchemaInput<TInputSchema>, TFinalResult>
           : SpreadTuple<FixedTuple<InferSchemaInput<TInputSchema>>, TFinalResult>
       : () => TFinalResult;
 

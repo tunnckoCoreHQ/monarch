@@ -253,6 +253,11 @@ type OptionalTail<T extends readonly any[], TTail extends any[] = []> = T extend
 // TEST: with expect-type
 export type SpreadTuple<T extends readonly any[], R> = (...args: OptionalTail<T>) => R;
 
+// An input that accepts `undefined`, from `.default()` or `.optional()`, makes the argument optional.
+// TEST: with expect-type
+export type SingleArg<TInput, R> =
+  IsOptional<TInput> extends true ? (arg?: TInput) => R : (arg: TInput) => R;
+
 // TEST: with expect-type
 export type ResolvedProcedure<
   TInputSchema extends AnySchema | undefined,
@@ -261,6 +266,6 @@ export type ResolvedProcedure<
   ? InferSchemaInput<TInputSchema> extends readonly [any, ...any[]]
     ? SpreadTuple<InferSchemaInput<TInputSchema>, TFinalResult>
     : [FixedTuple<InferSchemaInput<TInputSchema>>] extends [never]
-      ? (arg: InferSchemaInput<TInputSchema>) => TFinalResult
+      ? SingleArg<InferSchemaInput<TInputSchema>, TFinalResult>
       : SpreadTuple<FixedTuple<InferSchemaInput<TInputSchema>>, TFinalResult>
   : () => TFinalResult;
