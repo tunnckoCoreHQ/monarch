@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import * as v from "valibot";
-import { expect, test } from "vitest";
+import { expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
 
 import { Zagora, zagora } from "../src/index";
@@ -252,4 +252,28 @@ test("should support overriding schemas", () => {
   } else {
     expect(false, "Should not error for overriding error schemas").toBe(true);
   }
+});
+
+test("should support .errors() without .input()", () => {
+  const countKinds = zagora()
+    .errors(errorSchemas.multiple)
+    .handler(({ errors }) => Object.keys(errors).length)
+    .callable();
+
+  const counted = countKinds();
+  expect(counted).toMatchObject({ ok: true, data: 2 });
+  if (counted.ok) {
+    expectTypeOf(counted.data).toEqualTypeOf<number>();
+  }
+
+  const alwaysFails = zagora()
+    .errors(errorSchemas.single)
+    .handler(({ errors }) => {
+      throw errors.NETWORK_ERROR({ type: "NETWORK_ERROR", message: "offline", statusCode: 503 });
+    })
+    .callable();
+
+  const failed = alwaysFails();
+  expect(failed.ok).toBe(false);
+  expect(failed.error?.kind).toBe("NETWORK_ERROR");
 });
