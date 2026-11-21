@@ -444,3 +444,16 @@ test("proper return type for sync and async handlers", async () => {
   expect(res5).toBeInstanceOf(Promise);
   expect(((await res5) as any).data.name).toBe("zagora");
 });
+
+test("Valibot nested issue path - validation message prints the keys", () => {
+  const listNames = zagora()
+    .input(v.object({ users: v.array(v.object({ name: v.string() })) }))
+    .handler((_, input) => input.users.map((user) => user.name))
+    .callable();
+
+  // @ts-expect-error - name must be a string
+  const res = listNames({ users: [{ name: 1 }] });
+
+  expect(res.ok).toBe(false);
+  expect(res.error?.message).toContain("Input validation failed: users.0.name => ");
+});

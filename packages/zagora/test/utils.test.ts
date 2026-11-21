@@ -91,7 +91,7 @@ test("validateError - non-string kind becomes an internal error", () => {
   expect(procedure()).toMatchObject({
     ok: false,
     isTypedError: false,
-    error: { kind: "UNKNOWN_ERROR", cause: thrown },
+    error: { kind: "UNKNOWN_ERROR", message: "Sync handler threw unknown error", cause: thrown },
   });
 });
 
@@ -109,7 +109,7 @@ test("validateError - number kind does not match a numeric errors map key", () =
   expect(procedure()).toMatchObject({
     ok: false,
     isTypedError: false,
-    error: { kind: "UNKNOWN_ERROR", cause: thrown },
+    error: { kind: "UNKNOWN_ERROR", message: "Sync handler threw unknown error", cause: thrown },
   });
 });
 
