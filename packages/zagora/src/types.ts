@@ -199,9 +199,9 @@ export type ResolveProcedure<
   ? TInputSchema extends AnySchema
     ? InferSchemaOutput<TInputSchema> extends readonly [any, ...any[]]
       ? SpreadTuple<InferSchemaOutput<TInputSchema>, any>
-      : [FixedTuple<InferSchemaOutput<TInputSchema>>] extends [never]
+      : [FixedTupleOutput<TInputSchema>] extends [never]
         ? (arg: InferSchemaOutput<TInputSchema>) => any
-        : SpreadTuple<FixedTuple<InferSchemaOutput<TInputSchema>>, any>
+        : SpreadTuple<FixedTupleOutput<TInputSchema>, any>
     : () => any
   : TInputSchema extends AnySchema
     ? InferSchemaOutput<TInputSchema> extends readonly [any, ...any[]]
@@ -212,7 +212,7 @@ export type ResolveProcedure<
           ],
           any
         >
-      : [FixedTuple<InferSchemaOutput<TInputSchema>>] extends [never]
+      : [FixedTupleOutput<TInputSchema>] extends [never]
         ? (
             options: Prettify<ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>>,
             arg: InferSchemaOutput<TInputSchema>,
@@ -220,7 +220,7 @@ export type ResolveProcedure<
         : SpreadTuple<
             [
               Prettify<ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>>,
-              ...FixedTuple<InferSchemaOutput<TInputSchema>>,
+              ...FixedTupleOutput<TInputSchema>,
             ],
             any
           >
@@ -232,6 +232,13 @@ export type FixedTuple<T> = [T] extends [infer TTuple extends readonly any[]]
     ? never
     : TTuple
   : never;
+
+// The handler gets spread arguments only when the schema input is a tuple too, as the runtime requires.
+type FixedTupleOutput<TSchema extends AnySchema> = [FixedTuple<InferSchemaInput<TSchema>>] extends [
+  never,
+]
+  ? never
+  : FixedTuple<InferSchemaOutput<TSchema>>;
 
 // Only the trailing elements that accept `undefined` become optional.
 type OptionalTail<T extends readonly any[], TTail extends any[] = []> = T extends readonly [

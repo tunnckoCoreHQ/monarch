@@ -1082,3 +1082,15 @@ test("should have ~zagora property typed on auto-callable procedures", () => {
   expect(meta.inputSchema).toBeDefined();
   expect(meta).not.toHaveProperty("envVars");
 });
+
+test("non-tuple schema with an optional tuple output passes one handler argument", () => {
+  const procedure = zagora()
+    .input(z.string().transform((value): [string?] => [value]))
+    .handler((_, list) => {
+      expectTypeOf(list).toEqualTypeOf<[string?]>();
+      return list.length;
+    })
+    .callable();
+
+  expect(procedure("x")).toMatchObject({ ok: true, data: 1 });
+});

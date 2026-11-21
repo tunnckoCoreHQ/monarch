@@ -108,7 +108,7 @@ export function processHandler(
       // TODO: we should have a better serializer a bit later
       key = getCacheHash(
         JSON.stringify({ ...incoming, fnStr: handlerFn.toString(), args }, (_, value) =>
-          typeof value === "bigint" ? `${value}n` : value,
+          typeof value === "bigint" ? { $bigint: value.toString() } : value,
         ),
       );
     } catch (error) {

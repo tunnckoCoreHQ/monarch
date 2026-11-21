@@ -1055,3 +1055,20 @@ test("cache key supports bigint inputs", () => {
   expect(double(6n)).toMatchObject({ ok: true, data: 12n });
   expect(called).toBe(2);
 });
+
+test("cache key keeps a bigint apart from a string with the same digits", () => {
+  let called = 0;
+  const describe = zagora()
+    .input(z.union([z.bigint(), z.string()]))
+    .cache(new Map())
+    .handler((_, value) => {
+      called += 1;
+      return typeof value;
+    })
+    .callable();
+
+  expect(describe(5n)).toMatchObject({ ok: true, data: "bigint" });
+  expect(describe("5n")).toMatchObject({ ok: true, data: "string" });
+  expect(describe("5")).toMatchObject({ ok: true, data: "string" });
+  expect(called).toBe(3);
+});

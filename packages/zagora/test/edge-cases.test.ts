@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import { runInNewContext } from "node:vm";
 
 import * as v from "valibot";
 import { expect, test } from "vitest";
@@ -459,13 +458,14 @@ test("Valibot nested issue path - validation message prints the keys", () => {
   expect(res.error?.message).toContain("Input validation failed: users.0.name => ");
 });
 
-test("thenable handler result - awaited like a native Promise", async () => {
-  // A Promise from another realm is a thenable, and it is not an instance of this realm's Promise.
-  const resolving: PromiseLike<string> = runInNewContext("Promise.resolve('done')");
-  expect(resolving).not.toBeInstanceOf(Promise);
+const createThenable = <T>(settle: () => Promise<T>): PromiseLike<T> => ({
+  // oxlint-disable-next-line unicorn/no-thenable -- the test needs a thenable that is not a native Promise
+  then: (onFulfilled, onRejected) => settle().then(onFulfilled).catch(onRejected),
+});
 
+test("thenable handler result - awaited like a native Promise", async () => {
   const proc = zagora()
-    .handler(() => resolving)
+    .handler(() => createThenable(() => Promise.resolve("done")))
     .callable();
 
   const pending = proc();
@@ -473,9 +473,7 @@ test("thenable handler result - awaited like a native Promise", async () => {
   expect(await pending).toMatchObject({ ok: true, data: "done" });
 
   const failing = zagora()
-    .handler((): PromiseLike<string> =>
-      runInNewContext("Promise.reject(new Error('query failed'))"),
-    )
+    .handler(() => createThenable<string>(() => Promise.reject(new Error("query failed"))))
     .callable();
 
   const res = await failing();
