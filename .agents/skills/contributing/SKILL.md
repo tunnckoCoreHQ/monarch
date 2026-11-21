@@ -60,6 +60,7 @@ description: How to develop in the monarch monorepo. Use before changing code, a
 - The `ci` run checks, tests, and builds on pull requests and on `master`. Each Vitest run writes JSON results, which RWX shows on the run.
 - After those pass, a push to `master` publishes `nightly` packages, runs `deploy:nightly` for the apps it changed, and opens or updates the release pull request.
 - The release pull request (`chore: release packages`) publishes `latest`. The owner merges it by hand.
+- To keep a package out of the release, add its name to `held` in `scripts/version-packages.sh`. Its changesets stay pending, and it still gets nightly versions. Remove the name to release it.
 - To rehearse that publish, run `rwx dispatch monarch-publish-dry-run --ref master --wait`. It uses the pending changesets, uploads nothing, pushes no tag, and creates no GitHub Release.
 - Production deploys of two-environment apps run only by hand and only when the user asks: `promote` for one app, `pnpm run apps:deploy:prod` for all.
 
