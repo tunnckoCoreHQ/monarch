@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
-import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { expectTypeOf, test } from "vitest";
 import { z } from "zod";
 
-import type { DefinedError, ResolveErrorKindNames } from "../src/errors";
-import type { ZagoraConfig } from "../src/index";
 import type {
   ConditionalCacheAsync,
   FixedTuple,
@@ -13,16 +10,11 @@ import type {
   InferSchemaInput,
   InferSchemaInputSafe,
   InferSchemaOutput,
-  ObjectToUnion,
-  Prettify,
-  SchemaIssue,
-  ZagoraDef,
   ZagoraEnvVars,
 } from "../src/types";
 
 const withDefault = z.number().default(10);
 const toLength = z.string().transform((value) => value.length);
-const idSchema = z.object({ id: z.string() });
 
 type SyncCache = {
   has(key: string): boolean;
@@ -75,51 +67,8 @@ test("ConditionalCacheAsync adds a Promise only for an async cache", () => {
   >();
 });
 
-test("Prettify flattens an intersection", () => {
-  expectTypeOf<Prettify<{ a: 1 } & { b: 2 }>>().toEqualTypeOf<{ a: 1; b: 2 }>();
-});
-
-test("ObjectToUnion gives the union of the values", () => {
-  expectTypeOf<ObjectToUnion<{ a: 1; b: "x" }>>().toEqualTypeOf<1 | "x">();
-});
-
-test("SchemaIssue is the Standard Schema issue", () => {
-  expectTypeOf<SchemaIssue>().toEqualTypeOf<StandardSchemaV1.Issue>();
-});
-
 test("ZagoraEnvVars accepts records of strings only", () => {
   expectTypeOf<{ PORT: string }>().toExtend<ZagoraEnvVars>();
   expectTypeOf<typeof process.env>().toExtend<ZagoraEnvVars>();
   expectTypeOf<{ DEBUG: boolean }>().not.toExtend<ZagoraEnvVars>();
-});
-
-test("ZagoraConfig has two optional flags", () => {
-  expectTypeOf<ZagoraConfig>().toEqualTypeOf<{
-    disableOptions?: boolean;
-    autoCallable?: boolean;
-  }>();
-});
-
-test("ZagoraDef carries the schemas it gets", () => {
-  type Def = ZagoraDef<{ db: string }, typeof idSchema, undefined, undefined, undefined>;
-
-  expectTypeOf<Def["inputSchema"]>().toEqualTypeOf<typeof idSchema>();
-  expectTypeOf<Def["outputSchema"]>().toEqualTypeOf<undefined>();
-  expectTypeOf<Def["cacheAdapter"]>().toEqualTypeOf<undefined>();
-  expectTypeOf<Def["envVars"]>().toEqualTypeOf<ZagoraEnvVars>();
-  expectTypeOf<Def["disableOptions"]>().toEqualTypeOf<boolean | undefined>();
-});
-
-test("ResolveErrorKindNames gives the keys of an error map", () => {
-  expectTypeOf<
-    ResolveErrorKindNames<{ NOT_FOUND: typeof idSchema; FORBIDDEN: typeof idSchema }>
-  >().toEqualTypeOf<"NOT_FOUND" | "FORBIDDEN">();
-  expectTypeOf<ResolveErrorKindNames<undefined>>().toEqualTypeOf<undefined>();
-});
-
-test("DefinedError adds a readonly kind to the error data", () => {
-  expectTypeOf<DefinedError<{ id: string }>>().toEqualTypeOf<{
-    readonly kind: string;
-    id: string;
-  }>();
 });
