@@ -492,6 +492,8 @@ test("async handler - invalid input gives a Promise and skips the handler", asyn
     })
     .callable();
 
+  expectTypeOf<ReturnType<typeof proc>>().toExtend<Promise<unknown>>();
+
   // @ts-expect-error - the input must be a string
   const invalid = proc(123);
   expectTypeOf(invalid).toExtend<Promise<unknown>>();
@@ -510,6 +512,8 @@ test("async handler - failed env validation gives a Promise and skips the handle
     })
     .callable();
 
+  expectTypeOf<ReturnType<typeof proc>>().toExtend<Promise<unknown>>();
+
   const invalid = proc();
   expectTypeOf(invalid).toExtend<Promise<unknown>>();
   expect(invalid).toBeInstanceOf(Promise);
@@ -527,6 +531,8 @@ test("async handler - cache hit gives a Promise and skips the handler", async ()
       return input;
     })
     .callable();
+
+  expectTypeOf<ReturnType<typeof proc>>().toExtend<Promise<unknown>>();
 
   expect(await proc("a")).toMatchObject({ ok: true, data: "a" });
   expect(called).toBe(1);
