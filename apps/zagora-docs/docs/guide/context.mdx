@@ -1,5 +1,5 @@
 ---
-title: Context
+title: Pass dependencies with context
 description: Pass typed dependencies, such as a database, a request, or the current user, to handlers, when you define the procedure or when you make it callable.
 ---
 
@@ -10,19 +10,19 @@ import { z } from "zod";
 import { zagora } from "zagora";
 // ---cut---
 const procedure = zagora()
-  .context<{ userId: string; foo?: string }>({ userId: "default" })
+  .context<{ userId: string; requestId?: string }>({ userId: "anonymous" })
   .input(z.string())
   .handler(({ context }, id) => {
-    // context: { userId: string; foo?: string }
-    return `${context.userId} has foo -> ${context.foo ?? "unknown"}, id = ${id}`;
+    // context: { userId: string; requestId?: string }
+    return `${context.userId} reads ${id} in request ${context.requestId ?? "none"}`;
   })
-  .callable({ context: { userId: "foo-bar", foo: "qux" } });
+  .callable({ context: { userId: "ada", requestId: "req-1" } });
 
-procedure("charlie");
-// { ok: true, data: 'foo-bar has foo -> qux, id = charlie', error: undefined }
+procedure("post-1");
+// { ok: true, data: 'ada reads post-1 in request req-1', error: undefined }
 ```
 
-## Pass the context when you define or when you make the procedure
+## Pass the context with .context() or .callable()
 
 You can give the context in two places:
 
@@ -56,7 +56,7 @@ A `.context<T>()` call with no value sets only the type. Pass the value with `.c
 
 ## The two contexts merge key by key
 
-zagora deep-merges the `.callable()` context over the initial context. Plain objects merge key by key. Any other value, such as a class instance, an array, or a `Map`, replaces the initial value as it is. A database client therefore keeps its prototype and its methods.
+Zagora deep-merges the `.callable()` context over the initial context. The `.callable()` context must still match the whole `.context<T>()` type, so give each required key a value there too. Plain objects merge key by key. Any other value, such as a class instance, an array, or a `Map`, replaces the initial value as it is. A database client therefore keeps its prototype and its methods.
 
 ```ts twoslash
 import { zagora } from "zagora";
@@ -84,7 +84,7 @@ procedure();
 // { ok: true, data: { db: 'test', config: { timeout: 5, retries: 2 } }, error: undefined }
 ```
 
-The context root must be a plain object. TypeScript rejects other values.
+The context root must be a plain object. TypeScript rejects other values. A value that bypasses the type, through a cast or plain JavaScript, makes the call throw `Expects plain object args`.
 
 ## Auto-callable procedures get only the initial context
 

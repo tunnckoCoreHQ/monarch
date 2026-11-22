@@ -10,13 +10,21 @@
   overflow-wrap: anywhere;
 }
 
+/* A phone has no hover, so popups matter less there than readable lines. Scroll long lines sideways instead of wrapping them. */
+@media (max-width: 640px), (hover: none) {
+  .prose pre.twoslash > code {
+    overflow-x: auto;
+    overflow-wrap: normal;
+    white-space: pre;
+  }
+}
+
 /* A `// @errors:` line shows the compiler message under the code. Let it wrap to the block width instead of its full one-line width. */
 .prose pre.twoslash .twoslash-meta-line {
   width: auto;
   min-width: 0;
 }
 
-/* Size a popup by its content, cap its width, and wrap long types. */
 .prose .twoslash-popup-container {
   width: max-content;
   max-width: min(100vw - 1.5rem, 34rem);
@@ -37,4 +45,14 @@
   [data-blume-footer] {
     padding-inline: max(1.5rem, calc((100% - 84rem) / 2 + 1.5rem));
   }
+}
+
+/* Blume marks the current sidebar page with a gray background only. Give it the accent color. */
+.blume-nav-link[aria-current="page"] {
+  background: color-mix(in oklab, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+}
+
+.blume-nav-link[aria-current="page"] svg {
+  color: inherit;
 }

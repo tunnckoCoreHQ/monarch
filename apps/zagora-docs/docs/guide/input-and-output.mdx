@@ -1,25 +1,23 @@
 ---
-title: Input and output
+title: Validate input and output
 description: Validate the arguments and the return value of a procedure with any Standard Schema library, and see how each schema shape maps to function arguments.
 ---
 
 The input schema validates the arguments before the handler runs. The output schema validates the return value after the handler runs. Both can come from any [Standard Schema](https://standardschema.dev) library, and one procedure can mix libraries.
 
-## How the input schema maps to arguments
+## Pick the input schema for your arguments
 
 The shape of the input schema sets the signature of the procedure.
 
-| Input schema                         | Procedure     | Handler, after the options object |
-| ------------------------------------ | ------------- | --------------------------------- |
-| none                                 | `()`          | nothing                           |
-| primitive, such as `z.string()`      | `(value)`     | `value`                           |
-| object, such as `z.object({...})`    | `(input)`     | `input`                           |
-| array, such as `z.array(z.string())` | `(items)`     | `items`                           |
-| tuple, such as `z.tuple([...])`      | `(a, b, ...)` | `a, b, ...`                       |
+| Input schema                         | Procedure     |
+| ------------------------------------ | ------------- |
+| none                                 | `()`          |
+| primitive, such as `z.string()`      | `(value)`     |
+| object, such as `z.object({...})`    | `(input)`     |
+| array, such as `z.array(z.string())` | `(items)`     |
+| tuple, such as `z.tuple([...])`      | `(a, b, ...)` |
 
 Only a tuple spreads into several arguments. An array stays one argument. The [tuple arguments](/guide/tuple-arguments) page explains the tuple case.
-
-### Primitive input
 
 ```ts twoslash
 import { z } from "zod";
@@ -30,44 +28,27 @@ const shout = zagora()
   .handler((_, text) => text.toUpperCase())
   .callable();
 
-shout("hello world");
-// { ok: true, data: 'HELLO WORLD', error: undefined }
-```
-
-### Object input
-
-```ts twoslash
-import { z } from "zod";
-import { zagora } from "zagora";
-// ---cut---
 const describe = zagora()
   .input(z.object({ name: z.string(), age: z.number().default(18) }))
   .handler((_, { name, age }) => `${name} is ${age}`)
   .callable();
 
-describe({ name: "Ada" });
-// { ok: true, data: 'Ada is 18', error: undefined }
-```
-
-### Array input
-
-```ts twoslash
-import { z } from "zod";
-import { zagora } from "zagora";
-// ---cut---
 const upper = zagora()
   .input(z.array(z.string()))
   .handler((_, items) => items.map((item) => item.toUpperCase()))
-  // items: string[]
   .callable();
 
+shout("hello world");
+// { ok: true, data: 'HELLO WORLD', error: undefined }
+describe({ name: "Ada" });
+// { ok: true, data: 'Ada is 18', error: undefined }
 upper(["foo", "bar"]);
 // { ok: true, data: ['FOO', 'BAR'], error: undefined }
 ```
 
-## Input types and output types
+## Defaults and transforms in the input schema
 
-A schema has an input type and an output type. The two types differ when the schema has a default or a transform. The procedure accepts the input type, and the handler gets the output type.
+The input schema has an input type and an output type. The two types differ when the schema has a default or a transform. The procedure accepts the input type of the input schema, and the handler gets the output type of the input schema.
 
 ```ts twoslash
 import { z } from "zod";
@@ -83,9 +64,9 @@ parsePort("8080");
 // { ok: true, data: 8081, error: undefined }
 ```
 
-## Output validation
+## Validate the return value
 
-With an output schema, zagora validates the return value of the handler. An invalid return value becomes a `VALIDATION_ERROR`, and its message starts with `Output validation failed`.
+With an output schema, Zagora validates the return value of the handler. An invalid return value becomes a `VALIDATION_ERROR`, and its message starts with `Output validation failed`.
 
 ```ts twoslash
 import { z } from "zod";
@@ -111,7 +92,7 @@ age(30);
 
 The output schema also types `result.data`. A transform in the output schema runs on the return value, and `result.data` has the transformed type.
 
-## Validation errors
+## Read a validation error
 
 Every validation failure has the same shape.
 
@@ -128,27 +109,27 @@ The message starts with the part that failed, which is `Input`, `Output`, `Env`,
 
 ## Other schema libraries
 
-Validation works the same way with Valibot, ArkType, and every other Standard Schema library. You can mix libraries in one procedure.
-
-Tuple spreading is different. zagora spreads a tuple only when it recognizes the tuple schema, and it recognizes Zod and Valibot tuples.
+Zagora accepts any schema that follows the [Standard Schema](https://standardschema.dev) spec. Zod, Valibot, ArkType, and other libraries all work, and each schema in a procedure can come from a different library. In this example, the input uses Valibot and the output uses Zod.
 
 ```ts twoslash
 import * as v from "valibot";
 import { z } from "zod";
 import { zagora } from "zagora";
 // ---cut---
-const add = zagora()
-  .input(v.tuple([v.number(), v.optional(v.number(), 1)]))
-  .output(z.number())
-  .handler((_, a, b) => a + b)
+const getUser = zagora()
+  .input(v.object({ id: v.string() }))
+  .output(z.object({ id: z.string(), name: z.string() }))
+  .handler((_, { id }) => ({ id, name: "Ada" }))
   .callable();
 
-add(2);
-// { ok: true, data: 3, error: undefined }
+getUser({ id: "1" });
+// { ok: true, data: { id: '1', name: 'Ada' }, error: undefined }
 ```
 
-## When a schema itself fails
+Tuple arguments are the one exception. Zagora spreads only Zod and Valibot tuples into separate arguments. The [tuple arguments](/guide/tuple-arguments) guide covers both.
 
-A schema can throw instead of returning issues, or an async schema can reject. zagora does not report a validation failure then. It returns an `UNKNOWN_ERROR` with the message `Unexpected failure during input validation`, and the thrown value is in `error.cause`. For the other schemas, the message has `output`, `env`, or `error data` in place of `input`.
+## When a schema throws
 
-An env schema that is async always fails with a different `UNKNOWN_ERROR`, because zagora does not support async env schemas. The handler does not run when the input schema fails.
+A schema can throw instead of returning issues, or an async schema can reject. Zagora does not report a validation failure then. It returns an `UNKNOWN_ERROR` with the message `Unexpected failure during input validation`, and the thrown value is in `error.cause`. For the other schemas, the message has `output`, `env`, or `error data` in place of `input`.
+
+An env schema that is async always fails with a different `UNKNOWN_ERROR`, because Zagora does not support async env schemas. The handler does not run when the input schema fails.

@@ -7,7 +7,7 @@ description: The zagora() factory, its config, and every builder method with its
 
 | Import | Exports |
 | --- | --- |
-| `zagora` | `zagora`, the `Zagora` class, the `ZagoraConfig` type, the `errors` and `utils` namespaces, and the type-only `types` namespace |
+| `zagora` | `zagora`, `implement`, the `Zagora` class, the `ZagoraConfig` type, the `errors` and `utils` namespaces, and the type-only `types` namespace |
 | `zagora/errors` | The error guards, the error creators, and the error types. See the [zagora/errors reference](/reference/errors). |
 | `zagora/utils` | The runtime helpers. See the [zagora/utils reference](/reference/utils). |
 | `zagora/types` | The type utilities. See the [zagora/types reference](/reference/types). |
@@ -17,15 +17,12 @@ description: The zagora() factory, its config, and every builder method with its
 Creates a builder.
 
 ```ts
-function zagora(config?: ZagoraConfig): Zagora;
-
-interface ZagoraConfig {
-  disableOptions?: boolean; // default false
-  autoCallable?: boolean; // default false
-}
+function zagora(): Zagora;
+function zagora(config: { disableOptions: boolean; autoCallable?: boolean }): Zagora;
+function zagora(config: { autoCallable: boolean; disableOptions?: boolean }): Zagora;
 ```
 
-The config has two flags.
+A config object sets at least one of the two flags. Both flags are `false` by default.
 
 - `disableOptions`. The handler gets only the input arguments, without the options object.
 - `autoCallable`. The `.handler()` method returns the procedure, without `.callable()`.
@@ -50,7 +47,7 @@ Sets the Standard Schema for the arguments. A tuple schema gives one argument pe
 .output<TOutput extends AnySchema>(outputSchema: TOutput)
 ```
 
-Sets the Standard Schema for the return value. zagora validates the return value of the handler with it, and `result.data` gets the output type of the schema. Without an output schema, `result.data` has the awaited return type of the handler.
+Sets the Standard Schema for the return value. Zagora validates the return value of the handler with it, and `result.data` gets the output type of the output schema. Without an output schema, `result.data` has the awaited return type of the handler.
 
 ### .context(initialContext?)
 
@@ -58,7 +55,7 @@ Sets the Standard Schema for the return value. zagora validates the return value
 .context<TNewContext extends Record<string, unknown>>(initialContext?: TNewContext)
 ```
 
-Sets the context type and an optional initial value. zagora deep-merges the `.callable()` context over the initial value. See the [context guide](/guide/context).
+Sets the context type and an optional initial value. Zagora deep-merges the `.callable()` context over the initial value. See the [context guide](/guide/context).
 
 ### .errors(errorsMap)
 
@@ -77,7 +74,7 @@ Declares the typed error kinds. The keys must be uppercase. The handler gets one
 )
 ```
 
-Sets the schema for the environment variables and their optional values. The keys of an `envVars` object literal must be uppercase. zagora validates the merged values on every call, and the handler reads the parsed values from `options.env`. An async env schema gives an `UNKNOWN_ERROR`. See the [environment variables guide](/guide/environment-variables).
+Sets the schema for the environment variables and their optional values. The keys of an `envVars` object literal must be uppercase. Zagora validates the merged values on every call, and the handler reads the parsed values from `options.env`. An async env schema gives an `UNKNOWN_ERROR`. See the [environment variables guide](/guide/environment-variables).
 
 ### .cache(cacheAdapter)
 
@@ -107,13 +104,15 @@ Sets the function that runs. Its first parameter is the options object, unless `
 
 Makes the procedure. TypeScript rejects any other option key. The options have these effects:
 
-- zagora deep-merges `context` over the initial context.
+- Zagora deep-merges `context` over the initial context. The context root must be a plain object, as the type requires. A value that bypasses the type, through a cast or plain JavaScript, makes the call throw `Expects plain object args`.
 - A `cache` adapter replaces the adapter from `.cache()`.
-- zagora merges `env` over the values from `.env()`. The type of `env` is the input type of the env schema, and TypeScript rejects a key that the schema does not have. Without an env schema, the type of `env` is `never`.
+- Zagora merges `env` over the values from `.env()`. The type of `env` is the input type of the env schema, and TypeScript rejects a key that the schema does not have. Without an env schema, the type of `env` is `never`.
 
 The `TNewContext` type extends the context type from `.context()`. The `ResolveCallableEnv` type is internal to `zagora` and is not exported.
 
 You can call `.callable()` many times on one builder, for example once per request.
+
+Call `.handler()` before `.callable()`. TypeScript reports an error for `.callable()` on a builder without a handler. If a cast or plain JavaScript bypasses the types, the procedure still does not throw. A call with valid env values and valid input returns an `UNKNOWN_ERROR` with the message `No handler set: call .handler() before .callable()`.
 
 ## The procedure
 
@@ -121,5 +120,42 @@ The procedure is the function that `.callable()` returns, or that `.handler()` r
 
 - It takes the arguments that the input schema describes.
 - It returns a [result](/reference/result), or a `Promise` of one when part of the procedure is async. See the [async guide](/guide/async).
-- It returns failures in the result. It does not throw and does not reject.
+- It returns every failure in the result. It does not throw and does not reject.
 - Its `~zagora` property has the definition, without the env values. The definition can have the keys `inputSchema`, `outputSchema`, `errorsMap`, `envVarsMapSchema`, `initialContext`, `cacheAdapter`, `handler`, `disableOptions`, and `autoCallable`. A key is there only when the builder set it.
+
+## implement(contract, router)
+
+```ts
+function implement<TContract, const TRouter extends Implemented<TContract>>(
+  contract: TContract,
+  router: Exact<TRouter, Implemented<TContract>>,
+): TRouter;
+```
+
+Checks at compile time that a router matches a contract, and returns the router unchanged. A contract is an object of builders without handlers. A router is an object of procedures with the same keys. Both can nest.
+
+```ts twoslash
+import { z } from "zod";
+import { implement, zagora } from "zagora";
+// ---cut---
+const contract = {
+  greet: zagora().input(z.string()).output(z.string()),
+};
+
+const router = implement(contract, {
+  greet: contract.greet.handler((_, name) => `Hello, ${name}`).callable(),
+});
+
+router.greet("Ada");
+// { ok: true, data: 'Hello, Ada', error: undefined }
+```
+
+TypeScript reports an error in these cases:
+
+- The router misses a procedure of the contract.
+- The router has a key that the contract does not have, at any depth.
+- A procedure takes parameters that do not match the input schema of its contract.
+
+The check does not compare result types. The returned router keeps the exact type of each procedure.
+
+The same check works without the function, as `satisfies Implemented<typeof contract>`. The [`Implemented`](/reference/types#results-and-procedures) type is in `zagora/types`. The [Contract-First](/contract-first) page shows both in use.

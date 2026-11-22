@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import type { ErrorHelpers, InferSchemaMapPlain, InternalError, ValidationError } from "./errors";
+import type { Zagora } from "./index";
 import type { IsPromise } from "./is-promise";
 
 export type * from "./is-promise";
@@ -9,7 +10,6 @@ export type Schema<I, O = I> = StandardSchemaV1<I, O>;
 
 export type AnySchema = Schema<any, any>;
 
-// TEST: with expect-type
 export type IsAsyncSchema<T> = [T] extends [never]
   ? false
   : T extends unknown
@@ -38,7 +38,6 @@ type SchemaMapAsyncState<T> =
 type IsDefinitelyAsync<T extends boolean> = [T] extends [true] ? true : false;
 type IsPossiblyAsync<T extends boolean> = true extends T ? true : false;
 
-// TEST: with expect-type
 export type HasAsyncSchema<TInputSchema, TOutputSchema, TErrorsMap> = true extends
   | IsDefinitelyAsync<IsAsyncSchema<TInputSchema>>
   | IsDefinitelyAsync<IsAsyncSchema<TOutputSchema>>
@@ -51,7 +50,6 @@ export type HasAsyncSchema<TInputSchema, TOutputSchema, TErrorsMap> = true exten
     ? boolean
     : false;
 
-// TEST: with expect-type
 export type ConditionalSchemaAsync<
   TAsync extends boolean,
   TSync,
@@ -68,7 +66,6 @@ export type InferSchemaInput<T extends AnySchema> =
 
 export type InferSchemaOutputSafe<T> = T extends AnySchema ? InferSchemaOutput<T> : unknown;
 
-// Infer output type from either output schema or handler return type
 export type InferOutput<
   TOutputSchema extends AnySchema | undefined,
   THandlerFn extends (...args: any[]) => any,
@@ -78,7 +75,6 @@ export type InferOutput<
 
 export type InferSchemaInputSafe<T> = T extends AnySchema ? InferSchemaInput<T> : unknown;
 
-// TEST: with expect-type
 export type UppercaseKeys<T> = {
   [K in keyof T as Uppercase<string & K>]: T[K];
 };
@@ -89,7 +85,6 @@ export type Prettify<T> = {
   [K in keyof T]: T[K];
 } & {};
 
-// TEST: with expect-type
 export type IsOptional<T> = undefined extends T ? true : false;
 
 export type ObjectToUnion<T> = T[keyof T];
@@ -100,7 +95,6 @@ export type CacheAdapter = {
   set(key: string, value: unknown): any;
 };
 
-// TEST: with expect-type
 export type HasAsyncCache<TCache> = TCache extends {
   has(key: string): infer THas;
   get(key: string): infer TGet;
@@ -119,13 +113,10 @@ export type HasAsyncCache<TCache> = TCache extends {
       : false
   : false;
 
-// Cache methods run only on the paths that need them, so even a definitely
-// async method makes the procedure possibly async rather than always async.
 export type ConditionalCacheAsync<TCache, TResult> = [HasAsyncCache<TCache>] extends [false]
   ? TResult
   : TResult | Promise<Awaited<TResult>>;
 
-// TEST: with expect-type
 export type ZagoraResult<
   TOutput,
   TErrorsMap,
@@ -177,7 +168,6 @@ export interface ZagoraDef<
   handler?: (options: { context: TContext; errors: any }, ...args: unknown[]) => any;
 }
 
-// TEST: with expect-type
 export interface ResolveHandlerOptions<
   TContext,
   TErrorsMap extends Record<string, AnySchema> | undefined,
@@ -188,7 +178,6 @@ export interface ResolveHandlerOptions<
   env: InferSchemaOutputSafe<TEnvVarsMap>;
 }
 
-// TEST: with expect-type
 export type ResolveProcedure<
   TDisableOptions extends boolean,
   TContext,
@@ -199,9 +188,9 @@ export type ResolveProcedure<
   ? TInputSchema extends AnySchema
     ? InferSchemaOutput<TInputSchema> extends readonly [any, ...any[]]
       ? SpreadTuple<InferSchemaOutput<TInputSchema>, any>
-      : [FixedTupleOutput<TInputSchema>] extends [never]
+      : [TupleSchemaFixedOutput<TInputSchema>] extends [never]
         ? (arg: InferSchemaOutput<TInputSchema>) => any
-        : SpreadTuple<FixedTupleOutput<TInputSchema>, any>
+        : SpreadTuple<TupleSchemaFixedOutput<TInputSchema>, any>
     : () => any
   : TInputSchema extends AnySchema
     ? InferSchemaOutput<TInputSchema> extends readonly [any, ...any[]]
@@ -212,7 +201,7 @@ export type ResolveProcedure<
           ],
           any
         >
-      : [FixedTupleOutput<TInputSchema>] extends [never]
+      : [TupleSchemaFixedOutput<TInputSchema>] extends [never]
         ? (
             options: Prettify<ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>>,
             arg: InferSchemaOutput<TInputSchema>,
@@ -220,27 +209,24 @@ export type ResolveProcedure<
         : SpreadTuple<
             [
               Prettify<ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>>,
-              ...FixedTupleOutput<TInputSchema>,
+              ...TupleSchemaFixedOutput<TInputSchema>,
             ],
             any
           >
     : (options: Prettify<ResolveHandlerOptions<TContext, TErrorsMap, TEnvVarsMap>>) => any;
 
-// A tuple with a fixed length, also when every element is optional. The runtime spreads it.
 export type FixedTuple<T> = [T] extends [infer TTuple extends readonly any[]]
   ? number extends TTuple["length"]
     ? never
     : TTuple
   : never;
 
-// The handler gets spread arguments only when the schema input is a tuple too, as the runtime requires.
-type FixedTupleOutput<TSchema extends AnySchema> = [FixedTuple<InferSchemaInput<TSchema>>] extends [
-  never,
-]
+type TupleSchemaFixedOutput<TSchema extends AnySchema> = [
+  FixedTuple<InferSchemaInput<TSchema>>,
+] extends [never]
   ? never
   : FixedTuple<InferSchemaOutput<TSchema>>;
 
-// Only the trailing elements that accept `undefined` become optional.
 type OptionalTail<T extends readonly any[], TTail extends any[] = []> = T extends readonly [
   ...infer THead,
   infer TLast,
@@ -250,15 +236,11 @@ type OptionalTail<T extends readonly any[], TTail extends any[] = []> = T extend
     : [...T, ...Partial<TTail>]
   : [...T, ...Partial<TTail>];
 
-// TEST: with expect-type
 export type SpreadTuple<T extends readonly any[], R> = (...args: OptionalTail<T>) => R;
 
-// An input that accepts `undefined`, from `.default()` or `.optional()`, makes the argument optional.
-// TEST: with expect-type
 export type SingleArg<TInput, R> =
   IsOptional<TInput> extends true ? (arg?: TInput) => R : (arg: TInput) => R;
 
-// TEST: with expect-type
 export type ResolvedProcedure<
   TInputSchema extends AnySchema | undefined,
   TFinalResult,
@@ -269,3 +251,15 @@ export type ResolvedProcedure<
       ? SingleArg<InferSchemaInput<TInputSchema>, TFinalResult>
       : SpreadTuple<FixedTuple<InferSchemaInput<TInputSchema>>, TFinalResult>
   : () => TFinalResult;
+
+export type Implemented<T> = {
+  [K in keyof T]: T[K] extends Zagora<any, any, infer TInput, any, any, any, any, any, any>
+    ? ResolvedProcedure<TInput, unknown>
+    : Implemented<T[K]>;
+};
+
+export type Exact<T, TContract> = T extends (...args: any[]) => any
+  ? T
+  : T & { [K in Exclude<keyof T, keyof TContract>]: never } & {
+      [K in keyof T & keyof TContract]: Exact<T[K], TContract[K]>;
+    };

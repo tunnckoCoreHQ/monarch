@@ -1,0 +1,162 @@
+---
+title: Contract-First
+description: Describe your procedures as contracts first, with schemas and errors but no logic, then implement them somewhere else and let TypeScript check the fit.
+sidebar:
+  icon: handshake
+---
+
+Most Zagora code defines a procedure and implements it in the same chain: schemas, then `.handler()`, then `.callable()`. That's the right default. Contract-First splits it in two. First you write the contract, which says what each procedure takes, what it returns, and how it can fail. There's no logic in it. Then you write the implementation against that contract, in another file or another package.
+
+It's worth the extra step when:
+
+- You want to agree on the shape of an SDK before anyone writes the code behind it.
+- Several packages need the shapes, but only one should carry the implementation and its dependencies.
+- You want the schemas to live in one place, so the implementation can't quietly drift away from them.
+
+Zagora doesn't need a separate contract builder for this. A chain without a handler already is a contract.
+
+## A chain without a handler is a contract
+
+Every builder method returns a new builder, and nothing runs until `.callable()`. So `zagora().input(...).output(...).errors(...)` is a finished value with schemas and types but no behavior. You can export it, import it somewhere else, and add the handler there. TypeScript rejects `.callable()` on a builder that has no handler yet, so a contract can't turn into a procedure by accident.
+
+```ts twoslash include contract-first-contract title="contract.ts"
+import { z } from "zod";
+import { zagora } from "zagora";
+
+export const UserSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.email(),
+});
+
+export type User = z.infer<typeof UserSchema>;
+export type Db = { users: Map<string, User> };
+
+const base = zagora().context<{ db: Db }>();
+
+export const contract = {
+  users: {
+    list: base.output(z.array(UserSchema)),
+    find: base
+      .input(z.object({ id: z.string() }))
+      .output(UserSchema)
+      .errors({ NOT_FOUND: z.object({ id: z.string() }) }),
+    create: base
+      .input(z.object({ name: z.string(), email: z.email() }))
+      .output(UserSchema)
+      .errors({ EMAIL_TAKEN: z.object({ email: z.email() }) }),
+  },
+};
+```
+
+The result type comes from the output schema. Normally Zagora infers `result.data` from what the handler returns. A contract has no handler yet, so `.output()` decides the type. Once a handler exists, Zagora also validates its return value against that schema at runtime.
+
+The dependencies go into the contract as a type only. With `.context<{ db: Db }>()`, the contract says that every user procedure gets a `db`, but not which one. You decide that much later, when you call `.callable()`.
+
+Each procedure declares only the errors it can hit. Listing can't fail, a lookup can fail with `NOT_FOUND`, and a sign-up can fail with `EMAIL_TAKEN`. Both are part of the contract, so the caller knows every way a call can fail before any code exists.
+
+Keep this file free of implementation code. It imports Zod and Zagora and nothing else, so any package can depend on it without pulling in a database driver.
+
+## Implement the contract
+
+An implementation starts from the contract and adds the handler. The handler already knows everything the contract declared: the type of the input, the context, and the error helpers. You only write the logic.
+
+```ts twoslash include contract-first-impl title="users.ts"
+// @include: contract-first-contract
+// ---cut---
+export const listUsers = contract.users.list.handler(({ context }) => [
+  ...context.db.users.values(),
+]);
+
+export const findUser = contract.users.find.handler(({ context, errors }, { id }) => {
+  const user = context.db.users.get(id);
+  if (!user) {
+    throw errors.NOT_FOUND({ id });
+  }
+  return user;
+});
+
+export const createUser = contract.users.create.handler(({ context, errors }, { name, email }) => {
+  const taken = [...context.db.users.values()].some((user) => user.email === email);
+  if (taken) {
+    throw errors.EMAIL_TAKEN({ email });
+  }
+  const user = { id: crypto.randomUUID(), name, email };
+  context.db.users.set(user.id, user);
+  return user;
+});
+```
+
+These are still builders, and nothing is wired to a real database yet. That happens where the app starts, with `.callable()`:
+
+```ts title="app.ts"
+import type { Db } from "./contract";
+import { listUsers, findUser, createUser } from "./users";
+
+const db: Db = {
+  users: new Map([["1", { id: "1", name: "Ada", email: "ada@example.com" }]]),
+};
+
+export const users = {
+  list: listUsers.callable({ context: { db } }),
+  find: findUser.callable({ context: { db } }),
+  create: createUser.callable({ context: { db } }),
+};
+```
+
+A test does the same thing with its own `db`. It takes the same implementation and makes a callable around a fake database, as in the [testing recipe](/recipes/testing).
+
+So far, nothing here is a special API. A contract is a builder, and an implementation is that builder with a handler. Contract-First is just an abstraction, a way to organize and compose objects and files.
+
+## Check that the router is complete
+
+A router is a plain object of procedures. Pass it to `implement()` together with the contract, and TypeScript checks that the two match:
+
+```ts twoslash title="router.ts"
+// @include: contract-first-impl
+// ---cut---
+import { implement } from "zagora";
+
+const db: Db = {
+  users: new Map([["1", { id: "1", name: "Ada", email: "ada@example.com" }]]),
+};
+
+export const router = implement(contract, {
+  users: {
+    list: listUsers.callable({ context: { db } }),
+    find: findUser.callable({ context: { db } }),
+    create: createUser.callable({ context: { db } }),
+  },
+});
+```
+
+Leave out `find` and it doesn't compile. Add a `remove` that the contract doesn't have, at the top level or inside `users`, and it doesn't compile either. Pass a procedure that takes a `string` where the contract says `{ id: string }`, and the parameters don't match. The router comes back with its exact type, so callers still see each procedure's real result.
+
+The same check works as a type, without the function. Write the router as an object literal that `satisfies Implemented<typeof contract>`, with [`Implemented`](/reference/types#results-and-procedures) from `zagora/types`. The [`implement` reference](/reference/api#implementcontract-router) lists what the check covers.
+
+## Use the contract on its own
+
+The contract is useful even where nothing gets implemented.
+
+Types for the code that calls your SDK come straight from the schemas, through [`zagora/types`](/reference/types):
+
+```ts twoslash title="types.ts"
+// @include: contract-first-contract
+// ---cut---
+import type { InferSchemaInput, InferSchemaOutput } from "zagora/types";
+
+// what a handler returns, before the output schema runs
+export type UserInput = InferSchemaInput<typeof UserSchema>;
+// what a caller gets in result.data
+export type UserOutput = InferSchemaOutput<typeof UserSchema>;
+```
+
+The builder's `~zagora` property also holds the schemas, as `inputSchema`, `outputSchema`, and `errorsMap`. A script can walk the contract and read them, for example to generate JSON Schema for each procedure, or to put a [fetch handler](/recipes/http-handlers) in front without touching the implementation.
+
+## What's different from oRPC
+
+Zagora's Contract-First is the same idea with less machinery, and a few things work differently:
+
+- Calling `.input()` or `.output()` replaces the schema instead of adding to it. So an implementation can call `.input()` on a contract and swap the schema out, and nothing stops it. Start from the contract and add only `.handler()`.
+- There's no `.meta()`. If you need metadata per procedure, keep it in a plain object next to the contract.
+- There's no network client. A contract describes functions, not endpoints. If your client is in another process, put [oRPC](https://orpc.dev) in front and call the Zagora procedures from its handlers.

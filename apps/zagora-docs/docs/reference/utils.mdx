@@ -1,9 +1,9 @@
 ---
 title: zagora/utils
-description: The low-level runtime helpers that zagora is built from, exported from zagora/utils.
+description: The low-level runtime helpers that Zagora is built from, exported from zagora/utils.
 ---
 
-The zagora runtime is built from these functions. The main entry has the same exports on its `utils` namespace.
+The Zagora runtime is built from these functions. The main entry has the same exports on its `utils` namespace.
 
 ```ts
 import { createResult, deepMerge } from "zagora/utils";
@@ -15,11 +15,11 @@ The table lists the functions in the order of the source file.
 | --- | --- |
 | `getCacheHash(data)` | Returns the SHA-256 hex digest of the string `data`, from `node:crypto`. |
 | `validateInputOutputOrEnv(mode, schema, data)` | Runs a Standard Schema on `data` and returns a result, or a `Promise` of one for an async schema. The `mode` is `"input"`, `"output"`, or `"env"`. A schema that throws or rejects gives an `UNKNOWN_ERROR` with the message `Unexpected failure during <mode> validation`. |
-| `validateError(errorsMap, error, isAsync)` | Turns a thrown value into a result. A `kind` that is a key of `errorsMap` gives a typed error, or a `VALIDATION_ERROR` when the error data fails its schema. Any other value gives an `UNKNOWN_ERROR`. |
-| `processHandler(handlerFn, args, cacheAdapter, incoming)` | Computes the cache key when there is a cache adapter. Then it reads the cache on a hit, or calls `executeHandler`. The `incoming` object has the schemas that go into the key. |
+| `validateError(errorsMap, error, isAsync)` | Turns a thrown value into a result. A `kind` that is a key of `errorsMap` gives a [typed error](/guide/typed-errors), or a `VALIDATION_ERROR` when the error data fails its schema. Any other value gives an `UNKNOWN_ERROR`. |
+| `processHandler(handlerFn, args, cacheAdapter, incoming)` | Computes the cache key when there is a [cache adapter](/guide/caching). Then it reads the cache on a hit, or calls `executeHandler`. The `incoming` object has the schemas that go into the key. |
 | `executeHandler(argz, options)` | Calls the handler with `argz`, validates the output, and writes the valid output to the cache. The `options` object has `handlerFn`, `cacheAdapter`, `key`, and `outputSchema`. |
 | `tryCatch(fn, isHandler, method?)` | Calls `fn` and returns a result, or a `Promise` of one for a thenable. A throw or a rejection gives a failed result. With `isHandler` set to `true`, the failed result has the raw error, `handlerFailed: true`, and `isAsync`. With `isHandler` set to `false`, the error is an `UNKNOWN_ERROR` whose message names the `CacheAdapter` method. |
 | `createResult(data, error, isTypedError)` | Builds a result. With a truthy `error`, it returns `{ ok: false, isTypedError, error }` with the error frozen. Otherwise it returns `{ ok: true, data, error: undefined }`. |
 | `getPipeInputSchema(schema)` | Follows the Zod pipes that transforms make, and returns the schema that receives the input. |
-| `handleTupleDefaults(schema, rawArgs)` | Fills in the defaults of missing trailing elements for Zod and Valibot tuple schemas. A value that is not an array comes back wrapped in an array. |
+| `handleTupleDefaults(schema, parsedInput)` | Fills in the defaults of missing trailing elements for Zod and Valibot tuple schemas. A value that is not an array comes back wrapped in an array. |
 | `deepMerge(base, override)` | Merges plain objects key by key. Other values replace the base value. Throws when `base` or `override` is not a plain object. Keeps `__proto__` as an own data key. |

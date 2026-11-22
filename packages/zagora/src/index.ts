@@ -3,10 +3,12 @@ import type { ConditionalAsync } from "./is-promise";
 import type {
   AnySchema,
   CacheAdapter,
+  Exact,
   FixedTuple,
   ConditionalCacheAsync,
   ConditionalSchemaAsync,
   HasAsyncSchema,
+  Implemented,
   InferOutput,
   InferSchemaInput,
   InferSchemaInputSafe,
@@ -52,12 +54,16 @@ type ResolveCallableEnv<TOptions, TEnvVarsMap> = TEnvVarsMap extends AnySchema
         : unknown)
   : never;
 
+declare const noHandler: unique symbol;
+
+type NoHandler = ((...args: any[]) => any) & { readonly [noHandler]: true };
+
 export interface ZagoraConfig {
   disableOptions?: boolean;
   autoCallable?: boolean;
 }
 
-export function zagora(): Zagora<any>;
+export function zagora(): Zagora<NoHandler>;
 export function zagora<
   TDisableOptions extends boolean = false,
   TAutoCallable extends boolean = false,
@@ -65,7 +71,7 @@ export function zagora<
   disableOptions: TDisableOptions;
   autoCallable?: TAutoCallable;
 }): Zagora<
-  any,
+  NoHandler,
   undefined,
   undefined,
   undefined,
@@ -79,7 +85,7 @@ export function zagora<TAutoCallable extends boolean = false>(config: {
   autoCallable: TAutoCallable;
   disableOptions?: boolean;
 }): Zagora<
-  any,
+  NoHandler,
   undefined,
   undefined,
   undefined,
@@ -118,7 +124,6 @@ export class Zagora<
   ) {
     this["~zagora"] = def;
 
-    // Ensure config flags are set from constructor if provided
     if ("disableOptions" in def && def.disableOptions !== undefined) {
       this["~zagora"].disableOptions = def.disableOptions;
     }
@@ -295,7 +300,6 @@ export class Zagora<
       handler: fn as any,
     });
 
-    // If autoCallable is true, create the procedure immediately
     if (this["~zagora"].autoCallable) {
       return newInstance._createProcedure(
         this["~zagora"].initialContext,
@@ -327,7 +331,6 @@ export class Zagora<
       isAsyncSchema(outputSchema) ||
       Object.values(errorsMap || {}).some(isAsyncSchema);
 
-    // An `async` handler types the procedure as a Promise, also on the paths that never call it.
     const hasAsyncHandler = handlerFn?.constructor?.name === "AsyncFunction";
 
     // The spread copies `process.env`, which is not a plain object on Node.
@@ -362,23 +365,22 @@ export class Zagora<
         ResolveHandlerOptions<Prettify<TNewContext & TContext>, TErrorsMap, TEnvVarsMap>
       >;
 
-      // A Zod transform wraps the tuple in a pipe, and the tuple is the pipe's input schema.
       const schemaAny = getPipeInputSchema(inputSchema);
       const isTupleSchema =
         (schemaAny?._def && schemaAny?._def?.type === "tuple") || schemaAny?.type === "tuple";
 
-      const isArraySchema =
-        (schemaAny?._def && schemaAny?._def?.type === "array") || schemaAny?.type === "array";
-
-      const isPrimitiveSchema = !isTupleSchema;
-
       const processInput = (inputData: any) => {
-        // NOTE: isTuple is safe/enough here cuz it's based on the inputSchema,
-        // thus if inputSchema is not defined, then it would be isTuple=false too.
-        const handlerArgs =
-          !isArraySchema && !isPrimitiveSchema
-            ? handleTupleDefaults(inputSchema as any, inputData)
-            : [inputData];
+        if (!handlerFn) {
+          return createResult(
+            null,
+            createInternalError("No handler set: call .handler() before .callable()"),
+            false,
+          );
+        }
+
+        const handlerArgs = isTupleSchema
+          ? handleTupleDefaults(inputSchema as any, inputData)
+          : [inputData];
 
         const executionArgs = disableOptions ? handlerArgs : [options, ...handlerArgs];
 
@@ -390,15 +392,12 @@ export class Zagora<
         });
 
         const handleState = (st: any) => {
-          // processHandler already validated the output
           if (st.ok) {
             return st;
           }
 
           const { isAsync, handlerFailed, ...rest } = st;
 
-          // if handler failed, then we need to validate the error if errorSchema,
-          // otherwise we can passthrough the Result object whatever it is.
           return handlerFailed
             ? validateError<TKindNames>(errorsMap as any, st.error, isAsync)
             : rest;
@@ -411,7 +410,7 @@ export class Zagora<
         return handleState(state);
       };
 
-      const inputArgs = !isArraySchema && !isPrimitiveSchema ? args : args[0];
+      const inputArgs = isTupleSchema ? args : args[0];
 
       const inputResult = inputSchema
         ? validateInputOutputOrEnv("input", inputSchema, inputArgs)
@@ -458,7 +457,6 @@ export class Zagora<
       >;
     };
 
-    // The callable can reach code that only invokes it, so it must not carry the env values.
     const { envVars: _envVars, ...metadata } = this["~zagora"];
     proc["~zagora"] = metadata;
 
@@ -471,6 +469,19 @@ export class Zagora<
     TKindNames extends ResolveErrorKindNames<TErrorsMap>,
     const TOptions extends object = {},
   >(
+    this: THandlerFn extends NoHandler
+      ? never
+      : Zagora<
+          THandlerFn,
+          TContext,
+          TInputSchema,
+          TOutputSchema,
+          TErrorsMap,
+          TEnvVarsMap,
+          TCacheAdapter,
+          TDisableOptions,
+          TAutoCallable
+        >,
     options: {
       context?: TNewContext;
       cache?: CacheAdapter;
@@ -491,9 +502,19 @@ export class Zagora<
         : TProvidedCache
       : TCacheAdapter;
 
-    let za = this;
+    let za = this as Zagora<
+      THandlerFn,
+      TContext,
+      TInputSchema,
+      TOutputSchema,
+      TErrorsMap,
+      TEnvVarsMap,
+      TCacheAdapter,
+      TDisableOptions,
+      TAutoCallable
+    >;
     if (options.cache) {
-      za = this.cache(options.cache) as any;
+      za = za.cache(options.cache) as any;
     }
 
     return za._createProcedure<TEffectiveCacheAdapter, TIncomingEnv, TNewContext, TKindNames>(
@@ -501,4 +522,11 @@ export class Zagora<
       options.env,
     );
   }
+}
+
+export function implement<TContract, const TRouter extends Implemented<TContract>>(
+  _contract: TContract,
+  router: Exact<TRouter, Implemented<TContract>>,
+): TRouter {
+  return router;
 }

@@ -3,7 +3,7 @@ title: Wrap code that throws
 description: Turn functions that throw, such as JSON.parse or a call to a third-party SDK, into functions that return a result.
 ---
 
-zagora catches what a handler throws. To get a version of a throwing function that returns a result, call that function inside a handler.
+Zagora catches what a handler throws. To get a version of a throwing function that returns a result, call that function inside a handler.
 
 ## Wrap JSON.parse
 
@@ -46,7 +46,7 @@ if (result.ok) {
 
 ## Wrap an async SDK call
 
-Declare a typed error for each failure that the caller must handle, and throw it from the handler. A rejected promise gives an `UNKNOWN_ERROR` with the original error in `cause`.
+Declare a [typed error](/guide/typed-errors) for each failure that the caller must handle, and throw it from the handler. A promise that rejects with any other value gives an `UNKNOWN_ERROR` with that value in `cause`.
 
 ```ts twoslash
 import { z } from "zod";

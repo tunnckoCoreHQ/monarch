@@ -1,15 +1,15 @@
 ---
 title: Getting started
-description: Install zagora, write a procedure that validates its input, call it with good and bad input, and export it.
+description: Install Zagora, write a procedure that validates its input, call it with good and bad input, and export it.
 sidebar:
   icon: rocket
 ---
 
 In this tutorial, you write a `greet` procedure. You call it with a valid name and with an empty string, and you read the result of each call. Then you export it.
 
-## Install zagora and a schema library
+## Install Zagora and a schema library
 
-zagora is an ESM-only package with built-in types. Version 1 is a prerelease on the `nightly` dist-tag. Install it together with a Standard Schema library. These docs use [Zod](https://zod.dev). [Valibot](https://valibot.dev), [ArkType](https://arktype.io), and the other [Standard Schema libraries](https://standardschema.dev) work the same way.
+Zagora is an ESM-only package with built-in types. Version 1 is a prerelease on the `nightly` dist-tag. Install it together with a Standard Schema library. These docs use [Zod](https://zod.dev). [Valibot](https://valibot.dev), [ArkType](https://arktype.io), and the other [Standard Schema libraries](https://standardschema.dev) work the same way.
 
 ```package-install
 npm install zagora@nightly zod
@@ -54,7 +54,7 @@ const result = greet("Ada");
 
 if (result.ok) {
   result.data;
-  // string
+  // 'Hello, Ada!'
 } else {
   result.error;
   // a VALIDATION_ERROR or an UNKNOWN_ERROR
@@ -94,11 +94,10 @@ The `message` names the failed path and the schema's message. The `issues` array
 
 ## Export the procedure
 
-A procedure is a function, so you export it like one. A library can export procedures directly, and an app can collect them in a plain object.
+A procedure is a function, so you export it like one. Keep `greet` in `greet.ts`, and export it again from the entry file of your package.
 
 ```ts
 export { greet } from "./greet";
-export { getUser, createUser } from "./users";
 ```
 
 Other modules can now import `greet` and call it.

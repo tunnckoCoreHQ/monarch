@@ -16,11 +16,11 @@ Every call returns one of three shapes.
 { readonly ok: false; readonly isTypedError: false; readonly error: InternalError | ValidationError }
 ```
 
-The typed error shape exists only when the procedure declares an error map. The fields have these types:
+The [typed error](/guide/typed-errors) shape exists only when the procedure declares an error map. The fields have these types:
 
 - The `data` field has the output type of the output schema. Without an output schema, it has the awaited return type of the handler.
 - A typed error has the output type of its schema, without its own `kind` field, plus `kind` set to the error key.
-- In a procedure with an error map, the `key` field of a `ValidationError` has the union of the declared kinds as its type. zagora sets `key` when the data of a typed error fails its schema.
+- In a procedure with an error map, the `key` field of a `ValidationError` has the union of the declared kinds as its type. Zagora sets `key` when the data of a typed error fails its schema.
 
 ## The ZagoraResult type
 

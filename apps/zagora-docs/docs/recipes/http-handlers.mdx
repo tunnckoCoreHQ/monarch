@@ -1,13 +1,13 @@
 ---
 title: Serve procedures over HTTP
-description: Put zagora procedures behind a fetch handler, pass context for each request, and map error kinds to HTTP status codes.
+description: Put Zagora procedures behind a fetch handler, pass context for each request, and map error kinds to HTTP status codes.
 ---
 
-zagora has no network layer, so you write the HTTP code. For each request, read the request, build the context, make the procedure callable, call it, and turn the result into a response.
+Zagora has no network layer, so you write the HTTP code. For each request, read the request, build the context, make the procedure callable, call it, and turn the result into a response.
 
 ## Write a fetch handler
 
-The following handler works in Cloudflare Workers, Bun, Deno, and any other runtime with the Fetch API.
+The following handler works in Bun, Deno, Cloudflare Workers, and any other runtime with the Fetch API. Zagora imports `node:crypto` to hash cache keys, so a Cloudflare Worker needs the `nodejs_compat` compatibility flag.
 
 ```ts twoslash
 import { z } from "zod";
@@ -45,7 +45,8 @@ export default {
     const user = getUserFromToken(request.headers.get("authorization"));
     const run = deletePost.callable({ context: { user } });
 
-    const result = run(await request.json());
+    const body = await request.json().catch(() => undefined);
+    const result = run(body);
 
     if (result.ok) {
       return Response.json(result.data);
@@ -63,4 +64,4 @@ An `UNKNOWN_ERROR` holds the thrown value in `cause` and its stack trace in `sta
 
 ## Route requests
 
-zagora does not route. Use the router of your framework, or a plain object keyed by path. The [routers recipe](/recipes/routers) shows the plain object.
+Zagora does not route. Use the router of your framework, or a plain object keyed by path. The [routers recipe](/recipes/routers) shows the plain object.

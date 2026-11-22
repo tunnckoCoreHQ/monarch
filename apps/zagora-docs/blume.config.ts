@@ -15,7 +15,56 @@ export default defineConfig({
     accent: "teal",
   },
   navigation: {
-    sidebar: { display: "group" },
+    sidebar: {
+      display: "group",
+      items: [
+        "/",
+        "/getting-started",
+        "/comparison",
+        "/contract-first",
+        "/how-zagora-works",
+        "/how-zagora-is-tested",
+        { label: "API Reference", href: "/reference/api", icon: "code" },
+        {
+          label: "Guides",
+          icon: "book-marked",
+          items: [
+            "/guide/procedures",
+            "/guide/input-and-output",
+            "/guide/tuple-arguments",
+            "/guide/optional-and-default-values",
+            "/guide/typed-errors",
+            "/guide/error-handling",
+            "/guide/context",
+            "/guide/environment-variables",
+            "/guide/caching",
+            "/guide/async",
+            "/guide/instance-options",
+          ],
+        },
+        {
+          label: "Recipes",
+          icon: "chef-hat",
+          items: [
+            "/recipes/routers",
+            "/recipes/http-handlers",
+            "/recipes/wrapping-throwing-code",
+            "/recipes/testing",
+          ],
+        },
+        {
+          label: "Reference",
+          icon: "library",
+          items: [
+            "/reference/api",
+            "/reference/result",
+            "/reference/errors",
+            "/reference/utils",
+            "/reference/types",
+          ],
+        },
+      ],
+    },
   },
   footer: {
     copyright: "Released under the Apache-2.0 License.",
@@ -26,7 +75,6 @@ export default defineConfig({
       details:
         "Reach for zagora when a TypeScript library, SDK, CLI, or app needs functions that validate their input and output with a Standard Schema library (Zod, Valibot, ArkType) and return typed errors instead of throwing. Every call returns `{ ok: true, data }` or `{ ok: false, error }`. zagora has no router and no network layer. For an HTTP API with a typed client, use oRPC. Install it with `npm install zagora@nightly zod`, then follow the Getting started page below.",
     },
-    // The `zagora` skill at the repo root, published at /.well-known/agent-skills/.
     skills: "../../skills",
   },
   seo: {
@@ -40,7 +88,6 @@ export default defineConfig({
       ],
     },
   },
-  // A static build: the Worker in src/index.ts serves dist/ as its assets.
   deployment: cloudflare({
     output: "static",
     site: "https://zagora-docs.equator-owl-studio.workers.dev",

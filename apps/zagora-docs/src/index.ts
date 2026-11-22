@@ -1,6 +1,3 @@
-// Serves the static Blume build, and adds the HTTP behavior that Blume's own server build adds:
-// Markdown for `Accept: text/markdown`, a Markdown 404 for agents, and problem-details 404s under /api/.
-
 import { apiNotFoundResponse } from "blume/ai/api/handlers.ts";
 
 interface Env {
@@ -12,7 +9,7 @@ const markdownHeaders = { "content-type": "text/markdown; charset=utf-8", vary: 
 const wantsMarkdown = (request: Request) =>
   (request.headers.get("accept") ?? "").includes("text/markdown");
 
-// A page path has no file extension. Blume writes each page's Markdown copy at `<path>.md`.
+// Blume writes each page's Markdown copy at `<path>.md`.
 const markdownPath = (pathname: string) => {
   if (/\.[a-z0-9]+$/i.test(pathname)) {
     return undefined;
@@ -49,7 +46,6 @@ export default {
       return response;
     }
 
-    // A page answers in HTML or Markdown by the Accept header, so caches must keep them apart.
     const page = new Response(response.body, response);
     page.headers.append("vary", "Accept");
     return page;

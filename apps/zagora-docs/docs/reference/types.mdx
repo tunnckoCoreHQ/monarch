@@ -1,13 +1,13 @@
 ---
 title: zagora/types
-description: The type utilities exported from zagora/types, which zagora uses to infer arguments, results, and async return types.
+description: The type utilities exported from zagora/types, which Zagora uses to infer arguments, results, and async return types.
 ---
 
 ```ts
 import type { ZagoraResult, CacheAdapter, IsPromise } from "zagora/types";
 ```
 
-The main entry has the same exports on its type-only `types` namespace. zagora tests these types with `expectTypeOf`, in a test file of their own.
+The main entry has the same exports on its type-only `types` namespace.
 
 ## Schemas
 
@@ -34,6 +34,8 @@ The main entry has the same exports on its type-only `types` namespace. zagora t
 | `SpreadTuple<T, R>` | A function type that takes the elements of the tuple `T` as arguments and returns `R`. The trailing elements that accept `undefined` become optional. |
 | `SingleArg<TInput, R>` | A function type that takes one argument of type `TInput` and returns `R`. The argument is optional when `TInput` accepts `undefined`. |
 | `FixedTuple<T>` | `T` when it is a tuple with a fixed length, otherwise `never` |
+| `Implemented<T>` | The router that the contract `T` requires. Each builder becomes the signature of its procedure, with an `unknown` result. Use it with `satisfies`, or through [`implement`](/reference/api#implementcontract-router). |
+| `Exact<T, TContract>` | `T` with each key that `TContract` does not have typed as `never`, at any depth. The `implement` function uses it to reject extra keys. |
 | `CacheAdapter` | `{ has(key): boolean \| Promise<boolean>; get(key): unknown; set(key, value): any }` |
 | `ZagoraEnvVars` | `Record<string, string> \| Record<string, string \| undefined>` |
 
@@ -45,7 +47,7 @@ The main entry has the same exports on its type-only `types` namespace. zagora t
 | `ConditionalAsync<T, Result>` | `Promise<Result>` when `IsPromise<T>` is `true`, `Result` when it is `false`, and `Result \| Promise<Result>` when it is `boolean` |
 | `IsAsyncSchema<T>` | `true` when the `async` property of the schema type is `true`, `boolean` when it can be `true`, otherwise `false` |
 | `HasAsyncSchema<TInputSchema, TOutputSchema, TErrorsMap>` | `true` when one of the schemas is async, `boolean` when one can be async, otherwise `false` |
-| `ConditionalSchemaAsync<TAsync, TSync, TAsyncResult>` | `TAsyncResult` when `TAsync` is `true`, otherwise `TSync` |
+| `ConditionalSchemaAsync<TAsync, TSync, TAsyncResult>` | `TAsyncResult` when `TAsync` is `true`, `TSync` when it is `false`, and the union of both when it is `boolean` |
 | `HasAsyncCache<TCache>` | `true` when a cache method returns a promise, `boolean` when one can, otherwise `false` |
 | `ConditionalCacheAsync<TCache, TResult>` | `TResult` for a sync cache, otherwise `TResult \| Promise<Awaited<TResult>>` |
 
@@ -55,6 +57,6 @@ The main entry has the same exports on its type-only `types` namespace. zagora t
 | --- | --- |
 | `IsAny<T>` | `true` only for `any` |
 | `IsOptional<T>` | `true` when `T` accepts `undefined` |
-| `UppercaseKeys<T>` | `T` with its keys in uppercase. zagora uses it to require uppercase keys. |
+| `UppercaseKeys<T>` | `T` with its keys in uppercase. Zagora uses it to require uppercase keys. |
 | `Prettify<T>` | `T` with an intersection flattened into one object type, for readable hovers |
 | `ObjectToUnion<T>` | The union of the value types of `T` |

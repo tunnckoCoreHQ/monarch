@@ -4,8 +4,6 @@
  * This helper type returns `true` if the type parameter `T` is literally the `any` type,
  * and `false` otherwise. Uses the `0 extends 1 & T` trick which only passes for `any`.
  */
-
-// TEST: with expect-type
 export type IsAny<T> = 0 extends 1 & T ? true : false;
 
 /**
@@ -28,7 +26,6 @@ export type IsAny<T> = 0 extends 1 & T ? true : false;
  *
  * @template V - The value type you want to test
  */
-// TEST: with expect-type
 export type IsPromise<V> =
   IsAny<V> extends true
     ? false
@@ -39,6 +36,10 @@ export type IsPromise<V> =
         : [Extract<V, PromiseLike<any>>] extends [never]
           ? false
           : boolean;
+
+type ResolvePromise<TAsync extends boolean, Result> = TAsync extends true
+  ? Promise<Result>
+  : Result;
 
 /**
  * Preserves sync, async, and possibly-async return shapes from the input type.
@@ -67,9 +68,4 @@ export type IsPromise<V> =
  * @template T - The type to check (typically a function's return type)
  * @template Result - The result type to wrap conditionally
  */
-// TEST: with expect-type
-type ResolvePromise<TAsync extends boolean, Result> = TAsync extends true
-  ? Promise<Result>
-  : Result;
-
 export type ConditionalAsync<T, Result> = ResolvePromise<IsPromise<T>, Result>;
