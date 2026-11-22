@@ -4,7 +4,7 @@ import { expect, expectTypeOf, test } from "vitest";
 import { z } from "zod";
 
 import { implement, zagora } from "../src/index";
-import type { Implemented } from "../src/types";
+import type { AnySchema, Implemented, InferSchemaOutput } from "../src/types";
 
 const planet = z.object({ id: z.number(), name: z.string() });
 
@@ -44,6 +44,12 @@ const createFromTitle = zagora()
   .handler((_, { title }) => ({ id: 1, name: title }))
   .callable();
 
+type ContractRouter = Implemented<typeof contract>;
+type OutputOf<T extends { "~zagora": { outputSchema?: AnySchema } }> = InferSchemaOutput<
+  NonNullable<T["~zagora"]["outputSchema"]>
+>;
+type DataOf<T extends (...args: any[]) => any> = Extract<ReturnType<T>, { ok: true }>["data"];
+
 test("implement returns the router with each procedure's exact type", () => {
   const router = implement(contract, { planet: { list, find, create } });
 
@@ -51,6 +57,26 @@ test("implement returns the router with each procedure's exact type", () => {
   expectTypeOf(router.planet.list).toEqualTypeOf<typeof list>();
   expectTypeOf(router.planet.find).toEqualTypeOf<typeof find>();
   expectTypeOf(router.planet.create).toEqualTypeOf<typeof create>();
+
+  expectTypeOf(router.planet.list).parameters.toEqualTypeOf<
+    Parameters<ContractRouter["planet"]["list"]>
+  >();
+  expectTypeOf(router.planet.find).parameters.toEqualTypeOf<
+    Parameters<ContractRouter["planet"]["find"]>
+  >();
+  expectTypeOf(router.planet.create).parameters.toEqualTypeOf<
+    Parameters<ContractRouter["planet"]["create"]>
+  >();
+
+  expectTypeOf<DataOf<typeof router.planet.list>>().toEqualTypeOf<
+    OutputOf<typeof contract.planet.list>
+  >();
+  expectTypeOf<DataOf<typeof router.planet.find>>().toEqualTypeOf<
+    OutputOf<typeof contract.planet.find>
+  >();
+  expectTypeOf<DataOf<typeof router.planet.create>>().toEqualTypeOf<
+    OutputOf<typeof contract.planet.create>
+  >();
 
   const found = router.planet.find(4);
   expect(found).toMatchObject({ ok: true, data: { id: 4, name: "Mars" } });
