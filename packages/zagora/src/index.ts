@@ -56,7 +56,6 @@ type ResolveCallableEnv<TOptions, TEnvVarsMap> = TEnvVarsMap extends AnySchema
 
 declare const noHandler: unique symbol;
 
-// The handler type of a builder before `.handler()`. It blocks `.callable()`.
 type NoHandler = ((...args: any[]) => any) & { readonly [noHandler]: true };
 
 export interface ZagoraConfig {
@@ -503,7 +502,6 @@ export class Zagora<
         : TProvidedCache
       : TCacheAdapter;
 
-    // The `this` type above only blocks a builder without a handler. The body needs the plain class type.
     let za = this as Zagora<
       THandlerFn,
       TContext,
