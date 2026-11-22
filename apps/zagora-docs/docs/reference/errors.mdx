@@ -20,7 +20,7 @@ Each guard takes any value and returns a boolean.
 | `isDefinedError(val)` | `kind` is a non-empty string that equals its uppercase form, and the other two guards return `false` |
 | `isZagoraError(val)` | one of the three guards above returns `true` |
 
-At runtime, the order of the checks does not matter. At the type level, `isDefinedError` narrows to every error with a string `kind`, so its `false` branch narrows to `never`. Call it after the other two guards. The [type guards section of the error handling guide](/guide/error-handling#type-guards) shows the order.
+On an error union, such as `result.error`, each guard narrows to the members that match, and its `false` branch keeps the other members. On any other value, it narrows to the guarded error shape. The order of the checks does not matter. The [type guards section of the error handling guide](/guide/error-handling#type-guards) shows them in use.
 
 ## Creators
 
