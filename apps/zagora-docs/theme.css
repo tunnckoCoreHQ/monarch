@@ -1,0 +1,40 @@
+/* Twoslash renders a hover popup for every token. A hidden popup still takes layout, and its long one-line type makes the page wider than the screen. Keep each popup out of layout until its token is hovered. */
+.prose .twoslash-hover:not(:hover) > .twoslash-popup-container {
+  display: none;
+}
+
+/* Blume keeps Twoslash blocks at `overflow: visible`, so popups can leave the block. Long code lines then run past the block, so wrap them. */
+.prose pre.twoslash > code {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* A `// @errors:` line shows the compiler message under the code. Let it wrap to the block width instead of its full one-line width. */
+.prose pre.twoslash .twoslash-meta-line {
+  width: auto;
+  min-width: 0;
+}
+
+/* Size a popup by its content, cap its width, and wrap long types. */
+.prose .twoslash-popup-container {
+  width: max-content;
+  max-width: min(100vw - 1.5rem, 34rem);
+}
+
+.prose .twoslash-popup-container :is(pre, code) {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Blume stretches the layout to the full screen width, so the sidebar and the table of contents sit at the screen edges. Cap the layout width and center it. The header and footer contents line up with it. */
+@media (min-width: 64rem) {
+  body > .mx-auto.grid {
+    max-width: 84rem;
+  }
+
+  [data-blume-header],
+  [data-blume-footer] {
+    padding-inline: max(1.5rem, calc((100% - 84rem) / 2 + 1.5rem));
+  }
+}

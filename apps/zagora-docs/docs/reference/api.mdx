@@ -1,0 +1,125 @@
+---
+title: API
+description: The zagora() factory, its config, and every builder method with its signature and behavior.
+---
+
+## Entry points
+
+| Import | Exports |
+| --- | --- |
+| `zagora` | `zagora`, the `Zagora` class, the `ZagoraConfig` type, the `errors` and `utils` namespaces, and the type-only `types` namespace |
+| `zagora/errors` | The error guards, the error creators, and the error types. See the [zagora/errors reference](/reference/errors). |
+| `zagora/utils` | The runtime helpers. See the [zagora/utils reference](/reference/utils). |
+| `zagora/types` | The type utilities. See the [zagora/types reference](/reference/types). |
+
+## zagora(config?)
+
+Creates a builder.
+
+```ts
+function zagora(config?: ZagoraConfig): Zagora;
+
+interface ZagoraConfig {
+  disableOptions?: boolean; // default false
+  autoCallable?: boolean; // default false
+}
+```
+
+The config has two flags.
+
+- `disableOptions`. The handler gets only the input arguments, without the options object.
+- `autoCallable`. The `.handler()` method returns the procedure, without `.callable()`.
+
+The type parameters of the returned `Zagora` carry the literal values of both flags. See the [instance options guide](/guide/instance-options).
+
+## Builder methods
+
+Each builder method returns a new builder and does not change the builder that you call it on. The `.handler()` method in auto-callable mode and the `.callable()` method return a procedure instead. A second call to the same method replaces the value from the first call.
+
+### .input(inputSchema)
+
+```ts
+.input<TInput extends AnySchema>(inputSchema: TInput)
+```
+
+Sets the Standard Schema for the arguments. A tuple schema gives one argument per element. Any other schema gives one argument. Without an input schema, the procedure type takes no arguments. See the [input and output guide](/guide/input-and-output) and the [tuple arguments guide](/guide/tuple-arguments).
+
+### .output(outputSchema)
+
+```ts
+.output<TOutput extends AnySchema>(outputSchema: TOutput)
+```
+
+Sets the Standard Schema for the return value. zagora validates the return value of the handler with it, and `result.data` gets the output type of the schema. Without an output schema, `result.data` has the awaited return type of the handler.
+
+### .context(initialContext?)
+
+```ts
+.context<TNewContext extends Record<string, unknown>>(initialContext?: TNewContext)
+```
+
+Sets the context type and an optional initial value. zagora deep-merges the `.callable()` context over the initial value. See the [context guide](/guide/context).
+
+### .errors(errorsMap)
+
+```ts
+.errors<TErrors extends Record<string, AnySchema>>(errorsMap: TErrors & UppercaseKeys<TErrors>)
+```
+
+Declares the typed error kinds. The keys must be uppercase. The handler gets one helper per key on `options.errors`. See the [typed errors guide](/guide/typed-errors).
+
+### .env(envVarsMapSchema, envVars?)
+
+```ts
+.env<TNewEnvVarsMapSchema extends AnySchema, TEnvVars extends ZagoraEnvVars>(
+  envVarsMapSchema: TNewEnvVarsMapSchema,
+  envVars?: TEnvVars & UppercaseKeys<TEnvVars>,
+)
+```
+
+Sets the schema for the environment variables and their optional values. The keys of an `envVars` object literal must be uppercase. zagora validates the merged values on every call, and the handler reads the parsed values from `options.env`. An async env schema gives an `UNKNOWN_ERROR`. See the [environment variables guide](/guide/environment-variables).
+
+### .cache(cacheAdapter)
+
+```ts
+.cache<TNewCacheAdapter extends CacheAdapter>(cacheAdapter: TNewCacheAdapter)
+```
+
+Sets a cache adapter with `has`, `get`, and `set` methods. See the [caching guide](/guide/caching).
+
+### .handler(fn)
+
+```ts
+.handler<TFn extends ResolveProcedure<TDisableOptions, TContext, TInputSchema, TErrorsMap, TEnvVarsMap>>(fn: TFn)
+```
+
+Sets the function that runs. Its first parameter is the options object, unless `disableOptions` is on. The input arguments follow. With `autoCallable` on, the method returns the procedure. Otherwise it returns a builder.
+
+### .callable(options?)
+
+```ts
+.callable(options?: {
+  context?: TNewContext;
+  cache?: CacheAdapter;
+  env?: ResolveCallableEnv<TOptions, TEnvVarsMap>;
+})
+```
+
+Makes the procedure. TypeScript rejects any other option key. The options have these effects:
+
+- zagora deep-merges `context` over the initial context.
+- A `cache` adapter replaces the adapter from `.cache()`.
+- zagora merges `env` over the values from `.env()`. The type of `env` is the input type of the env schema, and TypeScript rejects a key that the schema does not have. Without an env schema, the type of `env` is `never`.
+
+The `TNewContext` type extends the context type from `.context()`. The `ResolveCallableEnv` type is internal to `zagora` and is not exported.
+
+You can call `.callable()` many times on one builder, for example once per request.
+
+## The procedure
+
+The procedure is the function that `.callable()` returns, or that `.handler()` returns in auto-callable mode. It has these properties:
+
+- It takes the arguments that the input schema describes.
+- It returns a [result](/reference/result), or a `Promise` of one when part of the procedure is async. See the [async guide](/guide/async).
+- It returns failures in the result. It does not throw and does not reject.
+- Its `~zagora` property has the definition, without the env values. The definition can have the keys `inputSchema`, `outputSchema`, `errorsMap`, `envVarsMapSchema`, `initialContext`, `cacheAdapter`, `handler`, `disableOptions`, and `autoCallable`. A key is there only when the builder set it.

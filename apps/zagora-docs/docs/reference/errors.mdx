@@ -1,0 +1,67 @@
+---
+title: zagora/errors
+description: The error guards, error creators, and error types exported from zagora/errors.
+---
+
+```ts
+import { isValidationError, isInternalError, isDefinedError, isZagoraError } from "zagora/errors";
+```
+
+The main entry has the same exports on its `errors` namespace, as in `import { errors } from "zagora"`.
+
+## Guards
+
+Each guard takes any value and returns a boolean.
+
+| Function | Returns `true` when |
+| --- | --- |
+| `isValidationError(val)` | `kind` is `"VALIDATION_ERROR"`, `message` is a non-empty string, and `issues` is an array |
+| `isInternalError(val)` | `kind` is `"UNKNOWN_ERROR"`, `message` is a non-empty string, and the `cause` and `stack` keys exist |
+| `isDefinedError(val)` | `kind` is a non-empty string that equals its uppercase form, and the other two guards return `false` |
+| `isZagoraError(val)` | one of the three guards above returns `true` |
+
+At runtime, the order of the checks does not matter. At the type level, `isDefinedError` narrows to every error with a string `kind`, so its `false` branch narrows to `never`. Call it after the other two guards. The [type guards section of the error handling guide](/guide/error-handling#type-guards) shows the order.
+
+## Creators
+
+zagora builds its own errors with these functions.
+
+### createValidationError(mode, issues, key?)
+
+```ts
+createValidationError<ErrorKindNames = never>(
+  mode: "input" | "output" | "error data" | "env",
+  issues: SchemaIssue[],
+  key?: ErrorKindNames,
+);
+```
+
+Returns `{ kind: "VALIDATION_ERROR", message, key, issues }`. The message has the form `<Mode> validation failed[ for KEY]: <path> => <message>; ...`. Each path is the keys of the issue path joined with dots, or `(root)` when the issue has no path. The first `Invalid input: ` in each issue message is removed.
+
+### createInternalError(msg, cause?)
+
+```ts
+createInternalError(msg: string, cause?: any);
+```
+
+Returns `{ kind: "UNKNOWN_ERROR", message: msg, cause, stack: cause?.stack }`.
+
+### createErrorHelpers(errorMap)
+
+```ts
+createErrorHelpers(errorMap: any): Record<string, (data: any) => any>;
+```
+
+Returns one helper for each key that `Object.keys` gives for the map. A key whose schema is falsy gets no helper. A helper returns `{ ...data, kind }`, and the key wins over a `kind` field in `data`.
+
+## Types
+
+| Type | Shape |
+| --- | --- |
+| `ValidationError<ErrorKindNames>` | `Readonly<{ kind: "VALIDATION_ERROR"; message: string; issues: readonly SchemaIssue[]; key?: ErrorKindNames }>` |
+| `InternalError` | `Readonly<{ kind: "UNKNOWN_ERROR"; message: string; cause: any; stack: any }>`, the return type of `createInternalError` |
+| `DefinedError<T>` | `{ readonly kind: string } & T` |
+| `ZagoraError<T>` | `ValidationError \| InternalError \| DefinedError<T>` |
+| `ErrorHelpers<TErrorsMap>` | The `options.errors` object. Each key has a `(data) => never` function, where `data` is the schema input without `kind`. |
+| `InferSchemaMapPlain<T, ResolveErr>` | The output type of each schema in the map `T`. With `ResolveErr` set to `true`, each type also has `kind` set to its key. |
+| `ResolveErrorKindNames<TErrorsMap>` | The union of the keys of `TErrorsMap`, or `undefined` without an error map |

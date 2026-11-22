@@ -1,0 +1,159 @@
+---
+title: Typed errors
+description: Declare error kinds with schemas, throw them from the handler with typed helpers, and get a discriminated union of every kind in the result.
+---
+
+Declare the errors a procedure can return with `.errors()`. Each key is an error kind, and each value is a schema for the data of that error. The handler gets one helper per kind on `options.errors`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const getUser = zagora()
+  .input(z.string())
+  .output(z.string())
+  .errors({
+    NOT_FOUND: z.object({ resource: z.string() }),
+    UNAUTHORIZED: z.object({ userId: z.string() }),
+  })
+  .handler(({ errors }, id) => {
+    if (id === "invalid") {
+      throw errors.NOT_FOUND({ resource: "user" });
+    }
+    return `User ${id}`;
+  })
+  .callable();
+
+const result = getUser("invalid");
+
+if (!result.ok && result.error.kind === "NOT_FOUND") {
+  result.error;
+  // { readonly kind: "NOT_FOUND"; readonly resource: string }
+}
+```
+
+The call returns this result.
+
+```ts
+{ ok: false, isTypedError: true, error: { resource: "user", kind: "NOT_FOUND" } }
+```
+
+## Throw the helper
+
+A helper builds the error object, and you `throw` the object. The helper's return type is `never`, so TypeScript knows that the code after the `throw` does not run. The procedure does not throw, because zagora catches every value that the handler throws.
+
+## Keys are uppercase
+
+Error kinds must be uppercase. TypeScript reports a key that is not uppercase. zagora does not check the keys at runtime.
+
+```ts twoslash
+// @errors: 2345
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+zagora().errors({
+  notFound: z.object({ id: z.string() }),
+});
+```
+
+## The error union
+
+`result.error` is a discriminated union on `kind`. It has every declared kind, plus the two built-in kinds, `VALIDATION_ERROR` and `UNKNOWN_ERROR`. Check `kind`, or use the [type guards](/guide/error-handling#type-guards), to narrow it.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+const getUser = zagora()
+  .input(z.string())
+  .errors({
+    NOT_FOUND: z.object({ resource: z.string() }),
+    UNAUTHORIZED: z.object({ userId: z.string() }),
+  })
+  .handler((_, id) => id)
+  .callable();
+// ---cut---
+const result = getUser("42");
+
+if (!result.ok) {
+  switch (result.error.kind) {
+    case "NOT_FOUND":
+      console.log(result.error.resource);
+      break;
+    case "UNAUTHORIZED":
+      console.log(result.error.userId);
+      break;
+    case "VALIDATION_ERROR":
+      console.log(result.error.issues);
+      break;
+    case "UNKNOWN_ERROR":
+      console.log(result.error.cause);
+      break;
+  }
+}
+```
+
+On a failed result, `isTypedError` is `true` only for a declared kind.
+
+## The error data is validated
+
+zagora validates the data that you pass to a helper against the schema of that kind. TypeScript reports wrong or missing fields at compile time, and zagora checks them again at runtime. When the data fails, the result is a `VALIDATION_ERROR`, and its `key` is the kind that failed.
+
+```ts twoslash
+// @errors: 2345 2322
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const hello = zagora()
+  .errors({
+    RATE_LIMIT: z.object({
+      userId: z.string(),
+      retryAfter: z.number(),
+      limit: z.number().default(1000),
+    }),
+  })
+  .input(z.string())
+  .handler(({ errors }, input) => {
+    if (input === "missing") {
+      throw errors.RATE_LIMIT({ retryAfter: 120 });
+    }
+    if (input === "invalid") {
+      throw errors.RATE_LIMIT({ userId: "u1", retryAfter: "soon" });
+    }
+    return input;
+  })
+  .callable();
+
+hello("missing");
+// {
+//   ok: false,
+//   isTypedError: false,
+//   error: {
+//     kind: 'VALIDATION_ERROR',
+//     message: 'Error data validation failed for RATE_LIMIT: userId => expected string, received undefined',
+//     key: 'RATE_LIMIT',
+//     issues: [...]
+//   }
+// }
+```
+
+A field with a default, like `limit`, is not required.
+
+### Unknown fields
+
+A Zod object schema strips unknown fields by default. To reject unknown fields, make the schema strict with `z.strictObject()` or `.strict()`.
+
+### The kind is fixed
+
+The `kind` of a typed error always comes from the helper that you called. A `kind` field in the data does not change it. A schema transform that sets `kind` does not change it either.
+
+## Thrown values that are not declared
+
+A thrown value becomes a typed error when its `kind` is a key of the error map and its data passes the schema of that kind. A helper always sets such a `kind`. A thrown value without a declared `kind` becomes an `UNKNOWN_ERROR`, and `error.cause` holds the thrown value. The message depends on the thrown value.
+
+| Thrown value | Message |
+| --- | --- |
+| A value without a string `kind`, such as an `Error`, or any value when the procedure has no error map | `Sync handler threw unknown error` or `Async handler threw unknown error` |
+| An object with a `kind` that is not in the error map, such as `CUSTOM` | `Typed Error CUSTOM is not defined in errors map` |
+
+The [error handling](/guide/error-handling) page covers every kind of failure.

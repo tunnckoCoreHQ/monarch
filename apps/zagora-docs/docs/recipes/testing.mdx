@@ -1,0 +1,86 @@
+---
+title: Test procedures
+description: Test zagora procedures like any function, swap dependencies through context, and assert on the error kinds and the types.
+---
+
+A procedure returns a result and does not throw, so assert on the result. A test needs no setup and no `try` block.
+
+```ts twoslash
+import { describe, expect, test } from "vitest";
+import { z } from "zod";
+import { zagora } from "zagora";
+
+const add = zagora()
+  .input(z.tuple([z.number(), z.number()]))
+  .handler((_, a, b) => a + b)
+  .callable();
+
+describe("add", () => {
+  test("adds two numbers", () => {
+    expect(add(2, 3)).toEqual({ ok: true, data: 5, error: undefined });
+  });
+
+  test("rejects invalid input", () => {
+    const result = add(2, "3" as never);
+    expect(result).toMatchObject({ ok: false, error: { kind: "VALIDATION_ERROR" } });
+  });
+});
+```
+
+## Swap dependencies
+
+Define the procedure without `.callable()`. Then make one callable for production and one for each test, each with its own context.
+
+```ts twoslash
+import { expect, test } from "vitest";
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+type Db = { find(id: string): { id: string; name: string } | undefined };
+
+export const getUser = zagora()
+  .context<{ db: Db }>()
+  .input(z.string())
+  .errors({ NOT_FOUND: z.object({ id: z.string() }) })
+  .handler(({ context, errors }, id) => {
+    const user = context.db.find(id);
+    if (!user) {
+      throw errors.NOT_FOUND({ id });
+    }
+    return user;
+  });
+
+test("returns NOT_FOUND for a missing user", () => {
+  const run = getUser.callable({ context: { db: { find: () => undefined } } });
+
+  expect(run("42")).toEqual({
+    ok: false,
+    isTypedError: true,
+    error: { id: "42", kind: "NOT_FOUND" },
+  });
+});
+```
+
+## Test the types
+
+Use the `expectTypeOf` function from Vitest to check the parameters and the result type of a procedure. zagora tests its own types the same way.
+
+```ts twoslash
+import { expectTypeOf, test } from "vitest";
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const greet = zagora()
+  .input(z.string())
+  .handler((_, name) => `Hello, ${name}`)
+  .callable();
+
+test("greet types", () => {
+  expectTypeOf(greet).parameters.toEqualTypeOf<[string]>();
+
+  const result = greet("Ada");
+  if (result.ok) {
+    expectTypeOf(result.data).toEqualTypeOf<string>();
+  }
+});
+```

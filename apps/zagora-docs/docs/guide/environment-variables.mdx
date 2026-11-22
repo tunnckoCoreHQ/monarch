@@ -1,0 +1,93 @@
+---
+title: Environment variables
+description: Validate environment variables with a schema, pass them when you define the procedure or when you make it callable, and read the parsed values in the handler.
+---
+
+Set a schema for the environment variables with `.env(schema, envVars?)`. zagora validates the values on every call. The handler reads the parsed values from `options.env`.
+
+```ts twoslash
+/// <reference types="node" />
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const connect = zagora()
+  .env(
+    z.object({
+      DATABASE_URL: z.string().min(1).default("file://db.sqlite"),
+      AUTH_SECRET: z.string().min(1),
+      PORT: z.coerce.number(),
+    }),
+    process.env,
+  )
+  .handler(({ env }) => `${env.DATABASE_URL} on port ${env.PORT}`)
+  // env: { DATABASE_URL: string; AUTH_SECRET: string; PORT: number }
+  .callable();
+```
+
+The handler gets the schema output, not the raw strings. Here `z.coerce.number()` turns `PORT` into a `number`.
+
+## Pass the values when you define or when you make the procedure
+
+You can pass the values in one place or in both:
+
+- The second argument of `.env(schema, envVars)` takes `process.env`, `import.meta.env`, a Cloudflare Workers `env`, or a plain object.
+- The `env` option of `.callable({ env })` is for values that exist only where the call happens.
+
+When you pass both, zagora merges the `.callable()` values over the `.env()` values.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const ping = zagora()
+  .env(z.object({ API_URL: z.string().url(), API_KEY: z.string() }))
+  .handler(({ env }) => env.API_URL)
+  .callable({ env: { API_URL: "https://api.example.com", API_KEY: "secret" } });
+```
+
+TypeScript checks the `env` object of `.callable()` against the input type of the schema. It reports a missing required key. It also reports a key that the schema does not have.
+
+```ts twoslash
+// @errors: 2322
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const ping = zagora()
+  .env(z.object({ API_KEY: z.string() }))
+  .handler(({ env }) => env.API_KEY)
+  .callable({ env: { API_KEY: "secret", TYPO: "unexpected" } });
+```
+
+The type of `process.env` has an index signature, so TypeScript does not know its keys. Such a source fits the `env` option of `.callable()` only when every key of the schema is optional or has a default. For a schema with required keys, pass `process.env` to `.env()`.
+
+## Invalid values stop the call before the input check
+
+zagora validates the env values before the input. When the env values are invalid, the handler does not run. The result has a `VALIDATION_ERROR` whose message starts with `Env validation failed`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const proc = zagora()
+  .env(z.object({ AUTH_SECRET: z.string().min(1) }), {})
+  .handler(({ env }) => env.AUTH_SECRET)
+  .callable();
+
+proc();
+// error.message: 'Env validation failed: AUTH_SECRET => expected string, received undefined'
+```
+
+<Callout type="warning">
+  Async env schemas are not supported. A procedure with one returns an `UNKNOWN_ERROR` with the
+  message `Environment Variables cannot have async schema validation`.
+</Callout>
+
+## The procedure does not expose the env values
+
+The procedure has a `~zagora` property with its definition. That property has the env schema, but not the env values. Code that gets only the procedure cannot read the values.
+
+## Auto-callable and disableOptions procedures
+
+With `autoCallable: true`, there is no `.callable()` step. Pass the values as the second argument of `.env()`. If you do not, the types still give `env` its values, but the validation fails at runtime.
+
+With `disableOptions: true`, the handler gets no options object. It cannot read `env`.

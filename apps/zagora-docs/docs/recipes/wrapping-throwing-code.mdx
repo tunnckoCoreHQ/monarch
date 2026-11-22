@@ -1,0 +1,70 @@
+---
+title: Wrap code that throws
+description: Turn functions that throw, such as JSON.parse or a call to a third-party SDK, into functions that return a result.
+---
+
+zagora catches what a handler throws. To get a version of a throwing function that returns a result, call that function inside a handler.
+
+## Wrap JSON.parse
+
+Call `JSON.parse` in the handler. Bad JSON gives an `UNKNOWN_ERROR` with the `SyntaxError` in `cause`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+export const safeJsonParse = zagora({ autoCallable: true, disableOptions: true })
+  .input(z.string())
+  .handler((text) => JSON.parse(text) as unknown);
+
+const good = safeJsonParse('{"a":1}');
+// { ok: true, data: { a: 1 }, error: undefined }
+
+const bad = safeJsonParse("{oops");
+// { ok: false, isTypedError: false, error: { kind: 'UNKNOWN_ERROR', message: 'Sync handler threw unknown error', cause: SyntaxError, ... } }
+```
+
+## Parse and validate in one step
+
+Add an output schema to validate the parsed value. The schema also fills in defaults, so `result.data.host` is `"localhost"` here.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+const parseConfig = zagora({ autoCallable: true, disableOptions: true })
+  .input(z.string())
+  .output(z.object({ port: z.number(), host: z.string().default("localhost") }))
+  .handler((text) => JSON.parse(text));
+
+const result = parseConfig('{"port":8080}');
+if (result.ok) {
+  result.data;
+  // { port: number; host: string }
+}
+```
+
+## Wrap an async SDK call
+
+Declare a typed error for each failure that the caller must handle, and throw it from the handler. A rejected promise gives an `UNKNOWN_ERROR` with the original error in `cause`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+// ---cut---
+export const fetchJson = zagora()
+  .input(z.string().url())
+  .errors({ HTTP_ERROR: z.object({ status: z.number() }) })
+  .handler(async ({ errors }, url) => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw errors.HTTP_ERROR({ status: response.status });
+    }
+    return (await response.json()) as unknown;
+  })
+  .callable();
+
+const result = await fetchJson("https://example.com/data.json");
+```
+
+In this example, a non-2xx response gives an `HTTP_ERROR`. A network failure makes `fetch` reject, and the result holds an `UNKNOWN_ERROR`.

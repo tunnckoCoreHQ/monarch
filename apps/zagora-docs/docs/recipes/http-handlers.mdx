@@ -1,0 +1,66 @@
+---
+title: Serve procedures over HTTP
+description: Put zagora procedures behind a fetch handler, pass context for each request, and map error kinds to HTTP status codes.
+---
+
+zagora has no network layer, so you write the HTTP code. For each request, read the request, build the context, make the procedure callable, call it, and turn the result into a response.
+
+## Write a fetch handler
+
+The following handler works in Cloudflare Workers, Bun, Deno, and any other runtime with the Fetch API.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+type User = { id: string; role: "admin" | "member" };
+declare function getUserFromToken(token: string | null): User | null;
+// ---cut---
+const deletePost = zagora()
+  .context<{ user: User | null }>()
+  .errors({
+    UNAUTHORIZED: z.object({ message: z.string() }),
+    FORBIDDEN: z.object({ message: z.string() }),
+  })
+  .input(z.object({ id: z.string() }))
+  .handler(({ context, errors }, { id }) => {
+    if (!context.user) {
+      throw errors.UNAUTHORIZED({ message: "Login required" });
+    }
+    if (context.user.role !== "admin") {
+      throw errors.FORBIDDEN({ message: "Admins only" });
+    }
+    return { deleted: id };
+  });
+
+const status = {
+  VALIDATION_ERROR: 400,
+  UNAUTHORIZED: 401,
+  FORBIDDEN: 403,
+  UNKNOWN_ERROR: 500,
+} as const;
+
+export default {
+  async fetch(request: Request) {
+    const user = getUserFromToken(request.headers.get("authorization"));
+    const run = deletePost.callable({ context: { user } });
+
+    const result = run(await request.json());
+
+    if (result.ok) {
+      return Response.json(result.data);
+    }
+    return Response.json({ kind: result.error.kind }, { status: status[result.error.kind] });
+  },
+};
+```
+
+The code indexes `status` with `result.error.kind`, which is a union of every error kind. If you leave a kind out of `status`, TypeScript reports an error.
+
+## Keep internal errors on the server
+
+An `UNKNOWN_ERROR` holds the thrown value in `cause` and its stack trace in `stack`. Log both on the server. Send only the `kind`, or your own message, to the client. If the client needs details about bad input, return the validation `issues`.
+
+## Route requests
+
+zagora does not route. Use the router of your framework, or a plain object keyed by path. The [routers recipe](/recipes/routers) shows the plain object.

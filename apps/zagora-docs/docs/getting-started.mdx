@@ -1,0 +1,114 @@
+---
+title: Getting started
+description: Install zagora, write a procedure that validates its input, call it with good and bad input, and export it.
+sidebar:
+  icon: rocket
+---
+
+In this tutorial, you write a `greet` procedure. You call it with a valid name and with an empty string, and you read the result of each call. Then you export it.
+
+## Install zagora and a schema library
+
+zagora is an ESM-only package with built-in types. Version 1 is a prerelease on the `nightly` dist-tag. Install it together with a Standard Schema library. These docs use [Zod](https://zod.dev). [Valibot](https://valibot.dev), [ArkType](https://arktype.io), and the other [Standard Schema libraries](https://standardschema.dev) work the same way.
+
+```package-install
+npm install zagora@nightly zod
+```
+
+The two packages are now in your `dependencies`.
+
+## Define a procedure
+
+A procedure starts from `zagora()`. Chain `.input()` to validate the arguments, `.output()` to validate the return value, and `.handler()` for the code. Then call `.callable()` to get the function.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+export const greet = zagora()
+  .input(z.string().min(1))
+  .output(z.string())
+  .handler((_, name) => `Hello, ${name}!`)
+  .callable();
+```
+
+The `greet` constant is now a function that takes one string.
+
+The handler gets an options object first and the validated input after it. The options object holds the [context](/guide/context), the [error helpers](/guide/typed-errors), and the [environment variables](/guide/environment-variables). This example does not use them, so it names the parameter `_`. To remove the options object, see [instance options](/guide/instance-options).
+
+## Call the procedure
+
+Call `greet` like any other function. It takes the arguments that the input schema describes, and it returns a result object.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+const greet = zagora()
+  .input(z.string().min(1))
+  .output(z.string())
+  .handler((_, name) => `Hello, ${name}!`)
+  .callable();
+// ---cut---
+const result = greet("Ada");
+
+if (result.ok) {
+  result.data;
+  // string
+} else {
+  result.error;
+  // a VALIDATION_ERROR or an UNKNOWN_ERROR
+}
+```
+
+When `result.ok` is `true`, TypeScript narrows `result.data` to a `string`. Otherwise, `result.error` is a validation error or an unknown error.
+
+## Call it with bad input
+
+Call `greet` with an empty string. The call does not throw. The handler does not run, and the result holds a `VALIDATION_ERROR`.
+
+```ts twoslash
+import { z } from "zod";
+import { zagora } from "zagora";
+
+const greet = zagora()
+  .input(z.string().min(1))
+  .output(z.string())
+  .handler((_, name) => `Hello, ${name}!`)
+  .callable();
+// ---cut---
+const result = greet("");
+// {
+//   ok: false,
+//   isTypedError: false,
+//   error: {
+//     kind: 'VALIDATION_ERROR',
+//     message: 'Input validation failed: (root) => Too small: expected string to have >=1 characters',
+//     key: undefined,
+//     issues: [...]
+//   }
+// }
+```
+
+The `message` names the failed path and the schema's message. The `issues` array holds the raw Standard Schema issues.
+
+## Export the procedure
+
+A procedure is a function, so you export it like one. A library can export procedures directly, and an app can collect them in a plain object.
+
+```ts
+export { greet } from "./greet";
+export { getUser, createUser } from "./users";
+```
+
+Other modules can now import `greet` and call it.
+
+## Next steps
+
+You can continue with any of these pages.
+
+- Learn the builder in [Procedures](/guide/procedures).
+- Pass several arguments with [tuple arguments](/guide/tuple-arguments).
+- Declare and throw [typed errors](/guide/typed-errors).
+- See how the three error kinds work in [error handling](/guide/error-handling).
+- Inject dependencies with [context](/guide/context).
