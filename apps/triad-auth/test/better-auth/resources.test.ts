@@ -73,7 +73,7 @@ describe("Triad OAuth resource fragment", () => {
           | string
           | {
               identifier: string;
-              allowedScopes?: string[];
+              allowedScopes?: string[] | null;
               accessTokenTtl?: number;
             }
         >

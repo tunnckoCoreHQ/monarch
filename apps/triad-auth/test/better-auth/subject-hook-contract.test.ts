@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import { oauthProvider, type OAuthOptions } from "@better-auth/oauth-provider";
 import { describe, expect, it } from "vitest";
@@ -12,9 +12,11 @@ const plugin = oauthProvider({
   resolveSubjectIdentifier: resolver,
 });
 
-const entryUrl = new URL(import.meta.resolve("@better-auth/oauth-provider"));
-const entrySource = readFileSync(entryUrl, "utf-8");
-const utilitySource = readFileSync(new URL("utils-GbnW6qPl.mjs", entryUrl), "utf-8");
+const distUrl = new URL(".", import.meta.resolve("@better-auth/oauth-provider"));
+const distSource = readdirSync(distUrl)
+  .filter((file) => file.endsWith(".mjs"))
+  .map((file) => readFileSync(new URL(file, distUrl), "utf-8"))
+  .join("\n");
 
 describe("OAuth Provider exact-client subject hook", () => {
   it("exposes the resolver through the public options type", () => {
@@ -22,31 +24,35 @@ describe("OAuth Provider exact-client subject hook", () => {
   });
 
   it("labels every OIDC-facing subject use", () => {
-    expect(entrySource).toContain('resolveSubjectIdentifier(userId, client, opts, "logout_token")');
-    expect(entrySource).toContain('resolveSubjectIdentifier(user.id, client, opts, "userinfo")');
-    expect(entrySource).toContain('resolveSubjectIdentifier(user.id, client, opts, "id_token")');
+    expect(distSource).toContain('resolveSubjectIdentifier(userId, client, opts, "logout_token")');
+    expect(distSource).toContain('resolveSubjectIdentifier(user.id, client, opts, "userinfo")');
+    expect(distSource).toContain('resolveSubjectIdentifier(user.id, client, opts, "id_token")');
   });
 
   it("enables UserInfo subject resolution without a pairwise secret", () => {
-    expect(entrySource).toContain(
+    expect(distSource).toContain(
       "const client = clientId && (opts.pairwiseSecret || opts.resolveSubjectIdentifier || hasUserInfoClaimExtension(opts))",
     );
-    expect(entrySource).toContain(
+    expect(distSource).toContain(
       "if ((opts.pairwiseSecret || opts.resolveSubjectIdentifier) && client) baseUserClaims.sub",
     );
   });
 
   it("passes the exact client ID and built-in default subject to the hook", () => {
-    expect(utilitySource).toContain("clientId: client.clientId");
-    expect(utilitySource).toContain("defaultSubject");
+    const subjectResolver = distSource.match(
+      /async function resolveSubjectIdentifier\(userId, client, opts, use\) \{[\s\S]*?\n}/,
+    )?.[0];
+
+    expect(subjectResolver).toContain("clientId: client.clientId");
+    expect(subjectResolver).toContain("defaultSubject");
   });
 
-  it("does not pairwise-rewrite introspection subjects", () => {
-    const introspectionResolver = entrySource.match(
-      /async function resolveIntrospectionSub[\s\S]*?\n}\nasync function introspectEndpoint/,
+  it("returns the global subject from introspection", () => {
+    const introspectionResolver = distSource.match(
+      /async function resolveIntrospectionSubjects[\s\S]*?\n}\nasync function introspectEndpoint/,
     )?.[0];
 
     expect(introspectionResolver).toContain("return payload;");
-    expect(introspectionResolver).not.toContain("resolveSubjectIdentifier(");
+    expect(introspectionResolver).not.toContain("resolvePresentedSubjects(");
   });
 });

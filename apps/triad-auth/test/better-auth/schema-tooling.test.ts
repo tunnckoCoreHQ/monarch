@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, extname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,7 +5,6 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import config from "../../cloudflare.config";
-import { authSchemaDatabase } from "../../scripts/auth-schema-database";
 
 function readSource(path: string): string {
   const file = resolve(repositoryRoot, path);
@@ -70,17 +68,6 @@ function resolvesToModule(importerPath: string, specifier: string, targetPath: s
   return specifierId === targetId || specifierId.endsWith(`/${targetId}`);
 }
 
-const schemaIntrospectionQuery =
-  'select "name", "type", "sql" from "sqlite_master" where "type" in (?, ?) and "name" not like ? and "name" not like ? and "name" != ? and "name" != ?';
-const schemaIntrospectionParameters = [
-  "table",
-  "view",
-  "sqlite_%",
-  "_cf_%",
-  "kysely_migration",
-  "kysely_migration_lock",
-];
-const unsupportedIntrospectionError = "no such table: oauthResource";
 const packageJson = JSON.parse(readFileSync(resolve(repositoryRoot, "package.json"), "utf-8")) as {
   dependencies: Record<string, string>;
   devDependencies: Record<string, string>;
@@ -88,11 +75,11 @@ const packageJson = JSON.parse(readFileSync(resolve(repositoryRoot, "package.jso
 };
 const cloudflareConfigSource = readSource("cloudflare.config.ts");
 const schemaSource = readSource("src/better-auth/schema.ts");
-const schemaDatabaseSource = readSource("scripts/auth-schema-database.ts");
+const drizzleConfigSource = readSource("drizzle.config.ts");
 const migrationFiles = readdirSync(resolve(repositoryRoot, "migrations"))
   .filter((path: string) => path.endsWith(".sql"))
   .toSorted();
-const initialMigration = readSource("migrations/0001-initial.sql");
+const initialMigration = readSource("migrations/0000_initial.sql");
 
 // cloudflare.config.ts is a function of the mode; `--mode nightly` selects the nightly Worker.
 async function workerConfig(mode: string) {
@@ -105,44 +92,25 @@ const productionDatabaseId = "40220009-d502-4afd-ab7b-54495016720f";
 const nightlyDatabaseId = "c4c8e874-a463-4c22-8389-8911627c055d";
 
 describe("Better Auth schema tooling", () => {
-  it("keeps one squashed initial migration", () => {
-    expect(migrationFiles).toEqual(["0001-initial.sql"]);
-    expect(createHash("sha256").update(initialMigration).digest("hex")).toBe(
-      "edd209690f552bfff2b7d48d68d86bd4d9f6f393c664efb43c57602a95dea58d",
-    );
-    expect(initialMigration).toContain('create table "user"');
-    expect(initialMigration).toContain('"encryptedData" text');
-    expect(initialMigration).toContain('create table "walletAddress"');
-    expect(initialMigration).toContain('create table "passkey"');
-    expect(initialMigration).toContain('create table "passkeyUsername"');
-    expect(initialMigration).toContain('"credentialID" text not null');
-    expect(initialMigration).toContain('"username" text not null unique');
-    expect(initialMigration).toContain('"accountSub" text not null unique');
-    expect(initialMigration).toContain('"name" text not null');
-    expect(initialMigration).toContain('"email" text not null unique');
-    expect(initialMigration).toContain('"emailVerified" integer not null');
-    expect(initialMigration).toContain('"image" text');
-    expect(initialMigration).not.toContain('"profileEmail"');
-    expect(initialMigration).not.toContain('"profileEmailVerified"');
-    expect(initialMigration).not.toContain('"profileHandle"');
-    expect(initialMigration).not.toContain('"profileDisplayName"');
-    expect(initialMigration).not.toContain('"profileAvatar"');
-    expect(initialMigration).toContain('create table "deviceCode"');
-    expect(initialMigration).toContain('create table "rateLimit"');
-    expect(initialMigration).toContain('create table "walletRequest"');
-    expect(initialMigration).toContain('"namespace" text not null');
-    expect(initialMigration).toContain('"walletProfile" text not null');
-    expect(initialMigration).toContain('"accountIndex" integer not null');
-    expect(initialMigration).toContain('"chainId" integer');
-    expect(initialMigration).toContain('"signingMessage" text not null');
-    expect(initialMigration).toContain('"consumedAt" date');
-    expect(initialMigration).toContain('create index "walletRequest_expiresAt_idx"');
-    expect(initialMigration).toContain('create table "walletCapabilityRequest"');
-    expect(initialMigration).toContain('create index "walletCapabilityRequest_expiresAt_idx"');
-    expect(initialMigration).toMatch(
-      /create table "passkey" \([^;]*"walletCapable" integer not null default 0, "encryptedData" text\);/,
-    );
-    expect(initialMigration).not.toContain("alter table");
+  it("starts from one Drizzle migration with the full schema", () => {
+    expect(migrationFiles).toEqual(["0000_initial.sql"]);
+    expect(initialMigration).toContain("CREATE TABLE `user`");
+    expect(initialMigration).toContain("`encryptedData` text");
+    expect(initialMigration).toContain("`providerSub` text NOT NULL");
+    expect(initialMigration).toContain("CREATE UNIQUE INDEX `user_providerSub_unique`");
+    expect(initialMigration).toContain("CREATE TABLE `walletAddress`");
+    expect(initialMigration).toContain("CREATE TABLE `passkey`");
+    expect(initialMigration).toContain("CREATE TABLE `passkeyUsername`");
+    expect(initialMigration).toContain("`walletCapable` integer DEFAULT false NOT NULL");
+    expect(initialMigration).toContain("CREATE TABLE `deviceCode`");
+    expect(initialMigration).toContain("`oauthClientId` text");
+    expect(initialMigration).toContain("CREATE TABLE `rateLimit`");
+    expect(initialMigration).toContain("CREATE UNIQUE INDEX `rateLimit_key_unique`");
+    expect(initialMigration).toContain("CREATE TABLE `walletRequest`");
+    expect(initialMigration).toContain("CREATE TABLE `walletCapabilityRequest`");
+    expect(initialMigration).toContain("CREATE TABLE `oauthClient`");
+    expect(initialMigration).not.toMatch(/`profile(?:Email|Handle|DisplayName|Avatar)`/);
+    expect(initialMigration).not.toContain("ALTER TABLE");
   });
 
   it.each([
@@ -177,8 +145,8 @@ describe("Better Auth schema tooling", () => {
   });
 
   it("exposes generated schema, migration, and deployment commands", () => {
-    expect(packageJson.scripts["db:generate"]).toBe(
-      "pnpm exec auth generate --config src/better-auth/schema.ts --output .ignore/auth-schema.sql --yes",
+    expect(packageJson.scripts["db:generate"]).toMatch(
+      /^pnpm exec auth generate --config src\/better-auth\/schema\.ts --output src\/better-auth\/drizzle-schema\.ts --yes && sed .+ src\/better-auth\/drizzle-schema\.ts && pnpm exec drizzle-kit generate$/,
     );
     expect(packageJson.scripts.build).toBe("pnpm exec cf build");
     expect(packageJson.scripts["deploy:nightly"]).toBe(
@@ -195,6 +163,18 @@ describe("Better Auth schema tooling", () => {
     expect(packageJson.scripts.test).toBe("vitest run");
   });
 
+  it("writes Drizzle migrations from the generated schema into the deploy folder", () => {
+    expect(packageJson.dependencies["drizzle-orm"]).toBe("catalog:");
+    expect(packageJson.devDependencies["drizzle-kit"]).toBe("catalog:");
+    expect(drizzleConfigSource).toContain('dialect: "sqlite"');
+    expect(drizzleConfigSource).toContain('schema: "./src/better-auth/drizzle-schema.ts"');
+    expect(drizzleConfigSource).toContain('out: "./migrations"');
+  });
+
+  it("stores array and JSON fields as text that the adapter encodes once", () => {
+    expect(readSource("src/better-auth/drizzle-schema.ts")).not.toContain('mode: "json"');
+  });
+
   it("does not add Wrangler, an emulator, a SQLite driver, or a legacy resource name", () => {
     const dependencyNames = [
       ...Object.keys(packageJson.dependencies),
@@ -205,12 +185,9 @@ describe("Better Auth schema tooling", () => {
       JSON.stringify(packageJson.scripts),
       cloudflareConfigSource,
       schemaSource,
-      schemaDatabaseSource,
     ].join("\n");
 
-    expect(toolingSource).not.toMatch(
-      /drizzle|miniflare|better-sqlite3|bun:sqlite|node:sqlite|sqlite3/i,
-    );
+    expect(toolingSource).not.toMatch(/miniflare|better-sqlite3|bun:sqlite|node:sqlite|sqlite3/i);
     expect(toolingSource).not.toMatch(/triad-better-auth|triad-auth-broker/);
     expect(dependencyNames).not.toMatch(/^wrangler$/m);
   });
@@ -229,54 +206,10 @@ describe("Better Auth schema tooling", () => {
     expect(schemaSource).not.toMatch(/\bbetterAuth\s*\(/);
   });
 
-  it("returns an empty schema for Better Auth's exact D1 introspection query", async () => {
-    const result = await authSchemaDatabase
-      .prepare(schemaIntrospectionQuery)
-      .bind(...schemaIntrospectionParameters)
-      .all();
-
-    expect(result).toMatchObject({
-      success: true,
-      results: [],
-      meta: {
-        changes: 0,
-        last_row_id: 0,
-        rows_read: 0,
-        rows_written: 0,
-      },
-    });
-  });
-
-  it("rejects arbitrary application SQL", () => {
-    expect(() => authSchemaDatabase.prepare('select * from "user"')).toThrow(
-      unsupportedIntrospectionError,
-    );
-  });
-
-  it("rejects introspection execution with unexpected bindings", async () => {
-    const statement = authSchemaDatabase.prepare(schemaIntrospectionQuery).bind("table");
-
-    await expect(statement.all()).rejects.toThrow(unsupportedIntrospectionError);
-  });
-
-  it("throws from every unsupported query method", () => {
-    const statement = authSchemaDatabase
-      .prepare(schemaIntrospectionQuery)
-      .bind(...schemaIntrospectionParameters);
-
-    expect(() => authSchemaDatabase.batch([])).toThrow("SQL generation only");
-    expect(() => authSchemaDatabase.exec("select 1")).toThrow("SQL generation only");
-    expect(() => statement.first()).toThrow("SQL generation only");
-    expect(() => statement.raw()).toThrow("SQL generation only");
-    expect(() => statement.run()).toThrow("SQL generation only");
-  });
-
   it.each([
     ["relative schema", "../better-auth/schema", "src/better-auth/schema.ts"],
-    ["relative database", "../../scripts/auth-schema-database", "scripts/auth-schema-database.ts"],
     ["absolute schema", "/src/better-auth/schema.ts", "src/better-auth/schema.ts"],
     ["alias schema", "@triad/src/better-auth/schema", "src/better-auth/schema.ts"],
-    ["alias database", "@triad/scripts/auth-schema-database.ts", "scripts/auth-schema-database.ts"],
   ])("recognizes a %s import of a protected module", (_name, specifier, targetPath) => {
     expect(
       resolvesToModule(
@@ -297,20 +230,15 @@ describe("Better Auth schema tooling", () => {
     ).toBe(false);
   });
 
-  it("keeps the schema-only database out of every runtime module", () => {
+  it("keeps the schema-only auth instance out of every runtime module", () => {
     const schemaEntryPath = resolve(repositoryRoot, "src/better-auth/schema.ts");
-    const schemaDatabasePath = resolve(repositoryRoot, "scripts/auth-schema-database.ts");
     const violations = collectRuntimeSourcePaths("src").flatMap((path) => {
       if (path === schemaEntryPath) {
         return [];
       }
 
       return importSpecifiers(readSource(path))
-        .filter(
-          (specifier) =>
-            resolvesToModule(path, specifier, schemaEntryPath) ||
-            resolvesToModule(path, specifier, schemaDatabasePath),
-        )
+        .filter((specifier) => resolvesToModule(path, specifier, schemaEntryPath))
         .map((specifier) => `${path}: ${specifier}`);
     });
 

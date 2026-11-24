@@ -1,4 +1,3 @@
-import { authSchemaDatabase } from "../../scripts/auth-schema-database";
 import { createTriadAuth } from "./auth";
 import { createTriadConfiguration } from "./configuration";
 import type { TriadEnv } from "./env";
@@ -6,7 +5,8 @@ import type { TriadEnv } from "./env";
 const schemaEnv = {
   // SAFETY: Schema generation constructs auth options without serving static assets.
   ASSETS: {} as Fetcher,
-  DB: authSchemaDatabase,
+  // SAFETY: Schema generation reads the auth options only. The Drizzle adapter sends no query to this binding.
+  DB: {} as D1Database,
   AUTH_ORIGIN: "http://localhost",
   BETTER_AUTH_SECRET: "schema-only-secret-that-is-at-least-32-characters",
   IDENTIFIER_SECRET: "schema-identifier-secret-with-enough-entropy-123456",

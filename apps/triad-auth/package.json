@@ -8,7 +8,7 @@
   "scripts": {
     "build": "pnpm exec cf build",
     "check": "ultracite fix --type-aware --type-check",
-    "db:generate": "pnpm exec auth generate --config src/better-auth/schema.ts --output .ignore/auth-schema.sql --yes",
+    "db:generate": "pnpm exec auth generate --config src/better-auth/schema.ts --output src/better-auth/drizzle-schema.ts --yes && sed -zi -e 's/, {\\s*mode: \"json\",\\?\\s*}//g' -e 's/\\.default(\\[\\])/.default(\"[]\")/g' src/better-auth/drizzle-schema.ts && pnpm exec drizzle-kit generate",
     "db:migrate:local": "pnpm exec cf d1 migrations apply 40220009-d502-4afd-ab7b-54495016720f --local --persist-to .cloudflare/state",
     "deploy:nightly": "pnpm exec cf d1 migrations apply c4c8e874-a463-4c22-8389-8911627c055d && pnpm exec cf deploy --mode nightly",
     "deploy:prod": "pnpm exec cf d1 migrations apply 40220009-d502-4afd-ab7b-54495016720f && pnpm exec cf deploy --mode production",
@@ -35,6 +35,7 @@
     "astro": "catalog:",
     "auth": "catalog:better-auth",
     "better-auth": "catalog:better-auth",
+    "drizzle-orm": "catalog:",
     "jose": "catalog:",
     "viem": "catalog:"
   },
@@ -43,6 +44,7 @@
     "@types/bun": "catalog:types",
     "@types/node": "catalog:types",
     "cf": "catalog:",
+    "drizzle-kit": "catalog:",
     "typescript": "catalog:types"
   },
   "packageManager": "pnpm@11.21.0"

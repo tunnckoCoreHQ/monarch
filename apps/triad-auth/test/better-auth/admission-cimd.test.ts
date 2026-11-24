@@ -95,10 +95,7 @@ describe("CIMD admission options", () => {
     const options = createCimdAdmissionOptions({ resolveHostname });
 
     await expect(
-      options.isMetadataDocumentUrlAllowed?.(
-        "https://client.example.com/oauth/client.json",
-        {} as never,
-      ),
+      options.isMetadataDocumentUrlAllowed?.("https://client.example.com/oauth/client.json"),
     ).resolves.toBe(true);
     expect(resolveHostname).toHaveBeenCalledWith("client.example.com");
   });
@@ -115,10 +112,7 @@ describe("CIMD admission options", () => {
     });
 
     await expect(
-      options.isMetadataDocumentUrlAllowed?.(
-        "https://client.example.com/oauth/client.json",
-        {} as never,
-      ),
+      options.isMetadataDocumentUrlAllowed?.("https://client.example.com/oauth/client.json"),
     ).resolves.toBe(false);
   });
 
@@ -130,10 +124,7 @@ describe("CIMD admission options", () => {
     });
 
     await expect(
-      options.isMetadataDocumentUrlAllowed?.(
-        "https://client.example.com/oauth/client.json",
-        {} as never,
-      ),
+      options.isMetadataDocumentUrlAllowed?.("https://client.example.com/oauth/client.json"),
     ).resolves.toBe(false);
   });
 
@@ -143,10 +134,7 @@ describe("CIMD admission options", () => {
     });
 
     await expect(
-      options.isMetadataDocumentUrlAllowed?.(
-        "http://127.0.0.1:3000/oauth/client.json",
-        {} as never,
-      ),
+      options.isMetadataDocumentUrlAllowed?.("http://127.0.0.1:3000/oauth/client.json"),
     ).resolves.toBe(false);
   });
 

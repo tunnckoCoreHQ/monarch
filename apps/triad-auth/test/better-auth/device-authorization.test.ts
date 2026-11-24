@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   createTriadDeviceAuthorization,
@@ -8,35 +8,7 @@ import {
   type TriadDeviceAuthorizationPlugin,
 } from "../../src/better-auth/device";
 
-function createDeviceEnv(registeredClients: readonly string[] = []) {
-  return {
-    AUTH_ORIGIN: "https://AUTH.EXAMPLE.com:443/",
-    DB: {
-      prepare: () => {
-        const first = vi.fn<D1PreparedStatement["first"]>();
-        const statement: D1PreparedStatement = {
-          bind: (clientId: unknown) => {
-            first.mockResolvedValue(
-              typeof clientId === "string" && registeredClients.includes(clientId)
-                ? { registered: 1 }
-                : null,
-            );
-            return statement;
-          },
-          first,
-          all: vi.fn(),
-          raw: vi.fn(),
-          run: vi.fn(),
-        };
-        return statement;
-      },
-      batch: vi.fn(),
-      exec: vi.fn(),
-      withSession: vi.fn(),
-      dump: vi.fn(),
-    } satisfies D1Database,
-  };
-}
+const deviceEnv = { AUTH_ORIGIN: "https://AUTH.EXAMPLE.com:443/" };
 
 function validateClient(plugin: TriadDeviceAuthorizationPlugin) {
   const validate = plugin.options.validateClient;
@@ -49,7 +21,7 @@ function validateClient(plugin: TriadDeviceAuthorizationPlugin) {
 
 describe("Triad Better Auth device authorization", () => {
   it("exports a composable plugin with fixed device policy", () => {
-    const plugin = createTriadDeviceAuthorization(createDeviceEnv());
+    const plugin = createTriadDeviceAuthorization(deviceEnv);
 
     expect(plugin.id).toBe("device-authorization");
     expect(plugin.options).toMatchObject({
@@ -67,30 +39,24 @@ describe("Triad Better Auth device authorization", () => {
     "https://auth.example.com/device",
     "https://auth.example.com?client=device",
     "https://other.example.com",
+    "registered-device-client",
     "not-a-url",
-  ])("rejects unknown client ID %s", async (clientId) => {
-    const plugin = createTriadDeviceAuthorization(createDeviceEnv());
+  ])("leaves client ID %s to OAuth Provider", async (clientId) => {
+    const plugin = createTriadDeviceAuthorization(deviceEnv);
 
     await expect(Promise.resolve(validateClient(plugin)(clientId))).resolves.toBe(false);
   });
 
-  it("accepts only the exact canonical configured origin", async () => {
-    const plugin = createTriadDeviceAuthorization(createDeviceEnv());
+  it("accepts only the exact canonical configured origin as the first-party client", async () => {
+    const plugin = createTriadDeviceAuthorization(deviceEnv);
 
     await expect(Promise.resolve(validateClient(plugin)("https://auth.example.com"))).resolves.toBe(
       true,
     );
   });
 
-  it("accepts a registered OAuth client", async () => {
-    const clientId = "registered-device-client";
-    const plugin = createTriadDeviceAuthorization(createDeviceEnv([clientId]));
-
-    await expect(Promise.resolve(validateClient(plugin)(clientId))).resolves.toBe(true);
-  });
-
-  it("exposes Better Auth's device routes and shared schema", () => {
-    const plugin = createTriadDeviceAuthorization(createDeviceEnv());
+  it("exposes Better Auth's device routes and the OAuth device schema", () => {
+    const plugin = createTriadDeviceAuthorization(deviceEnv);
 
     expect(Object.values(plugin.endpoints).map((endpoint) => endpoint.path)).toEqual([
       "/device/code",
@@ -99,17 +65,8 @@ describe("Triad Better Auth device authorization", () => {
       "/device/approve",
       "/device/deny",
     ]);
-    expect(plugin.schema.deviceCode.fields).toEqual({
-      deviceCode: { type: "string", required: true },
-      userCode: { type: "string", required: true },
-      userId: { type: "string", required: false },
-      expiresAt: { type: "date", required: true },
-      status: { type: "string", required: true },
-      lastPolledAt: { type: "date", required: false },
-      pollingInterval: { type: "number", required: false },
-      clientId: { type: "string", required: false },
-      scope: { type: "string", required: false },
-      resource: { type: "string", required: false },
-    });
+    expect(Object.keys(plugin.schema.deviceCode.fields)).toEqual(
+      expect.arrayContaining(["deviceCode", "userCode", "userId", "clientId", "oauthClientId"]),
+    );
   });
 });

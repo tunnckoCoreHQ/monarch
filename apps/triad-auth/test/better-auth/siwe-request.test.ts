@@ -27,22 +27,30 @@ function migratedTables(): string[] {
     .map((file) => readFileSync(new URL(file, MIGRATIONS), "utf-8"))
     .join("\n");
 
-  return [...statements.matchAll(/create table "(\w+)"/g)].map(([, table]) => table ?? "");
+  return [...statements.matchAll(/CREATE TABLE `(\w+)`/g)].map(([, table]) => table ?? "");
 }
 
-function emptyDatabase(): D1Database {
+function createStatement(query: string): D1PreparedStatement {
+  let values: unknown[] = [];
   const statement: D1PreparedStatement = {
-    bind: () => statement,
+    bind: (...bound: unknown[]) => {
+      values = bound;
+
+      return statement;
+    },
     all: async () => ({ success: true, results: [], meta }),
     first: async () => null,
-    raw: () => {
-      throw new Error("Unexpected raw query");
-    },
+    // SAFETY: Drizzle reads each returned row as positional column values.
+    raw: (async () => (query.startsWith("insert") ? [values] : [])) as D1PreparedStatement["raw"],
     run: async () => ({ success: true, results: [], meta }),
   };
 
+  return statement;
+}
+
+function emptyDatabase(): D1Database {
   return {
-    prepare: () => statement,
+    prepare: createStatement,
     // The rate limiter reads one allowed bucket row from each batch result.
     async batch<T = unknown>(statements: D1PreparedStatement[]) {
       const allowed = { success: true as const, results: [{ lastRequest: 0 }], meta };

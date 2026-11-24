@@ -27,7 +27,7 @@ Fill `.env` with local values. `AUTH_ORIGIN` must match the local URL, or every 
 ## Making a change
 
 1. Branch from `master`.
-2. Make the change. For a schema change, add a new numbered file in `migrations/`. Never edit `migrations/0001-initial.sql` or any migration already applied.
+2. Make the change. For a schema change, run `pnpm run db:generate`: the Better Auth CLI rewrites the Drizzle schema in `src/better-auth/drizzle-schema.ts` from the auth configuration, and `drizzle-kit generate` writes the next numbered file in `migrations/`. Never edit `migrations/0000_initial.sql` or any migration already applied.
 3. Run the checks in this order and restart from the first after any fix:
 
    ```sh

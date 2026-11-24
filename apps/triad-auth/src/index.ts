@@ -135,6 +135,10 @@ async function handleDeviceDisclosure(
 }
 
 export function createWorker<Configuration>(services: WorkerServices<Configuration>) {
+  let auth: TriadAuthService | undefined;
+  const getAuth = (env: TriadEnv) =>
+    (auth ??= services.createTriadAuth(env, services.createTriadConfiguration(env)));
+
   return {
     async fetch(request, env, _context) {
       const url = new URL(request.url);
@@ -144,11 +148,8 @@ export function createWorker<Configuration>(services: WorkerServices<Configurati
       }
 
       if (url.pathname === DEVICE_DISCLOSURE_PATH) {
-        const configuration = services.createTriadConfiguration(env);
-        const auth = services.createTriadAuth(env, configuration);
-
         return withSecurityHeaders(
-          await handleDeviceDisclosure(request, env, auth),
+          await handleDeviceDisclosure(request, env, getAuth(env)),
           env,
           url.pathname,
         );
@@ -158,19 +159,15 @@ export function createWorker<Configuration>(services: WorkerServices<Configurati
         url.pathname === WALLET_API_BASE_PATH ||
         url.pathname.startsWith(`${WALLET_API_BASE_PATH}/`)
       ) {
-        const configuration = services.createTriadConfiguration(env);
-        const auth = services.createTriadAuth(env, configuration);
-
         return withSecurityHeaders(
-          await services.handleWalletBroker(request, env, auth),
+          await services.handleWalletBroker(request, env, getAuth(env)),
           env,
           url.pathname,
         );
       }
 
       if (isAuthPath(url.pathname)) {
-        const configuration = services.createTriadConfiguration(env);
-        const authResponse = await services.createTriadAuth(env, configuration).handler(request);
+        const authResponse = await getAuth(env).handler(request);
 
         return withSecurityHeaders(authResponse, env, url.pathname);
       }

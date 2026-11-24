@@ -1,5 +1,8 @@
 import { betterAuth, env as betterAuthEnv, type BetterAuthOptions } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { drizzle } from "drizzle-orm/d1";
 
+import * as schema from "./drizzle-schema";
 import type { TriadEnv } from "./env";
 import { validateEncryptionSecrets } from "./identity/encryption";
 
@@ -149,7 +152,11 @@ export function createTriadAuthOptions<const Configuration extends TriadAuthConf
 
   return {
     ...permittedConfiguration,
-    database: env.DB,
+    database: drizzleAdapter(drizzle(env.DB, { schema }), {
+      provider: "sqlite",
+      schema,
+      camelCase: true,
+    }),
     baseURL,
     basePath: AUTH_BASE_PATH,
     secret: env.BETTER_AUTH_SECRET,
@@ -160,6 +167,7 @@ export function createTriadAuthOptions<const Configuration extends TriadAuthConf
       ...permittedAdvanced,
       disableCSRFCheck: false,
       disableOriginCheck: false,
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     },
   };
 }

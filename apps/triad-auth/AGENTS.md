@@ -1,6 +1,7 @@
 # Project rules
 
 - always read `~/skills/instructions.md` - it contains everything
+- Take decisions and rules from `docs/adr/`, `CONTEXT.md`, and the code. The `docs/superpowers/` folder is an archive of old plans and progress. Do not read it or cite it unless the user asks.
 
 ## Verification
 

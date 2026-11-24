@@ -25,6 +25,7 @@ const OIDC_SUB_PATTERN = /^[\x21-\x7e]{1,255}$/;
 const DECIMAL_ID_PATTERN = /^[1-9][0-9]*$/;
 const SIWE_CHAIN_ID_FIELD = "Chain ID: ";
 const AGENTID_ISSUER = "https://auth.agentid.com";
+const AGENTID_DISCOVERY_URL = `${AGENTID_ISSUER}/.well-known/openid-configuration`;
 const AGENTID_OWNER_SCOPES = ["owner_name", "owner_email"] as const;
 const OWNER_MERGE_ATTEMPTS = 3;
 const IDENTITY_PROVIDERS: AuthenticationProvider[] = [
@@ -87,7 +88,7 @@ function agentidUpstreamId(profile: unknown): string {
 }
 
 // The access token comes from Triad's own code exchange, so the userinfo
-// response is the profile. Triad does not read the ID token. A failed or
+// response is the profile. A failed or
 // malformed response, including one without a valid `sub`, returns null, which
 // Better Auth turns into an OAuth error.
 async function agentidUserInfo(accessToken: string | undefined) {
@@ -470,8 +471,6 @@ export async function agentidOwnerDataMissing(
 
 // AgentID is not a built-in Better Auth provider. Generic OAuth registers it
 // as a social provider, so it uses `/sign-in/social` and `/callback/agentid`.
-// The endpoints are fixed because Triad builds Better Auth on every request,
-// and discovery would fetch the AgentID metadata each time.
 export function createAgentIdAuthentication(env: TriadEnv) {
   const clientId = env.AGENTID_CLIENT_ID?.trim();
   const clientSecret = env.AGENTID_CLIENT_SECRET?.trim();
@@ -486,9 +485,7 @@ export function createAgentIdAuthentication(env: TriadEnv) {
               clientId,
               clientSecret,
               authentication: "basic",
-              authorizationUrl: `${AGENTID_ISSUER}/v0/authorize`,
-              tokenUrl: `${AGENTID_ISSUER}/v0/token`,
-              accountIssuer: AGENTID_ISSUER,
+              discoveryUrl: AGENTID_DISCOVERY_URL,
               scopes: ["openid", "email", "profile"],
               getUserInfo: (tokens) => agentidUserInfo(tokens.accessToken),
               accountSubject: ({ profile }) => agentidUpstreamId(profile),
@@ -515,19 +512,6 @@ export function createAgentIdAuthentication(env: TriadEnv) {
 
   return {
     ...plugin,
-    // Generic OAuth takes the issuer only from discovery. AgentID sends `iss` on
-    // its callback (RFC 9207), so Triad sets the issuer here, and Better Auth
-    // rejects a callback whose `iss` is not AgentID before it redeems the code.
-    init: async (...args: Parameters<typeof plugin.init>) => {
-      const result = await plugin.init(...args);
-      for (const provider of result.context.socialProviders) {
-        if (provider.id === "agentid") {
-          provider.issuer = AGENTID_ISSUER;
-        }
-      }
-
-      return result;
-    },
     hooks: {
       before: [
         {
