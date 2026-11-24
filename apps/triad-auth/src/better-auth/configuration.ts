@@ -66,7 +66,7 @@ function validateProviderAuthorization(
 export function createTriadConfiguration(env: TriadEnv) {
   const identityConfiguration = createIdentityConfiguration(env);
   const resourceFragment = createTriadResourceFragment(env);
-  const admissionFragment = createClientAdmissionFragment();
+  const admissionFragment = createClientAdmissionFragment(new URL(env.AUTH_ORIGIN).origin);
   const tokenComposition = createTokenComposition({
     identity: {
       resolvePairwiseSubject: (accountSub, clientId) =>
