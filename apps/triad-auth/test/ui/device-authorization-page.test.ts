@@ -23,6 +23,7 @@ describe("Better Auth device verification page", () => {
     expect(page).toContain("/api/auth/oauth2/authorize?user_code=");
     expect(page).toContain('get("status")');
     expect(page).toContain('oauthDecision === "approved"');
+    expect(page).toMatch(/if \(oauthError\) \{[\s\S]+?return;[\s\S]+?await inspect\(\)/);
   });
 
   it("shows the exact requested disclosures before enabling approval", () => {

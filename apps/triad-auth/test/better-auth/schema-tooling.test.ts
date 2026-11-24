@@ -145,8 +145,8 @@ describe("Better Auth schema tooling", () => {
   });
 
   it("exposes generated schema, migration, and deployment commands", () => {
-    expect(packageJson.scripts["db:generate"]).toBe(
-      "pnpm exec auth generate --config src/better-auth/schema.ts --output src/better-auth/drizzle-schema.ts --yes && pnpm exec drizzle-kit generate",
+    expect(packageJson.scripts["db:generate"]).toMatch(
+      /^pnpm exec auth generate --config src\/better-auth\/schema\.ts --output src\/better-auth\/drizzle-schema\.ts --yes && sed .+ src\/better-auth\/drizzle-schema\.ts && pnpm exec drizzle-kit generate$/,
     );
     expect(packageJson.scripts.build).toBe("pnpm exec cf build");
     expect(packageJson.scripts["deploy:nightly"]).toBe(
@@ -169,6 +169,10 @@ describe("Better Auth schema tooling", () => {
     expect(drizzleConfigSource).toContain('dialect: "sqlite"');
     expect(drizzleConfigSource).toContain('schema: "./src/better-auth/drizzle-schema.ts"');
     expect(drizzleConfigSource).toContain('out: "./migrations"');
+  });
+
+  it("stores array and JSON fields as text that the adapter encodes once", () => {
+    expect(readSource("src/better-auth/drizzle-schema.ts")).not.toContain('mode: "json"');
   });
 
   it("does not add Wrangler, an emulator, a SQLite driver, or a legacy resource name", () => {

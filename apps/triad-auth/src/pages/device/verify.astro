@@ -88,6 +88,9 @@ export const prerender = true;
     const retry = document.querySelector<HTMLButtonElement>("#device-retry")!;
     const fromUrl = new URLSearchParams(location.search).get("user_code") ?? "";
     const oauthDecision = new URLSearchParams(location.search).get("status");
+    const oauthError =
+      new URLSearchParams(location.search).get("error_description") ??
+      new URLSearchParams(location.search).get("error");
     let sessionUserId: string | null = null;
     let requestKind: "oauth" | "session" | null = null;
     let inspection = 0;
@@ -316,6 +319,13 @@ export const prerender = true;
           result.hidden = false;
           status.textContent = oauthDecision === "approved" ? "Device authorization complete." : "Request denied.";
           status.dataset.tone = "success";
+          return;
+        }
+        if (oauthError) {
+          status.textContent = "The request could not be completed.";
+          status.dataset.tone = "error";
+          error.textContent = oauthError;
+          error.hidden = false;
           return;
         }
         if (hasCompleteCode()) {
