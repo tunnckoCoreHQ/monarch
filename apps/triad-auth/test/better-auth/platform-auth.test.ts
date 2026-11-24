@@ -141,6 +141,7 @@ describe("Triad Better Auth platform options", () => {
     expect(options.trustedOrigins).toEqual(["https://auth.example.com"]);
     expect(options.advanced.disableCSRFCheck).toBe(false);
     expect(options.advanced.disableOriginCheck).toBe(false);
+    expect(options.advanced.ipAddress).toEqual({ ipAddressHeaders: ["cf-connecting-ip"] });
   });
 
   it("preserves plugin tuples and non-fixed configuration", () => {
@@ -156,6 +157,7 @@ describe("Triad Better Auth platform options", () => {
       cookiePrefix: "triad",
       disableCSRFCheck: false,
       disableOriginCheck: false,
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     });
   });
 

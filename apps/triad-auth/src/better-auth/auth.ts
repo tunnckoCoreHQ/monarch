@@ -167,6 +167,7 @@ export function createTriadAuthOptions<const Configuration extends TriadAuthConf
       ...permittedAdvanced,
       disableCSRFCheck: false,
       disableOriginCheck: false,
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
     },
   };
 }
