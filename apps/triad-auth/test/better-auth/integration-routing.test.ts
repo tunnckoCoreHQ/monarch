@@ -172,6 +172,28 @@ describe("Triad protected-resource metadata routing", () => {
     expect(spies.fetchAssets).not.toHaveBeenCalled();
   });
 
+  it("builds one auth instance for every request the Worker serves", async () => {
+    const { services, spies } = createServices();
+    const worker = createWorker(services);
+    const env = createEnv();
+    const authRequest = () =>
+      new Request("https://auth.example.com/api/auth/get-session") as Parameters<
+        typeof worker.fetch
+      >[0];
+    const walletRequest = new Request(
+      "https://auth.example.com/api/wallet/authorize",
+    ) as Parameters<typeof worker.fetch>[0];
+
+    await worker.fetch(authRequest(), env, context);
+    await worker.fetch(authRequest(), env, context);
+    await worker.fetch(walletRequest, env, context);
+
+    expect(spies.createTriadConfiguration).toHaveBeenCalledOnce();
+    expect(spies.createTriadAuth).toHaveBeenCalledOnce();
+    expect(spies.authHandler).toHaveBeenCalledTimes(2);
+    expect(spies.handleWalletBroker).toHaveBeenCalledOnce();
+  });
+
   it("returns canonical disclosures for the active session's bound pending device request", async () => {
     const { database, spies: databaseSpies } = createDeviceDatabase({
       scope: "openid email handle name avatar",
