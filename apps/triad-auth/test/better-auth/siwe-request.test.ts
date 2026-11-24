@@ -30,8 +30,6 @@ function migratedTables(): string[] {
   return [...statements.matchAll(/CREATE TABLE `(\w+)`/g)].map(([, table]) => table ?? "");
 }
 
-// Drizzle reads rows through `raw`. A select finds nothing, and an
-// `insert ... returning` gets back the row it wrote, in the same column order.
 function createStatement(query: string): D1PreparedStatement {
   let values: unknown[] = [];
   const statement: D1PreparedStatement = {

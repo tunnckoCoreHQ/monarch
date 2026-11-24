@@ -88,8 +88,7 @@ function agentidUpstreamId(profile: unknown): string {
 }
 
 // The access token comes from Triad's own code exchange, so the userinfo
-// response is the profile. Better Auth checks the ID token against the AgentID
-// JWKS before this runs, and Triad does not read its claims. A failed or
+// response is the profile. A failed or
 // malformed response, including one without a valid `sub`, returns null, which
 // Better Auth turns into an OAuth error.
 async function agentidUserInfo(accessToken: string | undefined) {
@@ -472,9 +471,6 @@ export async function agentidOwnerDataMissing(
 
 // AgentID is not a built-in Better Auth provider. Generic OAuth registers it
 // as a social provider, so it uses `/sign-in/social` and `/callback/agentid`.
-// Discovery gives the endpoints and the issuer. AgentID sends `iss` on its
-// callback (RFC 9207), and Better Auth rejects a callback whose `iss` is not
-// the discovered issuer before it redeems the code.
 export function createAgentIdAuthentication(env: TriadEnv) {
   const clientId = env.AGENTID_CLIENT_ID?.trim();
   const clientSecret = env.AGENTID_CLIENT_SECRET?.trim();

@@ -12,7 +12,6 @@ const plugin = oauthProvider({
   resolveSubjectIdentifier: resolver,
 });
 
-// The patch edits several bundled chunks, so the contract reads all of them.
 const distUrl = new URL(".", import.meta.resolve("@better-auth/oauth-provider"));
 const distSource = readdirSync(distUrl)
   .filter((file) => file.endsWith(".mjs"))

@@ -15,9 +15,6 @@ export function createPublicDcrOptions() {
   } satisfies PublicDcrOptions;
 }
 
-// A registration without a session gets no client secret to keep, so it must
-// declare the "none" token endpoint auth method. Triad issues no initial access
-// tokens, so a session is the only way to register any other client.
 export const publicDcrGuard = {
   id: "triad-public-dcr-guard",
   hooks: {

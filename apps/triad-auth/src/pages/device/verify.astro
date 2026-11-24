@@ -87,7 +87,6 @@ export const prerender = true;
     const error = document.querySelector<HTMLElement>("#device-error")!;
     const retry = document.querySelector<HTMLButtonElement>("#device-retry")!;
     const fromUrl = new URLSearchParams(location.search).get("user_code") ?? "";
-    // OAuth Provider returns here with the decision after its consent page.
     const oauthDecision = new URLSearchParams(location.search).get("status");
     let sessionUserId: string | null = null;
     let requestKind: "oauth" | "session" | null = null;
@@ -162,8 +161,6 @@ export const prerender = true;
         if (current !== inspection) {
           return;
         }
-        // A registered OAuth client's code is approved through OAuth Provider,
-        // which runs the same sign-in and consent pages as a browser request.
         if (isRecord(body) && typeof body.error_description === "string" && body.error_description.includes("/oauth2/authorize?user_code=")) {
           status.textContent = "Opening the consent page for this OAuth client.";
           location.assign(`/api/auth/oauth2/authorize?user_code=${encodeURIComponent(input.value.replace("-", ""))}`);

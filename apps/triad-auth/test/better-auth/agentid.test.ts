@@ -58,8 +58,6 @@ const AGENT_PROFILE = {
   owner_sub: "oW7xN2pQ4mT8vL1kR6sC9dF3gH5jB0aE2uY4zI6nP8A",
 };
 
-// AgentID signs its ID tokens with ES256. Better Auth checks them against the
-// discovered JWKS, issuer, client ID, and the nonce of the sign-in.
 const agentIdKeys = await generateKeyPair("ES256");
 const agentIdJwks = {
   keys: [
@@ -112,7 +110,6 @@ function agentIdServer(userinfo: () => Response, nonce: string | null) {
   });
 }
 
-// AgentID's discovery document. Generic OAuth reads it when Better Auth starts.
 const AGENTID_DISCOVERY = {
   issuer: "https://auth.agentid.com",
   authorization_endpoint: "https://auth.agentid.com/v0/authorize",
