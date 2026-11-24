@@ -1,5 +1,5 @@
 import { createCimdClientDiscovery, type CimdAdmissionDependencies } from "./cimd";
-import { createPublicDcrOptions } from "./dcr";
+import { createPublicDcrOptions, publicDcrGuard } from "./dcr";
 
 export * from "./cimd";
 export * from "./dcr";
@@ -8,6 +8,7 @@ export function createClientAdmissionFragment(dependencies: CimdAdmissionDepende
   const clientDiscovery = createCimdClientDiscovery(dependencies);
 
   return {
+    betterAuthPlugins: [publicDcrGuard],
     oauthProvider: {
       ...createPublicDcrOptions(),
       extensions: [{ clientDiscovery }],

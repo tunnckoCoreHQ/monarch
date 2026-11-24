@@ -1,0 +1,108 @@
+diff --git a/dist/metadata-CS2-M7dK.mjs b/dist/metadata-CS2-M7dK.mjs
+index 819a7b0a513fc6a9bc34b3919bdaf7f199f28026..6d7fab94ab8bd075d64d27f9b60b32c817659742 100644
+--- a/dist/metadata-CS2-M7dK.mjs
++++ b/dist/metadata-CS2-M7dK.mjs
+@@ -342,7 +342,7 @@ async function prepareSessionLogoutPlan(ctx, opts, input) {
+ 			try {
+ 				return {
+ 					client,
+-					sub: await resolveSubjectIdentifier(userId, client, opts)
++					sub: await resolveSubjectIdentifier(userId, client, opts, "logout_token")
+ 				};
+ 			} catch (error) {
+ 				logger.warn(`back-channel logout: unable to resolve subject for client ${client.clientId}`, error);
+@@ -4980,8 +4980,8 @@ async function userInfoEndpoint(ctx, opts) {
+ 	});
+ 	const baseUserClaims = userNormalClaims(user, scopes ?? [], requestedClaims);
+ 	const clientId = jwt.client_id ?? jwt.azp;
+-	const client = clientId && (opts.pairwiseSecret || hasUserInfoClaimExtension(opts)) ? await getClient(ctx, opts, clientId) : void 0;
+-	if (opts.pairwiseSecret && client) baseUserClaims.sub = await resolveSubjectIdentifier(user.id, client, opts);
++	const client = clientId && (opts.pairwiseSecret || opts.resolveSubjectIdentifier || hasUserInfoClaimExtension(opts)) ? await getClient(ctx, opts, clientId) : void 0;
++	if ((opts.pairwiseSecret || opts.resolveSubjectIdentifier) && client) baseUserClaims.sub = await resolveSubjectIdentifier(user.id, client, opts, "userinfo");
+ 	const extensionUserClaims = scopes?.length ? await collectExtensionUserInfoClaims(opts, {
+ 		ctx,
+ 		opts,
+diff --git a/dist/oauth-BGFhMrqE.d.mts b/dist/oauth-BGFhMrqE.d.mts
+index 2a7ce8ae249a04becb70c63be6a9ef2c3f51c45e..4b9265f4577455e7f67f1da4a15dc8f7ddddcac5 100644
+--- a/dist/oauth-BGFhMrqE.d.mts
++++ b/dist/oauth-BGFhMrqE.d.mts
+@@ -3493,6 +3493,18 @@ interface OAuthOptions<Scopes extends readonly Scope[] = InternallySupportedScop
+    * @see https://openid.net/specs/openid-connect-core-1_0.html#PairwiseAlg
+    */
+   pairwiseSecret?: string;
++  /**
++   * Resolve an OIDC-facing subject after the built-in public or pairwise
++   * default has been computed. Access-token and introspection subjects do not
++   * use this hook.
++   */
++  resolveSubjectIdentifier?: (input: {
++    userId: string;
++    clientId: string;
++    subjectType: "public" | "pairwise" | undefined;
++    use: "id_token" | "userinfo" | "logout_token";
++    defaultSubject: string;
++  }) => Awaitable<string>;
+   /**
+    * The `sub` of JWT access tokens issued to a user. `"pairwise"` gives
+    * clients with `subject_type: "pairwise"` the same `sub` as their ID tokens,
+diff --git a/dist/resource-challenge-Ctsf0R-i.mjs b/dist/resource-challenge-Ctsf0R-i.mjs
+index 3b47a42839d43dc8e0ce961731c3ea588eba72e8..239a525ae6fe9e2e67021c919a354a2d54dfc351 100644
+--- a/dist/resource-challenge-Ctsf0R-i.mjs
++++ b/dist/resource-challenge-Ctsf0R-i.mjs
+@@ -1142,9 +1142,16 @@ async function computePairwiseSub(userId, client, secret) {
+ *
+ * @internal
+ */
+-async function resolveSubjectIdentifier(userId, client, opts) {
+-	if (client.subjectType === "pairwise" && opts.pairwiseSecret) return computePairwiseSub(userId, client, opts.pairwiseSecret);
+-	return userId;
++async function resolveSubjectIdentifier(userId, client, opts, use) {
++	const defaultSubject = client.subjectType === "pairwise" && opts.pairwiseSecret ? await computePairwiseSub(userId, client, opts.pairwiseSecret) : userId;
++	if (!opts.resolveSubjectIdentifier) return defaultSubject;
++	return opts.resolveSubjectIdentifier({
++		userId,
++		clientId: client.clientId,
++		subjectType: client.subjectType,
++		use,
++		defaultSubject
++	});
+ }
+ /**
+ * Claim carrying the user ID, `act`, and `may_act` with user IDs, encrypted
+diff --git a/dist/resource-request-D0bpy2pM.mjs b/dist/resource-request-D0bpy2pM.mjs
+index 890c32c4a0e490275e947959297979598b5f0df2..d858ec1db3c6aabc37518ae31494163c90451c88 100644
+--- a/dist/resource-request-D0bpy2pM.mjs
++++ b/dist/resource-request-D0bpy2pM.mjs
+@@ -1960,7 +1960,7 @@ async function computeOidcHash(token, signingAlg) {
+ async function createIdToken(ctx, opts, user, client, scopes, nonce, sessionId, authTime, accessToken, extraClaims, authenticationContext, grantId) {
+ 	const iat = Math.floor(Date.now() / 1e3);
+ 	const exp = iat + (opts.idTokenExpiresIn ?? 36e3);
+-	const resolvedSub = await resolveSubjectIdentifier(user.id, client, opts);
++	const resolvedSub = await resolveSubjectIdentifier(user.id, client, opts, "id_token");
+ 	const authTimeSec = authTime != null ? Math.floor(authTime.getTime() / 1e3) : void 0;
+ 	const customClaims = stripReservedIdTokenClaims(opts.customIdTokenClaims ? await opts.customIdTokenClaims({
+ 		user,
+@@ -3685,21 +3685,8 @@ async function requireActiveAccessTokenWithClaims(ctx, opts, token, clientId) {
+ * Applied at the presentation layer so internal validation functions
+ * keep real user.id (needed for user lookup in /userinfo).
+ */
+-async function resolveIntrospectionSubjects(ctx, opts, payload, introspectingClient) {
+-	if (!payload.active || !payload.sub) return payload;
+-	const issuerClientId = payload.client_id ?? payload.azp;
+-	if (!issuerClientId) return payload;
+-	const issuingClient = issuerClientId === introspectingClient.clientId ? introspectingClient : await getClient(ctx, opts, issuerClientId);
+-	if (!issuingClient) return payload;
+-	const subjects = await resolvePresentedSubjects(opts, {
+-		sub: payload.sub,
+-		...payload.act ? { act: payload.act } : {},
+-		...payload.may_act !== void 0 ? { may_act: payload.may_act } : {}
+-	}, issuingClient, payload.sub === issuerClientId ? "service" : "user");
+-	return {
+-		...payload,
+-		...subjects
+-	};
++async function resolveIntrospectionSubjects(_ctx, _opts, payload, _introspectingClient) {
++	return payload;
+ }
+ async function introspectEndpoint(ctx, opts) {
+ 	let { token, token_type_hint } = ctx.body;

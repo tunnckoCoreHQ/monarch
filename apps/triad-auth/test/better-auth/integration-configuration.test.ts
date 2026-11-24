@@ -71,6 +71,7 @@ describe("Triad Better Auth integration configuration", () => {
     });
     expect(configuration.rateLimit).toMatchObject({ storage: "database" });
     expect(configuration.plugins.map((plugin) => plugin.id)).toEqual([
+      "triad-public-dcr-guard",
       "device-authorization",
       "siwe",
       "generic-oauth",
@@ -78,7 +79,6 @@ describe("Triad Better Auth integration configuration", () => {
       "wallet-broker",
       "multi-session",
       "oauth-provider",
-      "oauth-provider-device-code",
       "jwt",
     ]);
 

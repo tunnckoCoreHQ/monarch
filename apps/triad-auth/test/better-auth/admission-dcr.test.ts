@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 
 import type { OAuthOptions, Scope } from "@better-auth/oauth-provider";
 import { describe, expect, expectTypeOf, it } from "vitest";
@@ -6,16 +6,14 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   createClientAdmissionFragment,
   createPublicDcrOptions,
+  publicDcrGuard,
 } from "../../src/better-auth/admission";
 
-const entrySource = readFileSync(
-  new URL(import.meta.resolve("@better-auth/oauth-provider")),
-  "utf-8",
-);
-const registrationSource = readFileSync(
-  new URL("register-BotzQoS8.mjs", import.meta.resolve("@better-auth/oauth-provider")),
-  "utf-8",
-);
+const distUrl = new URL(".", import.meta.resolve("@better-auth/oauth-provider"));
+const distSource = readdirSync(distUrl)
+  .filter((file) => file.endsWith(".mjs"))
+  .map((file) => readFileSync(new URL(file, distUrl), "utf-8"))
+  .join("\n");
 
 describe("public DCR policy", () => {
   it("enables anonymous authorization-code registration with mandatory PKCE", () => {
@@ -33,37 +31,45 @@ describe("public DCR policy", () => {
     expect(options).not.toHaveProperty("generateClientId");
   });
 
-  it("uses the patched anonymous none guard and never creates a public client secret", () => {
-    expect(registrationSource).toContain('body.token_endpoint_auth_method !== "none"');
-    expect(registrationSource).toContain(
+  it("guards only the register route and never creates a public client secret", () => {
+    const [hook] = publicDcrGuard.hooks.before;
+
+    expect(publicDcrGuard.hooks.before).toHaveLength(1);
+    expect(hook?.matcher({ path: "/oauth2/register" } as never)).toBe(true);
+    expect(hook?.matcher({ path: "/oauth2/token" } as never)).toBe(false);
+    expect(distSource).toContain(
       "const clientSecret = isPublic || isPrivateKeyJwt || isExtensionAuthMethod ? void 0",
     );
   });
 
   it("retains S256-only PKCE and safe exact registered redirect checks", () => {
-    expect(entrySource).toContain('code_challenge_methods_supported: ["S256"]');
-    expect(entrySource).toContain("redirect_uris: z.array(SafeUrlSchema).min(1).optional()");
-    expect(entrySource).toContain("if (url === requested) return true");
-    expect(entrySource).toContain("findRegisteredRedirectUri(client.redirectUris, redirectUri)");
+    expect(distSource).toContain('code_challenge_methods_supported: ["S256"]');
+    expect(distSource).toContain(
+      "redirect_uris: z.array(RedirectUriSyntaxSchema).min(1).optional()",
+    );
+    expect(distSource).toContain("if (url === requested) return true");
+    expect(distSource).toContain(
+      "findRegisteredRedirectUri(registeredUris, redirectUri, isWebClient)",
+    );
   });
 
   it("does not use Origin as client identity", () => {
     const options = createPublicDcrOptions();
 
     expect(options).not.toHaveProperty("generateClientId");
-    expect(registrationSource).toContain(
+    expect(distSource).toContain(
       "const clientId = input.clientId ?? opts.generateClientId?.() ?? generateRandomString",
     );
-    expect(registrationSource).not.toContain('headers.get("origin")');
   });
 });
 
 describe("client admission fragment", () => {
-  it("composes CIMD discovery with public DCR options", () => {
+  it("composes CIMD discovery, the public DCR guard, and public DCR options", () => {
     const fragment = createClientAdmissionFragment({
       resolveHostname: async () => ["8.8.8.8"],
     });
 
+    expect(fragment.betterAuthPlugins).toEqual([publicDcrGuard]);
     expect(fragment.oauthProvider.allowDynamicClientRegistration).toBe(true);
     expect(fragment.oauthProvider.allowUnauthenticatedClientRegistration).toBe(true);
     expect(fragment.oauthProvider.clientRegistrationRequirePKCE).toBe(true);

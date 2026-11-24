@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { exportJWK, generateKeyPair, SignJWT } from "jose";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createTriadAuthOptions } from "../../src/better-auth/auth";
 import { createTriadConfiguration } from "../../src/better-auth/configuration";
@@ -57,8 +58,28 @@ const AGENT_PROFILE = {
   owner_sub: "oW7xN2pQ4mT8vL1kR6sC9dF3gH5jB0aE2uY4zI6nP8A",
 };
 
-// AgentID's token and userinfo endpoints, as documented at https://www.agentid.com/docs.
-function agentIdServer(userinfo: () => Response) {
+// AgentID signs its ID tokens with ES256. Better Auth checks them against the
+// discovered JWKS, issuer, client ID, and the nonce of the sign-in.
+const agentIdKeys = await generateKeyPair("ES256");
+const agentIdJwks = {
+  keys: [
+    { ...(await exportJWK(agentIdKeys.publicKey)), kid: "agentid-test", alg: "ES256", use: "sig" },
+  ],
+};
+
+function agentIdToken(nonce: string | null) {
+  return new SignJWT(nonce ? { nonce } : {})
+    .setProtectedHeader({ alg: "ES256", kid: "agentid-test" })
+    .setIssuer("https://auth.agentid.com")
+    .setAudience("agentid-client-id")
+    .setSubject(AGENT_SUB)
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(agentIdKeys.privateKey);
+}
+
+// AgentID's token, JWKS, and userinfo endpoints, as documented at https://www.agentid.com/docs.
+function agentIdServer(userinfo: () => Response, nonce: string | null) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     if (request.url === "https://auth.agentid.com/v0/token") {
@@ -75,8 +96,11 @@ function agentIdServer(userinfo: () => Response) {
         access_token: "agentid-access-token",
         token_type: "Bearer",
         expires_in: 600,
-        id_token: "not.read.by-triad",
+        id_token: await agentIdToken(nonce),
       });
+    }
+    if (request.url === "https://auth.agentid.com/v0/jwks.json") {
+      return Response.json(agentIdJwks);
     }
     if (request.url === "https://auth.agentid.com/v0/userinfo") {
       expect(request.headers.get("authorization")).toBe("Bearer agentid-access-token");
@@ -86,6 +110,31 @@ function agentIdServer(userinfo: () => Response) {
 
     throw new Error(`Unexpected request to ${request.url}`);
   });
+}
+
+// AgentID's discovery document. Generic OAuth reads it when Better Auth starts.
+const AGENTID_DISCOVERY = {
+  issuer: "https://auth.agentid.com",
+  authorization_endpoint: "https://auth.agentid.com/v0/authorize",
+  token_endpoint: "https://auth.agentid.com/v0/token",
+  jwks_uri: "https://auth.agentid.com/v0/jwks.json",
+  userinfo_endpoint: "https://auth.agentid.com/v0/userinfo",
+  id_token_signing_alg_values_supported: ["ES256"],
+  authorization_response_iss_parameter_supported: true,
+};
+
+function stubAgentIdDiscovery() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      if (request.url === "https://auth.agentid.com/.well-known/openid-configuration") {
+        return Response.json(AGENTID_DISCOVERY);
+      }
+
+      throw new Error(`Unexpected request to ${request.url}`);
+    }),
+  );
 }
 
 const APP_CALLBACK = "https://app.example.com/callback";
@@ -210,7 +259,7 @@ async function signInThroughAgentId(
   const { url } = await start.json<{ url: string }>();
   const authorization = new URL(url);
 
-  const server = agentIdServer(userinfo);
+  const server = agentIdServer(userinfo, authorization.searchParams.get("nonce"));
   vi.stubGlobal("fetch", server);
   const state = authorization.searchParams.get("state") ?? "";
   const callback = await triad.auth.handler(
@@ -219,32 +268,31 @@ async function signInThroughAgentId(
       { headers: { cookie: cookieHeader(start) } },
     ),
   );
-  vi.unstubAllGlobals();
+  stubAgentIdDiscovery();
 
   return { authorization, callback, env: triad.env, memory: triad.memory, server, start };
 }
+
+beforeEach(() => {
+  stubAgentIdDiscovery();
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
 describe("AgentID Identity Source", () => {
-  it("registers AgentID with fixed endpoints only when both credentials are set", () => {
+  it("registers AgentID through discovery only when both credentials are set", () => {
     expect(createAgentIdAuthentication(createEnv()).options.config).toMatchObject([
       {
         providerId: "agentid",
         clientId: "agentid-client-id",
         clientSecret: "agentid-client-secret",
         authentication: "basic",
-        authorizationUrl: "https://auth.agentid.com/v0/authorize",
-        tokenUrl: "https://auth.agentid.com/v0/token",
-        accountIssuer: "https://auth.agentid.com",
+        discoveryUrl: "https://auth.agentid.com/.well-known/openid-configuration",
         scopes: ["openid", "email", "profile"],
       },
     ]);
-    expect(createAgentIdAuthentication(createEnv()).options.config[0]).not.toHaveProperty(
-      "discoveryUrl",
-    );
     expect(
       createAgentIdAuthentication(createEnv({ AGENTID_CLIENT_SECRET: " " })).options.config,
     ).toEqual([]);
@@ -266,7 +314,7 @@ describe("AgentID Identity Source", () => {
     });
     expect(callback.status).toBe(302);
     expect(callback.headers.get("location")).toBe(`${ORIGIN}/me`);
-    expect(server).toHaveBeenCalledTimes(2);
+    expect(server).toHaveBeenCalledTimes(3);
 
     const accountSub = await accountSubject(IDENTIFIER_SECRET, "agentid", AGENT_SUB);
     expect(memory.user).toMatchObject([
@@ -296,7 +344,6 @@ describe("AgentID Identity Source", () => {
     expect(memory.account).toMatchObject([
       {
         providerId: "agentid",
-        issuer: "https://auth.agentid.com",
         accountId: AGENT_SUB,
         userId: accountSub,
         accessToken: null,

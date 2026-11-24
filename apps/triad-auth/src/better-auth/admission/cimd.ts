@@ -96,9 +96,7 @@ function isPublicAddress(address: string): boolean {
   return validateClientIdUrl(`https://${host}/oauth/client.json`) === null;
 }
 
-export function createCimdAdmissionOptions(
-  dependencies: CimdAdmissionDependencies = {},
-): CimdOptions {
+export function createCimdAdmissionOptions(dependencies: CimdAdmissionDependencies = {}) {
   const fetcher = dependencies.fetch ?? globalThis.fetch;
   const resolveHostname = dependencies.resolveHostname ?? createDnsOverHttpsResolver(fetcher);
 
@@ -132,7 +130,7 @@ export function createCimdAdmissionOptions(
         return false;
       }
     },
-  };
+  } satisfies CimdOptions;
 }
 
 export function createCimdClientDiscovery(dependencies: CimdAdmissionDependencies = {}) {

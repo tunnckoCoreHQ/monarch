@@ -1,4 +1,4 @@
-import { deviceCodeGrant, oauthProvider } from "@better-auth/oauth-provider";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import type { BetterAuthPlugin } from "better-auth";
 import { APIError } from "better-auth/api";
 import { jwt, multiSession } from "better-auth/plugins";
@@ -85,6 +85,7 @@ export function createTriadConfiguration(env: TriadEnv) {
   const { extensions: tokenExtensions, ...tokenOptions } = tokenComposition.oauthProviderOptions;
   const plugins = preservePluginTuple([
     ...resourceFragment.betterAuthPlugins,
+    ...admissionFragment.betterAuthPlugins,
     createTriadDeviceAuthorization(env),
     createEthereumAuthentication(env),
     createAgentIdAuthentication(env),
@@ -130,7 +131,6 @@ export function createTriadConfiguration(env: TriadEnv) {
       },
       extensions: [...tokenExtensions, ...admissionExtensions],
     }),
-    deviceCodeGrant(),
     jwt(tokenComposition.jwtOptions),
   ]);
 

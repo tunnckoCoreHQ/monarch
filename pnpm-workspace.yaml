@@ -52,6 +52,8 @@ catalogs:
     erc721a: 4.3.0
     viem: 2.56.9
     jose: ^6.2.12
+    drizzle-orm: 0.45.4
+    drizzle-kit: 0.31.11
     oxlint: 1.94.0
     oxfmt: 0.71.0
     tsrs: 7.1.0-beta.tsrs3
@@ -81,11 +83,11 @@ catalogs:
     "@scure/bip32": 2.4.0
     "@scure/btc-signer": 2.4.1
   better-auth:
-    auth: 1.7.0-rc.4
-    "@better-auth/cimd": 1.7.0-rc.4
-    "@better-auth/oauth-provider": 1.7.0-rc.4
-    "@better-auth/passkey": 1.7.0-rc.4
-    "better-auth": 1.7.0-rc.4
+    auth: 1.8.0-beta.11
+    "@better-auth/cimd": 1.8.0-beta.11
+    "@better-auth/oauth-provider": 1.8.0-beta.11
+    "@better-auth/passkey": 1.8.0-beta.11
+    "better-auth": 1.8.0-beta.11
 
 overrides:
   # One workerd for the whole workspace: cf and @cloudflare/vite-plugin pin different ones.
@@ -103,4 +105,4 @@ overrides:
   "es-define-property": "npm:@socketregistry/es-define-property@^1"
 
 patchedDependencies:
-  "@better-auth/oauth-provider@1.7.0-rc.4": patches/@better-auth__oauth-provider@1.7.0-rc.4.patch
+  '@better-auth/oauth-provider@1.8.0-beta.11': patches/@better-auth__oauth-provider@1.8.0-beta.11.patch

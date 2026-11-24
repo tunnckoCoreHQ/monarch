@@ -117,10 +117,10 @@ afterEach(() => {
 });
 
 describe("Triad Better Auth platform options", () => {
-  it("uses the exact Worker D1 binding", () => {
+  it("uses the Drizzle adapter on the Worker D1 binding", () => {
     const options = createTriadAuthOptions(createEnv());
 
-    expect(options.database).toBe(database);
+    expect(options.database(options).id).toBe("drizzle");
   });
 
   it.each(["https://AUTH.EXAMPLE.com:443", "https://AUTH.EXAMPLE.com:443/"])(
@@ -177,8 +177,8 @@ describe("Triad Better Auth platform options", () => {
     };
     const options = createTriadAuthOptions(createEnv(), forbiddenConfiguration as never);
 
+    expect(options.database).not.toBe(replacementDatabase);
     expect(options).toMatchObject({
-      database,
       baseURL: "https://auth.example.com",
       basePath: "/api/auth",
       secret: "test-secret-that-is-at-least-32-characters",
@@ -309,6 +309,6 @@ describe("Triad Better Auth platform options", () => {
     expect(options.socialProviders).toBe(configuration.socialProviders);
     expect(options.databaseHooks).toBe(configuration.databaseHooks);
     expect(options.plugins).toBe(configuration.plugins);
-    expect(options.database).toBe(env.DB);
+    expect(options.database(options).id).toBe("drizzle");
   });
 });
