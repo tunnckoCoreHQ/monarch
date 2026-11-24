@@ -88,7 +88,8 @@ function agentidUpstreamId(profile: unknown): string {
 }
 
 // The access token comes from Triad's own code exchange, so the userinfo
-// response is the profile. Triad does not read the ID token. A failed or
+// response is the profile. Better Auth checks the ID token against the AgentID
+// JWKS before this runs, and Triad does not read its claims. A failed or
 // malformed response, including one without a valid `sub`, returns null, which
 // Better Auth turns into an OAuth error.
 async function agentidUserInfo(accessToken: string | undefined) {
