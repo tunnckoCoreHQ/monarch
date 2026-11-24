@@ -68,8 +68,8 @@ function createEnv(): TriadEnv {
   };
 }
 
-describe("First-party device authorization on an HTTPS origin", () => {
-  it("issues a device code to Triad's own origin", async () => {
+describe("First-party device authorization", () => {
+  it("issues a device code to the triad-auth client ID on an HTTPS origin", async () => {
     const env = createEnv();
     const auth = createTriadAuth(env, createTriadConfiguration(env));
 
@@ -77,7 +77,7 @@ describe("First-party device authorization on an HTTPS origin", () => {
       new Request(`${ORIGIN}/api/auth/device/code`, {
         method: "POST",
         headers: { "content-type": "application/json", origin: ORIGIN },
-        body: JSON.stringify({ client_id: ORIGIN, scope: "openid" }),
+        body: JSON.stringify({ client_id: "triad-auth", scope: "openid" }),
       }),
     );
 

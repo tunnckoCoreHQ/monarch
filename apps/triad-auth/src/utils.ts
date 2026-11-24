@@ -3,6 +3,8 @@ import type {
   PublicKeyCredentialCreationOptionsJSON,
 } from "@simplewebauthn/browser";
 
+export const FIRST_PARTY_DEVICE_CLIENT_ID = "triad-auth";
+
 export type PublicJwk =
   | { crv: "P-256" | "P-384" | "P-521"; kty: "EC"; x: string; y: string }
   | { crv: "Ed25519"; kty: "OKP"; x: string }

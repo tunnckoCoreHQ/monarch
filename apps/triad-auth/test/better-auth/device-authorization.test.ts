@@ -8,8 +8,6 @@ import {
   type TriadDeviceAuthorizationPlugin,
 } from "../../src/better-auth/device";
 
-const deviceEnv = { AUTH_ORIGIN: "https://AUTH.EXAMPLE.com:443/" };
-
 function validateClient(plugin: TriadDeviceAuthorizationPlugin) {
   const validate = plugin.options.validateClient;
   if (!validate) {
@@ -21,7 +19,7 @@ function validateClient(plugin: TriadDeviceAuthorizationPlugin) {
 
 describe("Triad Better Auth device authorization", () => {
   it("exports a composable plugin with fixed device policy", () => {
-    const plugin = createTriadDeviceAuthorization(deviceEnv);
+    const plugin = createTriadDeviceAuthorization();
 
     expect(plugin.id).toBe("device-authorization");
     expect(plugin.options).toMatchObject({
@@ -35,6 +33,7 @@ describe("Triad Better Auth device authorization", () => {
   });
 
   it.each([
+    "https://auth.example.com",
     "https://auth.example.com/",
     "https://auth.example.com/device",
     "https://auth.example.com?client=device",
@@ -42,21 +41,19 @@ describe("Triad Better Auth device authorization", () => {
     "registered-device-client",
     "not-a-url",
   ])("leaves client ID %s to OAuth Provider", async (clientId) => {
-    const plugin = createTriadDeviceAuthorization(deviceEnv);
+    const plugin = createTriadDeviceAuthorization();
 
     await expect(Promise.resolve(validateClient(plugin)(clientId))).resolves.toBe(false);
   });
 
-  it("accepts only the exact canonical configured origin as the first-party client", async () => {
-    const plugin = createTriadDeviceAuthorization(deviceEnv);
+  it("accepts the triad-auth client ID as the first-party client", async () => {
+    const plugin = createTriadDeviceAuthorization();
 
-    await expect(Promise.resolve(validateClient(plugin)("https://auth.example.com"))).resolves.toBe(
-      true,
-    );
+    await expect(Promise.resolve(validateClient(plugin)("triad-auth"))).resolves.toBe(true);
   });
 
   it("exposes Better Auth's device routes and the OAuth device schema", () => {
-    const plugin = createTriadDeviceAuthorization(deviceEnv);
+    const plugin = createTriadDeviceAuthorization();
 
     expect(Object.values(plugin.endpoints).map((endpoint) => endpoint.path)).toEqual([
       "/device/code",

@@ -174,7 +174,7 @@ export const prerender = true;
   </style>
 
   <script>
-    import { isRecord, responseError } from "../../utils";
+    import { FIRST_PARTY_DEVICE_CLIENT_ID, isRecord, responseError } from "../../utils";
     import {
       authorizationRequest,
       canonicalScopeRequest,
@@ -423,7 +423,7 @@ export const prerender = true;
         deviceClientId =
           mode === "oauth"
             ? await registerDeviceClient(discovery, requestedScope)
-            : location.origin;
+            : FIRST_PARTY_DEVICE_CLIENT_ID;
         deviceTokenEndpoint =
           mode === "oauth" ? discovery.token_endpoint : "/api/auth/device/token";
         activeStart.textContent = "REQUESTING CODE";
