@@ -66,7 +66,7 @@ function validateProviderAuthorization(
 export function createTriadConfiguration(env: TriadEnv) {
   const identityConfiguration = createIdentityConfiguration(env);
   const resourceFragment = createTriadResourceFragment(env);
-  const admissionFragment = createClientAdmissionFragment(new URL(env.AUTH_ORIGIN).origin);
+  const admissionFragment = createClientAdmissionFragment();
   const tokenComposition = createTokenComposition({
     identity: {
       resolvePairwiseSubject: (accountSub, clientId) =>
@@ -86,7 +86,7 @@ export function createTriadConfiguration(env: TriadEnv) {
   const plugins = preservePluginTuple([
     ...resourceFragment.betterAuthPlugins,
     ...admissionFragment.betterAuthPlugins,
-    createTriadDeviceAuthorization(env),
+    createTriadDeviceAuthorization(),
     createEthereumAuthentication(env),
     createAgentIdAuthentication(env),
     createPasskeyAuthentication(env),

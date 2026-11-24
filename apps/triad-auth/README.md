@@ -61,5 +61,5 @@ Terms and the current data inventory are available at [`/terms`](/terms) and [`/
 
 Triad supports two device contracts through OAuth Provider's device authorization plugin. Both share the `/device/code` route and the `/device/verify` page:
 
-- First-party devices use Triad's origin as `client_id`. The Account Holder approves on `/device/verify`, and the device redeems `/device/token` for a Triad session.
+- First-party apps and CLIs use the `client_id` `triad-auth`. The Account Holder approves on `/device/verify`, and the app redeems `/device/token` for a Triad session.
 - Registered OAuth clients request approved scopes and resources. `/device/verify` sends the Account Holder to `/oauth2/authorize?user_code=…`, which runs the same sign-in and consent pages as a browser request and returns to `/device/verify` with the decision. The client redeems `/oauth2/token` with the RFC 8628 device-code grant for OAuth tokens. Each code redeems only on its own token endpoint.

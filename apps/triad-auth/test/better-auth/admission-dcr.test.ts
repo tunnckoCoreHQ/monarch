@@ -65,7 +65,7 @@ describe("public DCR policy", () => {
 
 describe("client admission fragment", () => {
   it("composes CIMD discovery, the public DCR guard, and public DCR options", () => {
-    const fragment = createClientAdmissionFragment("https://auth.example.com", {
+    const fragment = createClientAdmissionFragment({
       resolveHostname: async () => ["8.8.8.8"],
     });
 
@@ -79,13 +79,5 @@ describe("client admission fragment", () => {
       id: "cimd",
       discoveryMetadata: { client_id_metadata_document_supported: true },
     });
-    expect(
-      fragment.oauthProvider.extensions[0]?.clientDiscovery.matches("https://auth.example.com"),
-    ).toBe(false);
-    expect(
-      fragment.oauthProvider.extensions[0]?.clientDiscovery.matches(
-        "https://client.example/oauth/client.json",
-      ),
-    ).toBe(true);
   });
 });

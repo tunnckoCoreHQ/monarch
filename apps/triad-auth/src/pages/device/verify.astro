@@ -66,7 +66,7 @@ export const prerender = true;
 
   <script>
     import { renderDisclosures } from "../../scripts/disclosure-controls";
-    import { isRecord, responseError } from "../../utils";
+    import { FIRST_PARTY_DEVICE_CLIENT_ID, isRecord, responseError } from "../../utils";
 
     const summary = document.querySelector<HTMLElement>("#device-summary")!;
     const signedOut = document.querySelector<HTMLElement>("#device-sign-in")!;
@@ -181,7 +181,7 @@ export const prerender = true;
           throw new Error("The device request has no client identity.");
         }
 
-        requestKind = body.client_id === location.origin ? "session" : "oauth";
+        requestKind = body.client_id === FIRST_PARTY_DEVICE_CLIENT_ID ? "session" : "oauth";
         client.textContent = body.client_id;
         contract.textContent = requestKind === "oauth" ? "OAUTH TOKENS" : "TRIAD SESSION";
         requestedResource.textContent =
