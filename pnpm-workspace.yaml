@@ -91,6 +91,11 @@ catalogs:
     "better-auth": 1.8.0-beta.11
 
 overrides:
+  "side-channel": "npm:@socketregistry/side-channel@^1"
+  "safer-buffer": "npm:@socketregistry/safer-buffer@^1"
+  "safe-buffer": "npm:@socketregistry/safe-buffer@^1"
+  "object-assign": "npm:@socketregistry/object-assign@^1"
+  "isarray": "npm:@socketregistry/isarray@^1"
   # One workerd for the whole workspace: cf and @cloudflare/vite-plugin pin different ones.
   "workerd": "1.20260930.2"
   "miniflare": "5.20260930.0-alpha"
