@@ -4,7 +4,7 @@ import "../styles.css";
 
 import CopyIcons from "../components/CopyIcons.astro";
 
-import { CDP_FORWARD_TOKEN_HEADER } from "@tunnckocore/x402-router";
+import { CDP_FORWARD_TOKEN_HEADER, PAYAI_FORWARD_TOKEN_HEADER } from "@tunnckocore/x402-router";
 
 // Built once and served as a static asset; only the API runs in the Worker. Astro.url comes from `site`.
 export const prerender = true;
@@ -69,57 +69,87 @@ const statements: Array<{ parts: Part[]; support: Note[] }> = [
   },
   {
     parts: [
-      { text: "Base, Polygon, Arbitrum and World Chain go to ", tone: "key" },
-      { text: "CDP.", tone: "info" },
+      { text: "EVM and Solana go to ", tone: "key" },
+      { text: "PayAI, Dexter or CDP.", tone: "accent" },
     ],
     support: [
       "Through ",
+      { code: "facilitator.payai.network", href: "https://facilitator.payai.network", tone: "accent" },
+      ", ",
+      { code: "x402.dexter.cash", href: "https://dexter.cash/facilitator", tone: "accent" },
+      " and ",
       {
         code: "api.cdp.coinbase.com",
         href: "https://docs.cdp.coinbase.com/x402/seller/facilitator",
         tone: "info",
       },
-      ", with a short-lived JWT your server signs. World Chain Sepolia routes there too.",
+      ", testnets included. With no keys, PayAI goes first on its free credits, then Dexter.",
     ],
   },
   {
     parts: [
-      { text: "Solana goes to ", tone: "key" },
-      { text: "PayAI, then Dexter.", tone: "accent" },
-    ],
-    support: [
-      "Through ",
-      { code: "facilitator.payai.network", href: "https://facilitator.payai.network", tone: "accent" },
-      " or ",
-      { code: "x402.dexter.cash", href: "https://dexter.cash/facilitator", tone: "accent" },
-      ". No auth header needed. A request with a CDP token goes to CDP.",
-    ],
-  },
-  {
-    parts: [
-      { text: "Base Sepolia and Solana Devnet go to ", tone: "key" },
+      { text: "Other testnets go to ", tone: "key" },
       { text: "x402.org.", tone: "x402" },
     ],
     support: [
-      "Public test networks, through ",
+      "Base Sepolia, Solana Devnet and more, through ",
       { code: "x402.org/facilitator", href: "https://x402.org", tone: "x402" },
       ". No auth header needed.",
     ],
   },
   {
     parts: [
-      { text: "Your " },
-      { text: "CDP keys", tone: "info" },
-      { text: " stay on your server.", tone: "key" },
+      { text: "A " },
+      { text: "CDP or PayAI key", tone: "info" },
+      { text: " goes first.", tone: "key" },
     ],
     support: [
-      "The router's ",
-      { code: "createCdpAuthHeaders" },
-      " helper signs a short-lived JWT and sends it as ",
+      "The ",
+      { code: "createRouterAuthHeaders" },
+      " helper signs short-lived JWTs on your server and sends them as ",
       { code: CDP_FORWARD_TOKEN_HEADER },
-      ". The router copies it to ",
+      " and ",
+      { code: PAYAI_FORWARD_TOKEN_HEADER },
+      ". The router copies each one to ",
       { code: "authorization" },
-      " only when the route is CDP.",
+      " only for its own facilitator. With both keys, CDP goes first.",
+    ],
+  },
+  {
+    parts: [
+      { text: "You choose the " },
+      { text: "order per chain.", tone: "key" },
+    ],
+    support: [
+      "Pass ",
+      { code: 'preference: { eip155: ["cdp", "payai"], solana: ["payai", "dexter"] }' },
+      ". A key can be a namespace such as ",
+      { code: "eip155" },
+      " or a network such as ",
+      { code: "eip155:8453" },
+      ". The same order picks the fee payer in ",
+      { code: "/supported" },
+      " and the facilitator that settles.",
+    ],
+  },
+  {
+    parts: [
+      { text: "When one fails, " },
+      { text: "the next one tries.", tone: "key" },
+    ],
+    support: [
+      "The router moves on when a facilitator is out of credits, down, or does not support the payment. It stops when the payment itself is invalid, such as a bad signature. A Solana payment goes only to the facilitator whose fee payer the buyer signed.",
+    ],
+  },
+  {
+    parts: [
+      { text: "The buyer gets a " },
+      { text: "reason to act on.", tone: "key" },
+    ],
+    support: [
+      "For example, a missing one-time Permit2 approval, or a seller whose provider is out of credits. ",
+      { code: "extra.router.tried" },
+      " lists every facilitator the router asked and what each one said.",
     ],
   },
   {
@@ -131,7 +161,7 @@ const statements: Array<{ parts: Part[]; support: Note[] }> = [
       { code: "scheme" },
       " and ",
       { code: "network" },
-      ", picks the upstream, and streams back its status and body.",
+      ", picks the upstream, and passes back its answer.",
     ],
   },
 ];
@@ -147,7 +177,7 @@ const toneClass = {
 
 // Tiny tokenizer for the static snippet: comments, strings, keywords, x402 identifiers.
 const tokenPattern =
-  /((?<!:)\/\/.*$|^#.*$)|("(?:[^"\\\n]|\\.)*")|\b(import|from|const|new|export|default|async|return|await)\b|\b(createCdpAuthHeaders|createX402Router|HTTPFacilitatorClient|x402ResourceServer|paymentMiddleware|ExactEvmScheme|ExactSvmScheme)\b/gm;
+  /((?<!:)\/\/.*$|^#.*$)|("(?:[^"\\\n]|\\.)*")|\b(import|from|const|new|export|default|async|return|await)\b|\b(createRouterAuthHeaders|createX402Router|HTTPFacilitatorClient|x402ResourceServer|paymentMiddleware|ExactEvmScheme|ExactSvmScheme)\b/gm;
 const escapeHtml = (text: string) =>
   text.replace(/[&<>]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[char] ?? char);
 function highlight(source: string) {
@@ -169,8 +199,12 @@ function highlight(source: string) {
   return html + escapeHtml(source.slice(last));
 }
 
-const sellerCode = `import { BASE_MAINNET, ETHEREUM_MAINNET, SOLANA_MAINNET } from "@tunnckocore/x402-router";
-import { createCdpAuthHeaders } from "@tunnckocore/x402-router/cdp";
+const sellerCode = `import {
+  BASE_MAINNET,
+  createRouterAuthHeaders,
+  ETHEREUM_MAINNET,
+  SOLANA_MAINNET,
+} from "@tunnckocore/x402-router";
 import { HTTPFacilitatorClient, x402ResourceServer } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { paymentMiddleware } from "@x402/hono";
@@ -179,12 +213,23 @@ import { Hono } from "hono";
 
 const app = new Hono();
 
+// Every part is optional. With none, PayAI goes first, then Dexter.
 const facilitator = new HTTPFacilitatorClient({
   url: "${origin}",
   createAuthHeaders: () =>
-    createCdpAuthHeaders({
-      apiKeyId: process.env.CDP_API_KEY_ID,
-      apiKeySecret: process.env.CDP_API_KEY_SECRET,
+    createRouterAuthHeaders({
+      cdp: {
+        apiKeyId: process.env.CDP_API_KEY_ID,
+        apiKeySecret: process.env.CDP_API_KEY_SECRET,
+      },
+      payai: {
+        apiKeyId: process.env.PAYAI_API_KEY_ID,
+        apiKeySecret: process.env.PAYAI_API_KEY_SECRET,
+      },
+      preference: {
+        eip155: ["cdp", "payai", "dexter"],
+        solana: ["payai", "dexter", "cdp"],
+      },
     }),
 });
 
@@ -219,10 +264,10 @@ const sellerLine = `const facilitator = new HTTPFacilitatorClient({ url: "${orig
 const routerOptions: Array<{ name: string; fallback: string; does: Note[] }> = [
   {
     name: "upstreams",
-    fallback: "PrimeV, x402.org, PayAI, Dexter, CDP",
+    fallback: "PrimeV, CDP, PayAI, Dexter, x402.org",
     does: [
       "Pass a list of your own facilitators, each ",
-      { code: "{ name, facilitatorUrl, auth?, supportedKinds?, limitToSupportedKinds? }" },
+      { code: "{ name, facilitatorUrl, auth?, supportedKinds? }" },
     ],
   },
   {

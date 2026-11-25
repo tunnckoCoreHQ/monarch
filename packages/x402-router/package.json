@@ -13,7 +13,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./cdp": "./src/cdp.ts"
+    "./cdp": "./src/cdp.ts",
+    "./payai": "./src/payai.ts"
   },
   "publishConfig": {
     "exports": {
@@ -24,6 +25,10 @@
       "./cdp": {
         "types": "./dist/cdp.d.ts",
         "default": "./dist/cdp.js"
+      },
+      "./payai": {
+        "types": "./dist/payai.d.ts",
+        "default": "./dist/payai.js"
       }
     },
     "access": "public"

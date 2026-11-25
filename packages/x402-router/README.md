@@ -23,7 +23,9 @@ npm install @tunnckocore/x402-router
 - **One facilitator URL.** The standard x402 stack talks to one endpoint; the router handles upstream choice.
 - **Live support discovery.** `/supported` is built from the upstream facilitators, not a stale local list.
 - **Protocol-level routing.** Requests route by x402 version, scheme, and network. No hard-coded "Base only" path.
-- **Stateless CDP pass-through.** Sellers generate short-lived CDP JWTs locally; the router stores nothing.
+- **Stateless key pass-through.** Sellers sign short-lived CDP and PayAI JWTs locally. The router stores nothing.
+- **Fallback.** When a facilitator fails, the router tries the next one that can settle the payment, and it tells the buyer what went wrong when none can.
+- **Works without keys.** PayAI free credits and Dexter cover EVM and Solana with no account.
 - **PrimeV mainnet rail.** Ethereum payments use [PrimeV x402 facilitator](https://github.com/primev/mainnet-x402-facilitator) for 1.2s settlement and sponsored gas.
 - **Self-hostable Fetch handler.** Run the same code on Cloudflare Workers, Node, Bun, Deno, or any Fetch API runtime.
 - **Open source.** Apache-2.0.
@@ -36,17 +38,26 @@ POST /verify
 POST /settle
 ```
 
-Default routing is explicit: Ethereum Mainnet goes to PrimeV; Base and other CDP-supported EVM networks go to CDP; Solana Mainnet goes to PayAI, then Dexter, or to CDP when the request carries a CDP token; public test/dev networks come from x402.org. `/supported` reports what those upstreams currently claim, one kind per network and scheme, from the upstream that the payment routes to.
+Default routing: Ethereum Mainnet goes to PrimeV. EVM and Solana payments go to PayAI, Dexter, or CDP, testnets included. x402.org covers testnets. A CDP token or a PayAI key puts that facilitator first. When a facilitator fails, the router tries the next one that can settle the payment. [Upstreams](https://x402-router.wgw.lol/docs/upstreams.md) has the full order, the fallback rules, and the error messages.
 
 ## Reasoning and routing
 
-This package exists because facilitator support is fragmented. CDP covers its EVM/Solana rails, x402.org covers public test/dev networks, and PrimeV covers Ethereum Mainnet. The router gives sellers one facilitator URL without pretending every upstream supports every chain.
+This package exists because facilitator support is fragmented. Each facilitator covers its own set of networks, keys, and fees. The router gives sellers one facilitator URL and picks a facilitator for each payment.
 
-It does not add another account system. PrimeV gives us fast Ethereum settlement with sponsored gas. CDP keeps its own auth. The router stays thin.
+It does not add another account system. PrimeV gives fast Ethereum settlement with sponsored gas. Dexter charges no fee. PayAI works without a key on its free credits. CDP and PayAI keep their own auth.
 
-For CDP-routed calls, the router does not need your CDP secret key. You generate a short-lived CDP JWT on your server. The router forwards that JWT only when it chooses CDP. No router-side secrets, accounts, storage, API keys, or auth layer.
+The router does not need your secret keys. You sign short-lived JWTs on your server. The router forwards each JWT only to its own facilitator. It has no router-side secrets, accounts, or storage.
 
-Routing is decided from the request network, scheme, and x402 version. `/supported` is generated live from upstream facilitators.
+The router orders the facilitators for each network:
+
+1. It starts from the default list: `primev`, `cdp`, `payai`, `dexter`, `x402`.
+2. The seller's preference moves the facilitators it names to the front.
+3. Facilitators with a key in the request go before the rest. With both keys, CDP goes first.
+4. CDP drops out when the request has no CDP token.
+
+`/supported` takes each payment kind from the first facilitator in that order, so the Solana fee payer the seller gets is the fee payer of the facilitator that settles. A payment that names its facilitator, such as a Solana fee payer or an `upto` facilitator address, goes only to that facilitator.
+
+`/supported` lists only `exact`, `upto`, and `batch-settlement`, because the router forwards only `/verify` and `/settle`.
 
 ## Usage for deployers
 
@@ -74,18 +85,30 @@ export default {
 
 ## Usage for seller
 
-CDP-routed requests require a short-lived bearer token for CDP, not for the router URL. Use the helper with the normal x402 facilitator client:
+Point the normal x402 facilitator client at the router. Add keys and a preference only when you want them:
 
 ```ts
-import { createCdpAuthHeaders } from "@tunnckocore/x402-router/cdp";
+import { createRouterAuthHeaders } from "@tunnckocore/x402-router";
 
 const facilitator = new HTTPFacilitatorClient({
   url: "https://x402-router.wgw.lol",
   createAuthHeaders: () =>
-    // creates a short-lived JWT token for forwarded CDP requests
-    createCdpAuthHeaders({
-      apiKeyId: process.env.CDP_API_KEY_ID!,
-      apiKeySecret: process.env.CDP_API_KEY_SECRET!,
+    createRouterAuthHeaders({
+      // Optional. Puts CDP first.
+      cdp: {
+        apiKeyId: process.env.CDP_API_KEY_ID!,
+        apiKeySecret: process.env.CDP_API_KEY_SECRET!,
+      },
+      // Optional. Without it, PayAI uses its free credits.
+      payai: {
+        apiKeyId: process.env.PAYAI_API_KEY_ID!,
+        apiKeySecret: process.env.PAYAI_API_KEY_SECRET!,
+      },
+      // Optional. Upstream names to try first, per namespace or network.
+      preference: {
+        eip155: ["cdp", "payai", "dexter"],
+        solana: ["payai", "dexter", "cdp"],
+      },
     }),
 });
 
@@ -131,9 +154,9 @@ app.use(
 );
 ```
 
-The middleware still calls `/supported`, `/verify`, and `/settle` normally. The router serves `/supported` from its upstream list. The helper only supplies the forwarded CDP bearer header when `/verify` or `/settle` routes to CDP.
+The middleware still calls `/supported`, `/verify`, and `/settle`. The helper sends the router headers on all three. The router forwards each token only to its own facilitator.
 
-The CDP secrets stay on the seller's server. They are passed to the CDP SDK to generate a short-lived JWT, then used to authorize the CDP upstream request. The router remains stateless.
+The secrets stay on the seller server. The helpers sign short-lived JWTs there: CDP through the CDP SDK, and PayAI through Web Crypto. The router stays stateless.
 
 ## License
 

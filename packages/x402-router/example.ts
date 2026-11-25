@@ -1,6 +1,10 @@
 import { serve } from "@hono/node-server";
-import { BASE_MAINNET, ETHEREUM_MAINNET, SOLANA_MAINNET } from "@tunnckocore/x402-router";
-import { createCdpAuthHeaders } from "@tunnckocore/x402-router/cdp";
+import {
+  BASE_MAINNET,
+  createRouterAuthHeaders,
+  ETHEREUM_MAINNET,
+  SOLANA_MAINNET,
+} from "@tunnckocore/x402-router";
 import { HTTPFacilitatorClient, x402ResourceServer } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { paymentMiddleware } from "@x402/hono";
@@ -12,9 +16,12 @@ const app = new Hono();
 const facilitator = new HTTPFacilitatorClient({
   url: "https://x402-router.wgw.lol",
   createAuthHeaders: () =>
-    createCdpAuthHeaders({
-      apiKeyId: process.env.CDP_API_KEY_ID!,
-      apiKeySecret: process.env.CDP_API_KEY_SECRET!,
+    createRouterAuthHeaders({
+      cdp: {
+        apiKeyId: process.env.CDP_API_KEY_ID!,
+        apiKeySecret: process.env.CDP_API_KEY_SECRET!,
+      },
+      preference: { solana: ["payai", "dexter", "cdp"] },
     }),
 });
 
