@@ -1,3 +1,8 @@
+import { and, eq } from "drizzle-orm";
+
+import type { TriadDatabase } from "../database";
+import { session as sessionTable, walletAddress } from "../drizzle-schema";
+
 const DEVICE_SESSION_COOKIE = ".session_token_multi-";
 
 function cookieName(pair: string): string {
@@ -29,20 +34,19 @@ export function withoutActiveSessionCookies(
   return stripped;
 }
 
-export function createSessionClaimResolver(database: D1Database) {
+export function createSessionClaimResolver(database: TriadDatabase) {
   return {
     resolveAuthenticationChains: async (sessionId: string, userId: string) => {
       const [session, wallets] = await Promise.all([
         database
-          .prepare(
-            'select "authenticationChainId" from "session" where "id" = ? and "userId" = ? limit 1',
-          )
-          .bind(sessionId, userId)
-          .first<{ authenticationChainId: unknown }>(),
+          .select({ authenticationChainId: sessionTable.authenticationChainId })
+          .from(sessionTable)
+          .where(and(eq(sessionTable.id, sessionId), eq(sessionTable.userId, userId)))
+          .get(),
         database
-          .prepare('select "chainId" from "walletAddress" where "userId" = ?')
-          .bind(userId)
-          .all<{ chainId: unknown }>(),
+          .select({ chainId: walletAddress.chainId })
+          .from(walletAddress)
+          .where(eq(walletAddress.userId, userId)),
       ]);
       const chainId = session?.authenticationChainId;
 
@@ -51,7 +55,7 @@ export function createSessionClaimResolver(database: D1Database) {
           typeof chainId === "number" && Number.isSafeInteger(chainId) && chainId > 0
             ? chainId
             : undefined,
-        chains: wallets.results.map((wallet) => wallet.chainId),
+        chains: wallets.map((wallet) => wallet.chainId),
       };
     },
   };

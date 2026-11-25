@@ -1,9 +1,12 @@
 import type { Account, BetterAuthOptions, HookEndpointContext } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { genericOAuth, type GenericOAuthUserInfo } from "better-auth/plugins";
+import { eq } from "drizzle-orm";
 
 import { isRecord } from "../../utils";
+import { triadDatabase } from "../database";
 import { PROVIDER_UPSTREAM_SCOPE_MAP } from "../disclosures";
+import { deviceCode, user as userTable } from "../drizzle-schema";
 import type { TriadEnv } from "../env";
 import { validateEncryptionSecrets } from "./encryption";
 import {
@@ -395,7 +398,7 @@ export function createIdentityConfiguration(env: TriadEnv) {
         },
         delete: {
           before: async (user, _context) => {
-            await env.DB.prepare('delete from "deviceCode" where "userId" = ?').bind(user.id).run();
+            await triadDatabase(env.DB).delete(deviceCode).where(eq(deviceCode.userId, user.id));
           },
         },
       },
@@ -457,9 +460,11 @@ export async function agentidOwnerDataMissing(
     typeof user.encryptedData === "string"
       ? user.encryptedData
       : (
-          await env.DB.prepare('select "encryptedData" from "user" where "id" = ?')
-            .bind(user.id)
-            .first<{ encryptedData: unknown }>()
+          await triadDatabase(env.DB)
+            .select({ encryptedData: userTable.encryptedData })
+            .from(userTable)
+            .where(eq(userTable.id, user.id))
+            .get()
         )?.encryptedData;
   const profile =
     typeof envelope === "string"

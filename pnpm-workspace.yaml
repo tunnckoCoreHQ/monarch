@@ -54,6 +54,7 @@ catalogs:
     jose: ^6.2.12
     drizzle-orm: 0.45.4
     drizzle-kit: 0.31.11
+    miniflare: 5.20260930.0-alpha
     oxlint: 1.94.0
     oxfmt: 0.71.0
     tsrs: 7.1.0-beta.tsrs3

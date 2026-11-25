@@ -1,5 +1,9 @@
+import { asc, eq } from "drizzle-orm";
+
 import { base64UrlDecode, base64UrlEncode, isRecord, type PublicJwk } from "../../utils";
+import type { TriadDatabase } from "../database";
 import type { OptionalDisclosureScope } from "../disclosures";
+import { passkey as passkeyTable, walletAddress } from "../drizzle-schema";
 import { openEncryptedData, sealEncryptedData, validateEncryptionSecrets } from "./encryption";
 import {
   isIdentityPasskey,
@@ -423,20 +427,20 @@ async function resolveProfileClaims(
   return claims;
 }
 
-async function walletClaim(database: D1Database, userId: string): Promise<string | undefined> {
+async function walletClaim(database: TriadDatabase, userId: string): Promise<string | undefined> {
   const row = await database
-    .prepare(
-      'select "address" from "walletAddress" where "userId" = ? order by "createdAt" asc limit 1',
-    )
-    .bind(userId)
-    .first<{ address: unknown }>();
+    .select({ address: walletAddress.address })
+    .from(walletAddress)
+    .where(eq(walletAddress.userId, userId))
+    .orderBy(asc(walletAddress.createdAt))
+    .get();
   const address = row?.address;
 
   return typeof address === "string" && /^0x[0-9a-fA-F]{40}$/.test(address) ? address : undefined;
 }
 
 async function passkeyClaims(
-  database: D1Database,
+  database: TriadDatabase,
   user: ProfileIdentityUser,
   identifierSecret: string,
 ): Promise<Pick<ProfileClaims, "cred" | "pubkey" | "cosekey">> {
@@ -444,20 +448,18 @@ async function passkeyClaims(
     return {};
   }
   const providerSub = user.providerSub;
-  const result = await database
-    .prepare('select "credentialID", "publicKey" from "passkey" where "userId" = ?')
-    .bind(user.id)
-    .all<{ credentialID: unknown; publicKey: unknown }>();
+  const rows = await database
+    .select({ credentialID: passkeyTable.credentialID, publicKey: passkeyTable.publicKey })
+    .from(passkeyTable)
+    .where(eq(passkeyTable.userId, user.id));
   const candidates = await Promise.all(
-    result.results.map(async (candidate) => ({
+    rows.map(async (candidate) => ({
       candidate,
-      identity:
-        typeof candidate.publicKey === "string" &&
-        (await isIdentityPasskey(identifierSecret, providerSub, candidate.publicKey)),
+      identity: await isIdentityPasskey(identifierSecret, providerSub, candidate.publicKey),
     })),
   );
   const row = candidates.find(({ identity }) => identity)?.candidate;
-  if (typeof row?.credentialID !== "string" || typeof row.publicKey !== "string") {
+  if (!row) {
     return {};
   }
   const cred = credentialId(row.credentialID);
@@ -473,7 +475,7 @@ async function passkeyClaims(
 
 interface ProfileClaimResolverOptions {
   encryptionSecrets: string;
-  database?: D1Database;
+  database?: TriadDatabase;
   identifierSecret?: string;
 }
 

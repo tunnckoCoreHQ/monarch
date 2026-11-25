@@ -1,64 +1,22 @@
 import type { oauthProvider } from "@better-auth/oauth-provider";
-import { betterAuth, type HookEndpointContext } from "better-auth";
-import { memoryAdapter } from "better-auth/adapters/memory";
+import type { HookEndpointContext } from "better-auth";
 import { describe, expect, it } from "vitest";
 
-import { createTriadAuth, createTriadAuthOptions } from "../../src/better-auth/auth";
+import { createTriadAuth } from "../../src/better-auth/auth";
 import { createTriadConfiguration } from "../../src/better-auth/configuration";
+import { passkey, session, user, verification } from "../../src/better-auth/drizzle-schema";
 import type { TriadEnv } from "../../src/better-auth/env";
 import {
   createPasskeyAuthentication,
   hasOtherDeviceSession,
   withoutActiveSessionCookies,
 } from "../../src/better-auth/identity";
+import { createTestDatabase } from "../database";
 
 const SECRET = "test-secret-that-is-at-least-32-characters";
 const SESSION_COOKIE = "__Secure-better-auth.session_token";
 
-function recordingDatabase(queries: string[]): D1Database {
-  const meta = {
-    duration: 0,
-    size_after: 0,
-    rows_read: 0,
-    rows_written: 0,
-    last_row_id: 0,
-    changed_db: false,
-    changes: 0,
-  };
-  const statement = (query: string): D1PreparedStatement => {
-    const prepared: D1PreparedStatement = {
-      bind: () => prepared,
-      all: async () => ({ success: true, results: [], meta }),
-      first: async () => null,
-      raw: () => {
-        throw new Error("Unexpected raw query");
-      },
-      run: async () => ({ success: true, results: [], meta }),
-    };
-    queries.push(query);
-
-    return prepared;
-  };
-
-  return {
-    prepare: statement,
-    // The rate limiter reads one allowed bucket row from each batch result.
-    async batch<T = unknown>(statements: D1PreparedStatement[]) {
-      const allowed = { success: true as const, results: [{ lastRequest: 0 }], meta };
-
-      return statements.map(() => allowed) as Array<D1Result<T>>;
-    },
-    exec: async () => ({ count: 0, duration: 0 }),
-    withSession: () => {
-      throw new Error("Unexpected session");
-    },
-    dump: () => {
-      throw new Error("Unexpected dump");
-    },
-  };
-}
-
-function createEnv(database: D1Database): TriadEnv {
+function createEnv(database = {} as D1Database): TriadEnv {
   return {
     ASSETS: {} as Fetcher,
     DB: database,
@@ -92,19 +50,56 @@ async function signedCookieValue(value: string): Promise<string> {
   return encodeURIComponent(`${value}.${btoa(String.fromCharCode(...new Uint8Array(signature)))}`);
 }
 
-async function sessionQueries(path: string): Promise<string[]> {
-  const queries: string[] = [];
-  const env = createEnv(recordingDatabase(queries));
+const ACTIVE_ACCOUNT = `acc_${"c".repeat(64)}`;
+const ACTIVE_CREDENTIAL = "active-account-credential";
+
+// Signs one Google account in with a fresh session and one attached passkey, then sends
+// the request with that session's cookie.
+async function withActiveSession(path: string): Promise<Record<string, unknown> | null> {
+  const { binding, database } = await createTestDatabase();
+  const now = new Date();
+  await database.insert(user).values({
+    id: ACTIVE_ACCOUNT,
+    name: ACTIVE_ACCOUNT,
+    email: `${ACTIVE_ACCOUNT}@identity.invalid`,
+    provider: "google",
+    providerSub: `pid_google_${"c".repeat(64)}`,
+  });
+  await database.insert(session).values({
+    id: "active-session",
+    token: "active-session-token",
+    userId: ACTIVE_ACCOUNT,
+    expiresAt: new Date(now.getTime() + 60 * 60 * 1_000),
+    createdAt: now,
+    updatedAt: now,
+  });
+  await database.insert(passkey).values({
+    id: "active-passkey",
+    publicKey: "public-key",
+    userId: ACTIVE_ACCOUNT,
+    credentialID: ACTIVE_CREDENTIAL,
+    counter: 0,
+    deviceType: "multiDevice",
+    backedUp: true,
+    createdAt: now,
+  });
+  const env = createEnv(binding);
   const auth = createTriadAuth(env, createTriadConfiguration(env));
   const cookie = `${SESSION_COOKIE}=${await signedCookieValue("active-session-token")}`;
 
-  await auth.handler(
+  const response = await auth.handler(
     new Request(`https://auth.example.com/api/auth${path}`, {
       headers: { cookie, origin: "https://auth.example.com" },
     }),
   );
 
-  return queries.filter((query) => query.includes('from "session"'));
+  return response.json();
+}
+
+function credentialIds(options: Record<string, unknown> | null, field: string): unknown[] {
+  const credentials = options?.[field];
+
+  return Array.isArray(credentials) ? credentials.map((credential) => credential.id) : [];
 }
 
 const APP_CALLBACK = "https://app.example.com/callback";
@@ -156,15 +151,9 @@ function authorizationPath(): string {
 }
 
 async function twoAccounts() {
-  const memory = new Proxy<Record<string, unknown[]>>(
-    {},
-    { get: (tables, model: string) => (tables[model] ??= []) },
-  );
-  const env = createEnv(recordingDatabase([]));
-  const auth = betterAuth({
-    ...createTriadAuthOptions(env, createTriadConfiguration(env)),
-    database: memoryAdapter(memory),
-  });
+  const { binding, database } = await createTestDatabase();
+  const env = createEnv(binding);
+  const auth = createTriadAuth(env, createTriadConfiguration(env));
   const context = await auth.$context;
   await context.adapter.create({
     model: "oauthClient",
@@ -200,7 +189,7 @@ async function twoAccounts() {
 
   return {
     auth,
-    memory,
+    database,
     google: await signIn("google", "a"),
     twitter: await signIn("twitter", "b"),
   };
@@ -208,7 +197,7 @@ async function twoAccounts() {
 
 describe("Triad multi-session", () => {
   it("keeps one signed-in account per Identity Source sign-in", () => {
-    const configuration = createTriadConfiguration(createEnv(recordingDatabase([])));
+    const configuration = createTriadConfiguration(createEnv());
     const provider = configuration.plugins.find(
       (plugin): plugin is ReturnType<typeof oauthProvider> => plugin.id === "oauth-provider",
     );
@@ -243,24 +232,29 @@ describe("Triad multi-session", () => {
   });
 
   it("reads the signed session for ordinary requests", async () => {
-    await expect(sessionQueries("/get-session")).resolves.not.toHaveLength(0);
+    await expect(withActiveSession("/get-session")).resolves.toMatchObject({
+      user: { id: ACTIVE_ACCOUNT },
+    });
   });
 
   it("offers every discoverable passkey regardless of the active account", async () => {
-    await expect(sessionQueries("/passkey/generate-authenticate-options")).resolves.toHaveLength(0);
+    const options = await withActiveSession("/passkey/generate-authenticate-options");
+
+    expect(options).toMatchObject({ challenge: expect.any(String) });
+    expect(credentialIds(options, "allowCredentials")).toEqual([]);
   });
 
   it("registers an Identity Passkey without attaching it to the active account", async () => {
-    await expect(
-      sessionQueries("/passkey/generate-register-options?context=alice"),
-    ).resolves.toHaveLength(0);
-    await expect(
-      sessionQueries("/passkey/generate-register-options?name=laptop"),
-    ).resolves.not.toHaveLength(0);
+    const identity = await withActiveSession("/passkey/generate-register-options?context=alice");
+    const attached = await withActiveSession("/passkey/generate-register-options?name=laptop");
+
+    expect(identity).toMatchObject({ challenge: expect.any(String) });
+    expect(credentialIds(identity, "excludeCredentials")).toEqual([]);
+    expect(credentialIds(attached, "excludeCredentials")).toEqual([ACTIVE_CREDENTIAL]);
   });
 
   it("verifies only new Identity Passkey registrations without the active account", () => {
-    const hook = createPasskeyAuthentication(createEnv(recordingDatabase([]))).hooks.before[0];
+    const hook = createPasskeyAuthentication(createEnv()).hooks.before[0];
     const verification = (body: Record<string, unknown>) =>
       // SAFETY: The matcher reads only the path and body of the hook context.
       hook?.matcher({ path: "/passkey/verify-registration", body } as HookEndpointContext);
@@ -298,7 +292,7 @@ describe("Triad multi-session", () => {
   });
 
   it("continues an authorization with the account the person chooses", async () => {
-    const { auth, memory, google, twitter } = await twoAccounts();
+    const { auth, database, google, twitter } = await twoAccounts();
     const authorization = authorizationPath();
 
     const single = await auth.handler(
@@ -326,8 +320,8 @@ describe("Triad multi-session", () => {
     );
     const { url }: { url: string } = await continued.json();
     // Better Auth stores authorization codes hashed, so the test reads the stored grants in order.
-    const grants = memory.verification
-      .map((row) => JSON.parse(String(Reflect.get(row as object, "value"))))
+    const grants = (await database.select({ value: verification.value }).from(verification))
+      .map((row) => JSON.parse(row.value))
       .filter((value) => value.type === "authorization_code");
 
     expect(new URL(url).origin).toBe("https://app.example.com");

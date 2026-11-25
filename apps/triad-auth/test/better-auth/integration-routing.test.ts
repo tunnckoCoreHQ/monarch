@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { deviceCode } from "../../src/better-auth/drizzle-schema";
 import type { TriadEnv } from "../../src/better-auth/env";
 import { createWorker } from "../../src/index";
+import { createTestDatabase } from "../database";
 
 const context = {} as ExecutionContext;
 
@@ -55,23 +57,20 @@ function createServices() {
   };
 }
 
-function createDeviceDatabase(record: { scope: string } | null) {
-  const first = vi.fn<D1PreparedStatement["first"]>().mockResolvedValue(record);
-  const bind = vi.fn<D1PreparedStatement["bind"]>();
-  const statement: D1PreparedStatement = { first, bind, all: vi.fn(), raw: vi.fn(), run: vi.fn() };
-  bind.mockReturnValue(statement);
-  const prepare = vi.fn<D1Database["prepare"]>().mockReturnValue(statement);
+// Stores one device request for the session account, bound to user code 4KLF-MBB8.
+async function createDeviceDatabase(scope: string) {
+  const { binding, database } = await createTestDatabase();
+  await database.insert(deviceCode).values({
+    id: "device-request",
+    deviceCode: "device-code",
+    userCode: "4KLFMBB8",
+    userId: "acc_session",
+    expiresAt: new Date(Date.now() + 60_000),
+    status: "pending",
+    scope,
+  });
 
-  return {
-    database: {
-      prepare,
-      batch: vi.fn(),
-      exec: vi.fn(),
-      withSession: vi.fn(),
-      dump: vi.fn(),
-    } satisfies D1Database,
-    spies: { bind, first, prepare },
-  };
+  return binding;
 }
 
 describe("Triad protected-resource metadata routing", () => {
@@ -195,9 +194,7 @@ describe("Triad protected-resource metadata routing", () => {
   });
 
   it("returns canonical disclosures for the active session's bound pending device request", async () => {
-    const { database, spies: databaseSpies } = createDeviceDatabase({
-      scope: "openid email handle name avatar",
-    });
+    const database = await createDeviceDatabase("openid email handle name avatar");
     const { services, spies } = createServices();
     const worker = createWorker(services);
     const request = new Request(
@@ -211,12 +208,11 @@ describe("Triad protected-resource metadata routing", () => {
       scopes: ["openid", "email", "handle", "name", "avatar"],
     });
     expect(spies.getSession).toHaveBeenCalledWith({ headers: request.headers });
-    expect(databaseSpies.bind).toHaveBeenCalledWith("4KLFMBB8", "acc_session");
     expect(spies.authHandler).not.toHaveBeenCalled();
   });
 
   it("does not inspect device disclosures without an active session", async () => {
-    const { database, spies: databaseSpies } = createDeviceDatabase({ scope: "openid" });
+    // The default env has no usable D1 binding, so any query would fail the request with a 500.
     const { services, spies } = createServices();
     spies.getSession.mockResolvedValueOnce(null as never);
     const worker = createWorker(services);
@@ -224,14 +220,27 @@ describe("Triad protected-resource metadata routing", () => {
       "https://auth.example.com/api/auth/device/disclosure?user_code=4KLF-MBB8",
     ) as Parameters<typeof worker.fetch>[0];
 
-    const response = await worker.fetch(request, createEnv({ DB: database }), context);
+    const response = await worker.fetch(request, createEnv(), context);
 
     expect(response.status).toBe(401);
-    expect(databaseSpies.prepare).not.toHaveBeenCalled();
+  });
+
+  it("does not disclose a device request bound to another account", async () => {
+    const database = await createDeviceDatabase("openid");
+    const { services, spies } = createServices();
+    spies.getSession.mockResolvedValueOnce({ user: { id: "acc_other" } });
+    const worker = createWorker(services);
+    const request = new Request(
+      "https://auth.example.com/api/auth/device/disclosure?user_code=4KLF-MBB8",
+    ) as Parameters<typeof worker.fetch>[0];
+
+    const response = await worker.fetch(request, createEnv({ DB: database }), context);
+
+    expect(response.status).toBe(404);
   });
 
   it("rejects a pending device request with unsupported disclosure scopes", async () => {
-    const { database } = createDeviceDatabase({ scope: "openid admin" });
+    const database = await createDeviceDatabase("openid admin");
     const { services } = createServices();
     const worker = createWorker(services);
     const request = new Request(

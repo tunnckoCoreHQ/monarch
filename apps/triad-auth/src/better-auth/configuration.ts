@@ -5,6 +5,7 @@ import { jwt, multiSession } from "better-auth/plugins";
 
 import { createClientAdmissionFragment } from "./admission";
 import type { TriadAuthConfiguration } from "./auth";
+import { triadDatabase } from "./database";
 import { createTriadDeviceAuthorization } from "./device";
 import {
   type DisclosureProvider,
@@ -64,6 +65,7 @@ function validateProviderAuthorization(
 }
 
 export function createTriadConfiguration(env: TriadEnv) {
+  const database = triadDatabase(env.DB);
   const identityConfiguration = createIdentityConfiguration(env);
   const resourceFragment = createTriadResourceFragment(env);
   const admissionFragment = createClientAdmissionFragment();
@@ -75,10 +77,10 @@ export function createTriadConfiguration(env: TriadEnv) {
     },
     profileClaims: createProfileClaimResolver({
       encryptionSecrets: env.ENCRYPTION_SECRETS,
-      database: env.DB,
+      database,
       identifierSecret: env.IDENTIFIER_SECRET,
     }),
-    sessionClaims: createSessionClaimResolver(env.DB),
+    sessionClaims: createSessionClaimResolver(database),
     resource: resourceFragment,
   });
   const { extensions: admissionExtensions, ...admissionOptions } = admissionFragment.oauthProvider;
@@ -139,7 +141,7 @@ export function createTriadConfiguration(env: TriadEnv) {
     rateLimit: {
       enabled: true,
       storage: "database",
-      customStorage: createD1RateLimitStorage(env.DB, env.RATE_LIMIT_SECRET),
+      customStorage: createD1RateLimitStorage(database, env.RATE_LIMIT_SECRET),
       window: RATE_LIMIT_WINDOW_SECONDS,
       max: 60,
       customRules: {

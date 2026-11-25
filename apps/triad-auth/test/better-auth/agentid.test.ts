@@ -1,10 +1,9 @@
-import { betterAuth } from "better-auth";
-import { memoryAdapter } from "better-auth/adapters/memory";
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createTriadAuthOptions } from "../../src/better-auth/auth";
+import { createTriadAuth } from "../../src/better-auth/auth";
 import { createTriadConfiguration } from "../../src/better-auth/configuration";
+import { account, oauthClient, user } from "../../src/better-auth/drizzle-schema";
 import type { TriadEnv } from "../../src/better-auth/env";
 import {
   accountSubject,
@@ -15,6 +14,7 @@ import {
   providerSubject,
   sealProfileEncryptedData,
 } from "../../src/better-auth/identity";
+import { createTestDatabase } from "../database";
 
 const ORIGIN = "https://auth.example.com";
 const IDENTIFIER_SECRET = "identifier-secret-with-enough-entropy-1234567890";
@@ -136,88 +136,30 @@ function stubAgentIdDiscovery() {
 
 const APP_CALLBACK = "https://app.example.com/callback";
 
-// Triad reads a stored profile envelope from D1 by user id. This stub answers
-// that single-row lookup from the memory adapter's user table.
-function memoryUserDatabase(memory: Record<string, Array<Record<string, unknown>>>): D1Database {
-  const meta = {
-    duration: 0,
-    size_after: 0,
-    rows_read: 0,
-    rows_written: 0,
-    last_row_id: 0,
-    changed_db: false,
-    changes: 0,
-  };
-
-  return {
-    prepare: () => {
-      let id: unknown;
-      const statement: D1PreparedStatement = {
-        bind: (value) => {
-          id = value;
-
-          return statement;
-        },
-        first: async <T>() => {
-          const row: unknown = memory.user?.find((user) => user.id === id) ?? null;
-
-          return row as T | null;
-        },
-        all: async () => ({ success: true, results: [], meta }),
-        raw: () => {
-          throw new Error("Unexpected raw query");
-        },
-        run: async () => ({ success: true, results: [], meta }),
-      };
-
-      return statement;
-    },
-    batch: async () => [],
-    exec: async () => ({ count: 0, duration: 0 }),
-    withSession: () => {
-      throw new Error("Unexpected session");
-    },
-    dump: () => {
-      throw new Error("Unexpected dump");
-    },
-  };
-}
-
-function createTriad() {
-  const memory: Record<string, Array<Record<string, unknown>>> = {
-    user: [],
-    account: [],
-    session: [],
-    verification: [],
-    oauthResource: [],
-    oauthClient: [
-      {
-        id: "agent-app",
-        clientId: "agent-app",
-        redirectUris: [APP_CALLBACK],
-        scopes: ["openid", "owner_name", "owner_email"],
-        skipConsent: true,
-        tokenEndpointAuthMethod: "none",
-        grantTypes: ["authorization_code"],
-        responseTypes: ["code"],
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ],
-  };
-  const env = createEnv({ DB: memoryUserDatabase(memory) });
-  const auth = betterAuth({
-    ...createTriadAuthOptions(env, createTriadConfiguration(env)),
-    database: memoryAdapter(memory),
-    rateLimit: { enabled: false },
+async function createTriad() {
+  const { binding, database } = await createTestDatabase();
+  await database.insert(oauthClient).values({
+    id: "agent-app",
+    clientId: "agent-app",
+    redirectUris: JSON.stringify([APP_CALLBACK]),
+    scopes: JSON.stringify(["openid", "owner_name", "owner_email"]),
+    skipConsent: true,
+    tokenEndpointAuthMethod: "none",
+    grantTypes: JSON.stringify(["authorization_code"]),
+    responseTypes: JSON.stringify(["code"]),
+    createdAt: new Date(),
+    updatedAt: new Date(),
   });
+  const env = createEnv({ DB: binding });
 
-  return { auth, env, memory };
+  return { auth: createTriadAuth(env, createTriadConfiguration(env)), database, env };
 }
+
+type Triad = Awaited<ReturnType<typeof createTriad>>;
 
 // Asks Triad to authorize the app without a session and returns the signed
 // query that Triad hands to its account page.
-async function signedOAuthQuery(triad: ReturnType<typeof createTriad>, scope: string) {
+async function signedOAuthQuery(triad: Triad, scope: string) {
   const query = new URLSearchParams({
     response_type: "code",
     client_id: "agent-app",
@@ -236,13 +178,14 @@ async function signedOAuthQuery(triad: ReturnType<typeof createTriad>, scope: st
 
 // Starts an AgentID sign-in, then returns to Triad's callback with a code.
 async function signInThroughAgentId(
-  triad = createTriad(),
+  triadInput?: Triad,
   {
     userinfo = () => Response.json(AGENT_PROFILE),
     iss = "https://auth.agentid.com",
     oauthQuery,
   }: { userinfo?: () => Response; iss?: string; oauthQuery?: string } = {},
 ) {
+  const triad = triadInput ?? (await createTriad());
   const start = await triad.auth.handler(
     new Request(`${ORIGIN}/api/auth/sign-in/social`, {
       method: "POST",
@@ -267,7 +210,7 @@ async function signInThroughAgentId(
   );
   stubAgentIdDiscovery();
 
-  return { authorization, callback, env: triad.env, memory: triad.memory, server, start };
+  return { authorization, callback, database: triad.database, env: triad.env, server, start };
 }
 
 beforeEach(() => {
@@ -296,7 +239,7 @@ describe("AgentID Identity Source", () => {
   });
 
   it("signs an agent in to a Triad Account through the AgentID code flow", async () => {
-    const { authorization, callback, env, memory, server, start } = await signInThroughAgentId();
+    const { authorization, callback, database, env, server, start } = await signInThroughAgentId();
 
     expect(start.status).toBe(200);
     expect(`${authorization.origin}${authorization.pathname}`).toBe(
@@ -314,7 +257,9 @@ describe("AgentID Identity Source", () => {
     expect(server).toHaveBeenCalledTimes(3);
 
     const accountSub = await accountSubject(IDENTIFIER_SECRET, "agentid", AGENT_SUB);
-    expect(memory.user).toMatchObject([
+    const users = await database.select().from(user);
+    const accounts = await database.select().from(account);
+    expect(users).toMatchObject([
       {
         id: accountSub,
         name: "",
@@ -325,20 +270,16 @@ describe("AgentID Identity Source", () => {
         encryptedData: expect.any(String),
       },
     ]);
-    expect(JSON.stringify(memory.user)).not.toContain("agent@agentmail.to");
+    expect(JSON.stringify(users)).not.toContain("agent@agentmail.to");
     await expect(
-      openProfileEncryptedData(
-        env.ENCRYPTION_SECRETS,
-        accountSub,
-        String(memory.user[0]?.encryptedData),
-      ),
+      openProfileEncryptedData(env.ENCRYPTION_SECRETS, accountSub, String(users[0]?.encryptedData)),
     ).resolves.toEqual({
       profileEmail: "agent@agentmail.to",
       profileEmailVerified: true,
       profileHandle: "agent_agentmail-to",
       profileDisplayName: "Research Agent",
     });
-    expect(memory.account).toMatchObject([
+    expect(accounts).toMatchObject([
       {
         providerId: "agentid",
         accountId: AGENT_SUB,
@@ -365,24 +306,24 @@ describe("AgentID Identity Source", () => {
       },
     ],
   ])("fails the sign-in cleanly when AgentID userinfo %s", async (_case, userinfo) => {
-    const { callback, memory } = await signInThroughAgentId(undefined, { userinfo });
+    const { callback, database } = await signInThroughAgentId(undefined, { userinfo });
 
     expect(callback.status).toBe(302);
     expect(callback.headers.get("location")).toContain("error=unable_to_get_user_info");
-    expect(memory.user).toEqual([]);
-    expect(memory.account).toEqual([]);
+    await expect(database.select().from(user)).resolves.toEqual([]);
+    await expect(database.select().from(account)).resolves.toEqual([]);
   });
 
   it("rejects a callback whose iss is not AgentID before redeeming the code", async () => {
-    const { callback, memory, server } = await signInThroughAgentId(undefined, {
+    const { callback, database, server } = await signInThroughAgentId(undefined, {
       iss: "https://attacker.example",
     });
 
     expect(callback.status).toBe(302);
     expect(callback.headers.get("location")).toContain("error=issuer_mismatch");
     expect(server).not.toHaveBeenCalled();
-    expect(memory.user).toEqual([]);
-    expect(memory.account).toEqual([]);
+    await expect(database.select().from(user)).resolves.toEqual([]);
+    await expect(database.select().from(account)).resolves.toEqual([]);
   });
 
   it("maps the Triad owner scopes to the AgentID owner scopes", () => {
@@ -394,7 +335,7 @@ describe("AgentID Identity Source", () => {
   });
 
   it("asks AgentID for owner scopes only when the app asks Triad for owner claims", async () => {
-    const triad = createTriad();
+    const triad = await createTriad();
     const withOwner = await signInThroughAgentId(triad, {
       oauthQuery: await signedOAuthQuery(triad, "openid owner_email"),
     });
@@ -411,7 +352,7 @@ describe("AgentID Identity Source", () => {
   });
 
   it("adds owner data from a later sign-in to the existing encrypted profile", async () => {
-    const triad = createTriad();
+    const triad = await createTriad();
     await signInThroughAgentId(triad);
     const { callback } = await signInThroughAgentId(triad, {
       userinfo: () =>
@@ -423,15 +364,16 @@ describe("AgentID Identity Source", () => {
         }),
     });
     const accountSub = await accountSubject(IDENTIFIER_SECRET, "agentid", AGENT_SUB);
+    const users = await triad.database.select().from(user);
 
     expect(callback.status).toBe(302);
-    expect(triad.memory.user).toHaveLength(1);
-    expect(JSON.stringify(triad.memory.user)).not.toContain("owner@example.com");
+    expect(users).toHaveLength(1);
+    expect(JSON.stringify(users)).not.toContain("owner@example.com");
     await expect(
       openProfileEncryptedData(
         triad.env.ENCRYPTION_SECRETS,
         accountSub,
-        String(triad.memory.user[0]?.encryptedData),
+        String(users[0]?.encryptedData),
       ),
     ).resolves.toEqual({
       profileEmail: "agent@agentmail.to",
@@ -445,7 +387,7 @@ describe("AgentID Identity Source", () => {
   });
 
   it("drops the old owner email verification when a new owner email arrives without one", async () => {
-    const triad = createTriad();
+    const triad = await createTriad();
     const signIn = (owner: Record<string, unknown>) =>
       signInThroughAgentId(triad, {
         userinfo: () => Response.json({ ...AGENT_PROFILE, ...owner }),
@@ -454,10 +396,11 @@ describe("AgentID Identity Source", () => {
     await signIn({ owner_email: "old-owner@example.com", owner_email_verified: true });
     await signIn({ owner_email: "new-owner@example.com" });
     const accountSub = await accountSubject(IDENTIFIER_SECRET, "agentid", AGENT_SUB);
+    const users = await triad.database.select().from(user);
     const profile = await openProfileEncryptedData(
       triad.env.ENCRYPTION_SECRETS,
       accountSub,
-      String(triad.memory.user[0]?.encryptedData),
+      String(users[0]?.encryptedData),
     );
 
     expect(profile.profileOwnerEmail).toBe("new-owner@example.com");
@@ -465,7 +408,7 @@ describe("AgentID Identity Source", () => {
   });
 
   it("keeps the owner email verification when the same owner email arrives without one", async () => {
-    const triad = createTriad();
+    const triad = await createTriad();
     const signIn = (owner: Record<string, unknown>) =>
       signInThroughAgentId(triad, {
         userinfo: () => Response.json({ ...AGENT_PROFILE, ...owner }),
@@ -473,10 +416,11 @@ describe("AgentID Identity Source", () => {
     await signIn({ owner_email: "owner@example.com", owner_email_verified: true });
     await signIn({ owner_email: "owner@example.com" });
     const accountSub = await accountSubject(IDENTIFIER_SECRET, "agentid", AGENT_SUB);
+    const users = await triad.database.select().from(user);
     const profile = await openProfileEncryptedData(
       triad.env.ENCRYPTION_SECRETS,
       accountSub,
-      String(triad.memory.user[0]?.encryptedData),
+      String(users[0]?.encryptedData),
     );
 
     expect(profile.profileOwnerEmail).toBe("owner@example.com");
@@ -513,7 +457,7 @@ describe("AgentID Identity Source", () => {
   });
 
   it("sends an AgentID session without owner data back to sign in before authorizing", async () => {
-    const triad = createTriad();
+    const triad = await createTriad();
     const authorize = async (cookie: string) => {
       const query = new URLSearchParams({
         response_type: "code",

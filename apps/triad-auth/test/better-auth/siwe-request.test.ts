@@ -1,76 +1,16 @@
-import { readFileSync, readdirSync } from "node:fs";
-
-import { betterAuth } from "better-auth";
-import { memoryAdapter } from "better-auth/adapters/memory";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 
-import { createTriadAuth, createTriadAuthOptions } from "../../src/better-auth/auth";
+import { createTriadAuth } from "../../src/better-auth/auth";
 import { createTriadConfiguration } from "../../src/better-auth/configuration";
+import { session, walletAddress } from "../../src/better-auth/drizzle-schema";
 import type { TriadEnv } from "../../src/better-auth/env";
+import { createTestDatabase } from "../database";
 
-const meta = {
-  duration: 0,
-  size_after: 0,
-  rows_read: 0,
-  rows_written: 0,
-  last_row_id: 0,
-  changed_db: false,
-  changes: 0,
-};
-
-const MIGRATIONS = new URL("../../migrations/", import.meta.url);
-
-function migratedTables(): string[] {
-  const statements = readdirSync(MIGRATIONS)
-    .filter((file) => file.endsWith(".sql"))
-    .map((file) => readFileSync(new URL(file, MIGRATIONS), "utf-8"))
-    .join("\n");
-
-  return [...statements.matchAll(/CREATE TABLE `(\w+)`/g)].map(([, table]) => table ?? "");
-}
-
-function createStatement(query: string): D1PreparedStatement {
-  let values: unknown[] = [];
-  const statement: D1PreparedStatement = {
-    bind: (...bound: unknown[]) => {
-      values = bound;
-
-      return statement;
-    },
-    all: async () => ({ success: true, results: [], meta }),
-    first: async () => null,
-    // SAFETY: Drizzle reads each returned row as positional column values.
-    raw: (async () => (query.startsWith("insert") ? [values] : [])) as D1PreparedStatement["raw"],
-    run: async () => ({ success: true, results: [], meta }),
-  };
-
-  return statement;
-}
-
-function emptyDatabase(): D1Database {
-  return {
-    prepare: createStatement,
-    // The rate limiter reads one allowed bucket row from each batch result.
-    async batch<T = unknown>(statements: D1PreparedStatement[]) {
-      const allowed = { success: true as const, results: [{ lastRequest: 0 }], meta };
-
-      return statements.map(() => allowed) as Array<D1Result<T>>;
-    },
-    exec: async () => ({ count: 0, duration: 0 }),
-    withSession: () => {
-      throw new Error("Unexpected session");
-    },
-    dump: () => {
-      throw new Error("Unexpected dump");
-    },
-  };
-}
-
-function createEnv(): TriadEnv {
+function createEnv(database: D1Database): TriadEnv {
   return {
     ASSETS: {} as Fetcher,
-    DB: emptyDatabase(),
+    DB: database,
     AUTH_ORIGIN: "https://auth.example.com",
     BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters",
     IDENTIFIER_SECRET: "identifier-secret-with-enough-entropy-1234567890",
@@ -96,9 +36,15 @@ function siweRequest(path: string, body: string): Request {
   });
 }
 
+async function createAuth() {
+  const { binding, database } = await createTestDatabase();
+  const env = createEnv(binding);
+
+  return { auth: createTriadAuth(env, createTriadConfiguration(env)), database };
+}
+
 async function postSiwe(path: string, body: string): Promise<Response> {
-  const env = createEnv();
-  const auth = createTriadAuth(env, createTriadConfiguration(env));
+  const { auth } = await createAuth();
 
   return auth.handler(siweRequest(path, body));
 }
@@ -143,16 +89,7 @@ describe("SIWE request bodies", () => {
   ])(
     "signs in with a valid wallet signature and stores the signed chain with %s",
     async (_case, trailing: string[]) => {
-      // The memory adapter copies plain arrays during a transaction and needs every
-      // migrated table up front.
-      const memory: Record<string, Array<Record<string, unknown>>> = Object.fromEntries(
-        migratedTables().map((table) => [table, []]),
-      );
-      const env = createEnv();
-      const auth = betterAuth({
-        ...createTriadAuthOptions(env, createTriadConfiguration(env)),
-        database: memoryAdapter(memory),
-      });
+      const { auth, database } = await createAuth();
       const wallet = privateKeyToAccount(generatePrivateKey());
 
       const nonceResponse = await auth.handler(siweRequest("/siwe/nonce", "{}"));
@@ -178,9 +115,12 @@ describe("SIWE request bodies", () => {
 
       expect(verifyResponse.status).toBe(200);
       expect(verifyResponse.headers.get("set-cookie")).toContain("better-auth.session_token=");
-      expect(memory.session).toHaveLength(1);
-      expect(memory.session[0]).toMatchObject({ authenticationChainId: 8453 });
-      expect(memory.walletAddress[0]).toMatchObject({ chainId: 8453 });
+      await expect(
+        database.select({ authenticationChainId: session.authenticationChainId }).from(session),
+      ).resolves.toEqual([{ authenticationChainId: 8453 }]);
+      await expect(
+        database.select({ chainId: walletAddress.chainId }).from(walletAddress),
+      ).resolves.toEqual([{ chainId: 8453 }]);
     },
   );
 });

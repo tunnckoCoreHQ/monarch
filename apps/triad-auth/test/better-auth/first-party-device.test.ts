@@ -2,55 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { createTriadAuth } from "../../src/better-auth/auth";
 import { createTriadConfiguration } from "../../src/better-auth/configuration";
+import { deviceCode } from "../../src/better-auth/drizzle-schema";
 import type { TriadEnv } from "../../src/better-auth/env";
+import { createTestDatabase } from "../database";
 
 const ORIGIN = "https://auth.example.com";
-const meta = {
-  duration: 0,
-  size_after: 0,
-  rows_read: 0,
-  rows_written: 0,
-  last_row_id: 0,
-  changed_db: false,
-  changes: 0,
-};
 
-function createStatement(query: string): D1PreparedStatement {
-  let values: unknown[] = [];
-  const statement: D1PreparedStatement = {
-    bind: (...bound: unknown[]) => {
-      values = bound;
-
-      return statement;
-    },
-    all: async () => ({ success: true, results: [], meta }),
-    first: async () => null,
-    // SAFETY: Drizzle reads each returned row as positional column values.
-    raw: (async () => (query.startsWith("insert") ? [values] : [])) as D1PreparedStatement["raw"],
-    run: async () => ({ success: true, results: [], meta }),
-  };
-
-  return statement;
-}
-
-function createEnv(): TriadEnv {
+function createEnv(database: D1Database): TriadEnv {
   return {
     ASSETS: {} as Fetcher,
-    DB: {
-      prepare: createStatement,
-      async batch<T = unknown>(statements: D1PreparedStatement[]) {
-        const allowed = { success: true as const, results: [{ lastRequest: 0 }], meta };
-
-        return statements.map(() => allowed) as Array<D1Result<T>>;
-      },
-      exec: async () => ({ count: 0, duration: 0 }),
-      withSession: () => {
-        throw new Error("Unexpected session");
-      },
-      dump: () => {
-        throw new Error("Unexpected dump");
-      },
-    },
+    DB: database,
     AUTH_ORIGIN: ORIGIN,
     BETTER_AUTH_SECRET: "test-secret-that-is-at-least-32-characters",
     IDENTIFIER_SECRET: "identifier-secret-with-enough-entropy-1234567890",
@@ -70,7 +31,8 @@ function createEnv(): TriadEnv {
 
 describe("First-party device authorization", () => {
   it("issues a device code to the triad-auth client ID on an HTTPS origin", async () => {
-    const env = createEnv();
+    const { binding, database } = await createTestDatabase();
+    const env = createEnv(binding);
     const auth = createTriadAuth(env, createTriadConfiguration(env));
 
     const response = await auth.handler(
@@ -86,5 +48,10 @@ describe("First-party device authorization", () => {
       device_code: expect.any(String),
       user_code: expect.any(String),
     });
+    await expect(
+      database
+        .select({ clientId: deviceCode.clientId, status: deviceCode.status })
+        .from(deviceCode),
+    ).resolves.toEqual([{ clientId: "triad-auth", status: "pending" }]);
   });
 });
