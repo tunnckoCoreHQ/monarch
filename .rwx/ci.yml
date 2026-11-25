@@ -421,10 +421,11 @@ tasks:
 
   # Runs Socket Optimize. Verified overrides are pushed straight to master by the PAT owner, a
   # repository admin. When the overrides fail verification, the diff is opened as a pull request
-  # that needs attention. When there is nothing to push, an issue links the failed run.
+  # that needs attention. When there is nothing to push, an issue links the failed run. The
+  # verification runs the ethscriptions-rescue tests, which start anvil from Foundry.
   - key: socket-optimize
     if: ${{ init.job == 'socket-optimize' }}
-    use: [deps, gh]
+    use: [deps, gh, foundry]
     cache: false
     env:
       TURBO_TELEMETRY_DISABLED: 1
