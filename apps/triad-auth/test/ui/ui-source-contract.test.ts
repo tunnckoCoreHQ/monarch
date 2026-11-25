@@ -38,7 +38,7 @@ describe("preserved Better Auth UI wiring", () => {
   });
 
   it("claims each one-time wallet challenge before cryptographic verification", () => {
-    const claim = walletBroker.indexOf('update "walletRequest" set "consumedAt"');
+    const claim = walletBroker.indexOf(".update(walletRequestTable)");
     const verification = walletBroker.indexOf("verifyStoredPasskeyAssertion", claim);
 
     expect(claim).toBeGreaterThan(-1);

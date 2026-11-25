@@ -45,6 +45,7 @@
     "@types/node": "catalog:types",
     "cf": "catalog:",
     "drizzle-kit": "catalog:",
+    "miniflare": "catalog:",
     "typescript": "catalog:types"
   },
   "packageManager": "pnpm@11.21.0"

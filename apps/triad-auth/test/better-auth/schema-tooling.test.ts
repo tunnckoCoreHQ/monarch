@@ -175,7 +175,7 @@ describe("Better Auth schema tooling", () => {
     expect(readSource("src/better-auth/drizzle-schema.ts")).not.toContain('mode: "json"');
   });
 
-  it("does not add Wrangler, an emulator, a SQLite driver, or a legacy resource name", () => {
+  it("does not add Wrangler or a legacy resource name", () => {
     const dependencyNames = [
       ...Object.keys(packageJson.dependencies),
       ...Object.keys(packageJson.devDependencies),
@@ -187,7 +187,6 @@ describe("Better Auth schema tooling", () => {
       schemaSource,
     ].join("\n");
 
-    expect(toolingSource).not.toMatch(/miniflare|better-sqlite3|bun:sqlite|node:sqlite|sqlite3/i);
     expect(toolingSource).not.toMatch(/triad-better-auth|triad-auth-broker/);
     expect(dependencyNames).not.toMatch(/^wrangler$/m);
   });

@@ -27,7 +27,7 @@ Fill `.env` with local values. `AUTH_ORIGIN` must match the local URL, or every 
 ## Making a change
 
 1. Branch from `master`.
-2. Make the change. For a schema change, run `pnpm run db:generate`: the Better Auth CLI rewrites the Drizzle schema in `src/better-auth/drizzle-schema.ts` from the auth configuration, and `drizzle-kit generate` writes the next numbered file in `migrations/`. Never edit `migrations/0000_initial.sql` or any migration already applied.
+2. Make the change. For a schema change, run `pnpm run db:generate`: the Better Auth CLI rewrites the Drizzle schema in `src/better-auth/drizzle-schema.ts` from the auth configuration, and `drizzle-kit generate` writes the next numbered file in `migrations/`. Never edit `migrations/0000_initial.sql` or any migration already applied. Query the database through Drizzle with `triadDatabase(env.DB)` from `src/better-auth/database.ts`, never with raw SQL. Tests that touch the database call `createTestDatabase()` from `test/database.ts`, which starts an empty local D1 database in Miniflare and applies the migrations.
 3. Run the checks in this order and restart from the first after any fix:
 
    ```sh

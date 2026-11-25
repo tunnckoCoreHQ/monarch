@@ -1,6 +1,10 @@
+import { and, eq } from "drizzle-orm";
+
 import { AUTH_BASE_PATH, createTriadAuth } from "./better-auth/auth";
 import { createTriadConfiguration } from "./better-auth/configuration";
+import { triadDatabase } from "./better-auth/database";
 import { canonicalDisclosureScopes } from "./better-auth/disclosures";
+import { deviceCode } from "./better-auth/drizzle-schema";
 import type { TriadEnv } from "./better-auth/env";
 import { createTriadResourceFragment } from "./better-auth/resources";
 import { handleWalletBrokerRequest } from "./better-auth/wallet";
@@ -18,10 +22,6 @@ interface WorkerServices<Configuration> {
   createTriadAuth(env: TriadEnv, configuration: Configuration): TriadAuthService;
   handleWalletBroker(request: Request, env: TriadEnv, auth: TriadAuthService): Promise<Response>;
   fetchAssets(request: Request, env: TriadEnv): Promise<Response>;
-}
-
-interface DeviceDisclosureRecord {
-  scope: string | null;
 }
 
 const DEVICE_DISCLOSURE_PATH = `${AUTH_BASE_PATH}/device/disclosure`;
@@ -107,11 +107,17 @@ async function handleDeviceDisclosure(
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const record = await env.DB.prepare(
-    'select "scope" from "deviceCode" where "userCode" = ? and "userId" = ? and "status" = \'pending\'',
-  )
-    .bind(userCode, session.user.id)
-    .first<DeviceDisclosureRecord>();
+  const record = await triadDatabase(env.DB)
+    .select({ scope: deviceCode.scope })
+    .from(deviceCode)
+    .where(
+      and(
+        eq(deviceCode.userCode, userCode),
+        eq(deviceCode.userId, session.user.id),
+        eq(deviceCode.status, "pending"),
+      ),
+    )
+    .get();
   if (!record) {
     return Response.json({ error: "invalid_request" }, { status: 404 });
   }

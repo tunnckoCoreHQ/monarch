@@ -1,7 +1,7 @@
 import { betterAuth, env as betterAuthEnv, type BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { drizzle } from "drizzle-orm/d1";
 
+import { triadDatabase } from "./database";
 import * as schema from "./drizzle-schema";
 import type { TriadEnv } from "./env";
 import { validateEncryptionSecrets } from "./identity/encryption";
@@ -152,7 +152,7 @@ export function createTriadAuthOptions<const Configuration extends TriadAuthConf
 
   return {
     ...permittedConfiguration,
-    database: drizzleAdapter(drizzle(env.DB, { schema }), {
+    database: drizzleAdapter(triadDatabase(env.DB), {
       provider: "sqlite",
       schema,
       camelCase: true,
