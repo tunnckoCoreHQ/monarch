@@ -10,4 +10,4 @@ Route every standard x402 payment across PrimeV, CDP, PayAI, Dexter, and x402.or
 - When an upstream is out of credits, down, rejects the key, or does not support the payment, the router tries the next one. It stops when the payment itself is invalid. Failures carry a buyer message and `extra.router.tried`.
 - New `createPayAIAuthHeaders` in `@tunnckocore/x402-router/payai`, and `createRouterAuthHeaders` for CDP, PayAI, and the preference together.
 - `createCdpAuthHeaders` now signs a token for `/supported` too.
-- Removed `limitToSupportedKinds`, `defaultX402SupportedResponse`, and the `supported` and `bazaar` fields of the CDP helper.
+- Removed `limitToSupportedKinds` and `defaultX402SupportedResponse`.

@@ -17,6 +17,7 @@ export type GenerateCdpJwtOptions = {
 };
 
 export type CdpAuthHeaders = {
+  bazaar?: Record<string, string>;
   settle: Record<string, string>;
   supported: Record<string, string>;
   verify: Record<string, string>;
@@ -25,6 +26,8 @@ export type CdpAuthHeaders = {
 export type CreateCdpAuthHeadersOptions = Omit<GenerateCdpJwtOptions, "endpoint"> & {
   forwardedHeader?: string;
   generateAuthorizationHeader?: (options: GenerateCdpJwtOptions) => Promise<string>;
+  /** Headers for `/supported`. Defaults to a CDP token signed for `GET /supported`. */
+  supported?: Record<string, string>;
 };
 
 export function cdpRequestTarget(
@@ -77,7 +80,7 @@ export async function createCdpAuthHeaders(
 
   return {
     settle: await token("settle"),
-    supported: await token("supported"),
+    supported: options.supported ?? (await token("supported")),
     verify: await token("verify"),
   };
 }

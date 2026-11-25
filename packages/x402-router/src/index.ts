@@ -502,7 +502,10 @@ async function forwardToCandidates(
       return new Response(text, { headers, status: response.status });
     }
 
-    attempts.push({ reason: reasonOf(body), status: response.status, upstream: upstream.name });
+    // PayAI documents the code, not the body shape, so the router looks for it anywhere in the text.
+    const reason = text.includes("free_tier_exhausted") ? "free_tier_exhausted" : reasonOf(body);
+
+    attempts.push({ reason, status: response.status, upstream: upstream.name });
     ambiguousSettle ||= endpoint === "settle" && response.status >= 500;
     last = { body, outcome, status: response.status, text };
 

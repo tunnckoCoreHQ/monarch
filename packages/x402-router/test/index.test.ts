@@ -749,3 +749,36 @@ test("tries the next upstream when reading a body fails", async () => {
   expect(forwarded()).toEqual([PAYAI_FACILITATOR_URL, DEXTER_FACILITATOR_URL]);
   expect(await bodyOf(response)).toMatchObject({ by: DEXTER_FACILITATOR_URL, success: true });
 });
+
+test("finds PayAI's out-of-credits code anywhere in the response", async () => {
+  const { fetch, forwarded } = facilitators(solanaFeePayers, {
+    [PAYAI_FACILITATOR_URL]: {
+      body: { error: { code: "free_tier_exhausted", detail: "Free credits used up" } },
+      status: 403,
+    },
+  });
+  const router = createX402Router({ fetch });
+  const response = await router.fetch(
+    paymentRequest(SOLANA_MAINNET, { endpoint: "settle", extra: { feePayer: "payai-payer" } }),
+  );
+
+  expect(forwarded()).toEqual([PAYAI_FACILITATOR_URL]);
+  expect(await bodyOf(response)).toMatchObject({
+    errorMessage:
+      "The seller's payment provider is out of credits. Try again later, or pay on another network.",
+    extra: {
+      router: { tried: [{ reason: "free_tier_exhausted", status: 403, upstream: "payai" }] },
+    },
+  });
+});
+
+test("keeps a custom CDP /supported header", async () => {
+  const headers = await createCdpAuthHeaders({
+    apiKeyId: "key-id",
+    apiKeySecret: "key-secret",
+    generateAuthorizationHeader: async ({ endpoint }) => `Bearer ${endpoint}`,
+    supported: { "X-Custom": "yes" },
+  });
+
+  expect(headers.supported).toEqual({ "X-Custom": "yes" });
+});
