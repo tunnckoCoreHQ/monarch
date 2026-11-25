@@ -392,8 +392,6 @@ function buyerMessage(
   ambiguousSettle: boolean,
   lastOutcome: Outcome,
 ) {
-  const reasons = attempts.map((attempt) => attempt.reason ?? "").join(" ");
-
   if (ambiguousSettle) {
     return {
       message: "The payment may have settled. Check your wallet before you pay again.",
@@ -401,24 +399,25 @@ function buyerMessage(
     };
   }
 
-  if (/allowance/i.test(reasons)) {
+  if (/allowance/i.test(attempts.at(-1)?.reason ?? "")) {
     return {
       message: `This payment needs a one-time Permit2 approval of the token on ${network} from your wallet. Approve it, or pay on another network.`,
     };
   }
 
-  if (/free_tier|exhausted/i.test(reasons)) {
+  // A stop means the payment itself is invalid, so the upstream's own message is the right one.
+  if (lastOutcome === "stop") {
+    return undefined;
+  }
+
+  if (attempts.some((attempt) => /free_tier|exhausted/i.test(attempt.reason ?? ""))) {
     return {
       message:
         "The seller's payment provider is out of credits. Try again later, or pay on another network.",
     };
   }
 
-  if (lastOutcome === "next") {
-    return { message: `No facilitator can settle this payment on ${network} right now.` };
-  }
-
-  return undefined;
+  return { message: `No facilitator can settle this payment on ${network} right now.` };
 }
 
 function failureResponse(
@@ -427,11 +426,10 @@ function failureResponse(
   attempts: Attempt[],
   last: { body: unknown; outcome: Outcome; status: number; text: string } | undefined,
   ambiguousSettle: boolean,
+  topUpUrl: string | undefined,
 ) {
   const body = isRecord(last?.body) ? last.body : {};
   const hint = buyerMessage(attempts, network, ambiguousSettle, last?.outcome ?? "next");
-  const topUpUrl =
-    typeof body.topUpUrl === "string" ? body.topUpUrl : last?.text.match(TOP_UP_URL)?.[0];
   const reason = hint?.reason ?? reasonOf(body) ?? "no_facilitator_available";
   const extra = {
     ...(isRecord(body.extra) ? body.extra : {}),
@@ -473,9 +471,11 @@ async function forwardToCandidates(
   const attempts: Attempt[] = [];
   let last: { body: unknown; outcome: Outcome; status: number; text: string } | undefined;
   let ambiguousSettle = false;
+  let topUpUrl: string | undefined;
 
   for (const upstream of candidates) {
     let response: Response;
+    let text: string;
 
     try {
       response = await fetcher(facilitatorUrl(upstream.facilitatorUrl, endpoint), {
@@ -483,6 +483,7 @@ async function forwardToCandidates(
         headers: authHeadersFor(request, upstream, endpoint, options),
         method: "POST",
       });
+      text = await response.text();
     } catch (error) {
       attempts.push({ reason: String(error), status: 0, upstream: upstream.name });
       ambiguousSettle ||= endpoint === "settle";
@@ -490,7 +491,7 @@ async function forwardToCandidates(
       continue;
     }
 
-    const text = await response.text();
+    topUpUrl ??= text.match(TOP_UP_URL)?.[0];
     const body = parseJson(text);
     const outcome = outcomeOf(endpoint, response.status, body);
 
@@ -510,7 +511,7 @@ async function forwardToCandidates(
     }
   }
 
-  return failureResponse(endpoint, network, attempts, last, ambiguousSettle);
+  return failureResponse(endpoint, network, attempts, last, ambiguousSettle, topUpUrl);
 }
 
 export function createX402Router(options: X402RouterOptions = {}) {

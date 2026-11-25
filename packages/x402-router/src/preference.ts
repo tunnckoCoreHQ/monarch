@@ -13,7 +13,7 @@ export function encodeRouterPreference(preference: X402RouterPreference) {
 }
 
 export function parseRouterPreference(value: string | null): X402RouterPreference {
-  const preference: X402RouterPreference = {};
+  const preference: X402RouterPreference = Object.create(null);
 
   for (const part of value?.split(";") ?? []) {
     const [key, names] = part.split("=");
@@ -31,7 +31,13 @@ export function parseRouterPreference(value: string | null): X402RouterPreferenc
 
 /** The upstream names the seller listed for this network, in their order. */
 export function preferredNamesFor(preference: X402RouterPreference, network: string) {
-  return preference[network] ?? preference[network.split(":")[0] ?? ""] ?? [];
+  const namespace = network.split(":")[0] ?? "";
+
+  if (Object.hasOwn(preference, network)) {
+    return preference[network] ?? [];
+  }
+
+  return Object.hasOwn(preference, namespace) ? (preference[namespace] ?? []) : [];
 }
 
 export function routerPreferenceHeaders(preference: X402RouterPreference) {

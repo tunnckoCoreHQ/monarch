@@ -685,3 +685,67 @@ test("ignores malformed preference parts", () => {
   });
   expect(parseRouterPreference(null)).toEqual({});
 });
+
+test("ignores preference keys inherited from Object", async () => {
+  const { fetch, forwarded } = facilitators(baseEverywhere);
+  const router = createX402Router({ fetch });
+  const headers = { [ROUTER_PREFERENCE_HEADER]: "__proto__=dexter;eip155=cdp" };
+  const response = await router.fetch(paymentRequest("constructor", { headers }));
+  const parsed = parseRouterPreference(headers[ROUTER_PREFERENCE_HEADER]);
+
+  expect(response.status).toBe(400);
+  expect(Object.keys(parsed)).toEqual(["__proto__", "eip155"]);
+  expect(Object.getPrototypeOf(parsed)).toBe(null);
+  expect(forwarded()).toEqual([]);
+});
+
+test("leaves out a provider whose key is missing", async () => {
+  const headers = await createRouterAuthHeaders({
+    cdp: { apiKeyId: "", apiKeySecret: undefined },
+    payai: { apiKeyId: undefined, apiKeySecret: "" },
+    preference: { solana: ["dexter"] },
+  });
+
+  expect(headers.verify).toEqual({ [ROUTER_PREFERENCE_HEADER]: "solana=dexter" });
+});
+
+test("keeps the upstream message when the last upstream finds the payment invalid", async () => {
+  const { fetch } = facilitators(baseEverywhere, {
+    [DEXTER_FACILITATOR_URL]: {
+      body: {
+        invalidMessage: "bad signature",
+        invalidReason: "invalid_exact_evm_signature",
+        isValid: false,
+      },
+    },
+    [PAYAI_FACILITATOR_URL]: { body: { error: "free_tier_exhausted" }, status: 403 },
+  });
+  const router = createX402Router({ fetch });
+
+  expect(await bodyOf(await router.fetch(paymentRequest(BASE_MAINNET)))).toMatchObject({
+    invalidMessage: "bad signature",
+    invalidReason: "invalid_exact_evm_signature",
+  });
+});
+
+test("tries the next upstream when reading a body fails", async () => {
+  const { fetch: live, forwarded } = facilitators(baseEverywhere);
+  const fetch = async (url: URL, init: RequestInit) => {
+    const response = await live(url, init);
+
+    if (url.href === `${PAYAI_FACILITATOR_URL}/settle`) {
+      const broken = new ReadableStream({
+        pull: (controller) => controller.error(new Error("reset")),
+      });
+
+      return new Response(broken, { status: 200 });
+    }
+
+    return response;
+  };
+  const router = createX402Router({ fetch });
+  const response = await router.fetch(paymentRequest(BASE_MAINNET, { endpoint: "settle" }));
+
+  expect(forwarded()).toEqual([PAYAI_FACILITATOR_URL, DEXTER_FACILITATOR_URL]);
+  expect(await bodyOf(response)).toMatchObject({ by: DEXTER_FACILITATOR_URL, success: true });
+});

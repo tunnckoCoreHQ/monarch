@@ -2,6 +2,12 @@ import { type CreateCdpAuthHeadersOptions, createCdpAuthHeaders } from "./cdp";
 import { type CreatePayAIAuthHeadersOptions, createPayAIAuthHeaders } from "./payai";
 import { routerPreferenceHeaders, type X402RouterPreference } from "./preference";
 
+/** A provider counts only with both parts of its key, so a missing env var leaves it out. */
+function hasKey<T extends { apiKeyId?: string; apiKeySecret?: string }>(
+  key: T | undefined,
+): key is T & { apiKeyId: string; apiKeySecret: string } {
+  return Boolean(key?.apiKeyId && key.apiKeySecret);
+}
 export type RouterAuthHeaders = {
   settle: Record<string, string>;
   supported: Record<string, string>;
@@ -9,8 +15,10 @@ export type RouterAuthHeaders = {
 };
 
 export type CreateRouterAuthHeadersOptions = {
-  cdp?: CreateCdpAuthHeadersOptions;
-  payai?: CreatePayAIAuthHeadersOptions;
+  /** Left out when `apiKeyId` or `apiKeySecret` is empty. */
+  cdp?: Partial<CreateCdpAuthHeadersOptions>;
+  /** Left out when `apiKeyId` or `apiKeySecret` is empty. */
+  payai?: Partial<CreatePayAIAuthHeadersOptions>;
   preference?: X402RouterPreference;
 };
 
@@ -22,8 +30,8 @@ export async function createRouterAuthHeaders(
   options: CreateRouterAuthHeadersOptions,
 ): Promise<RouterAuthHeaders> {
   const parts = await Promise.all([
-    options.cdp ? createCdpAuthHeaders(options.cdp) : undefined,
-    options.payai ? createPayAIAuthHeaders(options.payai) : undefined,
+    hasKey(options.cdp) ? createCdpAuthHeaders(options.cdp) : undefined,
+    hasKey(options.payai) ? createPayAIAuthHeaders(options.payai) : undefined,
   ]);
   const preference = options.preference ? routerPreferenceHeaders(options.preference) : {};
   const merge = (endpoint: keyof RouterAuthHeaders) =>
