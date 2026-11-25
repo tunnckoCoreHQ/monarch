@@ -23,7 +23,7 @@ GET  /healthz
 
 `/supported` is safe to call without auth. `/verify` and `/settle` route by x402 version, scheme, and network.
 
-CDP-routed requests need a short-lived bearer token in the forwarded CDP header. Use `createCdpAuthHeaders` from `@tunnckocore/x402-router/cdp` with the normal x402 facilitator client.
+The router works without keys. A CDP token or a PayAI key adds that facilitator. Use `createRouterAuthHeaders` with the normal x402 facilitator client. [Integration](/docs/integration.md) shows how.
 
 ## Install
 
@@ -35,4 +35,5 @@ The package exposes:
 
 - `createX402Router` for self-hosting.
 - `fetch` for a default Fetch handler.
-- `createCdpAuthHeaders` for seller-side CDP pass-through auth.
+- `createRouterAuthHeaders` for the seller headers: CDP token, PayAI key, and preference.
+- `createCdpAuthHeaders` from `@tunnckocore/x402-router/cdp` and `createPayAIAuthHeaders` from `@tunnckocore/x402-router/payai` for one facilitator alone.

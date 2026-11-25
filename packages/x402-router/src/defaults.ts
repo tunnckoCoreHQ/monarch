@@ -1,4 +1,7 @@
 export const CDP_FORWARD_TOKEN_HEADER = "X-Forwarded-CDP-Token";
+export const PAYAI_FORWARD_TOKEN_HEADER = "X-Forwarded-PayAI-Token";
+export const ROUTER_PREFERENCE_HEADER = "X-X402-Router-Preference";
+
 export const CDP_FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402";
 export const PRIMEV_FACILITATOR_URL = "https://facilitator.primev.xyz";
 export const X402_ORG_FACILITATOR_URL = "https://x402.org/facilitator";
@@ -15,6 +18,9 @@ export const WORLD_CHAIN_SEPOLIA = "eip155:4801";
 export const SOLANA_MAINNET = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 export const SOLANA_DEVNET = "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1";
 
+/** The x402 schemes that work through `/verify` and `/settle` alone. */
+export const STANDARD_SCHEMES = ["exact", "upto", "batch-settlement"];
+
 export type X402SupportedKind = {
   extra?: Record<string, unknown>;
   network: string;
@@ -28,61 +34,93 @@ export type X402SupportedResponse = {
   signers?: Record<string, string[]>;
 };
 
-export type X402RouterAuth = { type: "none" } | { header?: string; type: "forwarded-bearer" };
+/**
+ * How the router authenticates to an upstream. A `forwarded-bearer` upstream gets the token
+ * from a request header. When `required` is false, the upstream also works without a token.
+ */
+export type X402RouterAuth =
+  | { type: "none" }
+  | { header?: string; required?: boolean; type: "forwarded-bearer" };
 
 export type X402RouterUpstream = {
   auth?: X402RouterAuth;
   facilitatorUrl: string;
-  /** Keep only the live kinds that are also in `supportedKinds`. */
-  limitToSupportedKinds?: boolean;
   name: string;
+  /** Used when the live `/supported` call fails. */
   supportedKinds?: X402SupportedKind[];
 };
 
-const exact = (network: string): X402SupportedKind => ({
-  network,
-  scheme: "exact",
-  x402Version: 2,
-});
+const exact = (...networks: string[]): X402SupportedKind[] =>
+  networks.map((network) => ({ network, scheme: "exact", x402Version: 2 }));
 
+/** The default order. A request's keys and the seller's preference change it per network. */
 export const defaultX402RouterUpstreams: X402RouterUpstream[] = [
   {
     facilitatorUrl: PRIMEV_FACILITATOR_URL,
-    name: "primev-mainnet",
-    supportedKinds: [exact(ETHEREUM_MAINNET)],
-  },
-  {
-    facilitatorUrl: X402_ORG_FACILITATOR_URL,
-    name: "x402-testnet",
-    supportedKinds: [exact(BASE_SEPOLIA), exact(SOLANA_DEVNET)],
-  },
-  {
-    facilitatorUrl: PAYAI_FACILITATOR_URL,
-    limitToSupportedKinds: true,
-    name: "payai-solana",
-    supportedKinds: [exact(SOLANA_MAINNET)],
-  },
-  {
-    facilitatorUrl: DEXTER_FACILITATOR_URL,
-    limitToSupportedKinds: true,
-    name: "dexter-solana",
-    supportedKinds: [exact(SOLANA_MAINNET)],
+    name: "primev",
+    supportedKinds: exact(ETHEREUM_MAINNET),
   },
   {
     auth: { type: "forwarded-bearer" },
     facilitatorUrl: CDP_FACILITATOR_URL,
-    name: "cdp-mainnet",
-    supportedKinds: [
-      exact(BASE_MAINNET),
-      exact(POLYGON_MAINNET),
-      exact(ARBITRUM_ONE),
-      exact(WORLD_CHAIN),
-      exact(WORLD_CHAIN_SEPOLIA),
-      exact(SOLANA_MAINNET),
-    ],
+    name: "cdp",
+    supportedKinds: exact(
+      BASE_MAINNET,
+      POLYGON_MAINNET,
+      ARBITRUM_ONE,
+      WORLD_CHAIN,
+      WORLD_CHAIN_SEPOLIA,
+      SOLANA_MAINNET,
+    ),
+  },
+  {
+    auth: { header: PAYAI_FORWARD_TOKEN_HEADER, required: false, type: "forwarded-bearer" },
+    facilitatorUrl: PAYAI_FACILITATOR_URL,
+    name: "payai",
+    supportedKinds: exact(
+      BASE_MAINNET,
+      BASE_SEPOLIA,
+      POLYGON_MAINNET,
+      "eip155:80002",
+      ARBITRUM_ONE,
+      "eip155:421614",
+      "eip155:56",
+      "eip155:97",
+      "eip155:43114",
+      "eip155:43113",
+      "eip155:1329",
+      "eip155:713715",
+      "eip155:196",
+      "eip155:1952",
+      "eip155:1187947933",
+      "eip155:324705682",
+      SOLANA_MAINNET,
+      SOLANA_DEVNET,
+    ),
+  },
+  {
+    facilitatorUrl: DEXTER_FACILITATOR_URL,
+    name: "dexter",
+    supportedKinds: exact(
+      BASE_MAINNET,
+      BASE_SEPOLIA,
+      POLYGON_MAINNET,
+      ARBITRUM_ONE,
+      WORLD_CHAIN,
+      "eip155:10",
+      "eip155:56",
+      "eip155:43114",
+      "eip155:143",
+      "eip155:4663",
+      "eip155:1187947933",
+      "eip155:324705682",
+      SOLANA_MAINNET,
+      SOLANA_DEVNET,
+    ),
+  },
+  {
+    facilitatorUrl: X402_ORG_FACILITATOR_URL,
+    name: "x402",
+    supportedKinds: exact(BASE_SEPOLIA, SOLANA_DEVNET),
   },
 ];
-
-export const defaultX402SupportedResponse: X402SupportedResponse = {
-  kinds: defaultX402RouterUpstreams.flatMap((upstream) => upstream.supportedKinds ?? []),
-};
