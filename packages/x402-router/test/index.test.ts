@@ -5,9 +5,13 @@ import {
   BASE_MAINNET,
   BASE_SEPOLIA,
   CDP_FORWARD_TOKEN_HEADER,
+  DEXTER_FACILITATOR_URL,
   createX402Router,
   ETHEREUM_MAINNET,
+  PAYAI_FACILITATOR_URL,
   PRIMEV_FACILITATOR_URL,
+  SOLANA_MAINNET,
+  type X402SupportedKind,
 } from "../src/index";
 
 function paymentRequest(network: string, scheme = "exact", x402Version = 2) {
@@ -453,3 +457,107 @@ test.each(["supported", "verify", "settle"])(
     }
   },
 );
+
+function solana(feePayer: string) {
+  return { extra: { feePayer }, network: SOLANA_MAINNET, scheme: "exact", x402Version: 2 };
+}
+
+function solanaFacilitators(options: { payaiSolana?: boolean } = {}) {
+  const calls: string[] = [];
+  const kinds: Record<string, unknown[]> = {
+    [CDP_FACILITATOR_URL]: [solana("cdp-fee-payer")],
+    [DEXTER_FACILITATOR_URL]: [solana("dexter-fee-payer")],
+    [PAYAI_FACILITATOR_URL]: [
+      { network: BASE_MAINNET, scheme: "exact", x402Version: 2 },
+      { network: SOLANA_MAINNET, scheme: "batch-settlement", x402Version: 2 },
+      ...(options.payaiSolana === false ? [] : [solana("payai-fee-payer")]),
+    ],
+  };
+  const fetch = async (url: URL) => {
+    calls.push(url.href);
+    const base = url.href.replace(/\/(supported|verify|settle)$/, "");
+
+    if (url.pathname.endsWith("/supported")) {
+      return Response.json({ kinds: kinds[base] ?? [] });
+    }
+
+    return Response.json({ upstream: base });
+  };
+
+  return { calls, fetch };
+}
+
+test("routes Solana mainnet to PayAI when no CDP token is present", async () => {
+  const { fetch } = solanaFacilitators();
+  const router = createX402Router({ fetch });
+
+  await expect((await router.fetch(paymentRequest(SOLANA_MAINNET))).json()).resolves.toEqual({
+    upstream: PAYAI_FACILITATOR_URL,
+  });
+});
+
+test("routes Solana mainnet to Dexter when PayAI does not list it", async () => {
+  const { fetch } = solanaFacilitators({ payaiSolana: false });
+  const router = createX402Router({ fetch });
+
+  await expect((await router.fetch(paymentRequest(SOLANA_MAINNET))).json()).resolves.toEqual({
+    upstream: DEXTER_FACILITATOR_URL,
+  });
+});
+
+test("routes Solana mainnet to CDP when a CDP token is present", async () => {
+  const { fetch } = solanaFacilitators();
+  const router = createX402Router({ fetch });
+  const request = paymentRequest(SOLANA_MAINNET);
+
+  request.headers.set(CDP_FORWARD_TOKEN_HEADER, "Bearer signed-for-cdp-upstream");
+
+  await expect((await router.fetch(request)).json()).resolves.toEqual({
+    upstream: CDP_FACILITATOR_URL,
+  });
+});
+
+test("ignores PayAI kinds outside Solana mainnet exact", async () => {
+  const { calls, fetch } = solanaFacilitators();
+  const router = createX402Router({ fetch });
+  const supported = await router.fetch(new Request("https://router.example/supported"));
+  const body = await supported.json<{ kinds: unknown[] }>();
+
+  expect(body.kinds).not.toContainEqual({
+    network: SOLANA_MAINNET,
+    scheme: "batch-settlement",
+    x402Version: 2,
+  });
+  expect((await router.fetch(paymentRequest(BASE_MAINNET))).status).toBe(401);
+  expect(calls).not.toContain(`${PAYAI_FACILITATOR_URL}/verify`);
+});
+
+test("serves the Solana fee payer of the upstream that the payment routes to", async () => {
+  const { fetch } = solanaFacilitators();
+  const router = createX402Router({ fetch });
+  const solanaKinds = async (request: Request) => {
+    const body = await (await router.fetch(request)).json<{ kinds: X402SupportedKind[] }>();
+
+    return body.kinds.filter((kind) => kind.network === SOLANA_MAINNET);
+  };
+  const withToken = new Request("https://router.example/supported");
+
+  withToken.headers.set(CDP_FORWARD_TOKEN_HEADER, "Bearer signed-for-cdp-upstream");
+
+  await expect(solanaKinds(new Request("https://router.example/supported"))).resolves.toEqual([
+    {
+      extra: { feePayer: "payai-fee-payer" },
+      network: SOLANA_MAINNET,
+      scheme: "exact",
+      x402Version: 2,
+    },
+  ]);
+  await expect(solanaKinds(withToken)).resolves.toEqual([
+    {
+      extra: { feePayer: "cdp-fee-payer" },
+      network: SOLANA_MAINNET,
+      scheme: "exact",
+      x402Version: 2,
+    },
+  ]);
+});

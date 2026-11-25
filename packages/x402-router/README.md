@@ -36,7 +36,7 @@ POST /verify
 POST /settle
 ```
 
-Default routing is explicit: Ethereum Mainnet goes to PrimeV; Base, Solana, and other CDP-supported networks go to CDP; public test/dev networks come from x402.org. `/supported` reports what those upstreams currently claim.
+Default routing is explicit: Ethereum Mainnet goes to PrimeV; Base and other CDP-supported EVM networks go to CDP; Solana Mainnet goes to PayAI, then Dexter, or to CDP when the request carries a CDP token; public test/dev networks come from x402.org. `/supported` reports what those upstreams currently claim, one kind per network and scheme, from the upstream that the payment routes to.
 
 ## Reasoning and routing
 

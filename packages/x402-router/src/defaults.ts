@@ -2,6 +2,8 @@ export const CDP_FORWARD_TOKEN_HEADER = "X-Forwarded-CDP-Token";
 export const CDP_FACILITATOR_URL = "https://api.cdp.coinbase.com/platform/v2/x402";
 export const PRIMEV_FACILITATOR_URL = "https://facilitator.primev.xyz";
 export const X402_ORG_FACILITATOR_URL = "https://x402.org/facilitator";
+export const PAYAI_FACILITATOR_URL = "https://facilitator.payai.network";
+export const DEXTER_FACILITATOR_URL = "https://x402.dexter.cash";
 
 export const ETHEREUM_MAINNET = "eip155:1";
 export const BASE_MAINNET = "eip155:8453";
@@ -31,6 +33,8 @@ export type X402RouterAuth = { type: "none" } | { header?: string; type: "forwar
 export type X402RouterUpstream = {
   auth?: X402RouterAuth;
   facilitatorUrl: string;
+  /** Keep only the live kinds that are also in `supportedKinds`. */
+  limitToSupportedKinds?: boolean;
   name: string;
   supportedKinds?: X402SupportedKind[];
 };
@@ -51,6 +55,18 @@ export const defaultX402RouterUpstreams: X402RouterUpstream[] = [
     facilitatorUrl: X402_ORG_FACILITATOR_URL,
     name: "x402-testnet",
     supportedKinds: [exact(BASE_SEPOLIA), exact(SOLANA_DEVNET)],
+  },
+  {
+    facilitatorUrl: PAYAI_FACILITATOR_URL,
+    limitToSupportedKinds: true,
+    name: "payai-solana",
+    supportedKinds: [exact(SOLANA_MAINNET)],
+  },
+  {
+    facilitatorUrl: DEXTER_FACILITATOR_URL,
+    limitToSupportedKinds: true,
+    name: "dexter-solana",
+    supportedKinds: [exact(SOLANA_MAINNET)],
   },
   {
     auth: { type: "forwarded-bearer" },
