@@ -101,15 +101,32 @@ function forwardedBearerToken(
   return request.headers.get(header);
 }
 
-function mergeSupported(responses: X402SupportedResponse[]) {
+type X402SupportEntry = { supported: X402SupportedResponse; upstream: X402RouterUpstream };
+
+/** Routing order: upstreams whose forwarded token the request carries, then list order. */
+function inRoutingOrder(request: Request, entries: X402SupportEntry[], options: X402RouterOptions) {
+  const hasToken = (entry: X402SupportEntry) =>
+    forwardedBearerToken(request, entry.upstream, options) ? 1 : 0;
+
+  return entries.toSorted((a, b) => hasToken(b) - hasToken(a));
+}
+
+/** Each kind comes from the upstream that a payment for that kind routes to. */
+function mergeSupported(entries: X402SupportEntry[]) {
   const extensions = new Set<string>();
   const kinds = new Map<string, X402SupportedKind>();
+  const owners = new Map<string, X402RouterUpstream>();
   const signers: Record<string, string[]> = {};
 
-  for (const response of responses.map((supported) => supportedV2Only(supported))) {
+  for (const { supported: response, upstream } of entries) {
     for (const kind of response.kinds) {
       const key = kindKey(kind);
 
+      if ((owners.get(key) ?? upstream) !== upstream) {
+        continue;
+      }
+
+      owners.set(key, upstream);
       kinds.set(key, preferredKind(kinds.get(key), kind));
     }
 
@@ -215,6 +232,12 @@ async function fetchSupportedForUpstream(
       return staticSupportedFor(upstream);
     }
 
+    if (upstream.limitToSupportedKinds) {
+      const allowed = new Set((upstream.supportedKinds ?? []).map((kind) => kindKey(kind)));
+
+      supported.kinds = supported.kinds.filter((kind) => allowed.has(kindKey(kind)));
+    }
+
     return supportedV2Only(supported);
   } catch {
     return staticSupportedFor(upstream);
@@ -252,26 +275,22 @@ async function supportedForRequest(
     return supportedV2Only(options.supported);
   }
 
-  return mergeSupported(
-    (await supportEntriesForRequest(request, upstreams, options)).map((entry) => entry.supported),
-  );
+  const entries = await supportEntriesForRequest(request, upstreams, options);
+
+  return mergeSupported(inRoutingOrder(request, entries, options));
 }
 
 function routeFor(
   request: Request,
-  entries: Array<{ supported: X402SupportedResponse; upstream: X402RouterUpstream }>,
+  entries: X402SupportEntry[],
   kind: X402SupportedKind,
   options: X402RouterOptions,
 ): X402RouterUpstream | undefined {
   const targetKey = kindKey(kind);
-  const matches = entries.filter((entry) =>
-    entry.supported.kinds.some((supportedKind) => kindKey(supportedKind) === targetKey),
-  );
 
-  return (
-    matches.find((entry) => forwardedBearerToken(request, entry.upstream, options))?.upstream ??
-    matches[0]?.upstream
-  );
+  return inRoutingOrder(request, entries, options).find((entry) =>
+    entry.supported.kinds.some((supportedKind) => kindKey(supportedKind) === targetKey),
+  )?.upstream;
 }
 
 async function parsePayload(request: Request): Promise<X402FacilitatorPayload | null> {

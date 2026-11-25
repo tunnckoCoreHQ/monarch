@@ -11,7 +11,7 @@ export const prerender = true;
 
 const pageTitle = "WGW x402 Router";
 const pageDescription =
-  "One x402 v2 facilitator URL that routes each payment to PrimeV, CDP, or x402.org by network.";
+  "One x402 v2 facilitator URL that routes each payment to PrimeV, CDP, PayAI, Dexter, or x402.org by network.";
 const origin = Astro.url.origin;
 const host = Astro.url.host;
 const sourceUrl = "https://github.com/tunnckoCoreHQ/monarch/tree/master/packages/x402-router";
@@ -69,7 +69,7 @@ const statements: Array<{ parts: Part[]; support: Note[] }> = [
   },
   {
     parts: [
-      { text: "Base, Polygon, Arbitrum, World Chain and Solana go to ", tone: "key" },
+      { text: "Base, Polygon, Arbitrum and World Chain go to ", tone: "key" },
       { text: "CDP.", tone: "info" },
     ],
     support: [
@@ -80,6 +80,19 @@ const statements: Array<{ parts: Part[]; support: Note[] }> = [
         tone: "info",
       },
       ", with a short-lived JWT your server signs. World Chain Sepolia routes there too.",
+    ],
+  },
+  {
+    parts: [
+      { text: "Solana goes to ", tone: "key" },
+      { text: "PayAI, then Dexter.", tone: "accent" },
+    ],
+    support: [
+      "Through ",
+      { code: "facilitator.payai.network", href: "https://facilitator.payai.network", tone: "accent" },
+      " or ",
+      { code: "x402.dexter.cash", href: "https://dexter.cash/facilitator", tone: "accent" },
+      ". No auth header needed. A request with a CDP token goes to CDP.",
     ],
   },
   {
@@ -206,10 +219,10 @@ const sellerLine = `const facilitator = new HTTPFacilitatorClient({ url: "${orig
 const routerOptions: Array<{ name: string; fallback: string; does: Note[] }> = [
   {
     name: "upstreams",
-    fallback: "PrimeV, x402.org, CDP",
+    fallback: "PrimeV, x402.org, PayAI, Dexter, CDP",
     does: [
       "Pass a list of your own facilitators, each ",
-      { code: "{ name, facilitatorUrl, auth?, supportedKinds? }" },
+      { code: "{ name, facilitatorUrl, auth?, supportedKinds?, limitToSupportedKinds? }" },
     ],
   },
   {
@@ -338,6 +351,14 @@ const router = createX402Router();
               href="https://docs.cdp.coinbase.com/x402/seller/facilitator"
               class="text-info underline decoration-line underline-offset-4 hover:decoration-current"
               >CDP</a
+            >, <a
+              href="https://facilitator.payai.network"
+              class="text-accent underline decoration-line underline-offset-4 hover:decoration-current"
+              >PayAI</a
+            >, <a
+              href="https://dexter.cash/facilitator"
+              class="text-accent underline decoration-line underline-offset-4 hover:decoration-current"
+              >Dexter</a
             > or <a
               href="https://x402.org"
               class="text-x402 underline decoration-line underline-offset-4 hover:decoration-current"
