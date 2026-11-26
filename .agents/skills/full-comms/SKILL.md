@@ -11,7 +11,7 @@ These rules apply to everything you write on GitHub for the user: PR titles and 
 
 ## Disclosure
 
-Start every PR body, comment, and review reply with this note. Nothing goes above it.
+Start every PR body, comment, and review reply with this note. Nothing goes above it, except the opening Agent Marker in a PR body (see "PR body").
 
 ```md
 > [!NOTE]
@@ -61,6 +61,14 @@ GOOD
 
 The format applies to the first `gh pr create` and to every later `gh pr edit`. Check it before each publish.
 
+Wrap the whole body you write, the disclosure note included, in the Agent Markers:
+
+```md
+<!-- agent:start -->
+<disclosure note and body text>
+<!-- agent:end -->
+```
+
 1. Start with two or three plain sentences about the problem, taken from the user's original request.
 2. Explain the fix in simple terms.
 3. Add grouped sections for the main behavior changes.
@@ -76,9 +84,9 @@ GOOD
 
 > ✅ My "new worktree" default was ignored when starting new threads on existing worktrees. Super unintuitive. Now your preferences always apply.
 
-When you update the body, rewrite your own sections to match the final implementation. Do not append a partial note to an old body. Keep every part that a person or bot added, byte for byte. Put the lines that other skills give you, such as the proof line from `full-send` or the `review-loop` line, in your own sections.
+When you update the body, rewrite the text inside the Agent Markers to match the final implementation. Do not append a partial note to an old body. Keep every part that a person or bot added, byte for byte. Put the lines that other skills give you, such as the proof line from `full-send` or the `review-loop` line, inside the Agent Markers.
 
-Macroscope and other bots keep their blocks between HTML comment markers, and a block may quote your old body. Never edit inside them, even to remove a duplicate. Before each `gh pr edit`, diff the old and new body: text outside your own sections must not change.
+Macroscope and other bots keep their blocks between HTML comment markers. Never edit inside them. Edit only inside the Agent Markers.
 
 ## Comments and review replies
 
