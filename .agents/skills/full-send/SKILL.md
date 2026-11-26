@@ -46,12 +46,15 @@ one appears.
 1. **Finish the change.** Complete the goal from the user's request with the
    smallest change that works. Fix the case that happened, not every case
    that could. If you are on the default branch, create a branch first.
-   Update the docs with the `full-docs` skill. If the user's request also
+   Update the docs with the `full-docs` skill only when the change alters
+   behavior, architecture, a term, or a decision. If the user's request also
    names `hill-climb` ("full send hill climb"), reach the goal with that skill.
    Then continue from "Prove it". The climb report is part of the proof.
 2. **Prove it.** Get proof for every change you made. See "Proof".
-3. **Get feedback.** Run the `code-review` skill once and fix its findings.
-   Then run the `review-loop` skill.
+3. **Get feedback.** For behavior changes, run the `code-review` skill once
+   and fix its findings. Then run the `review-loop` skill once, after the
+   checks pass. Skip both for docs-only, CI-config-only, or vendored changes,
+   and say so in the report.
 4. **File the PR** with the `file-pr` skill. Add the proof to the PR body in
    this format. Say what the proof shows, not which commands ran.
 
@@ -144,6 +147,9 @@ Ask only when you cannot continue alone:
 
 Decide everything else yourself with sensible defaults, and list those decisions
 in the report.
+
+A user question during a full send is not a stop. Answer it, decide, and keep
+going.
 
 If no question tool is available, or the tool returns no answer, take the safe
 path: leave the PR open and unmerged, and start your final message with the

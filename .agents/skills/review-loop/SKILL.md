@@ -17,12 +17,12 @@ The Model is the reviewer for every round of this run.
 - Default: the newest Grok Fast model in the T3 catalog, at high reasoning effort, using T3Code Grok Build provider.
 - If the user names a model, for example "review loop with Opus 5.5", that model is the Model. Use the effort the user names, else the model's default.
 - Call `orchestrator_capabilities` once and pick the Model from it. Do not hardcode an ID.
-- If no route runs the Model, report the blocker. Do not substitute another model.
+- If the Model's route fails (quota, 402, auth), stop and restart the round with Claude Fable 5.2, medium effort, fast mode. Tell the user the route failed and that you switched.
 - Record the provider, model, and effort only when the catalog shows them.
 
 ## Budget
 
-- Default: 3 rounds total. Round 1 reviews everything. Later rounds check only the changed code and open findings.
+- Default: 3 rounds total. That is a cap, not a target: one approving round is a full run. Round 1 reviews everything. Later rounds check only the changed code and open findings.
 - Extend to 5 only for security, permissions, auth, data loss, or state and concurrency, while a `BLOCKER` or `SHOULD` stays open with evidence. Or when the user asks.
 - Stop early if a round returns only `NIT` findings. Declined `NIT` findings and comment, doc, or format-only fixes need no new round.
 - One reviewer only. The Model must not start subagents or other reviewers.

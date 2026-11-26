@@ -46,5 +46,6 @@ without the user. If someone else merged it, report that instead.
   needed. Follow full-send's rules for asking the user.
 
 In T3 Code, call `unwatch_pull_request` before the handoff or a question.
-Report the PR link, final head, verdict, proof, reviewer outcome, and remaining
-risks. State whether the PR is still open and unmerged.
+Report the PR link, final head, verdict, proof, reviewer outcome, and known
+defects in this diff, or "None". A listed defect means the verdict is not
+ready. State whether the PR is still open and unmerged.

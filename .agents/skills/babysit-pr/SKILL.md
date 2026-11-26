@@ -11,13 +11,11 @@ Own the PR until it merges or is ready. Fix problems instead of only reporting t
 
 ## Start
 
-When the user says "babysit" and T3 Code is available, launch a new T3 Code thread on the PR's worktree with Claude Opus 5.5, medium effort, fast mode. That thread runs the steps below for this PR only, never follow-up ones, and sends its final report to the thread that called it. The thread that launched it does not run the steps and does not watch the PR.
-
-Otherwise, run the steps below in this thread, on the PR's worktree.
+Run the steps below in this thread, on the PR's worktree. Launch a separate thread only when the user asks for one.
 
 1. Read the repository instructions.
 2. Read the PR body and the full diff.
-3. Read all checks, reviews, comments, and unresolved threads.
+3. Read all checks, reviews, comments, and unresolved threads. Read every page (`gh api --paginate`).
 4. Check mergeability and labels. A `do-not-merge` label holds the merge for the owner. Never remove it.
 5. Handle what already exists (see "Reviews"), then start the watcher (see "Waiting").
 
@@ -31,6 +29,8 @@ Call it and end your turn. T3 Code wakes you when a check fails, the required ch
 
 - **Only the thread that owns the PR watches it.** A delegated child task (a reviewer, a review-loop round, any `delegate_task` child) never calls `watch_pull_request`.
 - **A wake is news, not a merge decision.** Check the finish gate yourself.
+- **Confirm the watch.** Before you write "watching", confirm that `watch_pull_request` returned watching in this turn.
+- **Commit statuses.** CI that posts commit statuses, like CircleCI, may never wake the watcher. Check `gh api repos/<owner>/<repo>/commits/<sha>/status` with one background timer every 10 minutes.
 - **Unwatch when you hand off.** When you stop, or ask the user a question, call `unwatch_pull_request` first. A merge or close ends the watch on its own.
 - **"Stopped watching, could not read it"** usually means the GitHub rate limit is used up. Run `gh api rate_limit --jq .resources.graphql`. If `remaining` is near 0, wait for `reset` with one background command, then watch again. Never watch again in a tight loop.
 

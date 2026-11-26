@@ -50,6 +50,8 @@ description: How to develop in the monarch monorepo. Use before changing code, a
 - Worker secrets are set on the Worker once and persist across deploys. Deploy scripts only call `cf deploy`; never pass secrets through CI.
 - The app needs no workflow of its own.
 - Never run a deploy script locally unless the user asks.
+- `cf` is in `node_modules/.bin` and logged in. In a new worktree, run `pnpm install` first. Take Worker URLs from `cf` output, never guess them.
+- Nightly may break. Deploy nightly and reset nightly data without asking.
 
 ## CI and releases
 
@@ -68,7 +70,10 @@ description: How to develop in the monarch monorepo. Use before changing code, a
 
 - Use conventional commits.
 - Keep one task per pull request. Open another pull request only when the user asks for it.
-- Open with `gh pr create`, then run `gh pr merge --auto --squash`. Never merge by hand.
+- Open with the `file-pr` skill. Never turn on auto-merge. Only `full-send` merges.
+- Commit locally after each accepted change. Push only when the user asks or when a skill says so.
+- Do not add code comments. Code that has an explaining comment is intentional: keep it.
+- A port keeps the source behavior as it is, unless a listed finding says otherwise.
 - Never enable auto-merge on the release pull request.
 - Greptile does not review on its own. Comment `@greptileai review` to request a review.
 - Do not approve a pull request unless the user says so.

@@ -47,7 +47,7 @@ Use the `unslop` skill and ASD-STE100 Simplified Technical English for PR titles
 
 ## PR title
 
-PR titles become squash-commit messages. Use a conventional commit in plain language, and follow the repository's conventions from recently merged PRs and the Git history. Say why the change matters, not how it works.
+PR titles become squash-commit messages. Use a conventional commit in plain language, and follow the repository's conventions from recently merged PRs and the Git history. Say why the change matters, not how it works. Keep it to about 60 characters at most. Name what the PR does, not a metric like "X fewer lines". No "and… and…" lists.
 
 BAD
 
@@ -77,6 +77,8 @@ GOOD
 > ✅ My "new worktree" default was ignored when starting new threads on existing worktrees. Super unintuitive. Now your preferences always apply.
 
 When you update the body, rewrite your own sections to match the final implementation. Do not append a partial note to an old body. Keep every part that a person or bot added, byte for byte. Put the lines that other skills give you, such as the proof line from `full-send` or the `review-loop` line, in your own sections.
+
+Macroscope and other bots keep their blocks between HTML comment markers, and a block may quote your old body. Never edit inside them, even to remove a duplicate. Before each `gh pr edit`, diff the old and new body: text outside your own sections must not change.
 
 ## Comments and review replies
 
