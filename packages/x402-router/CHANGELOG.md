@@ -1,5 +1,28 @@
 # @tunnckocore/x402-router
 
+## 0.3.0
+
+### Minor Changes
+
+- [#197](https://github.com/tunnckoCoreHQ/monarch/pull/197) [`da72ec4`](https://github.com/tunnckoCoreHQ/monarch/commit/da72ec4e15d92624a3e576cb9f0a622cac3c3e1a) Thanks [@tunnckoCore](https://github.com/tunnckoCore)! - Route every standard x402 payment across PrimeV, CDP, PayAI, Dexter, and x402.org, with fallback.
+
+  - `/supported` merges all live `exact`, `upto`, and `batch-settlement` kinds, testnets included. Each kind comes from the first upstream in that network's order.
+  - The order starts from `primev`, `cdp`, `payai`, `dexter`, `x402`. The seller's preference moves named upstreams to the front, upstreams with a key in the request go first, and CDP wins over PayAI when both keys are present.
+  - A payment that names its facilitator, through `feePayer`, `facilitatorAddress`, `receiverAuthorizer`, or `assetTransferMethod`, goes only to an upstream that matches. This fixes Solana payments for sellers with a CDP token, which went to CDP with PayAI's fee payer.
+  - When an upstream is out of credits, down, rejects the key, or does not support the payment, the router tries the next one. It stops when the payment itself is invalid. Failures carry a buyer message and `extra.router.tried`.
+  - New `createPayAIAuthHeaders` in `@tunnckocore/x402-router/payai`, and `createRouterAuthHeaders` for CDP, PayAI, and the preference together.
+  - `createCdpAuthHeaders` now signs a token for `/supported` too.
+  - Removed `limitToSupportedKinds` and `defaultX402SupportedResponse`.
+
+- [#199](https://github.com/tunnckoCoreHQ/monarch/pull/199) [`908e103`](https://github.com/tunnckoCoreHQ/monarch/commit/908e10392b90befed7108754d1e7740890c2c048) Thanks [@tunnckoCore](https://github.com/tunnckoCore)! - Route XRP payments on XRP Ledger Mainnet through Sluzen.
+
+  - The new `sluzen` upstream takes `exact` XRP payments on `xrpl:0`. Sluzen settles only for a resource URL that the seller registered with Sluzen.
+  - The default order is now `primev`, `cdp`, `payai`, `dexter`, `sluzen`, `x402`.
+  - `/supported` now drops a live kind that has no `x402Version`, such as Sluzen's `paychan`, and keeps the upstream's other live kinds. Before, one such kind made the router use the upstream's static list.
+  - The package now exports `SLUZEN_FACILITATOR_URL` and `XRPL_MAINNET`.
+
+- [#196](https://github.com/tunnckoCoreHQ/monarch/pull/196) [`668a1c9`](https://github.com/tunnckoCoreHQ/monarch/commit/668a1c939f4708c5ce8f5bda9c81e4c593d86dd1) Thanks [@tunnckoCore](https://github.com/tunnckoCore)! - Route Solana Mainnet payments to PayAI, then Dexter, when the request has no CDP token. A request with a CDP token still goes to CDP. `GET /supported` now takes each kind from the upstream that the same request routes to, so the Solana fee payer matches the facilitator that settles. The new `limitToSupportedKinds` upstream option keeps only the live kinds listed in `supportedKinds`.
+
 ## 0.2.0
 
 ### Minor Changes
