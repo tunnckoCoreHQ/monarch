@@ -3,7 +3,7 @@ title: Upstreams
 description: How the router orders facilitators, routes payments, and falls back.
 ---
 
-The router sends each payment to one of five upstream facilitators.
+The router sends each payment to one of six upstream facilitators.
 
 | Name     | Facilitator                 | Key                 | Networks                          |
 | -------- | --------------------------- | ------------------- | --------------------------------- |
@@ -11,16 +11,25 @@ The router sends each payment to one of five upstream facilitators.
 | `cdp`    | `api.cdp.coinbase.com`      | CDP token, required | EVM and Solana                    |
 | `payai`  | `facilitator.payai.network` | PayAI key, optional | EVM and Solana, testnets included |
 | `dexter` | `x402.dexter.cash`          | none                | EVM and Solana                    |
+| `sluzen` | `api.sluzen.network`        | none                | XRP Ledger Mainnet                |
 | `x402`   | `x402.org/facilitator`      | none                | Testnets                          |
 
 Without a key, PayAI uses its free credits. Each receiving wallet gets 1,000 credits, and PayAI then needs a key.
+
+## XRP Ledger
+
+An XRP payment uses the `exact` scheme. The buyer signs an XRP Ledger `Payment` transaction and pays the ledger fee.
+
+Sluzen settles XRP on XRP Ledger Mainnet, `xrpl:0`. It settles only for a resource URL that the seller registered with Sluzen. For any other URL, Sluzen answers `Resource not registered`, and the router answers that no facilitator can settle the payment.
+
+x402.org settles XRP on XRP Ledger Testnet, `xrpl:1`.
 
 ## Order
 
 The router builds one order for each network. The same order decides which upstream serves a kind in `/supported` and which upstream `/verify` and `/settle` try first.
 
-1. The router starts from the default list: `primev`, `cdp`, `payai`, `dexter`, `x402`.
-2. The seller's preference moves the upstreams it names to the front. For example, the preference `["dexter", "payai"]` gives `dexter`, `payai`, `primev`, `cdp`, `x402`.
+1. The router starts from the default list: `primev`, `cdp`, `payai`, `dexter`, `sluzen`, `x402`.
+2. The seller's preference moves the upstreams it names to the front. For example, the preference `["dexter", "payai"]` gives `dexter`, `payai`, `primev`, `cdp`, `sluzen`, `x402`.
 3. Upstreams with a key in the request go before upstreams without one. Both groups keep the order from step 2.
 4. CDP drops out when the request has no CDP token.
 
@@ -97,5 +106,7 @@ The response also has `extra.router.tried`, with each upstream the router tried 
 ## Support discovery
 
 `GET /supported` asks every upstream for its live kinds. If an upstream fails, the router uses that upstream's static `supportedKinds` instead.
+
+The router drops a live kind that has no `x402Version`, such as Sluzen's `paychan`.
 
 A response for a request with keys or a preference is private to that seller. It has `cache-control: private` and a `vary` header for the routing headers.

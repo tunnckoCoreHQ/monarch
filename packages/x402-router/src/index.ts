@@ -242,6 +242,17 @@ function isSupportedResponse(value: unknown): value is X402SupportedResponse {
   );
 }
 
+function withoutUnversionedKinds(value: unknown): unknown {
+  if (!isRecord(value) || !Array.isArray(value.kinds)) {
+    return value;
+  }
+
+  return {
+    ...value,
+    kinds: value.kinds.filter((kind) => !isRecord(kind) || kind.x402Version !== undefined),
+  };
+}
+
 async function fetchSupportedForUpstream(
   request: Request,
   upstream: X402RouterUpstream,
@@ -266,7 +277,8 @@ async function fetchSupportedForUpstream(
       return staticSupportedFor(upstream);
     }
 
-    const supported: unknown = await response.json();
+    const body: unknown = await response.json();
+    const supported = withoutUnversionedKinds(body);
 
     return isSupportedResponse(supported) ? standardOnly(supported) : staticSupportedFor(upstream);
   } catch {

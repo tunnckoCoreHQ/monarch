@@ -11,7 +11,7 @@ export const prerender = true;
 
 const pageTitle = "WGW x402 Router";
 const pageDescription =
-  "One x402 v2 facilitator URL that routes each payment to PrimeV, CDP, PayAI, Dexter, or x402.org by network.";
+  "One x402 v2 facilitator URL that routes each payment to PrimeV, CDP, PayAI, Dexter, Sluzen, or x402.org by network.";
 const origin = Astro.url.origin;
 const host = Astro.url.host;
 const sourceUrl = "https://github.com/tunnckoCoreHQ/monarch/tree/master/packages/x402-router";
@@ -84,6 +84,19 @@ const statements: Array<{ parts: Part[]; support: Note[] }> = [
         tone: "info",
       },
       ", testnets included. With no keys, PayAI goes first on its free credits, then Dexter.",
+    ],
+  },
+  {
+    parts: [
+      { text: "XRP Ledger goes to ", tone: "key" },
+      { text: "Sluzen.", tone: "accent" },
+    ],
+    support: [
+      "XRP on mainnet, through ",
+      { code: "api.sluzen.network", href: "https://sluzen.network", tone: "accent" },
+      ". Register your resource URL with Sluzen first. XRP Ledger Testnet goes to ",
+      { code: "x402.org/facilitator", href: "https://x402.org", tone: "x402" },
+      ".",
     ],
   },
   {
@@ -264,7 +277,7 @@ const sellerLine = `const facilitator = new HTTPFacilitatorClient({ url: "${orig
 const routerOptions: Array<{ name: string; fallback: string; does: Note[] }> = [
   {
     name: "upstreams",
-    fallback: "PrimeV, CDP, PayAI, Dexter, x402.org",
+    fallback: "PrimeV, CDP, PayAI, Dexter, Sluzen, x402.org",
     does: [
       "Pass a list of your own facilitators, each ",
       { code: "{ name, facilitatorUrl, auth?, supportedKinds? }" },
@@ -404,6 +417,10 @@ const router = createX402Router();
               href="https://dexter.cash/facilitator"
               class="text-accent underline decoration-line underline-offset-4 hover:decoration-current"
               >Dexter</a
+            >, <a
+              href="https://sluzen.network"
+              class="text-accent underline decoration-line underline-offset-4 hover:decoration-current"
+              >Sluzen</a
             > or <a
               href="https://x402.org"
               class="text-x402 underline decoration-line underline-offset-4 hover:decoration-current"
