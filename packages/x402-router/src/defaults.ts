@@ -19,7 +19,6 @@ export const WORLD_CHAIN_SEPOLIA = "eip155:4801";
 export const SOLANA_MAINNET = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 export const SOLANA_DEVNET = "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1";
 export const XRPL_MAINNET = "xrpl:0";
-export const XRPL_TESTNET = "xrpl:1";
 
 /** The x402 schemes that work through `/verify` and `/settle` alone. */
 export const STANDARD_SCHEMES = ["exact", "upto", "batch-settlement"];
@@ -129,6 +128,6 @@ export const defaultX402RouterUpstreams: X402RouterUpstream[] = [
   {
     facilitatorUrl: X402_ORG_FACILITATOR_URL,
     name: "x402",
-    supportedKinds: exact(BASE_SEPOLIA, SOLANA_DEVNET, XRPL_TESTNET),
+    supportedKinds: exact(BASE_SEPOLIA, SOLANA_DEVNET),
   },
 ];

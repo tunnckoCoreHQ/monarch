@@ -242,15 +242,16 @@ function isSupportedResponse(value: unknown): value is X402SupportedResponse {
   );
 }
 
+function hasNoVersion(kind: unknown) {
+  return isRecord(kind) && kind.x402Version === undefined;
+}
+
 function withoutUnversionedKinds(value: unknown): unknown {
   if (!isRecord(value) || !Array.isArray(value.kinds)) {
     return value;
   }
 
-  return {
-    ...value,
-    kinds: value.kinds.filter((kind) => !isRecord(kind) || kind.x402Version !== undefined),
-  };
+  return { ...value, kinds: value.kinds.filter((kind) => !hasNoVersion(kind)) };
 }
 
 async function fetchSupportedForUpstream(
