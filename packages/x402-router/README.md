@@ -38,7 +38,7 @@ POST /verify
 POST /settle
 ```
 
-Default routing: Ethereum Mainnet goes to PrimeV. EVM and Solana payments go to PayAI, Dexter, or CDP, testnets included. x402.org covers testnets. A CDP token or a PayAI key puts that facilitator first. When a facilitator fails, the router tries the next one that can settle the payment. [Upstreams](https://x402-router.wgw.lol/docs/upstreams.md) has the full order, the fallback rules, and the error messages.
+Default routing: Ethereum Mainnet goes to PrimeV. EVM and Solana payments go to PayAI, Dexter, or CDP, testnets included. XRP payments on XRP Ledger Mainnet go to Sluzen. x402.org covers testnets, XRP Ledger Testnet included. A CDP token or a PayAI key puts that facilitator first. When a facilitator fails, the router tries the next one that can settle the payment. [Upstreams](https://x402-router.wgw.lol/docs/upstreams.md) has the full order, the fallback rules, and the error messages.
 
 ## Reasoning and routing
 
@@ -50,7 +50,7 @@ The router does not need your secret keys. You sign short-lived JWTs on your ser
 
 The router orders the facilitators for each network:
 
-1. It starts from the default list: `primev`, `cdp`, `payai`, `dexter`, `x402`.
+1. It starts from the default list: `primev`, `cdp`, `payai`, `dexter`, `sluzen`, `x402`.
 2. The seller's preference moves the facilitators it names to the front.
 3. Facilitators with a key in the request go before the rest. With both keys, CDP goes first.
 4. CDP drops out when the request has no CDP token.

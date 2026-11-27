@@ -7,6 +7,7 @@ export const PRIMEV_FACILITATOR_URL = "https://facilitator.primev.xyz";
 export const X402_ORG_FACILITATOR_URL = "https://x402.org/facilitator";
 export const PAYAI_FACILITATOR_URL = "https://facilitator.payai.network";
 export const DEXTER_FACILITATOR_URL = "https://x402.dexter.cash";
+export const SLUZEN_FACILITATOR_URL = "https://api.sluzen.network/facilitator";
 
 export const ETHEREUM_MAINNET = "eip155:1";
 export const BASE_MAINNET = "eip155:8453";
@@ -17,6 +18,7 @@ export const WORLD_CHAIN = "eip155:480";
 export const WORLD_CHAIN_SEPOLIA = "eip155:4801";
 export const SOLANA_MAINNET = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 export const SOLANA_DEVNET = "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1";
+export const XRPL_MAINNET = "xrpl:0";
 
 /** The x402 schemes that work through `/verify` and `/settle` alone. */
 export const STANDARD_SCHEMES = ["exact", "upto", "batch-settlement"];
@@ -117,6 +119,11 @@ export const defaultX402RouterUpstreams: X402RouterUpstream[] = [
       SOLANA_MAINNET,
       SOLANA_DEVNET,
     ),
+  },
+  {
+    facilitatorUrl: SLUZEN_FACILITATOR_URL,
+    name: "sluzen",
+    supportedKinds: exact(XRPL_MAINNET),
   },
   {
     facilitatorUrl: X402_ORG_FACILITATOR_URL,

@@ -15,11 +15,13 @@ import {
   PRIMEV_FACILITATOR_URL,
   ROUTER_PREFERENCE_HEADER,
   routerPreferenceHeaders,
+  SLUZEN_FACILITATOR_URL,
   SOLANA_MAINNET,
   WORLD_CHAIN_SEPOLIA,
   type X402RouterPreference,
   type X402SupportedKind,
   X402_ORG_FACILITATOR_URL,
+  XRPL_MAINNET,
 } from "../src/index";
 import { createPayAIAuthHeaders } from "../src/payai";
 
@@ -260,6 +262,42 @@ test("routes Ethereum Mainnet to PrimeV", async () => {
 
   expect((await router.fetch(paymentRequest(ETHEREUM_MAINNET))).status).toBe(200);
   expect(forwarded()).toEqual([PRIMEV_FACILITATOR_URL]);
+});
+
+test("routes XRP Ledger Mainnet to Sluzen", async () => {
+  const { fetch, forwarded } = facilitators({
+    [SLUZEN_FACILITATOR_URL]: [exact(XRPL_MAINNET)],
+  });
+  const router = createX402Router({ fetch });
+
+  expect((await router.fetch(paymentRequest(XRPL_MAINNET))).status).toBe(200);
+  expect(forwarded()).toEqual([SLUZEN_FACILITATOR_URL]);
+});
+
+test("keeps the live kinds of an upstream that also lists a kind with no x402 version", async () => {
+  const exactXrp = {
+    asset: "XRP",
+    extra: { areFeesSponsored: false },
+    network: XRPL_MAINNET,
+    scheme: "exact",
+    x402Version: 2,
+  };
+  const router = createX402Router({
+    fetch: async () =>
+      Response.json({
+        kinds: [exactXrp, { asset: "XRP", network: XRPL_MAINNET, scheme: "paychan" }],
+      }),
+    upstreams: [
+      {
+        facilitatorUrl: SLUZEN_FACILITATOR_URL,
+        name: "sluzen",
+        supportedKinds: [exact(XRPL_MAINNET)],
+      },
+    ],
+  });
+  const body = await bodyOf(await router.fetch(new Request("https://router.example/supported")));
+
+  expect(body.kinds).toEqual([exactXrp]);
 });
 
 const solanaFeePayers = {

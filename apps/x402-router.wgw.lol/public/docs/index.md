@@ -18,6 +18,7 @@ Use it as the facilitator URL in a standard x402 integration, or self-host the s
 
 - Routes Ethereum Mainnet payments to PrimeV for 1.2s settlement and sponsored gas.
 - Routes EVM and Solana payments to PayAI, Dexter, or CDP, testnets included, and to x402.org for testnets.
+- Routes XRP payments on XRP Ledger Mainnet to Sluzen, and on XRP Ledger Testnet to x402.org.
 - Tries the next facilitator when one fails, and tells the buyer what went wrong when none can settle.
 - Uses a CDP token or a PayAI key only when the seller sends one. The seller signs it on its own server.
 - Pulls `/supported` from upstream facilitators so clients see current upstream support.

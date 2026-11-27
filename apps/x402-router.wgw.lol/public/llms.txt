@@ -1,6 +1,6 @@
 # x402-router
 
-> Standalone x402 v2 facilitator router for any Fetch API runtime. One facilitator URL, https://x402-router.wgw.lol, routes each payment to PrimeV, CDP, PayAI, Dexter, or x402.org by network, with fallback.
+> Standalone x402 v2 facilitator router for any Fetch API runtime. One facilitator URL, https://x402-router.wgw.lol, routes each payment to PrimeV, CDP, PayAI, Dexter, Sluzen, or x402.org by network, with fallback.
 
 ## Docs
 
