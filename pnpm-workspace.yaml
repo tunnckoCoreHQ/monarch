@@ -55,9 +55,9 @@ catalogs:
     drizzle-orm: 0.45.4
     drizzle-kit: 0.31.11
     miniflare: 5.20260930.0-alpha
-    oxlint: 1.94.0
+    oxlint: 1.95.0
     oxfmt: 0.71.0
-    tsrs: 7.1.0-beta.tsrs3
+    tsrs: 7.1.0-beta.tsrs5
     ultracite: 7.12.2
     vitest: 5.0.3
     "@vitest/coverage-v8": 5.0.3

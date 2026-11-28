@@ -44,13 +44,13 @@ const contractPlugin = {
   },
 } satisfies BetterAuthPlugin;
 
-function assertPluginEndpointInference() {
+function _assertPluginEndpointInference() {
   const auth = createTriadAuth(createEnv(), { plugins: [contractPlugin] });
 
   expectTypeOf(auth.api.platformContract).toBeFunction();
 }
 
-function assertComposedPluginEndpointInference() {
+function _assertComposedPluginEndpointInference() {
   const env = createEnv();
   const configuration = createTriadConfiguration(env);
   const auth = createTriadAuth(env, configuration);
@@ -59,7 +59,7 @@ function assertComposedPluginEndpointInference() {
   expectTypeOf(auth.api.getJwks).toBeFunction();
 }
 
-function assertFixedOptionsCannotBeConfigured() {
+function _assertFixedOptionsCannotBeConfigured() {
   const env = createEnv();
 
   const databaseConfiguration = { database: {} as D1Database };
@@ -106,10 +106,6 @@ function assertFixedOptionsCannotBeConfigured() {
   // @ts-expect-error Origin checks cannot be disabled.
   createTriadAuthOptions(env, originCheckConfiguration);
 }
-
-void assertPluginEndpointInference;
-void assertComposedPluginEndpointInference;
-void assertFixedOptionsCannotBeConfigured;
 
 afterEach(() => {
   delete ambientEnv.BETTER_AUTH_SECRETS;
